@@ -10,17 +10,53 @@ use std::io::Write;
 pub struct EditorState {
     map: TileMap,
     selected_tile_type: TileType,
+    camera: Camera2D,
+    show_grid: bool,
 }
 
 impl EditorState {
     pub fn new(width: usize, height: usize) -> Self {
-        Self {
+        let camera = Camera2D::default();
+
+        let mut state = Self {
             map: TileMap::new(vec![vec![Tile::air(); width]; height]),
             selected_tile_type: TileType::Floor,
-        }
+            camera,
+            show_grid: true,
+        };
+
+        // Initialize camera view
+        state.reset_camera_view();
+
+        state
     }
 
     pub fn update(&mut self) {
+        // Handle zoom with mouse wheel
+        let wheel = mouse_wheel().1;
+
+        if wheel != 0.0 {
+            let zoom_speed = 1.1;
+            let zoom_factor = if wheel > 0.0 { zoom_speed } else { 1.0 / zoom_speed };
+
+            // Change world scale by modifying zoom based on screen size
+            let aspect_x = 2.0 / screen_width();
+            let aspect_y = -2.0 / screen_height(); // negative to flip Y
+
+            let current_scale = self.camera.zoom.x / aspect_x;
+
+            let new_scale = (current_scale * zoom_factor)
+                .clamp(0.25, 4.0); // Min and max zoom levels
+
+            self.camera.zoom = vec2(aspect_x * new_scale, aspect_y * new_scale);
+        }
+
+        // Pan with middle/right mouse
+        if is_mouse_button_down(MouseButton::Middle) || is_mouse_button_down(MouseButton::Right) {
+            let delta = mouse_delta_position();
+            self.camera.target -= delta / self.camera.zoom;
+        }
+
         // Click to toggle tile
         if is_mouse_button_pressed(MouseButton::Left) {
             if let Some((x, y)) = self.get_hovered_tile() {
@@ -38,7 +74,11 @@ impl EditorState {
             }
         }
 
-        // Optional: resize map with keys
+        if is_key_pressed(KeyCode::G) {
+            self.show_grid = !self.show_grid;
+        }
+
+        // Resize map with keys
         if is_key_pressed(KeyCode::Up) {
             self.map.tiles.push(vec![Tile::air(); self.map.width]);
             self.map.height += 1;
@@ -60,12 +100,17 @@ impl EditorState {
             self.map.width -= 1;
         }
 
+        // Reset camera view with R key
+        if is_key_pressed(KeyCode::R) {
+            self.reset_camera_view();
+        }
+
         // Save map
         if is_key_pressed(KeyCode::S) {
             if let Some(path) = FileDialog::new()
-            .add_filter("Map files", &["map"])
-            .set_file_name("untitled.map")
-            .save_file()
+                .add_filter("Map files", &["map"])
+                .set_file_name("untitled.map")
+                .save_file()
             {
                 if let Err(e) = self.save_to_file(&path) {
                     eprintln!("Failed to save map: {}", e);
@@ -95,40 +140,159 @@ impl EditorState {
 
     fn get_hovered_tile(&self) -> Option<(usize, usize)> {
         let mouse_pos = mouse_position();
-        let x = (mouse_pos.0 / TILE_SIZE) as usize;
-        let y = (mouse_pos.1 / TILE_SIZE) as usize;
-        let flipped_y = self.map.height.saturating_sub(1).saturating_sub(y);
-        Some((x, flipped_y))
+        
+        // Convert screen coordinates to world coordinates using the camera
+        let world_pos = self.camera.screen_to_world(mouse_pos.into());
+        
+        let x = (world_pos.x / TILE_SIZE) as i32;
+        let y = (world_pos.y / TILE_SIZE) as i32;
+        
+        // Check bounds
+        if x >= 0 && y >= 0 && x < self.map.width as i32 && y < self.map.height as i32 {
+            Some((x as usize, y as usize))
+        } else {
+            None
+        }
+    }
+
+    // Helper to reset camera target and zoom based on current map size and screen size
+    pub fn reset_camera_view(&mut self) {
+        let aspect_x = 2.0 / screen_width();
+        let aspect_y = -2.0 / screen_height();
+        let initial_scale = 1.0 / 2.0; // adjust initial zoom scale as you like
+
+        self.camera.target = vec2(
+            (self.map.width as f32 * TILE_SIZE) / 2.0,
+            (self.map.height as f32 * TILE_SIZE) / 2.0,
+        );
+
+        self.camera.zoom = vec2(aspect_x * initial_scale, aspect_y * initial_scale);
     }
 
     pub fn draw(&self) {
         clear_background(LIGHTGRAY);
-        self.map.draw();
 
-        // Draw grid
+        // Set the camera before drawing
+        set_camera(&self.camera);
+
+        // Draw tiles (no manual zoom scaling needed)
         for y in 0..self.map.height {
             for x in 0..self.map.width {
-                draw_rectangle_lines(
+                let tile = &self.map.tiles[y][x];
+                draw_rectangle(
                     x as f32 * TILE_SIZE,
-                    (self.map.height - 1 - y) as f32 * TILE_SIZE,
+                    y as f32 * TILE_SIZE,
                     TILE_SIZE,
                     TILE_SIZE,
-                    1.0,
-                    BLACK,
+                    tile.color,
                 );
             }
         }
+
+        // Draw grid with zoom-aware line width
+        let zoom_scale = self.camera.zoom.x.abs();
+        let base_width = 0.5; // much thinner base
+        let min_line_width = 2.0;
+        let max_line_width = 5.0;
+
+        // Clamp line width based on zoom, but never below min_line_width
+        let line_width = (base_width / zoom_scale).clamp(min_line_width, max_line_width);
+
+        if self.show_grid {
+            // Semi-transparent black
+            let grid_color = Color::from_rgba(0, 0, 0, 20);
+
+            // Draw horizontal lines
+            for y in 0..=self.map.height {
+                draw_line(
+                    0.0,
+                    y as f32 * TILE_SIZE,
+                    self.map.width as f32 * TILE_SIZE,
+                    y as f32 * TILE_SIZE,
+                    line_width,
+                    grid_color,
+                );
+            }
+
+            // Draw vertical lines
+            for x in 0..=self.map.width {
+                draw_line(
+                    x as f32 * TILE_SIZE,
+                    0.0,
+                    x as f32 * TILE_SIZE,
+                    self.map.height as f32 * TILE_SIZE,
+                    line_width,
+                    grid_color,
+                );
+            }
+        }
+
+        let highlight_color = Color::from_rgba(255, 0, 0, 255);
 
         // Highlight hovered tile
         if let Some((x, y)) = self.get_hovered_tile() {
             draw_rectangle_lines(
                 x as f32 * TILE_SIZE,
-                (self.map.height - 1 - y) as f32 * TILE_SIZE,
+                y as f32 * TILE_SIZE,
                 TILE_SIZE,
                 TILE_SIZE,
-                2.0,
-                RED,
+                line_width,
+                highlight_color,
             );
         }
+
+        // Reset to default camera for UI drawing
+        set_default_camera();
+        
+        // Draw UI elements (these will be drawn in screen space)
+        draw_text(
+            "Controls:",
+            10.0,
+            20.0,
+            16.0,
+            BLACK,
+        );
+        draw_text(
+            "Mouse Wheel: Zoom",
+            10.0,
+            40.0,
+            16.0,
+            BLACK,
+        );
+        draw_text(
+            "Right/Middle Mouse: Pan",
+            10.0,
+            60.0,
+            16.0,
+            BLACK,
+        );
+        draw_text(
+            "R: Reset View",
+            10.0,
+            80.0,
+            16.0,
+            BLACK,
+        );
+        draw_text(
+            "S: Save Map",
+            10.0,
+            100.0,
+            16.0,
+            BLACK,
+        );
+        draw_text(
+            "Arrow Keys: Resize Map",
+            10.0,
+            120.0,
+            16.0,
+            BLACK,
+        );
+        draw_text(
+            "G: Toggle Grid Lines",
+            10.0,
+            140.0,
+            16.0,
+            BLACK,
+        );
     }
 }

@@ -36,18 +36,38 @@ impl Entity {
         let grid_y = (cartesian_bottom_y / TILE_SIZE).floor() as i32;
 
         // Check collision with floor
-        if grid_y >= 0 && grid_x < map.width {
-            if let Some(tile) = map.get_tile(grid_x, grid_y as usize) {
-                if tile.tile_type == TileType::Floor {
-                    let tile_top_y = (grid_y as f32 + 1.0) * TILE_SIZE;
-                    if cartesian_bottom_y < tile_top_y {
-                        // Collision: reset velocity and snap to floor
-                        cartesian_bottom_y = tile_top_y;
-                        self.velocity_y = 0.0;
-                        self.is_airborne = false;
-                        self.has_double_jump = true;
+        if self.velocity_y > 0.0 { // only when falling
+            if grid_y >= 0 {
+                // Player's left and right edge in tile coordinates
+                let left_tile_x = (self.actual_position.x / TILE_SIZE).floor() as i32;
+                let right_tile_x = ((self.actual_position.x + TILE_SIZE - 1.0) / TILE_SIZE).floor() as i32;
+
+                // Check both tiles under the player
+                let mut on_floor = false;
+                for tile_x in left_tile_x..=right_tile_x {
+                    if tile_x >= 0 && tile_x < map.width as i32 {
+                        if let Some(tile) = map.get_tile(tile_x as usize, grid_y as usize) {
+                            if tile.tile_type == TileType::Floor {
+                                let tile_top_y = (grid_y as f32 + 1.0) * TILE_SIZE;
+                                let prev_cartesian_bottom_y =
+                                    map_pixel_height - self.actual_position.y - player_height;
+
+                                if cartesian_bottom_y < tile_top_y
+                                    && prev_cartesian_bottom_y >= tile_top_y
+                                {
+                                    cartesian_bottom_y = tile_top_y;
+                                    self.velocity_y = 0.0;
+                                    self.is_airborne = false;
+                                    self.has_double_jump = true;
+                                    on_floor = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
+
+                // If not on floor, is_airborne stays true
             }
         }
 
