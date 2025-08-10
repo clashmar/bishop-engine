@@ -9,7 +9,7 @@ use std::io::Write;
 
 pub struct EditorState {
     map: TileMap,
-    selected_tile_type: TileType,
+    selected_walkable: bool,
     camera: Camera2D,
     show_grid: bool,
 }
@@ -19,15 +19,14 @@ impl EditorState {
         let camera = Camera2D::default();
 
         let mut state = Self {
-            map: TileMap::new(vec![vec![Tile::air(); width]; height]),
-            selected_tile_type: TileType::Floor,
+            map: TileMap::new(width, height),
+            selected_walkable: true,
             camera,
             show_grid: true,
         };
 
         // Initialize camera view
         state.reset_camera_view();
-
         state
     }
 
@@ -57,30 +56,27 @@ impl EditorState {
             self.camera.target -= delta / self.camera.zoom;
         }
 
-        // Click to toggle tile
-        if is_mouse_button_pressed(MouseButton::Left) {
-            if let Some((x, y)) = self.get_hovered_tile() {
-                if y < self.map.tiles.len() && x < self.map.tiles[0].len() {
-                    let tile = &mut self.map.tiles[y][x];
-                    tile.tile_type = match tile.tile_type {
-                        TileType::Air => TileType::Floor,
-                        TileType::Floor => TileType::Air,
-                    };
-                    tile.color = match tile.tile_type {
-                        TileType::Air => GRAY,
-                        TileType::Floor => DARKGRAY,
-                    };
+        // Place tile (left click)
+        if is_mouse_button_down(MouseButton::Left) {
+            if let Some((tx, ty)) = self.get_hovered_tile() {
+                if tx < self.map.width && ty < self.map.height {
+                    self.map.tiles[ty][tx] = Tile::floor();
                 }
             }
         }
 
-        if is_key_pressed(KeyCode::G) {
-            self.show_grid = !self.show_grid;
+        // Remove tile (right click)
+        if is_mouse_button_down(MouseButton::Right) {
+            if let Some((tx, ty)) = self.get_hovered_tile() {
+                if tx < self.map.width && ty < self.map.height {
+                    self.map.tiles[ty][tx] = Tile::none();
+                }
+            }
         }
 
-        // Resize map with keys
+        // Resize map
         if is_key_pressed(KeyCode::Up) {
-            self.map.tiles.push(vec![Tile::air(); self.map.width]);
+            self.map.tiles.push(vec![Tile::none(); self.map.width]);
             self.map.height += 1;
         }
         if is_key_pressed(KeyCode::Down) && self.map.height > 1 {
@@ -89,7 +85,7 @@ impl EditorState {
         }
         if is_key_pressed(KeyCode::Right) {
             for row in &mut self.map.tiles {
-                row.push(Tile::air());
+                row.push(Tile::none());
             }
             self.map.width += 1;
         }
@@ -103,6 +99,11 @@ impl EditorState {
         // Reset camera view with R key
         if is_key_pressed(KeyCode::R) {
             self.reset_camera_view();
+        }
+        
+        // Toggle grid
+        if is_key_pressed(KeyCode::G) {
+            self.show_grid = !self.show_grid;
         }
 
         // Save map
@@ -123,18 +124,16 @@ impl EditorState {
 
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
         let mut file = File::create(path)?;
-
         for row in self.map.tiles.iter().rev() {
             for tile in row {
                 let c = match tile.tile_type {
-                    TileType::Air => '.',
                     TileType::Floor => '#',
+                    TileType::None => '.',
                 };
                 write!(file, "{}", c)?;
             }
             writeln!(file)?;
         }
-
         Ok(())
     }
 
@@ -170,22 +169,34 @@ impl EditorState {
     }
 
     pub fn draw(&self) {
-        clear_background(LIGHTGRAY);
+        clear_background(WHITE);
 
         // Set the camera before drawing
         set_camera(&self.camera);
 
-        // Draw tiles (no manual zoom scaling needed)
+        // Draw the TileMap background first
+        draw_rectangle(
+            0.0,
+            0.0,
+            self.map.width as f32 * TILE_SIZE,
+            self.map.height as f32 * TILE_SIZE,
+            self.map.background,
+        );
+
+        // Draw tiles
+        // Draw tiles, skip None tiles
         for y in 0..self.map.height {
             for x in 0..self.map.width {
                 let tile = &self.map.tiles[y][x];
-                draw_rectangle(
-                    x as f32 * TILE_SIZE,
-                    y as f32 * TILE_SIZE,
-                    TILE_SIZE,
-                    TILE_SIZE,
-                    tile.color,
-                );
+                if tile.tile_type != TileType::None {
+                    draw_rectangle(
+                        x as f32 * TILE_SIZE,
+                        y as f32 * TILE_SIZE,
+                        TILE_SIZE,
+                        TILE_SIZE,
+                        tile.color,
+                    );
+                }
             }
         }
 

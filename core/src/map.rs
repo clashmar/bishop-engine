@@ -12,14 +12,17 @@ pub struct TileMap {
     pub width: usize,
     pub height: usize,
     pub tiles: Vec<Vec<Tile>>,
+    pub background: Color,
 }
 
 impl TileMap {
-    pub fn new(tiles: Vec<Vec<Tile>>) -> Self {
-        let height = tiles.len();
-        let width = tiles.get(0).map_or(0, |row| row.len());
-
-        Self { width, height, tiles }
+    pub fn new(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height,
+            tiles: vec![vec![Tile::none(); width]; height],
+            background: LIGHTGRAY,
+        }
     }
 
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
@@ -27,65 +30,63 @@ impl TileMap {
         let reader = BufReader::new(file);
 
         let mut tiles: Vec<Vec<Tile>> = Vec::new();
-
         for line in reader.lines() {
-            let line = line?;
-            let row: Vec<Tile> = line
-                .chars()
-                .map(|c| {
-                    let tile_type = match c {
-                        '.' => TileType::Air,
-                        '#' => TileType::Floor,
-                        _ => TileType::Air, // default to air if unknown
-                    };
-                    let color = match tile_type {
-                        TileType::Air => GRAY,
-                        TileType::Floor => DARKGRAY,
-                    };
-                    Tile::new(color, tile_type)
-                })
-                .collect();
-            tiles.push(row);
-        }
+        let row: Vec<Tile> = line?
+            .chars()
+            .map(|c| match c {
+                '#' => Tile::floor(),
+                '.' => Tile::none(),
+                _   => Tile::none(),
+            })
+            .collect();
+        tiles.push(row);
+    }
 
         let height = tiles.len();
-        let width = tiles.first().map_or(0, |row| row.len());
+        let width = tiles.get(0).map_or(0, |r| r.len());
 
-        Ok(TileMap {
+        Ok(Self {
             width,
             height,
-            tiles: tiles.into_iter().rev().collect(), // flip vertically to match drawing
+            tiles: tiles.into_iter().rev().collect(),
+            background: LIGHTGRAY,
         })
     }
 
     pub fn draw(&self) {
+        // Draw the background
+        draw_rectangle(
+            0.0,
+            0.0,
+            self.width as f32 * TILE_SIZE,
+            self.height as f32 * TILE_SIZE,
+            self.background,
+        );
+
+        // Draw tiles on top, skipping None tiles
         for (y, row) in self.tiles.iter().rev().enumerate() {
             for (x, tile) in row.iter().enumerate() {
-                draw_rectangle(
-                    x as f32 * TILE_SIZE,
-                    y as f32 * TILE_SIZE,
-                    TILE_SIZE,
-                    TILE_SIZE,
-                    tile.color,
-                );
+                if tile.tile_type != TileType::None {
+                    draw_rectangle(
+                        x as f32 * TILE_SIZE,
+                        y as f32 * TILE_SIZE,
+                        TILE_SIZE,
+                        TILE_SIZE,
+                        tile.color,
+                    );
+                }
             }
         }
     }
 
     pub fn get_tile(&self, x: usize, y: usize) -> Option<&Tile> {
-        self.tiles.get(y).and_then(|row| row.get(x))
+        self.tiles.get(y)?.get(x)
     }
 }
 
+
 pub fn get_current_map() -> TileMap {
-
     let map_dir = PathBuf::from("game/src/maps");
-
-    // Log where we're looking
-    match map_dir.canonicalize() {
-        Ok(abs_path) => println!("Looking for map files in: {}", abs_path.display()),
-        Err(e) => println!("Could not canonicalize path {:?}: {}", map_dir, e),
-    }
 
     let maybe_file = fs::read_dir(&map_dir)
         .ok()
@@ -110,8 +111,7 @@ pub fn get_current_map() -> TileMap {
         eprintln!("No map files found in {:?}", map_dir);
     }
 
-    // fallback to empty map
-    TileMap::new(vec![vec![Tile::air(); 10]; 10])
+    TileMap::new(10, 10)
 }
 
 pub fn tile_to_world(grid_position: IVec2, map_height: usize) -> Vec2 {
