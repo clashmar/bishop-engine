@@ -89,8 +89,8 @@ impl GameState {
         draw_rectangle(
             self.player.actual_position.x,
             self.player.actual_position.y,
-            TILE_SIZE,
-            TILE_SIZE,
+            PLAYER_WIDTH,
+            PLAYER_HEIGHT,
             self.player.color,
         );
     }
