@@ -4,7 +4,7 @@ use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use crate::constants::*;
-use crate::tile::{Tile, TileType};
+use crate::tile::{GridPos, Tile, TileType};
 use macroquad::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -35,6 +35,8 @@ impl TileMap {
             .chars()
             .map(|c| match c {
                 '#' => Tile::floor(),
+                '-' => Tile::platform(),
+                '*' => Tile::decoration(),
                 '.' => Tile::none(),
                 _   => Tile::none(),
             })
@@ -79,8 +81,36 @@ impl TileMap {
         }
     }
 
-    pub fn get_tile(&self, x: usize, y: usize) -> Option<&Tile> {
+    pub fn get_tile(&self, pos: GridPos) -> Option<&Tile> {
+        let (x, y) = pos.as_usize()?;
         self.tiles.get(y)?.get(x)
+    }
+
+    pub fn pixel_to_grid(pixel: f32) -> i32 {
+        (pixel / TILE_SIZE).floor() as i32
+    }
+
+    pub fn any_tiles_in_range<F>(
+        map: &TileMap, 
+        x_range: std::ops::RangeInclusive<i32>, 
+        y_range: std::ops::RangeInclusive<i32>, 
+        predicate: F) -> bool
+    where
+        F: Fn(&Tile) -> bool,
+    {
+        for x in x_range {
+            for y in y_range.clone() {
+                let pos = GridPos::new(x, y);
+                if pos.in_bounds(map.width, map.height) {
+                    if let Some(tile) = map.get_tile(pos) {
+                        if predicate(tile) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 }
 
@@ -114,9 +144,9 @@ pub fn get_current_map() -> TileMap {
     TileMap::new(10, 10)
 }
 
-pub fn tile_to_world(grid_position: IVec2, map_height: usize) -> Vec2 {
+pub fn tile_to_world(grid_position: GridPos, map_height: usize) -> Vec2 {
     Vec2::new(
-        grid_position.x as f32 * TILE_SIZE,
-        (map_height as f32 - 1.0 - grid_position.y as f32) * TILE_SIZE,
+        grid_position.x() as f32 * TILE_SIZE,
+        (map_height as f32 - 1.0 - grid_position.y() as f32) * TILE_SIZE,
     )
 }

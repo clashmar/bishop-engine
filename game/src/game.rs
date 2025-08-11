@@ -1,5 +1,5 @@
-use core::{constants::*, map::{self, TileMap}};
-use crate::{entity::Entity, modes::Mode};
+use core::{constants::*, entity::Entity, map::{self, TileMap}, tile::GridPos};
+use crate::{modes::Mode};
 use macroquad::prelude::*;
 use crate::camera::Camera;
 
@@ -13,11 +13,12 @@ pub struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
-        let start_tile = ivec2(0, 10);
+        let start_pos = GridPos::new(0, 10);
         let map = map::get_current_map();
+
         let player = Entity { 
-            grid_position: start_tile, 
-            actual_position: map::tile_to_world(start_tile, map.height),
+            grid_position: start_pos, 
+            actual_position: map::tile_to_world(start_pos, map.height),
             velocity_x: 0.0,
             velocity_y: 0.0,
             is_airborne: false,
@@ -38,26 +39,7 @@ impl GameState {
     pub fn update(&mut self) {
         match self.mode {
             Mode::Explore => {
-                if is_key_pressed(KeyCode::Space) {
-                    if !self.player.is_airborne {
-                        // First jump from ground
-                        self.player.velocity_y = -10.0;
-                        self.player.is_airborne = true;
-                    } else if self.player.has_double_jump {
-                        // Double jump in air
-                        self.player.velocity_y = -10.0;
-                        self.player.has_double_jump = false;
-                    }
-                }
-
-                // Apply gravity
-                self.player.update_physics(&self.map, 0.4, self.map.height);
-
-                // Move left/right
-                self.player.handle_horizontal_input();
-
-                // Update grid position
-                self.player.update_grid_position(self.map.height);
+                self.player.update(&self.map);
 
                 // Keep camera locked on player in explore mode
                 self.camera.position = self.player.actual_position;

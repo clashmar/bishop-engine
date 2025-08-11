@@ -1,6 +1,6 @@
+use core::input;
 use core::constants::*;
 use macroquad::prelude::*;
-use crate::input;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Camera {

@@ -1,7 +1,5 @@
-mod entity;
 mod camera;
 mod game;
-mod input;
 mod modes;
 
 use crate::game::GameState;
