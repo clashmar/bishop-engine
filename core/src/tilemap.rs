@@ -91,17 +91,21 @@ impl TileMap {
     }
 
     pub fn any_tiles_in_range<F>(
-        map: &TileMap, 
-        x_range: std::ops::RangeInclusive<i32>, 
-        y_range: std::ops::RangeInclusive<i32>, 
-        predicate: F) -> bool
+        map: &TileMap,
+        x_range: std::ops::RangeInclusive<i32>,
+        y_range: std::ops::RangeInclusive<i32>,
+        predicate: F,
+    ) -> bool
     where
         F: Fn(&Tile) -> bool,
     {
+        let y_start = *y_range.start();
+        let y_end = *y_range.end();
+
         for x in x_range {
-            for y in y_range.clone() {
+            for y in y_start..=y_end {
                 let pos = GridPos::new(x, y);
-                if pos.in_bounds(map.width, map.height) {
+                if pos.is_in_bounds(map.width, map.height) {
                     if let Some(tile) = map.get_tile(pos) {
                         if predicate(tile) {
                             return true;

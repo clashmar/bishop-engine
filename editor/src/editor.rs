@@ -1,5 +1,4 @@
-use crate::tilemap_editor;
-use tilemap_editor::TileMapEditor;
+use crate::tilemap::tilemap_editor::TileMapEditor;
 
 pub struct EditorState {
     pub tilemap_editor: TileMapEditor,

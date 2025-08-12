@@ -1,4 +1,4 @@
-use crate::{constants::*, entity::Entity, map::TileMap};
+use crate::{constants::*, entity::Entity, tilemap::TileMap};
 
 pub fn update_physics(entity: &mut Entity, map: &TileMap) {
         apply_gravity(entity);
@@ -7,88 +7,88 @@ pub fn update_physics(entity: &mut Entity, map: &TileMap) {
         clamp_position(entity, map);
     }
 
-    fn apply_gravity(entity: &mut Entity) { 
-        entity.velocity_y += GRAVITY;
-    }
+fn apply_gravity(entity: &mut Entity) { 
+    entity.velocity_y += GRAVITY;
+}
 
-    fn clamp_position(entity: &mut Entity, map: &TileMap) { 
-        let max_x = (map.width as f32 * TILE_SIZE) - PLAYER_WIDTH;
-        entity.actual_position.x = entity.actual_position.x.clamp(0.0, max_x);
-    }
+fn clamp_position(entity: &mut Entity, map: &TileMap) { 
+    let max_x = (map.width as f32 * TILE_SIZE) - PLAYER_WIDTH;
+    entity.actual_position.x = entity.actual_position.x.clamp(0.0, max_x);
+}
 
-    fn resolve_vertical_movement(entity: &mut Entity, map: &TileMap) {
-        let map_pixel_height = map.height as f32 * TILE_SIZE;
+fn resolve_vertical_movement(entity: &mut Entity, map: &TileMap) {
+    let map_pixel_height = map.height as f32 * TILE_SIZE;
 
-        // Predict next vertical position (top-left coordinate)
-        let next_actual_y = (entity.actual_position.y + entity.velocity_y)
-            .clamp(0.0, map_pixel_height - PLAYER_HEIGHT);
+    // Predict next vertical position
+    let next_actual_y = (entity.actual_position.y + entity.velocity_y)
+        .clamp(0.0, map_pixel_height - PLAYER_HEIGHT);
 
-        // Convert to cartesian bottom y (bottom-up)
-        let mut cartesian_bottom_y = map_pixel_height - next_actual_y - PLAYER_HEIGHT;
+    // Convert to cartesian bottom y (bottom-up)
+    let mut cartesian_bottom_y = map_pixel_height - next_actual_y - PLAYER_HEIGHT;
 
-        // Collision with floor when falling
-        if entity.velocity_y > 0.0 {
-            let grid_y = TileMap::pixel_to_grid(cartesian_bottom_y);
-            if grid_y >= 0 {
-                let left_tile_x = TileMap::pixel_to_grid(entity.actual_position.x);
-                let right_tile_x = TileMap::pixel_to_grid(entity.actual_position.x + PLAYER_WIDTH - 1.0);
-
-                let collided = TileMap::any_tiles_in_range(
-                    map,
-                    left_tile_x..=right_tile_x,
-                    grid_y..=grid_y,
-                    |tile| tile.is_walkable,
-                );
-
-                if collided {
-                    // Find the tile top y to snap to floor
-                    let tile_top_y = (grid_y as f32 + 1.0) * TILE_SIZE;
-                    let prev_cartesian_bottom_y = map_pixel_height - entity.actual_position.y - PLAYER_HEIGHT;
-
-                    if cartesian_bottom_y < tile_top_y && prev_cartesian_bottom_y >= tile_top_y {
-                        // Snap to floor
-                        cartesian_bottom_y = tile_top_y;
-                        entity.velocity_y = 0.0;
-                        entity.is_airborne = false;
-                        entity.has_double_jump = true;
-                    }
-                }
-            }
-        }
-
-        // Collision with ceiling when jumping (moving up)
-        if entity.velocity_y < 0.0 {
-            let next_top_y = next_actual_y; // predicted top after move
-            let cartesian_top_y = map_pixel_height - next_top_y;
-            let grid_y_top = TileMap::pixel_to_grid(cartesian_top_y);
+    // Collision with floor when falling
+    if entity.velocity_y > 0.0 {
+        let grid_y = TileMap::pixel_to_grid(cartesian_bottom_y);
+        if grid_y >= 0 {
             let left_tile_x = TileMap::pixel_to_grid(entity.actual_position.x);
             let right_tile_x = TileMap::pixel_to_grid(entity.actual_position.x + PLAYER_WIDTH - 1.0);
 
             let collided = TileMap::any_tiles_in_range(
                 map,
                 left_tile_x..=right_tile_x,
-                grid_y_top..=grid_y_top,
-                |tile| tile.is_solid,
+                grid_y..=grid_y,
+                |tile| tile.is_walkable,
             );
 
             if collided {
-                // Compute tile bottom y
-                let tile_bottom_y = map_pixel_height - (grid_y_top as f32) * TILE_SIZE;
+                // Find the tile top y to snap to floor
+                let tile_top_y = (grid_y as f32 + 1.0) * TILE_SIZE;
+                let prev_cartesian_bottom_y = map_pixel_height - entity.actual_position.y - PLAYER_HEIGHT;
 
-                if next_top_y <= tile_bottom_y {
-                    // Clamp next_actual_y to tile bottom
-                    cartesian_bottom_y = map_pixel_height - tile_bottom_y - PLAYER_HEIGHT;
+                if cartesian_bottom_y < tile_top_y && prev_cartesian_bottom_y >= tile_top_y {
+                    // Snap to floor
+                    cartesian_bottom_y = tile_top_y;
                     entity.velocity_y = 0.0;
-                    entity.is_airborne = true;
+                    entity.is_airborne = false;
+                    entity.has_double_jump = true;
                 }
             }
         }
-
-        // Apply vertical position update after collision resolution
-        entity.actual_position.y = map_pixel_height - cartesian_bottom_y - PLAYER_HEIGHT;
     }
 
-    fn resolve_horizontal_movement(entity: &mut Entity, map: &TileMap) {
+    // Collision with ceiling when moving up
+    if entity.velocity_y < 0.0 {
+        let next_top_y = next_actual_y; // predicted top after move
+        let cartesian_top_y = map_pixel_height - next_top_y;
+        let grid_y_top = TileMap::pixel_to_grid(cartesian_top_y);
+        let left_tile_x = TileMap::pixel_to_grid(entity.actual_position.x);
+        let right_tile_x = TileMap::pixel_to_grid(entity.actual_position.x + PLAYER_WIDTH - 1.0);
+
+        let collided = TileMap::any_tiles_in_range(
+            map,
+            left_tile_x..=right_tile_x,
+            grid_y_top..=grid_y_top,
+            |tile| tile.is_solid,
+        );
+
+        if collided {
+            // Compute tile bottom y
+            let tile_bottom_y = map_pixel_height - (grid_y_top as f32) * TILE_SIZE;
+
+            if next_top_y <= tile_bottom_y {
+                // Clamp next_actual_y to tile bottom
+                cartesian_bottom_y = map_pixel_height - tile_bottom_y - PLAYER_HEIGHT;
+                entity.velocity_y = 0.0;
+                entity.is_airborne = true;
+            }
+        }
+    }
+
+    // Apply vertical position update after collision resolution
+    entity.actual_position.y = map_pixel_height - cartesian_bottom_y - PLAYER_HEIGHT;
+}
+
+fn resolve_horizontal_movement(entity: &mut Entity, map: &TileMap) {
     let map_pixel_height = map.height as f32 * TILE_SIZE;
 
     let next_x = entity.actual_position.x + entity.velocity_x;
@@ -99,9 +99,7 @@ pub fn update_physics(entity: &mut Entity, map: &TileMap) {
     let cartesian_player_top = map_pixel_height - player_top;
     let cartesian_player_bottom = map_pixel_height - player_bottom;
 
-    // To avoid overlap issues, subtract a small epsilon (e.g., 0.01) when flooring bottom tile index
-    // and add a small epsilon when ceiling top tile index to correctly clamp vertical tiles.
-    // This prevents including adjacent tiles that the player is not actually touching.
+    // To avoid overlap issues, subtract a small epsilon
     let epsilon = 0.01;
 
     // Use floor for bottom, with a tiny offset inside the tile

@@ -1,51 +1,47 @@
+use crate::gui::resize_button::ResizeButton;
+use crate::gui::{text_button::TextButton, ui_element::UiElement};
+use crate::tilemap::tile_palette::{TilePalette};
 use macroquad::prelude::*;
 use rfd::FileDialog;
-use core::map::TileMap;
+use core::tilemap::TileMap;
 use core::tile::{Tile, GridPos, TileType};
 use core::constants::*;
 use std::fs::File;
 use std::path::Path;
 use std::io::Write;
 
-const TILE_OPTION_ICON_X: f32 = 10.0;
-const TILE_OPTION_ICON_Y: f32 = 170.0;
-const TILE_OPTION_ICON_WIDTH: f32 = 100.0;
-const TILE_OPTION_ICON_HEIGHT: f32 = 25.0;
-const TILE_OPTION_ICON_PADDING: f32 = 10.0;
-
 pub struct TileMapEditor {
-    ui_elements: Vec<Rect>,
-    tile_options: Vec<TileOption>,
-    map: TileMap,
+    pub map: TileMap,
+    scaling_ui_elements: Vec<Box<dyn UiElement>>,
+    static_ui_elements: Vec<Box<dyn UiElement>>,
     selected_tile: Tile,
     camera: Camera2D,
     show_grid: bool,
-}
-
-struct TileOption {
-    name: &'static str,
-    tile: Tile,
-    rect: Rect, 
+    ui_clicked: bool,
 }
 
 impl TileMapEditor {
     pub fn new(width: usize, height: usize) -> Self {
         let camera = Camera2D::default();
 
-        // Define tile options without rects yet (rects will be assigned dynamically)
-        let tile_options = vec![
-            TileOption { name: "Floor", tile: Tile::floor(), rect: Rect::default() },
-            TileOption { name: "Platform", tile: Tile::platform(), rect: Rect::default() },
-            TileOption { name: "Decoration", tile: Tile::decoration(), rect: Rect::default() },
-        ];
+        let mut static_ui_elements: Vec<Box<dyn UiElement>> = Vec::new();
+
+        // Create tile palette and push into ui_elements
+        static_ui_elements.push(Box::new(TilePalette::new(
+            vec2(10.0, 10.0),
+            32.0,
+            2,
+            2,
+        )));
 
         let mut state = Self {
-            tile_options,
-            ui_elements: Vec::new(),
             map: TileMap::new(width, height),
+            scaling_ui_elements: Vec::new(),
+            static_ui_elements,
             selected_tile: Tile::floor(),
             camera,
             show_grid: true,
+            ui_clicked: false
         };
 
         // Initialize camera view
@@ -54,21 +50,21 @@ impl TileMapEditor {
     }
 
     pub fn update(&mut self) {
-        // Clear UI elements from last frame
-        self.ui_elements.clear();
+        // Clear scaling elements from last frame
+        self.scaling_ui_elements.clear(); 
 
-        for (i, option) in self.tile_options.iter_mut().enumerate() {
-            let y = TILE_OPTION_ICON_Y + (TILE_OPTION_ICON_HEIGHT + TILE_OPTION_ICON_PADDING) * i as f32;
-            option.rect = Rect::new(TILE_OPTION_ICON_X, y, TILE_OPTION_ICON_WIDTH, TILE_OPTION_ICON_HEIGHT);
-            self.ui_elements.push(option.rect);
-        }
+        ResizeButton::build_all(&mut self.map, &mut self.scaling_ui_elements);
         
+        let mouse_pos = mouse_position().into();
+
         self.handle_camera_controls();
 
-        let mouse_pos = mouse_position().into();
-        self.handle_tile_selection(mouse_pos);
-        self.handle_tile_placement(mouse_pos);
-        self.handle_map_resizing();
+        self.handle_ui_clicks(mouse_pos);
+
+        // Only place tiles if UI did not handle the click
+        if !self.ui_clicked {
+            self.handle_tile_placement(mouse_pos);
+        }
 
         // Reset camera view with R key
         if is_key_pressed(KeyCode::R) {
@@ -81,7 +77,6 @@ impl TileMapEditor {
         }
 
         self.handle_save_map();
-        
     }
 
     pub fn draw(&self) {
@@ -94,9 +89,18 @@ impl TileMapEditor {
         self.draw_grid();
         self.draw_hover_highlight();
 
-        // Reset to default camera for UI drawing
+        // Draw scaling UI
+        for element in &self.scaling_ui_elements {
+            element.draw(&self.camera);
+        }
+        
+        // Reset to default camera for static UI drawing
         set_default_camera();
-        self.draw_ui();
+
+        // Draw static UI
+        for element in &self.static_ui_elements {
+            element.draw(&self.camera);
+        }
     }
 
     fn handle_camera_controls(&mut self) {
@@ -126,15 +130,27 @@ impl TileMapEditor {
         }
     }
 
-    fn handle_tile_selection(&mut self, mouse_pos: Vec2) {
+    fn handle_ui_clicks(&mut self, mouse_pos: Vec2) {
         if is_mouse_button_pressed(MouseButton::Left) {
-            // Check which tile option button was clicked
-            for option in &self.tile_options {
-                if option.rect.contains(mouse_pos) {
-                    self.selected_tile = option.tile.clone();
+            for element in &mut self.scaling_ui_elements {
+                if element.is_mouse_over(mouse_pos, &self.camera) {
+                    element.on_click(&mut self.map, &mut self.selected_tile, mouse_pos, &self.camera);
+                    self.ui_clicked = true;
                     break;
                 }
             }
+
+            for element in &mut self.static_ui_elements {
+                if element.is_mouse_over(mouse_pos, &self.camera) {
+                    element.on_click(&mut self.map, &mut self.selected_tile, mouse_pos, &self.camera);
+                    self.ui_clicked = true;
+                    break;
+                }
+            }
+        }
+        // Unblock tile placement
+        if is_mouse_button_released(MouseButton::Left) {
+            self.ui_clicked = false;
         }
     }
 
@@ -155,29 +171,6 @@ impl TileMapEditor {
                     self.map.tiles[y][x] = Tile::none();
                 }
             }
-        }
-    }
-
-    fn handle_map_resizing(&mut self) {
-        if is_key_pressed(KeyCode::Up) {
-            self.map.tiles.push(vec![Tile::none(); self.map.width]);
-            self.map.height += 1;
-        }
-        if is_key_pressed(KeyCode::Down) && self.map.height > 1 {
-            self.map.tiles.pop();
-            self.map.height -= 1;
-        }
-        if is_key_pressed(KeyCode::Right) {
-            for row in &mut self.map.tiles {
-                row.push(Tile::none());
-            }
-            self.map.width += 1;
-        }
-        if is_key_pressed(KeyCode::Left) && self.map.width > 1 {
-            for row in &mut self.map.tiles {
-                row.pop();
-            }
-            self.map.width -= 1;
         }
     }
 
@@ -279,14 +272,14 @@ impl TileMapEditor {
         }
     }
 
-    fn draw_ui(&self) {
-        for option in &self.tile_options {
-            let is_selected = option.tile.tile_type == self.selected_tile.tile_type;
-            let color = if is_selected { GREEN } else { LIGHTGRAY };
-            draw_rectangle(option.rect.x, option.rect.y, option.rect.w, option.rect.h, color);
-            draw_text(option.name, option.rect.x + 10.0, option.rect.y + 17.0, 20.0, BLACK);
-        }
-    }
+    // fn draw_ui(&self) {
+    //     for option in &self.tile_options {
+    //         let is_selected = option.tile.tile_type == self.selected_tile.tile_type;
+    //         let color = if is_selected { GREEN } else { LIGHTGRAY };
+    //         draw_rectangle(option.rect.x, option.rect.y, option.rect.w, option.rect.h, color);
+    //         draw_text(option.name, option.rect.x + 10.0, option.rect.y + 17.0, 20.0, BLACK);
+    //     }
+    // }
 
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
         let mut file = File::create(path)?;
@@ -310,18 +303,17 @@ impl TileMapEditor {
         let world_pos = self.camera.screen_to_world(mouse_pos);
 
         let pos = GridPos::from_world(world_pos);
-        if pos.in_bounds(self.map.width, self.map.height) {
+        if pos.is_in_bounds(self.map.width, self.map.height) {
             Some(pos)
         } else {
             None
         }
     }
 
-    // Helper to reset camera target and zoom based on current map size and screen size
     pub fn reset_camera_view(&mut self) {
         let aspect_x = 2.0 / screen_width();
         let aspect_y = -2.0 / screen_height();
-        let initial_scale = 1.0 / 2.0; // adjust initial zoom scale as you like
+        let initial_scale = 1.0 / 2.0;
 
         self.camera.target = vec2(
             (self.map.width as f32 * TILE_SIZE) / 2.0,
@@ -331,8 +323,7 @@ impl TileMapEditor {
         self.camera.zoom = vec2(aspect_x * initial_scale, aspect_y * initial_scale);
     }
 
-    // Returns true if the mouse is currently over any UI element that should block tile placement
     fn is_mouse_over_ui(&self, mouse_pos: Vec2) -> bool {
-        self.ui_elements.iter().any(|rect| rect.contains(mouse_pos))
+        self.scaling_ui_elements.iter().any(|element| element.is_mouse_over(mouse_pos, &self.camera))
     }
 }

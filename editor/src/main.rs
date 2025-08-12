@@ -1,7 +1,8 @@
 use crate::editor::EditorState;
 use macroquad::prelude::*;
 mod editor;
-mod tilemap_editor;
+mod tilemap;
+mod gui;
 
 #[macroquad::main("Map Editor")]
 async fn main() {

@@ -1,5 +1,5 @@
 pub mod constants;
-pub mod map;
+pub mod tilemap;
 pub mod tile;
 pub mod entity;
 pub mod input;

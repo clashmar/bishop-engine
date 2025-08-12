@@ -67,7 +67,7 @@ impl GridPos {
     pub fn y(&self) -> i32 { self.0.y }
 
     /// Check if this position is within map bounds
-    pub fn in_bounds(&self, width: usize, height: usize) -> bool {
+    pub fn is_in_bounds(&self, width: usize, height: usize) -> bool {
         self.0.x >= 0
             && self.0.y >= 0
             && self.0.x < width as i32

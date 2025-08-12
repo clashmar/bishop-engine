@@ -1,6 +1,6 @@
 use crate::{input, physics};
 use macroquad::{color::Color, math::Vec2, prelude::*};
-use crate::{constants::*, map::TileMap, tile::GridPos};
+use crate::{constants::*, tilemap::TileMap, tile::GridPos};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Entity {
