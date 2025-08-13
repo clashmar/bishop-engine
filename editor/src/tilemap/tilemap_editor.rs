@@ -50,6 +50,7 @@ impl TileMapEditor  {
     pub fn update(&mut self, map: &mut TileMap) {
         if !self.initialized {
             self.reset_camera_view(map);
+            self.ui_clicked = true; // Stop any initial tile placements
             self.initialized = true;
         }
 
@@ -132,7 +133,7 @@ impl TileMapEditor  {
         }
 
         // Unblock UI
-        if is_mouse_button_released(MouseButton::Left) {
+        if is_mouse_button_released(MouseButton::Left) || !is_mouse_button_down(MouseButton::Left) {
             self.ui_clicked = false;
         }
     }
@@ -160,7 +161,7 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_save_map(&self, map: &TileMap) {
+    fn handle_save_map(&mut self, map: &TileMap) {
         if is_key_pressed(KeyCode::S) {
             if let Some(path) = FileDialog::new()
                 .add_filter("Map files", &["map"])
@@ -318,6 +319,8 @@ impl TileMapEditor  {
     }
 
     pub fn reset(&mut self) {
-        self.initialized = false
+        self.initialized = false;
+        self.ui_clicked = false;
+        self.camera = Camera2D::default();
     }
 }
