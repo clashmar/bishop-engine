@@ -1,12 +1,14 @@
-use crate::editor::EditorState;
+use crate::editor::Editor;
 use macroquad::prelude::*;
 mod editor;
 mod tilemap;
 mod gui;
+mod world;
+mod room;
 
 #[macroquad::main("Map Editor")]
 async fn main() {
-    let mut editor = EditorState::new(12, 9);
+    let mut editor = Editor::new(12, 9);
 
     loop {
         editor.update();

@@ -1,8 +1,7 @@
-use core::tile::{Tile, TileType};
+use core::tile::{Tile};
 use core::tilemap::TileMap;
 use macroquad::prelude::*;
 use crate::gui::ui_element::UiElement;
-use crate::tilemap::tilemap_editor::TileMapEditor;
 
 pub struct TilePalette {
     pub position: Vec2, // Top left corner of the palette
@@ -30,12 +29,7 @@ impl TilePalette {
             tiles,
         }
     }
-
-    // pub fn get_selected_tile(&self) -> Tile {
-    //     self.tiles[self.selected_index]
-    // }
 }
-
 
 impl UiElement for TilePalette {
     fn draw(&self, _camera: &Camera2D) {
