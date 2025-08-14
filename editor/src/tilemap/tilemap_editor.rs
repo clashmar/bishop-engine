@@ -6,13 +6,20 @@ use rfd::FileDialog;
 use core::tilemap::TileMap;
 use core::tile::{Tile, GridPos, TileType};
 use core::constants::*;
+use core::world::room::{Exit, ExitDirection};
 use std::fs::File;
 use std::path::Path;
 use std::io::Write;
 
+pub enum TilemapEditorMode {
+    Tiles,
+    Exits,
+}
+
 pub struct TileMapEditor {
-    scaling_ui_elements: Vec<Box<dyn UiElement>>,
-    static_ui_elements: Vec<Box<dyn UiElement>>,
+    mode: TilemapEditorMode,
+    dynamic_ui: Vec<Box<dyn UiElement>>,
+    static_ui: Vec<Box<dyn UiElement>>,
     selected_tile: Tile,
     camera: Camera2D,
     show_grid: bool,
@@ -34,8 +41,9 @@ impl TileMapEditor  {
         )));
 
         let editor = Self {
-            scaling_ui_elements: Vec::new(),
-            static_ui_elements,
+            mode: TilemapEditorMode::Tiles,
+            dynamic_ui: Vec::new(),
+            static_ui: static_ui_elements,
             selected_tile: Tile::floor(),
             camera,
             show_grid: true,
@@ -47,22 +55,25 @@ impl TileMapEditor  {
     }
 
     /// Update the editor with a mutable reference to the map
-    pub fn update(&mut self, map: &mut TileMap) {
+    pub fn update(&mut self, map: &mut TileMap, exits: &mut Vec<Exit>) {
         if !self.initialized {
             self.reset_camera_view(map);
             self.ui_clicked = true; // Stop any initial tile placements
             self.initialized = true;
         }
 
-        self.scaling_ui_elements.clear();
-        ResizeButton::build_all(map, &mut self.scaling_ui_elements);
+        self.dynamic_ui.clear();
+        ResizeButton::build_all(map, &mut self.dynamic_ui);
 
         let mouse_pos = mouse_position().into();
         self.handle_camera_controls();
         self.handle_ui_clicks(mouse_pos, map);
 
         if !self.ui_clicked {
-            self.handle_tile_placement(mouse_pos, map);
+            match self.mode {
+                TilemapEditorMode::Tiles => self.handle_tile_placement(mouse_pos, map),
+                TilemapEditorMode::Exits => self.handle_exit_placement(map, exits),
+            }
         }
 
         if is_key_pressed(KeyCode::R) {
@@ -71,15 +82,26 @@ impl TileMapEditor  {
         if is_key_pressed(KeyCode::G) {
             self.show_grid = !self.show_grid;
         }
+        if is_key_pressed(KeyCode::E) {
+            self.toggle_exits();
+        }
 
         self.handle_save_map(map);
     }
 
-    pub fn draw(&self, map: &TileMap) {
+    pub fn toggle_exits(&mut self) {
+        self.mode = match self.mode {
+            TilemapEditorMode::Exits => TilemapEditorMode::Tiles,
+            _ => TilemapEditorMode::Exits,
+        };
+    }
+
+    pub fn draw(&self, map: &TileMap, exits: &Vec<Exit>) {
         clear_background(WHITE);
         set_camera(&self.camera);
 
         self.draw_map(map);
+        self.draw_exits(map, exits);
         self.draw_grid(map);
         self.draw_hover_highlight(map);
 
@@ -115,7 +137,7 @@ impl TileMapEditor  {
 
     fn handle_ui_clicks(&mut self, mouse_pos: Vec2, map: &mut TileMap) {
         if is_mouse_button_pressed(MouseButton::Left) {
-            for element in &mut self.scaling_ui_elements {
+            for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, &self.camera) {
                     element.on_click(map, &mut self.selected_tile, mouse_pos, &self.camera);
                     self.ui_clicked = true;
@@ -123,7 +145,7 @@ impl TileMapEditor  {
                 }
             }
 
-            for element in &mut self.static_ui_elements {
+            for element in &mut self.static_ui {
                 if element.is_mouse_over(mouse_pos, &self.camera) {
                     element.on_click(map, &mut self.selected_tile, mouse_pos, &self.camera);
                     self.ui_clicked = true;
@@ -157,6 +179,25 @@ impl TileMapEditor  {
                         map.tiles[y][x] = Tile::none();
                     }
                 }
+            }
+        }
+    }
+
+    fn handle_exit_placement(&mut self, map: &TileMap, exits: &mut Vec<Exit>) {
+        if let Some(tile_pos) = self.get_hovered_edge(map) {
+            let exit_direction = self.exit_direction_from_position(tile_pos, map);
+            let exit_vec = vec2(tile_pos.x() as f32, tile_pos.y() as f32);
+
+            if is_mouse_button_pressed(MouseButton::Left) {
+                exits.push(Exit {
+                    position: exit_vec,
+                    direction: exit_direction,
+                    target_room_id: None,
+                });
+            }
+
+            if is_mouse_button_pressed(MouseButton::Right) {
+                exits.retain(|exit| exit.position != exit_vec);
             }
         }
     }
@@ -202,6 +243,41 @@ impl TileMapEditor  {
         }
     }
 
+    fn draw_exits(&self, _map: &TileMap, exits: &Vec<Exit>) {
+        for exit in exits {
+            self.draw_exit_indicator(exit.position, exit.direction);
+        }
+    }
+
+    /// Draw a yellow exit overlay/arrow at the given position
+    fn draw_exit_indicator(&self, pos: Vec2, direction: ExitDirection) {
+        let tile_size = TILE_SIZE;
+
+        // Position in world coordinates, including outside tiles
+        let x = pos.x * tile_size;
+        let y = pos.y * tile_size;
+
+        // Draw semi-transparent rectangle
+        draw_rectangle(x, y, tile_size, tile_size, LIGHTGRAY);
+
+        let arrow_center = vec2(x + tile_size / 2.0, y + tile_size / 2.0);
+        let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
+
+        let offsets = match direction {
+            ExitDirection::Up => [vec2(0.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0)],
+            ExitDirection::Down => [vec2(0.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0)],
+            ExitDirection::Left => [vec2(-1.0, 0.0), vec2(1.0, -1.0), vec2(1.0, 1.0)],
+            ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
+        };
+
+        draw_triangle(
+            arrow_center + offsets[0] * tile_size / 4.0,
+            arrow_center + offsets[1] * tile_size / 4.0,
+            arrow_center + offsets[2] * tile_size / 4.0,
+            arrow_color
+        );
+    }
+
     fn draw_grid(&self, map: &TileMap) {
         if !self.show_grid {
             return;
@@ -238,27 +314,36 @@ impl TileMapEditor  {
     }
 
     fn draw_hover_highlight(&self, map: &TileMap) {
-        if let Some(tile_pos) = self.get_hovered_tile(map) {
+        let tile_pos = match self.mode {
+            TilemapEditorMode::Tiles => self.get_hovered_tile(map),
+            TilemapEditorMode::Exits => self.get_hovered_edge(map),
+        };
+
+        if let Some(tile_pos) = tile_pos {
             let zoom_scale = self.camera.zoom.x.abs();
             let base_width = 0.5;
             let min_line_width = 2.0;
             let max_line_width = 5.0;
             let line_width = (base_width / zoom_scale).clamp(min_line_width, max_line_width);
 
-            draw_rectangle_lines(
-                tile_pos.x() as f32 * TILE_SIZE,
-                tile_pos.y() as f32 * TILE_SIZE,
-                TILE_SIZE,
-                TILE_SIZE,
-                line_width,
-                RED,
-            );
+            let x = tile_pos.x() as f32 * TILE_SIZE;
+            let y = tile_pos.y() as f32 * TILE_SIZE;
+
+            match self.mode {
+                TilemapEditorMode::Tiles => {
+                    draw_rectangle_lines(x, y, TILE_SIZE, TILE_SIZE, line_width, RED);
+                }
+                TilemapEditorMode::Exits => {
+                    let exit_direction = self.exit_direction_from_position(tile_pos, map);
+                    self.draw_exit_indicator(vec2(tile_pos.x() as f32, tile_pos.y() as f32), exit_direction);
+                }
+            }
         }
     }
 
     fn draw_ui(&self) {
         // Draw scaling UI
-        for element in &self.scaling_ui_elements {
+        for element in &self.dynamic_ui {
             element.draw(&self.camera);
         }
         
@@ -266,7 +351,7 @@ impl TileMapEditor  {
         set_default_camera();
 
         // Draw static UI
-        for element in &self.static_ui_elements {
+        for element in &self.static_ui {
             element.draw(&self.camera);
         }
     }
@@ -300,6 +385,22 @@ impl TileMapEditor  {
         }
     }
 
+    fn get_hovered_edge(&self, map: &TileMap) -> Option<GridPos> {
+        let mouse_pos: Vec2 = mouse_position().into();
+        let world_pos = self.camera.screen_to_world(mouse_pos);
+        let edge_pos = GridPos::from_world_edge(world_pos, map);
+
+        let x_outside = edge_pos.x() < 0 || edge_pos.x() >= map.width as i32;
+        let y_outside = edge_pos.y() < 0 || edge_pos.y() >= map.height as i32;
+
+        // Only allow positions strictly outside one axis (no corners)
+        if x_outside ^ y_outside {
+            Some(edge_pos)
+        } else {
+            None
+        }
+    }
+
     pub fn reset_camera_view(&mut self, map: &TileMap) {
         let aspect_x = 2.0 / screen_width();
         let aspect_y = -2.0 / screen_height();
@@ -313,9 +414,23 @@ impl TileMapEditor  {
     }
 
     fn is_mouse_over_ui(&self, mouse_pos: Vec2) -> bool {
-        self.scaling_ui_elements
+        self.dynamic_ui
         .iter()
         .any(|element| element.is_mouse_over(mouse_pos, &self.camera))
+    }
+
+    fn exit_direction_from_position(&self, tile_pos: GridPos, map: &TileMap) -> ExitDirection {
+        match tile_pos {
+            GridPos(p) if p.y == -1 => ExitDirection::Up,
+            GridPos(p) if p.y == map.height as i32 => ExitDirection::Down,
+            GridPos(p) if p.x == -1 => ExitDirection::Left,
+            GridPos(p) if p.x == map.width as i32 => ExitDirection::Right,
+            GridPos(p) if p.y == 0 => ExitDirection::Up,
+            GridPos(p) if p.y as usize == map.height - 1 => ExitDirection::Down,
+            GridPos(p) if p.x == 0 => ExitDirection::Left,
+            GridPos(p) if p.x as usize == map.width - 1 => ExitDirection::Right,
+            _ => ExitDirection::Up, // default for safety
+        }
     }
 
     pub fn reset(&mut self) {

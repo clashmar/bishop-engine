@@ -1,22 +1,12 @@
 use macroquad::prelude::*;
-use crate::{tile::GridPos, tilemap::TileMap};
+use crate::{tilemap::TileMap, world::world::World};
 
 pub struct Room {
     pub name: String,
     pub position: Vec2,      
     pub variants: Vec<RoomVariant>,  
-    pub exits: Vec<Exit>,  
-}
-
-impl Default for Room {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            position: Vec2::ZERO,
-            variants: vec![RoomVariant::default()],
-            exits: vec![],
-        }
-    }
+    pub exits: Vec<Exit>,
+    pub adjacent_rooms: Vec<usize>,   
 }
 
 impl Room {
@@ -29,6 +19,16 @@ impl Room {
         } else {
             Vec2::new(0.0, 0.0)
         }
+    }
+
+    pub fn link_exits_slice(&mut self, other_rooms: &[&Room]) {
+        //
+    }
+
+    pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
+        self.exits.iter().map(|exit| {
+            (self.position + exit.position, exit.direction)
+        }).collect()
     }
 }
 
@@ -46,8 +46,17 @@ impl Default for RoomVariant {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum ExitDirection {
+    Up,
+    Right,
+    Down,
+    Left
+}
+
+#[derive(Clone)]
 pub struct Exit {
-    pub position: GridPos,     
-    pub target_map: String,    
-    pub target_position: GridPos,
+    pub position: Vec2,                 
+    pub direction: ExitDirection,      
+    pub target_room_id: Option<usize>, 
 }

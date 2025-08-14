@@ -118,7 +118,6 @@ impl TileMap {
     }
 }
 
-
 pub fn get_current_map() -> TileMap {
     let map_dir = PathBuf::from("game/src/maps");
 

@@ -26,7 +26,8 @@ impl RoomEditor {
         match self.mode {
             RoomEditorMode::Tilemap => {
                 let tilemap = &mut room.variants[0].tilemap;
-                self.tilemap_editor.update(tilemap);
+                let exits = &mut room.exits;
+                self.tilemap_editor.update(tilemap, exits);
             }
             RoomEditorMode::Scene => {
                 // Non-tilemap logic
@@ -52,7 +53,8 @@ impl RoomEditor {
         match self.mode {
             RoomEditorMode::Tilemap => {
                 let tilemap = &room.variants[0].tilemap;
-                self.tilemap_editor.draw(tilemap);
+                let exits = &room.exits;
+                self.tilemap_editor.draw(tilemap, exits);
             }
             RoomEditorMode::Scene => {
                 draw_text("Non-tilemap mode active", 20.0, 20.0, 24.0, WHITE);

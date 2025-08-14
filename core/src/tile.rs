@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use crate::constants::TILE_SIZE;
+use crate::{constants::TILE_SIZE, tilemap::TileMap};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TileType {
@@ -89,5 +89,19 @@ impl GridPos {
         } else {
             None
         }
+    }
+    
+    pub fn from_world_edge(world_pos: Vec2, map: &TileMap) -> Self {
+        let mut x = (world_pos.x / TILE_SIZE).floor() as i32;
+        let mut y = (world_pos.y / TILE_SIZE).floor() as i32;
+
+        // Snap to map edges
+        if x < 0 { x = -1; }
+        else if x >= map.width as i32 { x = map.width as i32; }
+
+        if y < 0 { y = -1; }
+        else if y >= map.height as i32 { y = map.height as i32; }
+
+        GridPos::new(x, y)
     }
 }
