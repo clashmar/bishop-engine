@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use crate::{tilemap::TileMap, world::world::World};
+use crate::{tilemap::TileMap};
 
 pub struct Room {
     pub name: String,
@@ -22,12 +22,61 @@ impl Room {
     }
 
     pub fn link_exits_slice(&mut self, other_rooms: &[&Room]) {
-        //
+        let my_size = self.size();
+        let epsilon = 0.01; // tolerance for floating-point comparisons
+
+        for exit in self.exits.iter_mut() {
+            exit.target_room_id = None;
+
+            // Local to world position (Y-flip)
+            let exit_world_pos = self.position + Vec2::new(exit.position.x, my_size.y - exit.position.y - 1.0);
+
+            'other_rooms: for (idx, other_room) in other_rooms.iter().enumerate() {
+                let other_size = other_room.size();
+
+                for other_exit in &other_room.exits {
+                    // World position of the other room's exit (Y-flip)
+                    let other_world_pos = other_room.position
+                        + Vec2::new(other_exit.position.x, other_size.y - other_exit.position.y - 1.0);
+
+                    let linked = match exit.direction {
+                        ExitDirection::Up => {
+                            other_exit.direction == ExitDirection::Down &&
+                            (exit_world_pos.y - (other_world_pos.y + 1.0)).abs() < epsilon &&
+                            (exit_world_pos.x - other_world_pos.x).abs() < epsilon
+                        }
+                        ExitDirection::Down => {
+                            other_exit.direction == ExitDirection::Up &&
+                            (exit_world_pos.y + 1.0 - other_world_pos.y).abs() < epsilon &&
+                            (exit_world_pos.x - other_world_pos.x).abs() < epsilon
+                        }
+                        ExitDirection::Left => {
+                            other_exit.direction == ExitDirection::Right &&
+                            (exit_world_pos.x - other_world_pos.x + 1.0).abs() < epsilon && 
+                            (exit_world_pos.y - other_world_pos.y).abs() < epsilon    
+                        }
+                        ExitDirection::Right => {
+                            other_exit.direction == ExitDirection::Left &&
+                            (exit_world_pos.x - other_world_pos.x - 1.0).abs() < epsilon && 
+                            (exit_world_pos.y - other_world_pos.y).abs() < epsilon
+                        }
+                    };
+
+                    if linked {
+                        exit.target_room_id = Some(idx);
+                        break 'other_rooms;
+                    }
+                }
+            }
+        }
     }
 
     pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
+        let room_size = self.size();
         self.exits.iter().map(|exit| {
-            (self.position + exit.position, exit.direction)
+            // Flip y-axis: local Y increases up, world Y increases down
+            let world_pos = self.position + Vec2::new(exit.position.x, room_size.y - exit.position.y - 1.0);
+            (world_pos, exit.direction)
         }).collect()
     }
 }
@@ -46,7 +95,7 @@ impl Default for RoomVariant {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExitDirection {
     Up,
     Right,
@@ -54,7 +103,7 @@ pub enum ExitDirection {
     Left
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Exit {
     pub position: Vec2,                 
     pub direction: ExitDirection,      
