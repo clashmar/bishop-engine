@@ -29,8 +29,8 @@ impl Editor {
                 }
             }
             EditorMode::Room(room_idx) => {
-                let room = &mut self.world_editor.world.rooms[room_idx];
-                if self.room_editor.update(room) {
+                let rooms = &mut self.world_editor.world.rooms;
+                if self.room_editor.update(room_idx, rooms) {
                     self.world_editor.center_on_room(room_idx);
                     self.mode = EditorMode::World;
                 }

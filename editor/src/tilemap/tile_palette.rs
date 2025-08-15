@@ -62,7 +62,15 @@ impl UiElement for TilePalette {
             .contains(mouse_pos)
     }
 
-    fn on_click(&mut self, _map: &mut TileMap, selected_tile: &mut Tile, mouse_pos: Vec2, _camera: &Camera2D) {
+    fn on_click(
+        &mut self, 
+        _map: &mut TileMap, 
+        _room_position: &mut Vec2, 
+        selected_tile: &mut Tile, 
+        mouse_pos: Vec2, 
+        _camera: &Camera2D,
+        _other_bounds: &[(Vec2, Vec2)],
+    ) {
         if self.is_mouse_over(mouse_pos, _camera) {
             let local_x = mouse_pos.x - self.position.x;
             let local_y = mouse_pos.y - self.position.y;

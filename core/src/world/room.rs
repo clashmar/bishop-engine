@@ -21,6 +21,12 @@ impl Room {
         }
     }
 
+    pub fn bounds(&self) -> (f32, f32, f32, f32) {
+        let width = self.variants[0].tilemap.width as f32;
+        let height = self.variants[0].tilemap.height as f32;
+        (self.position.x, self.position.y, width, height)
+    }
+
     pub fn link_exits_slice(&mut self, other_rooms: &[&Room]) {
         let my_size = self.size();
         let epsilon = 0.01; // tolerance for floating-point comparisons

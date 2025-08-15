@@ -22,12 +22,24 @@ impl RoomEditor {
     }
 
     /// Returns `true` if user wants to exit back to world view.
-    pub fn update(&mut self, room: &mut Room) -> bool {
+    pub fn update(&mut self, room_idx: usize, rooms: &mut [Room]) -> bool {
         match self.mode {
             RoomEditorMode::Tilemap => {
-                let tilemap = &mut room.variants[0].tilemap;
-                let exits = &mut room.exits;
-                self.tilemap_editor.update(tilemap, exits);
+
+                // Collect bounds for all other rooms to check for intersections
+                let other_bounds: Vec<(Vec2, Vec2)> = rooms.iter()
+                    .enumerate()
+                    .filter(|(idx, _)| *idx != room_idx)
+                    .map(|(_, r)| {
+                        let size = Vec2::new(r.variants[0].tilemap.width as f32, r.variants[0].tilemap.height as f32);
+                        (r.position, size)
+                    })
+                    .collect();
+
+                let tilemap = &mut rooms[room_idx].variants[0].tilemap;
+                let exits = &mut rooms[room_idx].exits;
+                let position = &mut rooms[room_idx].position;
+                self.tilemap_editor.update(tilemap, exits, position, &other_bounds);
             }
             RoomEditorMode::Scene => {
                 // Non-tilemap logic

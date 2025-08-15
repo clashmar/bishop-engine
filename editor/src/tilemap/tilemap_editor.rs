@@ -55,7 +55,14 @@ impl TileMapEditor  {
     }
 
     /// Update the editor with a mutable reference to the map
-    pub fn update(&mut self, map: &mut TileMap, exits: &mut Vec<Exit>) {
+    pub fn update(
+        &mut self, 
+        map: &mut TileMap, 
+        exits: &mut Vec<Exit>, 
+        room_position: &mut Vec2, 
+        other_bounds: &[(Vec2, Vec2)]
+    ) 
+        {
         if !self.initialized {
             self.reset_camera_view(map);
             self.ui_clicked = true; // Stop any initial tile placements
@@ -67,7 +74,7 @@ impl TileMapEditor  {
 
         let mouse_pos = mouse_position().into();
         self.handle_camera_controls();
-        self.handle_ui_clicks(mouse_pos, map);
+        self.handle_ui_clicks(mouse_pos, map, room_position, other_bounds);
 
         if !self.ui_clicked {
             match self.mode {
@@ -135,11 +142,11 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_ui_clicks(&mut self, mouse_pos: Vec2, map: &mut TileMap) {
+    fn handle_ui_clicks(&mut self, mouse_pos: Vec2, map: &mut TileMap, room_position: &mut Vec2, other_bounds: &[(Vec2, Vec2)]) {
         if is_mouse_button_pressed(MouseButton::Left) {
             for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, &self.camera) {
-                    element.on_click(map, &mut self.selected_tile, mouse_pos, &self.camera);
+                    element.on_click(map, room_position, &mut self.selected_tile, mouse_pos, &self.camera, other_bounds);
                     self.ui_clicked = true;
                     break;
                 }
@@ -147,7 +154,7 @@ impl TileMapEditor  {
 
             for element in &mut self.static_ui {
                 if element.is_mouse_over(mouse_pos, &self.camera) {
-                    element.on_click(map, &mut self.selected_tile, mouse_pos, &self.camera);
+                    element.on_click(map, room_position, &mut self.selected_tile, mouse_pos, &self.camera, other_bounds);
                     self.ui_clicked = true;
                     break;
                 }
