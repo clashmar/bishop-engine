@@ -65,6 +65,7 @@ impl UiElement for TilePalette {
     fn on_click(
         &mut self, 
         _map: &mut TileMap, 
+        _room_size: &mut Vec2,
         _room_position: &mut Vec2, 
         selected_tile: &mut Tile, 
         mouse_pos: Vec2, 

@@ -32,7 +32,8 @@ impl UiElement for ResizeButton {
 
     fn on_click(
         &mut self, 
-        map: &mut TileMap, 
+        map: &mut TileMap,
+        room_size: &mut Vec2, 
         room_position: &mut Vec2, 
         _selected_tile: &mut Tile, 
         mouse_pos: Vec2, 
@@ -76,47 +77,55 @@ impl UiElement for ResizeButton {
         // Apply resize
         match self.action {
             ResizeAction::AddTop => {
-                map.tiles.insert(0, vec![Tile::none(); map.width]);
+                map.tiles.push(vec![Tile::none(); map.width]);
                 map.height += 1;
+                room_size.y += 1.0;
                 room_position.y -= 1.0;
             }
             ResizeAction::RemoveTop => {
                 if map.height > 1 {
-                    map.tiles.remove(0);
+                    map.tiles.pop();
                     map.height -= 1;
+                    room_size.y -= 1.0;
                     room_position.y += 1.0;
                 }
             }
             ResizeAction::AddBottom => {
-                map.tiles.push(vec![Tile::none(); map.width]);
+                map.tiles.insert(0, vec![Tile::none(); map.width]);
                 map.height += 1;
+                room_size.y += 1.0;
             }
             ResizeAction::RemoveBottom => {
                 if map.height > 1 {
-                    map.tiles.pop();
+                    map.tiles.remove(0);
                     map.height -= 1;
+                    room_size.y -= 1.0;
                 }
             }
             ResizeAction::AddLeft => {
                 for row in &mut map.tiles { row.insert(0, Tile::none()); }
                 map.width += 1;
+                room_size.x += 1.0;
                 room_position.x -= 1.0;
             }
             ResizeAction::RemoveLeft => {
                 if map.width > 1 {
                     for row in &mut map.tiles { row.remove(0); }
                     map.width -= 1;
+                    room_size.x -= 1.0;
                     room_position.x += 1.0;
                 }
             }
             ResizeAction::AddRight => {
                 for row in &mut map.tiles { row.push(Tile::none()); }
                 map.width += 1;
+                room_size.x += 1.0;
             }
             ResizeAction::RemoveRight => {
                 if map.width > 1 {
                     for row in &mut map.tiles { row.pop(); }
                     map.width -= 1;
+                    room_size.x -= 1.0;
                 }
             }
         }

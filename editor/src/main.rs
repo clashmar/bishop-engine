@@ -8,7 +8,7 @@ mod room;
 
 #[macroquad::main("Map Editor")]
 async fn main() {
-    let mut editor = Editor::new(12, 9);
+    let mut editor = Editor::new();
 
     loop {
         editor.update();

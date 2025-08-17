@@ -7,6 +7,7 @@ pub trait UiElement {
     fn on_click(
         &mut self, 
         map: &mut TileMap, 
+        room_size: &mut Vec2, 
         room_position: &mut Vec2, 
         selected_tile: &mut Tile, 
         mouse_pos: Vec2, 

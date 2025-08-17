@@ -1,34 +1,47 @@
 use macroquad::prelude::*;
-use crate::{tilemap::TileMap};
+use crate::{constants::*, tilemap::TileMap};
 
-pub struct Room {
+#[derive(Clone, Debug)]
+pub struct RoomMetadata {
     pub name: String,
-    pub position: Vec2,      
-    pub variants: Vec<RoomVariant>,  
+    pub position: Vec2,
+    pub size: Vec2,
     pub exits: Vec<Exit>,
-    pub adjacent_rooms: Vec<usize>,   
+    pub adjacent_rooms: Vec<usize>,
 }
 
-impl Room {
-    pub fn size(&self) -> Vec2 {
-        if let Some(first_variant) = self.variants.first() {
-            Vec2::new(
-                first_variant.tilemap.width as f32,
-                first_variant.tilemap.height as f32,
-            )
-        } else {
-            Vec2::new(0.0, 0.0)
+pub struct Room {
+    pub variants: Vec<RoomVariant>,
+}
+
+impl Default for RoomMetadata {
+    fn default() -> Self {
+        RoomMetadata {
+        name: "untitled".to_string(),
+        position: DEFAULT_ROOM_POSITION,
+        size: DEFAULT_ROOM_SIZE,
+        exits: vec![],
+        adjacent_rooms: vec![],
+        }
+    }
+}
+
+impl RoomMetadata {
+    pub fn load_room(&self) -> Room {
+        // Placeholder for real load logic
+
+        let variant = RoomVariant {
+            id: "default".to_string(),
+            tilemap: TileMap::new(self.size.x as usize, self.size.y as usize),
+        };    
+        
+        Room {
+            variants: vec![variant],
         }
     }
 
-    pub fn bounds(&self) -> (f32, f32, f32, f32) {
-        let width = self.variants[0].tilemap.width as f32;
-        let height = self.variants[0].tilemap.height as f32;
-        (self.position.x, self.position.y, width, height)
-    }
-
-    pub fn link_exits_slice(&mut self, other_rooms: &[&Room]) {
-        let my_size = self.size();
+    pub fn link_exits_slice(&mut self, other_rooms: &[&RoomMetadata]) {
+        let my_size = self.size;
         let epsilon = 0.01; // tolerance for floating-point comparisons
 
         for exit in self.exits.iter_mut() {
@@ -38,7 +51,7 @@ impl Room {
             let exit_world_pos = self.position + Vec2::new(exit.position.x, my_size.y - exit.position.y - 1.0);
 
             'other_rooms: for (idx, other_room) in other_rooms.iter().enumerate() {
-                let other_size = other_room.size();
+                let other_size = other_room.size;
 
                 for other_exit in &other_room.exits {
                     // World position of the other room's exit (Y-flip)
@@ -78,13 +91,36 @@ impl Room {
     }
 
     pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
-        let room_size = self.size();
+        let room_size = self.size;
         self.exits.iter().map(|exit| {
             // Flip y-axis: local Y increases up, world Y increases down
             let world_pos = self.position + Vec2::new(exit.position.x, room_size.y - exit.position.y - 1.0);
             (world_pos, exit.direction)
         }).collect()
     }
+}
+
+
+
+impl Default for Room {
+    fn default() -> Self {
+        let first_variant = RoomVariant {
+            id: "default".to_string(),
+            tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
+        };
+
+        Self { variants: vec![first_variant] }
+    }
+}
+
+impl Room {
+    // pub fn size(&self) -> Vec2 {
+    //     self.metadata.size
+    // }
+
+    // pub fn bounds(&self) -> (f32, f32, f32, f32) {
+    //     (self.metadata.position.x, self.metadata.position.y, self.metadata.size.x, self.metadata.size.y)
+    // }
 }
 
 pub struct RoomVariant {
