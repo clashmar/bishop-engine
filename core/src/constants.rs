@@ -7,3 +7,5 @@ pub const GRAVITY: f32 = 0.4;
 
 pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(10.0, 5.0);
 pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
+
+pub const WORLD_SAVE_FOLDER: &str = "assets/worlds";

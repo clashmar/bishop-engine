@@ -1,6 +1,6 @@
-use core::{constants::TILE_SIZE, tile::Tile, tilemap::TileMap};
 use macroquad::prelude::*;
-use crate::gui::{text_button::TextButton, ui_element::UiElement};
+use core::{constants::TILE_SIZE, tile::Tile, tilemap::TileMap, world::room::{RoomMetadata}};
+use crate::gui::{text_button::TextButton, ui_element::{DynamicTilemapUiElement}};
 
 pub struct ResizeButton {
     pub action: ResizeAction,
@@ -18,7 +18,7 @@ pub enum ResizeAction {
     RemoveRight,
 }
 
-impl UiElement for ResizeButton {
+impl DynamicTilemapUiElement for ResizeButton {
     fn draw(&self, camera: &Camera2D) {
         let mouse_world_pos = camera.screen_to_world(mouse_position().into());
         let hovered = self.button.is_hovered(mouse_world_pos);
@@ -33,9 +33,7 @@ impl UiElement for ResizeButton {
     fn on_click(
         &mut self, 
         map: &mut TileMap,
-        room_size: &mut Vec2, 
-        room_position: &mut Vec2, 
-        _selected_tile: &mut Tile, 
+        room_metadata: &mut RoomMetadata,
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
@@ -44,6 +42,10 @@ impl UiElement for ResizeButton {
         if !self.button.is_clicked(mouse_world_pos) {
             return;
         }
+
+        let room_position = &mut room_metadata.position;
+        let room_size = &mut room_metadata.size;
+        // let exits = &mut room_metadata.exits // Use this?
 
         // Compute proposed delta and new size
         let (delta_pos, new_size) = match self.action {
@@ -79,13 +81,33 @@ impl UiElement for ResizeButton {
             ResizeAction::AddTop => {
                 map.tiles.push(vec![Tile::none(); map.width]);
                 map.height += 1;
+
+                for exit in &mut room_metadata.exits {
+                    let exit_grid_y = room_size.y - exit.position.y; // convert exit y → grid y
+                    println!("room_position: {}, exit y: {}", room_position, exit_grid_y);
+                    if (exit_grid_y - 0.0).abs() < f32::EPSILON {
+                        // exit is on the top row
+                        exit.position.y += 1.0; // move up in exit-space
+                    }
+                }
+
                 room_size.y += 1.0;
                 room_position.y -= 1.0;
+                
             }
             ResizeAction::RemoveTop => {
                 if map.height > 1 {
                     map.tiles.pop();
                     map.height -= 1;
+
+                    for exit in &mut room_metadata.exits {
+                        let exit_grid_y = room_size.y - exit.position.y; // convert exit y to grid y
+                        if (exit_grid_y - 0.0).abs() < f32::EPSILON {
+                            // exit is on the top row, which is being removed
+                            exit.position.y -= 1.0; // move down in exit-space
+                        }
+                    }
+
                     room_size.y -= 1.0;
                     room_position.y += 1.0;
                 }
@@ -119,12 +141,28 @@ impl UiElement for ResizeButton {
             ResizeAction::AddRight => {
                 for row in &mut map.tiles { row.push(Tile::none()); }
                 map.width += 1;
+
+                for exit in &mut room_metadata.exits {
+                    // exit-space x increases to the right, so if it's on the right edge, shift it
+                    if (exit.position.x - room_size.x).abs() < f32::EPSILON {
+                        exit.position.x += 1.0;
+                    }
+                }
+
                 room_size.x += 1.0;
             }
             ResizeAction::RemoveRight => {
                 if map.width > 1 {
                     for row in &mut map.tiles { row.pop(); }
                     map.width -= 1;
+
+                    for exit in &mut room_metadata.exits {
+                        // if exit was on the rightmost column, move it left
+                        if (exit.position.x - room_size.x).abs() < f32::EPSILON {
+                            exit.position.x -= 1.0;
+                        }
+                    }
+                    
                     room_size.x -= 1.0;
                 }
             }
@@ -133,7 +171,7 @@ impl UiElement for ResizeButton {
 }
 
 impl ResizeButton {
-    pub fn build_all(map: &TileMap, ui_elements: &mut Vec<Box<dyn UiElement>>) {
+    pub fn build_all(map: &TileMap, ui_elements: &mut Vec<Box<dyn DynamicTilemapUiElement>>) {
         let margin = TILE_SIZE / 4.0;
         let btn_size = vec2(30.0, 30.0);
 

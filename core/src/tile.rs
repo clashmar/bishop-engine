@@ -1,7 +1,9 @@
+use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
 use crate::{constants::TILE_SIZE, tilemap::TileMap};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum TileType {
     None,
     Floor,
@@ -9,9 +11,11 @@ pub enum TileType {
     Decoration,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Tile {
     pub tile_type: TileType,
+    #[serde_as(as = "FromInto<[f32; 4]>")]
     pub color: Color,
     pub is_walkable: bool,
     pub is_solid: bool,

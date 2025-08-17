@@ -1,15 +1,22 @@
+use serde_with::FromInto;
 use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use crate::{constants::*, tilemap::TileMap};
 
-#[derive(Clone, Debug)]
+#[serde_as]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoomMetadata {
     pub name: String,
+    #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
+    #[serde_as(as = "FromInto<[f32; 2]>")]
     pub size: Vec2,
     pub exits: Vec<Exit>,
     pub adjacent_rooms: Vec<usize>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Room {
     pub variants: Vec<RoomVariant>,
 }
@@ -40,7 +47,7 @@ impl RoomMetadata {
         }
     }
 
-    pub fn link_exits_slice(&mut self, other_rooms: &[&RoomMetadata]) {
+    pub fn link_exits(&mut self, other_rooms: &[&RoomMetadata]) {
         let my_size = self.size;
         let epsilon = 0.01; // tolerance for floating-point comparisons
 
@@ -113,16 +120,7 @@ impl Default for Room {
     }
 }
 
-impl Room {
-    // pub fn size(&self) -> Vec2 {
-    //     self.metadata.size
-    // }
-
-    // pub fn bounds(&self) -> (f32, f32, f32, f32) {
-    //     (self.metadata.position.x, self.metadata.position.y, self.metadata.size.x, self.metadata.size.y)
-    // }
-}
-
+#[derive(Serialize, Deserialize)]
 pub struct RoomVariant {
     pub id: String,
     pub tilemap: TileMap,      
@@ -137,7 +135,7 @@ impl Default for RoomVariant {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExitDirection {
     Up,
     Right,
@@ -145,8 +143,10 @@ pub enum ExitDirection {
     Left
 }
 
-#[derive(Clone, Debug)]
+#[serde_as]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Exit {
+    #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,                 
     pub direction: ExitDirection,      
     pub target_room_id: Option<usize>, 

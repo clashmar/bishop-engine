@@ -1,3 +1,4 @@
+use serde_with::{serde_as, FromInto};
 use std::io::BufRead;
 use std::fs::{self, File};
 use std::io::BufReader;
@@ -6,12 +7,15 @@ use std::path::{Path, PathBuf};
 use crate::constants::*;
 use crate::tile::{GridPos, Tile, TileType};
 use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TileMap {
     pub width: usize,
     pub height: usize,
     pub tiles: Vec<Vec<Tile>>,
+    #[serde_as(as = "FromInto<[f32; 4]>")]
     pub background: Color,
 }
 

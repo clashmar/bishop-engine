@@ -1,7 +1,6 @@
 use core::tile::{Tile};
-use core::tilemap::TileMap;
 use macroquad::prelude::*;
-use crate::gui::ui_element::UiElement;
+use crate::gui::ui_element::TilemapUiElement;
 
 pub struct TilePalette {
     pub position: Vec2, // Top left corner of the palette
@@ -31,7 +30,7 @@ impl TilePalette {
     }
 }
 
-impl UiElement for TilePalette {
+impl TilemapUiElement for TilePalette {
     fn draw(&self, _camera: &Camera2D) {
         // Loop through each tile in the palette
         for (i, tile) in self.tiles.iter().enumerate() {
@@ -63,16 +62,12 @@ impl UiElement for TilePalette {
     }
 
     fn on_click(
-        &mut self, 
-        _map: &mut TileMap, 
-        _room_size: &mut Vec2,
-        _room_position: &mut Vec2, 
+        &mut self,
         selected_tile: &mut Tile, 
         mouse_pos: Vec2, 
-        _camera: &Camera2D,
-        _other_bounds: &[(Vec2, Vec2)],
+        camera: &Camera2D,
     ) {
-        if self.is_mouse_over(mouse_pos, _camera) {
+        if self.is_mouse_over(mouse_pos, camera) {
             let local_x = mouse_pos.x - self.position.x;
             let local_y = mouse_pos.y - self.position.y;
 

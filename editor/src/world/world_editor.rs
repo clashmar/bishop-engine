@@ -1,4 +1,5 @@
 use core::{constants::{DEFAULT_ROOM_SIZE, DEFAULT_ROOM_POSITION}, world::{room::{ExitDirection, RoomMetadata}, world::World}};
+use crate::gui::{ui_element::WorldUiElement, world_ui::WorldNameUi};
 use macroquad::prelude::*;
 
 const ROOM_SCALE_FACTOR: f32 = 8.0;
@@ -23,6 +24,7 @@ pub enum WorldEditorMode {
 pub struct WorldEditor {
     camera: Camera2D,
     mode: WorldEditorMode,
+    ui_elements: Vec<Box<dyn WorldUiElement>>,
     show_grid: bool,
     placing_start: Option<Vec2>,
     placing_end: Option<Vec2>, 
@@ -32,9 +34,13 @@ impl WorldEditor {
     pub fn new() -> Self {
         let camera = Self::compute_camera_for_room(DEFAULT_ROOM_SIZE, DEFAULT_ROOM_POSITION);
 
+        let mut ui_elements: Vec<Box<dyn WorldUiElement>> = Vec::new();
+        ui_elements.push(Box::new(WorldNameUi::new()));
+
         Self { 
             camera, 
             mode: WorldEditorMode::Selecting,
+            ui_elements,
             show_grid: true,
             placing_start: None,
             placing_end: None,
@@ -42,11 +48,13 @@ impl WorldEditor {
     }
 
     /// Returns `true` if a room is clicked on.
-    pub fn update(&mut self, world: &mut World) -> Option<usize> {
+    pub async fn update(&mut self, world: &mut World) -> Option<usize> {
         let dt = get_frame_time();
         self.update_camera(dt);
 
         world.link_all_exits();
+
+        self.handle_ui_clicks(world).await;
 
         if is_key_pressed(KeyCode::C) {
             self.toggle_placing_room();
@@ -64,6 +72,19 @@ impl WorldEditor {
             WorldEditorMode::Selecting => self.update_selecting_mode(world),
             WorldEditorMode::PlacingRoom => self.update_placing_mode(world),
             WorldEditorMode::DeletingRoom => self.update_deleting_mode(world),
+        }
+    }
+
+    async fn handle_ui_clicks(&mut self, world: &mut World) {
+        if is_mouse_button_pressed(MouseButton::Left) {
+            for element in &self.ui_elements {
+                if let Some(rect) = element.rect(world) { // pass `world`
+                    if mouse_over_rect(rect) {
+                        element.on_click(world).await;
+                        break; // only handle one click
+                    }
+                }
+            }
         }
     }
 
@@ -179,9 +200,11 @@ impl WorldEditor {
         self.camera.screen_to_world(vec2(x, y))
     }
 
-    pub fn draw(&self, rooms_metadata: &Vec<RoomMetadata>) {
+    pub fn draw(&self, world: &World) {
         set_camera(&self.camera);
         clear_background(LIGHTGRAY);
+
+        let rooms_metadata = &world.rooms_metadata;
 
         if self.show_grid {
             self.draw_grid();
@@ -202,6 +225,8 @@ impl WorldEditor {
         }
 
         self.draw_room_names(rooms_metadata); 
+
+        self.draw_ui(world);
 
         set_default_camera();
     }
@@ -414,6 +439,16 @@ impl WorldEditor {
         }
     }
 
+    fn draw_ui(&self, world: &World) {
+        set_default_camera(); // screen space
+
+        for element in &self.ui_elements {
+            element.draw(world);
+        }
+
+        set_camera(&self.camera); // back to world camera
+    }
+
     pub fn update_camera(&mut self, dt: f32) {
         let mut direction = vec2(0.0, 0.0);
 
@@ -453,6 +488,11 @@ impl WorldEditor {
             ..Default::default()
         }
     }
+}
+
+pub fn mouse_over_rect(rect: Rect) -> bool {
+    let mouse_pos = mouse_position();
+    rect.contains(vec2(mouse_pos.0, mouse_pos.1))
 }
 
 /// Helper: returns rect scaled for drawing

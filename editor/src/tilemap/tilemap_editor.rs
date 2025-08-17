@@ -1,5 +1,5 @@
 use crate::gui::resize_button::ResizeButton;
-use crate::gui::{ui_element::UiElement};
+use crate::gui::ui_element::{DynamicTilemapUiElement, TilemapUiElement};
 use crate::tilemap::tile_palette::{TilePalette};
 use macroquad::prelude::*;
 use rfd::FileDialog;
@@ -18,8 +18,8 @@ pub enum TilemapEditorMode {
 
 pub struct TileMapEditor {
     mode: TilemapEditorMode,
-    dynamic_ui: Vec<Box<dyn UiElement>>,
-    static_ui: Vec<Box<dyn UiElement>>,
+    dynamic_ui: Vec<Box<dyn DynamicTilemapUiElement>>,
+    static_ui: Vec<Box<dyn TilemapUiElement>>,
     selected_tile: Tile,
     camera: Camera2D,
     show_grid: bool,
@@ -31,7 +31,7 @@ impl TileMapEditor  {
     pub fn new() -> Self {
         let camera = Camera2D::default();
 
-        let mut static_ui_elements: Vec<Box<dyn UiElement>> = Vec::new();
+        let mut static_ui_elements: Vec<Box<dyn TilemapUiElement>> = Vec::new();
 
         static_ui_elements.push(Box::new(TilePalette::new(
             vec2(10.0, 10.0),
@@ -68,17 +68,18 @@ impl TileMapEditor  {
             self.initialized = true;
         }
 
-        let room_size = &mut room_metadata.size;
-        let room_position = &mut room_metadata.position;
-        let exits = &mut room_metadata.exits;
+        // let room_size = &mut room_metadata.size;
+        // let room_position = &mut room_metadata.position;
 
+        
         self.dynamic_ui.clear();
         ResizeButton::build_all(map, &mut self.dynamic_ui);
-
+        
         let mouse_pos = mouse_position().into();
         self.handle_camera_controls();
-        self.handle_ui_clicks(mouse_pos, map, room_size, room_position, other_bounds);
-
+        self.handle_ui_clicks(mouse_pos, map, room_metadata, other_bounds);
+        
+        let exits = &mut room_metadata.exits;
         if !self.ui_clicked {
             match self.mode {
                 TilemapEditorMode::Tiles => self.handle_tile_placement(mouse_pos, map),
@@ -148,15 +149,14 @@ impl TileMapEditor  {
     fn handle_ui_clicks(
         &mut self, 
         mouse_pos: Vec2, 
-        map: &mut TileMap, 
-        room_size: &mut Vec2, 
-        room_position: &mut Vec2, 
+        map: &mut TileMap,
+        room_metadata: &mut RoomMetadata,
         other_bounds: &[(Vec2, Vec2)]
     ) {
         if is_mouse_button_pressed(MouseButton::Left) {
             for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, &self.camera) {
-                    element.on_click(map, room_size, room_position, &mut self.selected_tile, mouse_pos, &self.camera, other_bounds);
+                    element.on_click(map, room_metadata, mouse_pos, &self.camera, other_bounds);
                     self.ui_clicked = true;
                     break;
                 }
@@ -164,7 +164,7 @@ impl TileMapEditor  {
 
             for element in &mut self.static_ui {
                 if element.is_mouse_over(mouse_pos, &self.camera) {
-                    element.on_click(map, room_size, room_position, &mut self.selected_tile, mouse_pos, &self.camera, other_bounds);
+                    element.on_click(&mut self.selected_tile, mouse_pos, &self.camera);
                     self.ui_clicked = true;
                     break;
                 }
