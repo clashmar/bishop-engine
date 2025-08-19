@@ -8,3 +8,4 @@ macroquad = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = "3.14.0"
 ron = "0.9"
+uuid = { version = "1.18", features = ["serde", "v4"] }

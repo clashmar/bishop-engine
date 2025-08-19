@@ -1,4 +1,5 @@
 use serde_with::FromInto;
+use uuid::Uuid;
 use crate::{world::room::{RoomMetadata}};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -9,50 +10,91 @@ use serde_with::serde_as;
 pub struct World {
     pub name: String,
     pub rooms_metadata: Vec<RoomMetadata>,
-    pub starting_room: Option<usize>,
+    pub starting_room: Option<Uuid>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
 }
 
 impl World {
-    pub fn create_room(&mut self, name: &str, position: Vec2, size: Vec2) -> usize {
+    /// Create a new room and return its Uuid.
+    // pub fn create_room(&mut self, name: &str, position: Vec2, size: Vec2) -> Uuid {
+    //     let new_meta = RoomMetadata {
+    //         id: Uuid::new_v4(),
+    //         name: name.to_string(),
+    //         position,
+    //         size,
+    //         exits: vec![],
+    //         adjacent_rooms: vec![],
+    //     };
 
-        let metadata = RoomMetadata {
-            name: name.to_string(),
-            position,
-            size,
-            exits: vec![],
-            adjacent_rooms: vec![],
-        };
+    //     let new_id = new_meta.id;
+    //     self.rooms_metadata.push(new_meta);
 
-        self.rooms_metadata.push(metadata);
-        let idx = self.rooms_metadata.len() - 1;
+    //     // Split the vector into “old rooms” and “the new room”
+    //     let len = self.rooms_metadata.len();              
+    //     let (old_slice, new_slice) = self.rooms_metadata.split_at_mut(len - 1);
 
-        // Update adjacency
-        for i in 0..self.rooms_metadata.len() - 1 {
-            if Self::are_rooms_adjacent(&self.rooms_metadata[i], &self.rooms_metadata[idx]) {
-                self.rooms_metadata[i].adjacent_rooms.push(idx);
-                self.rooms_metadata[idx].adjacent_rooms.push(i);
-            }
-        }
+    //     // The new room
+    //     let new_meta_ref = &mut new_slice[0];
 
-        idx
-    }
+    //     // Iterate through old rooms and update adjacency
+    //     for old_meta in old_slice.iter_mut() {
+    //         if Self::are_rooms_adjacent(old_meta, new_meta_ref) {
+    //             // Each room stores the other's UUID
+    //             old_meta.adjacent_rooms.push(new_id);
+    //             new_meta_ref.adjacent_rooms.push(old_meta.id);
+    //         }
+    //     }
 
-    pub fn delete_room(&mut self, index: usize) {
-        // Remove the room
-        self.rooms_metadata.remove(index);
+    //     // Save the room.
+    //     if let Err(e) = world_storage::save_room(
+    //         &world.name,             
+    //         room_id,             
+    //         &first_room,        
+    //     ) {
+    //         eprintln!("Could not save the initial room: {e}");
+    //     }
 
-        // Recompute adjacency for all remaining rooms
-        for i in 0..self.rooms_metadata.len() {
-            self.rooms_metadata[i].adjacent_rooms.clear();
-            for j in 0..self.rooms_metadata.len() {
-                if i != j && Self::are_rooms_adjacent(&self.rooms_metadata[i], &self.rooms_metadata[j]) {
-                    self.rooms_metadata[i].adjacent_rooms.push(j);
-                }
-            }
-        }
-    }
+    //     new_id
+    // }
+
+    // /// Delete a room by its UUID.
+    // pub fn delete_room(&mut self, room_id: Uuid) {
+    //     // Find the index of the room we want to remove.
+    //     let idx = match self.rooms_metadata.iter().position(|m| m.id == room_id) {
+    //         Some(i) => i,
+    //         None => return, // nothing to delete
+    //     };
+
+    //     // Remove the metadata entry.
+    //     self.rooms_metadata.remove(idx);
+
+    //     // Re‑compute adjacency for the remaining rooms.
+    //     let len = self.rooms_metadata.len();
+
+    //     for i in 0..len {
+    //         // Split the vector into three parts
+    //         let (before, rest) = self.rooms_metadata.split_at_mut(i);
+    //         let (room_i, after) = rest.split_first_mut().unwrap(); // safe because i < len
+
+    //         // Clear the old adjacency list.
+    //         room_i.adjacent_rooms.clear();
+
+    //         // Compare with rooms that come i
+    //         for other in before.iter() {
+    //             if Self::are_rooms_adjacent(room_i, other) {
+    //                 room_i.adjacent_rooms.push(other.id);
+    //             }
+    //         }
+
+    //         // Compare with rooms that come after i
+    //         for other in after.iter() {
+    //             if Self::are_rooms_adjacent(room_i, other) {
+    //                 room_i.adjacent_rooms.push(other.id);
+    //             }
+    //         }
+    //     }
+    // }
 
     pub fn link_all_exits(&mut self) {
         let len = self.rooms_metadata.len();
@@ -67,18 +109,5 @@ impl World {
 
             room_metadata.link_exits(&other_rooms);
         }
-    }
-    
-    fn are_rooms_adjacent(a: &RoomMetadata, b: &RoomMetadata) -> bool {
-        let a_rect = Rect::new(a.position.x, a.position.y, a.size.x, a.size.y);
-        let b_rect = Rect::new(b.position.x, b.position.y, b.size.x, b.size.y);
-
-        // Rooms are adjacent if they share an edge
-        let horizontal_touch = a_rect.x < b_rect.x + b_rect.w && a_rect.x + a_rect.w > b_rect.x &&
-                            (a_rect.y + a_rect.h == b_rect.y || b_rect.y + b_rect.h == a_rect.y);
-        let vertical_touch = a_rect.y < b_rect.y + b_rect.h && a_rect.y + a_rect.h > b_rect.y &&
-                            (a_rect.x + a_rect.w == b_rect.x || b_rect.x + b_rect.w == a_rect.x);
-
-        horizontal_touch || vertical_touch
     }
 }

@@ -1,6 +1,7 @@
 use core::{constants::{DEFAULT_ROOM_SIZE, DEFAULT_ROOM_POSITION}, world::{room::{ExitDirection, RoomMetadata}, world::World}};
-use crate::gui::{ui_element::WorldUiElement, world_ui::WorldNameUi};
+use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use macroquad::prelude::*;
+use uuid::Uuid;
 
 const ROOM_SCALE_FACTOR: f32 = 8.0;
 const WORLD_EDITOR_ZOOM_FACTOR: f32 = 1.0;
@@ -33,7 +34,6 @@ pub struct WorldEditor {
 impl WorldEditor {
     pub fn new() -> Self {
         let camera = Self::compute_camera_for_room(DEFAULT_ROOM_SIZE, DEFAULT_ROOM_POSITION);
-
         let mut ui_elements: Vec<Box<dyn WorldUiElement>> = Vec::new();
         ui_elements.push(Box::new(WorldNameUi::new()));
 
@@ -47,23 +47,19 @@ impl WorldEditor {
         }
     }
 
-    /// Returns `true` if a room is clicked on.
-    pub async fn update(&mut self, world: &mut World) -> Option<usize> {
+    /// Returns `Some(room_id)` if a room is clicked on.
+    pub async fn update(&mut self, world: &mut World) -> Option<Uuid> {
         let dt = get_frame_time();
         self.update_camera(dt);
-
         world.link_all_exits();
-
         self.handle_ui_clicks(world).await;
 
         if is_key_pressed(KeyCode::C) {
             self.toggle_placing_room();
         }
-
         if is_key_pressed(KeyCode::X) {
             self.toggle_delete_room();
         }
-
         if is_key_pressed(KeyCode::G) {
             self.show_grid = !self.show_grid;
         }
@@ -88,36 +84,34 @@ impl WorldEditor {
         }
     }
 
-    fn update_selecting_mode(&mut self, world: &mut World) -> Option<usize> {
+    fn update_selecting_mode(&mut self, world: &mut World) -> Option<Uuid> {
         if is_mouse_button_pressed(MouseButton::Left) {
             let world_mouse = self.mouse_world_pos();
-            for (i, room_metadata) in world.rooms_metadata.iter().enumerate() {
-                let rect = scaled_room_rect(room_metadata);
+            for meta in &world.rooms_metadata {
+                let rect = scaled_room_rect(meta);
                 if rect.contains(world_mouse) {
-                    return Some(i);
+                    return Some(meta.id);
                 }
             }
         }
         None
     }
 
-    fn update_deleting_mode(&mut self, world: &mut World) -> Option<usize> {
+    fn update_deleting_mode(&mut self, world: &mut World) -> Option<Uuid> {
         if is_mouse_button_pressed(MouseButton::Left) {
             let world_mouse = self.mouse_world_pos();
-            for (i, room_metadata) in world.rooms_metadata.iter().enumerate() {
-                let rect = scaled_room_rect(room_metadata);
+            for meta in &world.rooms_metadata {
+                let rect = scaled_room_rect(meta);
                 if rect.contains(world_mouse) {
-                    if let WorldEditorMode::DeletingRoom = self.mode {
-                        world.delete_room(i);
-                        return None;
-                    }
+                    self.delete_room(world, meta.id);
+                    return None;
                 }
             }
         }
         None
     }
 
-    fn update_placing_mode(&mut self, world: &mut World) -> Option<usize> {
+    fn update_placing_mode(&mut self, world: &mut World) -> Option<Uuid> {
         let mouse_tile = self.snap_to_grid(self.mouse_world_pos() / ROOM_SCALE_FACTOR);
 
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -132,17 +126,17 @@ impl WorldEditor {
         if is_mouse_button_released(MouseButton::Left) {
             if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
                 let (top_left, size) = rect_from_points(start, end);
-
                 if !self.intersects_existing_room(&world.rooms_metadata, top_left, size) {
-                    let room_idx = world.create_room("untitled", top_left, size);
+                    // Create the room and get its UUID back.
+                    let new_id = self.place_room_from_drag(world, top_left, size);
                     self.reset_placing();
                     self.mode = WorldEditorMode::Selecting;
-                    return Some(room_idx);
+                    return Some(new_id);
                 }
+                // Overlap – just abort placement.
                 self.reset_placing();
             }
         }
-
         None
     }
 

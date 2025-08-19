@@ -1,92 +1,180 @@
-use core::{constants::WORLD_SAVE_FOLDER, world::{room::RoomMetadata, world::World}};
-use macroquad::{prelude::*};
-use std::{fs, path::Path};
+use core::{
+    constants::WORLD_SAVE_FOLDER,
+    world::{
+        room::{Room, RoomMetadata},
+        world::World,
+    },
+};
+use macroquad::prelude::*;
+use uuid::Uuid;
+use std::{
+    fs,
+    io,
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
 
+use crate::storage::world_storage;
+
+/// Create a fresh world with a single default room.
 pub fn create_new_world(name: String) -> World {
     let first_room_metadata = RoomMetadata::default();
-    World { 
+    let room_id = first_room_metadata.id;
+    let first_room = Room::default();
+
+    let world = World {
         name,
         rooms_metadata: vec![first_room_metadata],
-        starting_room: Some(0),                  
+        starting_room: Some(room_id),
         starting_position: Some(vec2(1.0, 1.0)),
+    };
+
+    // Save the world.
+    if let Err(e) = world_storage::save_world(&world) {
+        eprintln!("Could not save the initial room: {e}");
     }
+
+    // Save the room.
+    if let Err(e) = world_storage::save_room(
+        &world.name,             
+        room_id,             
+        &first_room,        
+    ) {
+        eprintln!("Could not save the initial room: {e}");
+    }
+    world
 }
 
-pub async fn save_world(world: &World) {
+/// Write the `World`, including room metadata, to *WORLD_SAVE_FOLDER*.
+pub fn save_world(world: &World) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
         .separate_tuple_members(true)
         .enumerate_arrays(true);
+    let ron_string = ron::ser::to_string_pretty(world, pretty)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-    let path = format!("{}/{}.ron", WORLD_SAVE_FOLDER, world.name);
-    let ron_string = ron::ser::to_string_pretty(world, pretty).unwrap();
-    fs::write(&path, ron_string).unwrap();
+    // Build the directory and file path.
+    let dir_path = Path::new(WORLD_SAVE_FOLDER).join(&world.name);
+    let file_path = dir_path.join(format!("{}.ron", &world.name));
+
+    // Ensure the directory exists.
+    fs::create_dir_all(&dir_path)?;
+
+    // Write the serialized data.
+    fs::write(&file_path, ron_string)
 }
 
-pub async fn prompt_user() -> Option<String>{
-    while get_char_pressed().is_some() {} // Reset char input queue
-    let mut input = String::new();
-    let finished = false;
+/// Load a world from its *.ron* file.
+pub fn load_world(world_name: &str) -> io::Result<World> {
+    let path: PathBuf = Path::new(WORLD_SAVE_FOLDER)
+        .join(world_name)
+        .join(format!("{}.ron", world_name));
 
-    while !finished {
+    let ron_string = fs::read_to_string(&path)?;
+    ron::from_str(&ron_string).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+}
+
+/// Save a single room. Called automatically when the user leaves the room editor.
+pub fn save_room(world_name: &str, id: Uuid, room: &Room) -> io::Result<()> {
+    let base = Path::new(WORLD_SAVE_FOLDER).join(world_name);
+    let rooms_dir = base.join("rooms");
+    fs::create_dir_all(&rooms_dir)?; // create on first save if missing
+
+    let room_path = rooms_dir.join(format!("{}.ron", id));
+    let ron_string = ron::ser::to_string_pretty(room, ron::ser::PrettyConfig::default())
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+    fs::write(room_path, ron_string)
+}
+
+/// Load a single room by its UUID. Called when the user opens a room.
+pub fn load_room(world_name: &str, id: Uuid) -> io::Result<Room> {
+    let base = Path::new(WORLD_SAVE_FOLDER).join(world_name);
+    let room_path = base.join("rooms").join(format!("{}.ron", id));
+    let data = fs::read_to_string(room_path)?;
+    ron::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+}
+
+/// Delete a single room by its UUID.
+pub fn delete_room_file(world_name: &str, id: Uuid) -> io::Result<()> {
+    let path = Path::new(WORLD_SAVE_FOLDER)
+        .join(world_name)
+        .join("rooms")
+        .join(format!("{}.ron", id));
+    std::fs::remove_file(path)
+}
+
+/// Prompt the user for a string input using Macroquad’s UI loop.
+pub async fn prompt_user_input() -> Option<String> {
+    // Consume any remaining chars in the input queue.
+    while get_char_pressed().is_some() {}
+
+    let mut input = String::new();
+
+    loop {
         clear_background(BLACK);
 
+        // Gather newly pressed characters.
         while let Some(c) = get_char_pressed() {
-            if c.is_alphanumeric() || 
-            c.is_ascii_whitespace() || 
-            c.is_ascii_punctuation() {
+            if c.is_alphanumeric()
+                || c.is_ascii_whitespace()
+                || c.is_ascii_punctuation()
+            {
                 input.push(c);
             }
         }
 
-        // Handle backspace
+        // Backspace handling.
         if is_key_pressed(KeyCode::Backspace) {
             input.pop();
         }
 
-        // Handle backspace
+        // Escape cancels the prompt.
         if is_key_pressed(KeyCode::Escape) {
-            return None
+            return None;
         }
 
-        // Finish when Enter pressed
+        // Enter confirms the input (if not empty).
         if is_key_pressed(KeyCode::Enter) && !input.trim().is_empty() {
             return Some(input);
         }
 
-        // Draw prompt box
+        // Draw the prompt box.
         let text = format!("Enter world name: {}", input);
         draw_rectangle(100., 100., 600., 100., DARKGRAY);
         draw_text(&text, 120., 160., 30., WHITE);
 
         next_frame().await;
     }
-    Some(input)
 }
 
-pub fn load_world(filename: &str) -> World {
-    let path = format!("{}/{}.ron", WORLD_SAVE_FOLDER, filename);
-    let ron_string = fs::read_to_string(&path).unwrap();
-    ron::from_str(&ron_string).unwrap()
-}
-
+/// Return the name of the most‑recently‑modified world directory,
+/// or `None` if the folder does not exist or contains no sub‑directories.
 pub fn most_recent_world() -> Option<String> {
-    let folder = Path::new(WORLD_SAVE_FOLDER);
-    if !folder.exists() {
+    let root = Path::new(WORLD_SAVE_FOLDER);
+    if !root.is_dir() {
         return None;
     }
 
-    let mut entries: Vec<_> = fs::read_dir(folder)
-        .unwrap()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "ron").unwrap_or(false))
-        .collect();
+    let mut dirs: Vec<(fs::DirEntry, SystemTime)> = Vec::new();
 
-    // Sort by modified time, descending
-    entries.sort_by_key(|e| {
-        e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::SystemTime::UNIX_EPOCH)
-    });
-    entries.reverse();
+    // Iterate over entries synchronously.
+    for entry_res in fs::read_dir(root).ok()? {
+        let entry = entry_res.ok()?;
+        if entry.path().is_dir() {
+            let mod_time = entry
+                .metadata()
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .unwrap_or(SystemTime::UNIX_EPOCH);
+            dirs.push((entry, mod_time));
+        }
+    }
 
-    // Return the filename without extension
-    entries.first().map(|e| e.path().file_stem().unwrap().to_string_lossy().to_string())
+    // Sort newest‑first.
+    dirs.sort_by_key(|(_, time)| *time);
+    dirs.reverse();
+
+    dirs.first()
+        .and_then(|(entry, _)| entry.file_name().to_str().map(|s| s.to_owned()))
 }

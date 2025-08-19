@@ -1,3 +1,6 @@
+use std::{io, path::PathBuf};
+
+use uuid::Uuid;
 use serde_with::FromInto;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -7,13 +10,14 @@ use crate::{constants::*, tilemap::TileMap};
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoomMetadata {
+    pub id: Uuid, 
     pub name: String,
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub size: Vec2,
     pub exits: Vec<Exit>,
-    pub adjacent_rooms: Vec<usize>,
+    pub adjacent_rooms: Vec<Uuid>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,6 +28,7 @@ pub struct Room {
 impl Default for RoomMetadata {
     fn default() -> Self {
         RoomMetadata {
+        id: Uuid::new_v4(),
         name: "untitled".to_string(),
         position: DEFAULT_ROOM_POSITION,
         size: DEFAULT_ROOM_SIZE,
@@ -34,17 +39,13 @@ impl Default for RoomMetadata {
 }
 
 impl RoomMetadata {
-    pub fn load_room(&self) -> Room {
-        // Placeholder for real load logic
-
-        let variant = RoomVariant {
-            id: "default".to_string(),
-            tilemap: TileMap::new(self.size.x as usize, self.size.y as usize),
-        };    
-        
-        Room {
-            variants: vec![variant],
-        }
+    pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
+        let path = PathBuf::from(WORLD_SAVE_FOLDER)
+            .join(world_name)
+            .join("rooms")
+            .join(format!("{}.ron", self.id));
+        let data = std::fs::read_to_string(path)?;
+        ron::de::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
     pub fn link_exits(&mut self, other_rooms: &[&RoomMetadata]) {

@@ -9,9 +9,9 @@ mod storage;
 mod tilemap;
 mod world;
 
-#[macroquad::main("Map Editor")]
-async fn main() {
-    let mut editor = Editor::new().await;
+#[macroquad::main("World Editor")]
+async fn main() -> std::io::Result<()> {
+    let mut editor = Editor::new().await?;
 
     loop {
         editor.update().await;

@@ -28,7 +28,7 @@ impl WorldUiElement for WorldNameUi {
 
     fn on_click<'a>(&'a self, world: &'a mut World) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
         Box::pin(async move {
-            if let Some(new_name) = world_storage::prompt_user().await {
+            if let Some(new_name) = world_storage::prompt_user_input().await {
                 let new_name = new_name.trim().to_string();
                 let old_name = world.name.clone();
                 if new_name.trim().is_empty() || new_name == old_name { return; }
@@ -51,7 +51,7 @@ impl WorldUiElement for WorldNameUi {
                 }
 
                 world.name = new_name;
-                world_storage::save_world(world).await;
+                world_storage::save_world(world).expect("Could not save world.");
             }
         })
     }
