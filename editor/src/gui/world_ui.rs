@@ -1,5 +1,5 @@
-use core::{constants::WORLD_SAVE_FOLDER, world::world::World};
-use std::{future::Future, path::Path, pin::Pin};
+use core::{world::world::World};
+use std::{future::Future, pin::Pin};
 
 use crate::{gui::ui_element::WorldUiElement, storage::world_storage, world::world_editor::mouse_over_rect};
 use macroquad::prelude::*;
@@ -30,28 +30,16 @@ impl WorldUiElement for WorldNameUi {
         Box::pin(async move {
             if let Some(new_name) = world_storage::prompt_user_input().await {
                 let new_name = new_name.trim().to_string();
-                let old_name = world.name.clone();
-                if new_name.trim().is_empty() || new_name == old_name { return; }
+                if new_name.is_empty() || new_name == world.name { return; }
 
-                println!("{}.", &new_name);
+                // Update the index
+                let mut idx = world_storage::load_index().expect("load index");
+                idx.insert(world.id, new_name.clone());
+                world_storage::save_index(&idx).expect("save index");
 
-                let new_path = format!("{}/{}.ron", WORLD_SAVE_FOLDER, &new_name);
-                if Path::new(&new_path).exists() {
-                    eprintln!("World with name '{}' already exists, aborting rename.", new_name);
-                    return;
-                }
-
-                 let old_path = format!("{}/{}.ron", WORLD_SAVE_FOLDER, old_name);
-
-                if Path::new(&old_path).exists() {
-                    let new_path = format!("{}/{}.ron", WORLD_SAVE_FOLDER, &new_name);
-                    if let Err(err) = std::fs::rename(&old_path, &new_path) {
-                        eprintln!("Failed to rename world file: {}", err);
-                    }
-                }
-
+                // Update the in‑memory struct and persist the single file
                 world.name = new_name;
-                world_storage::save_world(world).expect("Could not save world.");
+                world_storage::save_world(world).expect("save world");
             }
         })
     }

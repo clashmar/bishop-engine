@@ -8,22 +8,23 @@ use core::{
 use macroquad::prelude::*;
 use uuid::Uuid;
 use std::{
-    fs,
-    io,
-    path::{Path, PathBuf},
-    time::SystemTime,
+    collections::HashMap, fs, io, path::{Path}, time::SystemTime
 };
 
 use crate::storage::world_storage;
 
+type WorldIndex = HashMap<Uuid, String>;
+
 /// Create a fresh world with a single default room.
 pub fn create_new_world(name: String) -> World {
+    let id = Uuid::new_v4();
     let first_room_metadata = RoomMetadata::default();
     let room_id = first_room_metadata.id;
     let first_room = Room::default();
 
     let world = World {
-        name,
+        id,
+        name: name.clone(),
         rooms_metadata: vec![first_room_metadata],
         starting_room: Some(room_id),
         starting_position: Some(vec2(1.0, 1.0)),
@@ -36,16 +37,34 @@ pub fn create_new_world(name: String) -> World {
 
     // Save the room.
     if let Err(e) = world_storage::save_room(
-        &world.name,             
+        &world.id,             
         room_id,             
         &first_room,        
     ) {
         eprintln!("Could not save the initial room: {e}");
     }
+
+    match load_index() {
+        Ok(mut idx) => {
+            idx.insert(world.id, name);
+            if let Err(e) = save_index(&idx) {
+                eprintln!("Failed to update world index: {e}");
+            }
+        }
+        Err(e) => {
+            eprintln!("Could not load world index (will create a new one): {e}");
+            // If the index file does not exist we create a fresh one.
+            let mut idx = HashMap::new();
+            idx.insert(world.id, name);
+            if let Err(e) = save_index(&idx) {
+                eprintln!("Failed to write new world index: {e}");
+            }
+        }
+    }
     world
 }
 
-/// Write the `World`, including room metadata, to *WORLD_SAVE_FOLDER*.
+/// Write the `World`, including room metadata, to WORLD_SAVE_FOLDER.
 pub fn save_world(world: &World) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
         .separate_tuple_members(true)
@@ -53,30 +72,26 @@ pub fn save_world(world: &World) -> io::Result<()> {
     let ron_string = ron::ser::to_string_pretty(world, pretty)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-    // Build the directory and file path.
-    let dir_path = Path::new(WORLD_SAVE_FOLDER).join(&world.name);
-    let file_path = dir_path.join(format!("{}.ron", &world.name));
+    // Folder is the UUID, file is always "world.ron"
+    let dir_path = Path::new(WORLD_SAVE_FOLDER).join(world.id.to_string());
+    let file_path = dir_path.join("world.ron");
 
-    // Ensure the directory exists.
     fs::create_dir_all(&dir_path)?;
-
-    // Write the serialized data.
-    fs::write(&file_path, ron_string)
+    fs::write(file_path, ron_string)
 }
 
 /// Load a world from its *.ron* file.
-pub fn load_world(world_name: &str) -> io::Result<World> {
-    let path: PathBuf = Path::new(WORLD_SAVE_FOLDER)
-        .join(world_name)
-        .join(format!("{}.ron", world_name));
-
-    let ron_string = fs::read_to_string(&path)?;
+pub fn load_world_by_id(id: &Uuid) -> io::Result<World> {
+    let path = Path::new(WORLD_SAVE_FOLDER)
+        .join(id.to_string())
+        .join("world.ron");
+    let ron_string = fs::read_to_string(path)?;
     ron::from_str(&ron_string).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
 /// Save a single room. Called automatically when the user leaves the room editor.
-pub fn save_room(world_name: &str, id: Uuid, room: &Room) -> io::Result<()> {
-    let base = Path::new(WORLD_SAVE_FOLDER).join(world_name);
+pub fn save_room(world_id: &Uuid, id: Uuid, room: &Room) -> io::Result<()> {
+    let base = Path::new(WORLD_SAVE_FOLDER).join(world_id.to_string());
     let rooms_dir = base.join("rooms");
     fs::create_dir_all(&rooms_dir)?; // create on first save if missing
 
@@ -88,20 +103,36 @@ pub fn save_room(world_name: &str, id: Uuid, room: &Room) -> io::Result<()> {
 }
 
 /// Load a single room by its UUID. Called when the user opens a room.
-pub fn load_room(world_name: &str, id: Uuid) -> io::Result<Room> {
-    let base = Path::new(WORLD_SAVE_FOLDER).join(world_name);
-    let room_path = base.join("rooms").join(format!("{}.ron", id));
+pub fn load_room(world_id: &Uuid, room_id: Uuid) -> io::Result<Room> {
+    let base = Path::new(WORLD_SAVE_FOLDER).join(world_id.to_string());
+    let room_path = base.join("rooms").join(format!("{}.ron", room_id));
     let data = fs::read_to_string(room_path)?;
     ron::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
 /// Delete a single room by its UUID.
-pub fn delete_room_file(world_name: &str, id: Uuid) -> io::Result<()> {
+pub fn delete_room_file(world_id: &Uuid, room_id: Uuid) -> io::Result<()> {
     let path = Path::new(WORLD_SAVE_FOLDER)
-        .join(world_name)
+        .join(world_id.to_string())
         .join("rooms")
-        .join(format!("{}.ron", id));
+        .join(format!("{}.ron", room_id));
     std::fs::remove_file(path)
+}
+
+pub fn load_index() -> io::Result<WorldIndex> {
+    let path = Path::new(WORLD_SAVE_FOLDER).join("index.ron");
+    if !path.exists() {
+        return Ok(HashMap::new());
+    }
+    let s = fs::read_to_string(path)?;
+    ron::from_str(&s).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+}
+
+pub fn save_index(idx: &WorldIndex) -> io::Result<()> {
+    let s = ron::ser::to_string_pretty(idx, ron::ser::PrettyConfig::default())
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let path = Path::new(WORLD_SAVE_FOLDER).join("index.ron");
+    fs::write(path, s)
 }
 
 /// Prompt the user for a string input using Macroquad’s UI loop.
@@ -150,31 +181,28 @@ pub async fn prompt_user_input() -> Option<String> {
 
 /// Return the name of the most‑recently‑modified world directory,
 /// or `None` if the folder does not exist or contains no sub‑directories.
-pub fn most_recent_world() -> Option<String> {
+pub fn most_recent_world_id() -> Option<Uuid> {
     let root = Path::new(WORLD_SAVE_FOLDER);
-    if !root.is_dir() {
-        return None;
-    }
+    let mut best: Option<(Uuid, SystemTime)> = None;
 
-    let mut dirs: Vec<(fs::DirEntry, SystemTime)> = Vec::new();
+    for entry in fs::read_dir(root).ok()? {
+        let entry = entry.ok()?;                     
+        if !entry.path().is_dir() { continue; }
 
-    // Iterate over entries synchronously.
-    for entry_res in fs::read_dir(root).ok()? {
-        let entry = entry_res.ok()?;
-        if entry.path().is_dir() {
-            let mod_time = entry
-                .metadata()
-                .ok()
-                .and_then(|m| m.modified().ok())
-                .unwrap_or(SystemTime::UNIX_EPOCH);
-            dirs.push((entry, mod_time));
+        let name = entry
+            .file_name()               
+            .to_string_lossy()         
+            .into_owned();              
+
+        if let Ok(uuid) = Uuid::parse_str(&name) {
+            let mod_time = entry.metadata().ok()?.modified().ok()?;
+            match best {
+                None => best = Some((uuid, mod_time)),
+                Some((_, t)) if mod_time > t => best = Some((uuid, mod_time)),
+                _ => {}
+            }
         }
     }
 
-    // Sort newest‑first.
-    dirs.sort_by_key(|(_, time)| *time);
-    dirs.reverse();
-
-    dirs.first()
-        .and_then(|(entry, _)| entry.file_name().to_str().map(|s| s.to_owned()))
+    best.map(|(id, _)| id)
 }

@@ -22,8 +22,8 @@ pub struct Editor {
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
-        let world = if let Some(latest) = world_storage::most_recent_world() {
-             world_storage::load_world(&latest).expect("Could not load world.")
+        let world = if let Some(latest_id) = world_storage::most_recent_world_id() {
+             world_storage::load_world_by_id(&latest_id).expect("Could not load world")
         } else if let Some(name) = world_storage::prompt_user_input().await {
             world_storage::create_new_world(name)
         } else {
@@ -45,15 +45,15 @@ impl Editor {
         match self.mode {
             EditorMode::World => {
                 // Update returns the id of the room being edited
-                if let Some(id) = self.world_editor.update(&mut self.world).await {
-                    match world_storage::load_room(&self.world.name, id) {
+                if let Some(room_id) = self.world_editor.update(&mut self.world).await {
+                    match world_storage::load_room(&self.world.id, room_id) {
                         Ok(room) => {
                             self.current_room = Some(room);
-                            self.current_room_id = Some(id);
-                            self.mode = EditorMode::Room(id);
+                            self.current_room_id = Some(room_id);
+                            self.mode = EditorMode::Room(room_id);
                         }
                         Err(e) => {
-                            eprintln!("Failed to load room {id}: {e}");
+                            eprintln!("Failed to load room {room_id}: {e}");
                         }
                     }
                 }
@@ -70,7 +70,7 @@ impl Editor {
                     // Take the edited room out of the editor
                     if let Some(ref edited_room) = self.current_room {
                         if let Err(e) = world_storage::save_room(
-                            &self.world.name,
+                            &self.world.id,
                             room_id,
                             edited_room,
                         ) {
@@ -113,7 +113,7 @@ impl Editor {
 
                 // The room should already be loaded but lazy loads if not
                 if self.current_room.is_none() {
-                    match world_storage::load_room(&self.world.name, room_id) {
+                    match world_storage::load_room(&self.world.id, room_id) {
                         Ok(room) => self.current_room = Some(room),
                         Err(e) => eprintln!("Failed to load room {room_id}: {e}"),
                     }

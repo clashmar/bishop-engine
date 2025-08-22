@@ -1,5 +1,4 @@
 use std::{io, path::PathBuf};
-
 use uuid::Uuid;
 use serde_with::FromInto;
 use macroquad::prelude::*;

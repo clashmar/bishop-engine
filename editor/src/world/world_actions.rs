@@ -49,7 +49,7 @@ impl WorldEditor {
         };
 
         // Save the new room to disk
-        if let Err(e) = world_storage::save_room(&world.name, new_id, &room) {
+        if let Err(e) = world_storage::save_room(&world.id, new_id, &room) {
             eprintln!("Could not save the newly created room {new_id}: {e}");
         }
 
@@ -87,7 +87,7 @@ impl WorldEditor {
         }
 
         // Delete file on disk
-        if let Err(e) = world_storage::delete_room_file(&world.name, room_id) {
+        if let Err(e) = world_storage::delete_room_file(&world.id, room_id) {
             eprintln!("Could not delete room file {room_id}: {e}");
         }
     }
@@ -100,7 +100,12 @@ impl WorldEditor {
         size: Vec2,
     ) -> Uuid {
         // The name could be generated automatically or asked from the UI.
-        self.create_room(world, "untitled", top_left, size)
+        let new_id = self.create_room(world, "untitled", top_left, size);
+
+        if let Err(e) = world_storage::save_world(world) {
+            eprintln!("Could not save world after placing room: {e}");
+        }
+        new_id
     }
 
     fn are_rooms_adjacent(a: &RoomMetadata, b: &RoomMetadata) -> bool {
