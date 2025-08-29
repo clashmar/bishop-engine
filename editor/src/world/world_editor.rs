@@ -1,20 +1,19 @@
-use core::{constants::{DEFAULT_ROOM_SIZE, DEFAULT_ROOM_POSITION}, world::{room::{ExitDirection, RoomMetadata}, world::World}};
-use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
+use core::{constants::TILE_SIZE, world::{room::{ExitDirection, RoomMetadata}, world::World}};
 use macroquad::prelude::*;
 use uuid::Uuid;
+use crate::camera_actions;
+use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
+use crate::world::coord;
 
-const ROOM_SCALE_FACTOR: f32 = 8.0;
-const WORLD_EDITOR_ZOOM_FACTOR: f32 = 1.0;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
 const HIGHLIGHT_ERROR_COLOR: Color = Color::new(1.0, 0.0, 0.0, 0.5);
 const LINE_THICKNESS_MULTIPLIER: f32 = 0.02;
 const ROOM_LINE_INSET: f32 = 0.5;
 const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
 const HOVER_LINE_THICKNESS: f32 = 0.05;
-const PAN_SPEED: f32 = 500.0;
 const ZOOM_SPEED_FACTOR: f32 = 0.1;
-const MIN_ZOOM: f32 = 0.003;
-const MAX_ZOOM: f32 = 0.01;
+const MIN_ZOOM: f32 = 0.0005;
+const MAX_ZOOM: f32 = 0.003;
 
 pub enum WorldEditorMode {
     Selecting,
@@ -23,7 +22,6 @@ pub enum WorldEditorMode {
 }
 
 pub struct WorldEditor {
-    camera: Camera2D,
     mode: WorldEditorMode,
     ui_elements: Vec<Box<dyn WorldUiElement>>,
     show_grid: bool,
@@ -33,12 +31,10 @@ pub struct WorldEditor {
 
 impl WorldEditor {
     pub fn new() -> Self {
-        let camera = Self::compute_camera_for_room(DEFAULT_ROOM_SIZE, DEFAULT_ROOM_POSITION);
         let mut ui_elements: Vec<Box<dyn WorldUiElement>> = Vec::new();
         ui_elements.push(Box::new(WorldNameUi::new()));
 
         Self { 
-            camera, 
             mode: WorldEditorMode::Selecting,
             ui_elements,
             show_grid: true,
@@ -48,9 +44,8 @@ impl WorldEditor {
     }
 
     /// Returns `Some(room_id)` if a room is clicked on.
-    pub async fn update(&mut self, world: &mut World) -> Option<Uuid> {
-        let dt = get_frame_time();
-        self.update_camera(dt);
+    pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<Uuid> {
+        self.update_camera(camera);
         world.link_all_exits();
         self.handle_ui_clicks(world).await;
 
@@ -65,9 +60,9 @@ impl WorldEditor {
         }
 
         match self.mode {
-            WorldEditorMode::Selecting => self.update_selecting_mode(world),
-            WorldEditorMode::PlacingRoom => self.update_placing_mode(world),
-            WorldEditorMode::DeletingRoom => self.update_deleting_mode(world),
+            WorldEditorMode::Selecting => self.update_selecting_mode(camera, world),
+            WorldEditorMode::PlacingRoom => self.update_placing_mode(camera, world),
+            WorldEditorMode::DeletingRoom => self.update_deleting_mode(camera, world),
         }
     }
 
@@ -84,9 +79,9 @@ impl WorldEditor {
         }
     }
 
-    fn update_selecting_mode(&mut self, world: &mut World) -> Option<Uuid> {
+    fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<Uuid> {
         if is_mouse_button_pressed(MouseButton::Left) {
-            let world_mouse = self.mouse_world_pos();
+            let world_mouse = coord::mouse_world_pos(camera);
             for meta in &world.rooms_metadata {
                 let rect = scaled_room_rect(meta);
                 if rect.contains(world_mouse) {
@@ -97,9 +92,9 @@ impl WorldEditor {
         None
     }
 
-    fn update_deleting_mode(&mut self, world: &mut World) -> Option<Uuid> {
+    fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<Uuid> {
         if is_mouse_button_pressed(MouseButton::Left) {
-            let world_mouse = self.mouse_world_pos();
+            let world_mouse = coord::mouse_world_pos(camera);
             for meta in &world.rooms_metadata {
                 let rect = scaled_room_rect(meta);
                 if rect.contains(world_mouse) {
@@ -111,8 +106,8 @@ impl WorldEditor {
         None
     }
 
-    fn update_placing_mode(&mut self, world: &mut World) -> Option<Uuid> {
-        let mouse_tile = self.snap_to_grid(self.mouse_world_pos() / ROOM_SCALE_FACTOR);
+    fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<Uuid> {
+        let mouse_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
 
         if is_mouse_button_pressed(MouseButton::Left) {
             self.placing_start = Some(mouse_tile);
@@ -182,53 +177,41 @@ impl WorldEditor {
         };
     }
 
-    fn snap_to_grid(&self, pos: Vec2) -> Vec2 {
-        vec2(
-            (pos.x).floor(),
-            (pos.y).floor(),
-        )
-    }
-
-    fn mouse_world_pos(&self) -> Vec2 {
-        let (x, y) = mouse_position();
-        self.camera.screen_to_world(vec2(x, y))
-    }
-
-    pub fn draw(&self, world: &World) {
-        set_camera(&self.camera);
+    pub fn draw(&self, camera: &Camera2D, world: &World) {
+        set_camera(camera);
         clear_background(LIGHTGRAY);
 
         let rooms_metadata = &world.rooms_metadata;
 
         if self.show_grid {
-            self.draw_grid();
+            self.draw_grid(camera);
         }
 
-        self.draw_rooms(rooms_metadata);
+        self.draw_rooms(camera, rooms_metadata);
         self.draw_unlinked_exits(rooms_metadata);
 
         // Highlight hovered room in select or delete mode
         match self.mode {
             WorldEditorMode::Selecting | 
-            WorldEditorMode::DeletingRoom => self.draw_hovered_room(rooms_metadata),
+            WorldEditorMode::DeletingRoom => self.draw_hovered_room(camera, rooms_metadata),
             _ => {},
         }
 
         if let WorldEditorMode::PlacingRoom = self.mode {
-            self.draw_placing_preview(rooms_metadata);
+            self.draw_placing_preview(camera, rooms_metadata);
         }
 
-        self.draw_room_names(rooms_metadata); 
-
-        self.draw_ui(world);
-
+        self.draw_room_names(camera, rooms_metadata); 
+        self.draw_ui(camera, world);
+        
         set_default_camera();
+        self.draw_coordinates(camera);
     }
 
-    pub fn draw_rooms(&self, rooms_metadata: &Vec<RoomMetadata>) {
+    pub fn draw_rooms(&self, camera: &Camera2D, rooms_metadata: &Vec<RoomMetadata>) {
         for room_metadata in rooms_metadata {
             let rect = scaled_room_rect(room_metadata);
-            let inset = ROOM_LINE_INSET * ROOM_SCALE_FACTOR;
+            let inset = ROOM_LINE_INSET * TILE_SIZE;
 
             // Draw the room outline
             draw_rectangle_lines(
@@ -236,7 +219,7 @@ impl WorldEditor {
                 rect.y + inset / 2.0,
                 rect.w - inset,
                 rect.h - inset,
-                LINE_THICKNESS_MULTIPLIER / self.camera.zoom.x,
+                LINE_THICKNESS_MULTIPLIER / camera.zoom.x,
                 BLUE,
             );
         }
@@ -267,34 +250,34 @@ impl WorldEditor {
 
     fn draw_exit_marker(&self, exit_world_pos: Vec2, dir: ExitDirection, color: Color) {
         let thickness = 2.0;
-        let length = ROOM_SCALE_FACTOR;
+        let length = TILE_SIZE;
         let offset = 1.0; 
 
         match dir {
             ExitDirection::Up => draw_rectangle(
-                exit_world_pos.x * ROOM_SCALE_FACTOR,
-                exit_world_pos.y * ROOM_SCALE_FACTOR - offset,
+                exit_world_pos.x * TILE_SIZE,
+                exit_world_pos.y * TILE_SIZE - offset,
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Down => draw_rectangle(
-                exit_world_pos.x * ROOM_SCALE_FACTOR,
-                exit_world_pos.y * ROOM_SCALE_FACTOR + ROOM_SCALE_FACTOR - thickness + offset,
+                exit_world_pos.x * TILE_SIZE,
+                exit_world_pos.y * TILE_SIZE + TILE_SIZE - thickness + offset,
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Left => draw_rectangle(
-                (exit_world_pos.x + 1.0) * ROOM_SCALE_FACTOR - offset,
-                exit_world_pos.y * ROOM_SCALE_FACTOR,
+                (exit_world_pos.x + 1.0) * TILE_SIZE - offset,
+                exit_world_pos.y * TILE_SIZE,
                 thickness,
                 length,
                 color,
             ),
             ExitDirection::Right => draw_rectangle(
-                (exit_world_pos.x - 1.0) * ROOM_SCALE_FACTOR + ROOM_SCALE_FACTOR - thickness + offset,
-                exit_world_pos.y * ROOM_SCALE_FACTOR,
+                (exit_world_pos.x - 1.0) * TILE_SIZE + TILE_SIZE - thickness + offset,
+                exit_world_pos.y * TILE_SIZE,
                 thickness,
                 length,
                 color,
@@ -302,12 +285,12 @@ impl WorldEditor {
         }
     }
 
-    fn draw_hovered_room(&self, rooms_metadata: &Vec<RoomMetadata>) {
-        let world_mouse = self.mouse_world_pos();
+    fn draw_hovered_room(&self, camera: &Camera2D, rooms_metadata: &Vec<RoomMetadata>) {
+        let world_mouse = coord::mouse_world_pos(camera);
         for room_metadata in rooms_metadata {
             let rect = scaled_room_rect(room_metadata);
             if rect.contains(world_mouse) {
-                let inset = ROOM_LINE_INSET * ROOM_SCALE_FACTOR;
+                let inset = ROOM_LINE_INSET * TILE_SIZE;
 
                 // Choose highlight color based on mode
                 let color = match self.mode {
@@ -328,14 +311,14 @@ impl WorldEditor {
         }
     }
 
-    fn draw_room_names(&self, rooms_metadata: &Vec<RoomMetadata>) {
+    fn draw_room_names(&self, camera: &Camera2D, rooms_metadata: &Vec<RoomMetadata>) {
         set_default_camera(); // draw in screen space
 
         for room_metadata in rooms_metadata {
             let rect = scaled_room_rect(room_metadata);
 
             // Screen coordinates of room center
-            let screen_pos = self.camera.world_to_screen(rect.point() + rect.size() / 2.0);
+            let screen_pos = camera.world_to_screen(rect.point() + rect.size() / 2.0);
 
             let text_len = room_metadata.name.len() as f32;
 
@@ -344,7 +327,7 @@ impl WorldEditor {
 
             // Scale based on room size and camera zoom
             let room_scale = (rect.w + rect.h) / 2.0 / 60.0;
-            let zoom_factor = self.camera.zoom.x * 100.0;
+            let zoom_factor = camera.zoom.x * 100.0;
             let font_size = (base_font_size * room_scale * zoom_factor).clamp(10.0, 200.0);
 
             // Rotation: vertical if tall
@@ -374,16 +357,16 @@ impl WorldEditor {
                 },
             );
         }
-    set_camera(&self.camera); // back to world camera
+    set_camera(camera); // back to world camera
 }
     
-    fn draw_grid(&self) {
-        let step = ROOM_SCALE_FACTOR;
-        let line_thickness = LINE_THICKNESS_MULTIPLIER / 2.0 / self.camera.zoom.x;
+    fn draw_grid(&self, camera: &Camera2D) {
+        let step = TILE_SIZE;
+        let line_thickness = LINE_THICKNESS_MULTIPLIER / 2.0 / camera.zoom.x;
 
-        let cam_pos = self.camera.target;
-        let screen_w = screen_width() / self.camera.zoom.x;
-        let screen_h = screen_height() / self.camera.zoom.y;
+        let cam_pos = camera.target;
+        let screen_w = screen_width() / camera.zoom.x;
+        let screen_h = screen_height() / camera.zoom.y;
 
         let start_x = ((cam_pos.x - screen_w / 2.0) / step).floor() * step;
         let start_y = ((cam_pos.y - screen_h / 2.0) / step).floor() * step;
@@ -403,84 +386,64 @@ impl WorldEditor {
         }
     }
 
-    fn draw_placing_preview(&self, rooms_metadata: &Vec<RoomMetadata>) {
+    fn draw_placing_preview(&self, camera: &Camera2D, rooms_metadata: &Vec<RoomMetadata>) {
         if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
             let (top_left, size) = rect_from_points(start, end);
             let color = if self.intersects_existing_room(rooms_metadata, top_left, size) { HIGHLIGHT_ERROR_COLOR } else { HIGHLIGHT_COLOR };
-            let inset = ROOM_LINE_INSET * ROOM_SCALE_FACTOR;
+            let inset = ROOM_LINE_INSET * TILE_SIZE;
             draw_rectangle_lines(
-                top_left.x * ROOM_SCALE_FACTOR + inset / 2.0,
-                top_left.y * ROOM_SCALE_FACTOR + inset / 2.0,
-                size.x * ROOM_SCALE_FACTOR - inset,
-                size.y * ROOM_SCALE_FACTOR - inset,
-                HOVER_LINE_THICKNESS / self.camera.zoom.x,
+                top_left.x * TILE_SIZE + inset / 2.0,
+                top_left.y * TILE_SIZE + inset / 2.0,
+                size.x * TILE_SIZE - inset,
+                size.y * TILE_SIZE - inset,
+                HOVER_LINE_THICKNESS / camera.zoom.x,
                 color,
             );
         } else {
-            let hover_tile = self.snap_to_grid(self.mouse_world_pos() / ROOM_SCALE_FACTOR);
+            let hover_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
             let color = if self.intersects_existing_room(rooms_metadata, hover_tile, vec2(1.0, 1.0)) {
                 HIGHLIGHT_ERROR_COLOR
             } else {
                 HIGHLIGHT_COLOR
             };
             draw_rectangle(
-                hover_tile.x * ROOM_SCALE_FACTOR,
-                hover_tile.y * ROOM_SCALE_FACTOR,
-                ROOM_SCALE_FACTOR,
-                ROOM_SCALE_FACTOR,
+                hover_tile.x * TILE_SIZE,
+                hover_tile.y * TILE_SIZE,
+                TILE_SIZE,
+                TILE_SIZE,
                 color,
             );
         }
     }
 
-    fn draw_ui(&self, world: &World) {
+    fn draw_ui(&self, camera: &Camera2D, world: &World) {
         set_default_camera(); // screen space
 
         for element in &self.ui_elements {
             element.draw(world);
         }
 
-        set_camera(&self.camera); // back to world camera
+        set_camera(camera); // back to world camera
     }
 
-    pub fn update_camera(&mut self, dt: f32) {
-        let mut direction = vec2(0.0, 0.0);
-
-        if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) { direction.y -= 1.0; }
-        if is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) { direction.y += 1.0; }
-        if is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) { direction.x -= 1.0; }
-        if is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) { direction.x += 1.0; }
-
-        if direction.length_squared() > 0.0 {
-            self.camera.target += direction.normalize() * PAN_SPEED * dt;
+    pub fn update_camera(&mut self, camera: &mut Camera2D) {
+        // Handle pan
+        if is_mouse_button_down(MouseButton::Middle) {
+            let delta = mouse_delta_position();
+            camera.target -= delta / camera.zoom;
         }
 
         let scroll = mouse_wheel().1;
         if scroll != 0.0 {
-            let zoom_speed = ZOOM_SPEED_FACTOR * self.camera.zoom.x;
-            let new_zoom = (self.camera.zoom.x + scroll * zoom_speed).clamp(MIN_ZOOM, MAX_ZOOM);
-            self.show_grid = new_zoom >= MAX_ZOOM / 2.0;
-            self.camera.zoom = vec2(new_zoom, new_zoom);
+            let zoom_speed = ZOOM_SPEED_FACTOR * camera.zoom.x;
+            let new_zoom = (camera.zoom.x + scroll * zoom_speed).clamp(MIN_ZOOM, MAX_ZOOM);
+            self.show_grid = new_zoom >= MIN_ZOOM * 2.0;
+            camera.zoom = vec2(new_zoom, new_zoom);
         }
     }
 
-    pub fn center_on_room(&mut self, room_metadata: &RoomMetadata) {
-        let room_size = room_metadata.size;
-        let room_position = room_metadata.position;
-        self.camera = Self::compute_camera_for_room(room_size, room_position);
-    }
-
-    fn compute_camera_for_room(room_size: Vec2, room_position: Vec2) -> Camera2D {
-        let room_scaled_size = room_size * ROOM_SCALE_FACTOR;
-
-        let max_dim = room_scaled_size.x.max(room_scaled_size.y);
-        let zoom = WORLD_EDITOR_ZOOM_FACTOR / max_dim;
-
-        Camera2D {
-            target: (room_position + room_size / 2.0) * ROOM_SCALE_FACTOR,
-            zoom: vec2(zoom, zoom),
-            ..Default::default()
-        }
+    pub fn center_on_room(&mut self, camera: &mut Camera2D, room_metadata: &RoomMetadata) {
+        *camera = camera_actions::camera_for_room(room_metadata.size, room_metadata.position);
     }
 }
 
@@ -489,26 +452,20 @@ pub fn mouse_over_rect(rect: Rect) -> bool {
     rect.contains(vec2(mouse_pos.0, mouse_pos.1))
 }
 
-/// Helper: returns rect scaled for drawing
+/// Returns rect scaled for drawing
 fn scaled_room_rect(room_metadata: &RoomMetadata) -> Rect {
     let size = room_metadata.size;
     Rect::new(
-        room_metadata.position.x * ROOM_SCALE_FACTOR,
-        room_metadata.position.y * ROOM_SCALE_FACTOR,
-        size.x * ROOM_SCALE_FACTOR,
-        size.y * ROOM_SCALE_FACTOR,
+        room_metadata.position.x * TILE_SIZE,
+        room_metadata.position.y * TILE_SIZE,
+        size.x * TILE_SIZE,
+        size.y * TILE_SIZE,
     )
 }
 
-/// Helper: returns unscaled rect for intersection check
-// fn room_rect(room: &Room) -> Rect {
-//     let size = room.size();
-//     Rect::new(room.position.x, room.position.y, size.x, size.y)
-// }
-
-/// Helper: compute top-left and size from any two points
+/// Compute top-left and size from any two points
 fn rect_from_points(p1: Vec2, p2: Vec2) -> (Vec2, Vec2) {
     let top_left = vec2(p1.x.min(p2.x), p1.y.min(p2.y));
-    let size = vec2((p1.x - p2.x).abs() + 1.0, (p1.y - p2.y).abs() + 1.0);
+    let size = vec2((p1.x - p2.x).abs(), (p1.y - p2.y).abs());
     (top_left, size)
 }

@@ -21,9 +21,10 @@ impl RoomEditor {
         }
     }
 
-    /// Returns `true` if user wants to exit back to world view. // Still refactoring as I go 
+    /// Returns `true` if user wants to exit back to world view.  
     pub fn update(
         &mut self, 
+        camera: &mut Camera2D,
         room: &mut Room,
         room_id: Uuid, 
         rooms_metadata: &mut [RoomMetadata]
@@ -44,7 +45,7 @@ impl RoomEditor {
                     .find(|m| m.id == room_id)
                     .expect("metadata must still exist");
 
-                self.tilemap_editor.update(tilemap, room_metadata, &other_bounds);
+                self.tilemap_editor.update(camera, tilemap, room_metadata, &other_bounds);
             }
             RoomEditorMode::Scene => {
                 // Non-tilemap logic
@@ -69,6 +70,7 @@ impl RoomEditor {
 
     pub fn draw(
         &mut self, 
+        camera: &Camera2D,
         room: &Room,
         room_metadata: &RoomMetadata
     ) {
@@ -76,12 +78,14 @@ impl RoomEditor {
             RoomEditorMode::Tilemap => {
                 let tilemap = &room.variants[0].tilemap;
                 let exits = &room_metadata.exits;
-                self.tilemap_editor.draw(tilemap, exits);
+                self.tilemap_editor.draw(camera, tilemap, exits);
             }
             RoomEditorMode::Scene => {
                 draw_text("Non-tilemap mode active", 20.0, 20.0, 24.0, WHITE);
             }
         }
+        set_default_camera();
+        self.draw_coordinates(camera, room_metadata);
     }
 
     pub fn reset(&mut self) {

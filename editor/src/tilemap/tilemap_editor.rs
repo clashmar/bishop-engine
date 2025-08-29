@@ -21,7 +21,6 @@ pub struct TileMapEditor {
     dynamic_ui: Vec<Box<dyn DynamicTilemapUiElement>>,
     static_ui: Vec<Box<dyn TilemapUiElement>>,
     selected_tile: Tile,
-    camera: Camera2D,
     show_grid: bool,
     ui_clicked: bool,
     initialized: bool, 
@@ -29,8 +28,6 @@ pub struct TileMapEditor {
 
 impl TileMapEditor  {
     pub fn new() -> Self {
-        let camera = Camera2D::default();
-
         let mut static_ui_elements: Vec<Box<dyn TilemapUiElement>> = Vec::new();
 
         static_ui_elements.push(Box::new(TilePalette::new(
@@ -45,7 +42,6 @@ impl TileMapEditor  {
             dynamic_ui: Vec::new(),
             static_ui: static_ui_elements,
             selected_tile: Tile::floor(),
-            camera,
             show_grid: true,
             ui_clicked: false,
             initialized: false,
@@ -57,38 +53,35 @@ impl TileMapEditor  {
     /// Update the editor with a mutable reference to the map
     pub fn update(
         &mut self, 
+        camera: &mut Camera2D,
         map: &mut TileMap, 
         room_metadata: &mut RoomMetadata,
         other_bounds: &[(Vec2, Vec2)]
     ) 
         {
         if !self.initialized {
-            self.reset_camera_view(map);
+            self.reset_camera_view(camera, map);
             self.ui_clicked = true; // Stop any initial tile placements
             self.initialized = true;
         }
 
-        // let room_size = &mut room_metadata.size;
-        // let room_position = &mut room_metadata.position;
-
-        
         self.dynamic_ui.clear();
         ResizeButton::build_all(map, &mut self.dynamic_ui);
         
         let mouse_pos = mouse_position().into();
-        self.handle_camera_controls();
-        self.handle_ui_clicks(mouse_pos, map, room_metadata, other_bounds);
+        self.update_camera(camera);
+        self.handle_ui_clicks(camera, mouse_pos, map, room_metadata, other_bounds);
         
         let exits = &mut room_metadata.exits;
         if !self.ui_clicked {
             match self.mode {
-                TilemapEditorMode::Tiles => self.handle_tile_placement(mouse_pos, map),
-                TilemapEditorMode::Exits => self.handle_exit_placement(map, exits),
+                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map),
+                TilemapEditorMode::Exits => self.handle_exit_placement(camera, map, exits),
             }
         }
 
         if is_key_pressed(KeyCode::R) {
-            self.reset_camera_view(map);
+            self.reset_camera_view(camera, map);
         }
         if is_key_pressed(KeyCode::G) {
             self.show_grid = !self.show_grid;
@@ -107,19 +100,7 @@ impl TileMapEditor  {
         };
     }
 
-    pub fn draw(&self, map: &TileMap, exits: &Vec<Exit>) {
-        clear_background(WHITE);
-        set_camera(&self.camera);
-
-        self.draw_map(map);
-        self.draw_exits(map, exits);
-        self.draw_grid(map);
-        self.draw_hover_highlight(map);
-
-        self.draw_ui();
-    }
-
-    fn handle_camera_controls(&mut self) {
+    fn update_camera(&mut self, camera: &mut Camera2D) {
         // Handle zoom
         let wheel = mouse_wheel().1;
 
@@ -129,25 +110,26 @@ impl TileMapEditor  {
 
             // Change world scale by modifying zoom based on screen size
             let aspect_x = 2.0 / screen_width();
-            let aspect_y = -2.0 / screen_height(); // negative to flip Y
+            let aspect_y = 2.0 / screen_height(); // negative to flip Y
 
-            let current_scale = self.camera.zoom.x / aspect_x;
+            let current_scale = camera.zoom.x / aspect_x;
 
             let new_scale = (current_scale * zoom_factor)
                 .clamp(0.25, 4.0); // Min and max zoom levels
 
-            self.camera.zoom = vec2(aspect_x * new_scale, aspect_y * new_scale);
+            camera.zoom = vec2(aspect_x * new_scale, aspect_y * new_scale);
         }
 
         // Handle pan
-        if is_mouse_button_down(MouseButton::Middle) || is_mouse_button_down(MouseButton::Right) {
+        if is_mouse_button_down(MouseButton::Middle) {
             let delta = mouse_delta_position();
-            self.camera.target -= delta / self.camera.zoom;
+            camera.target -= delta / camera.zoom;
         }
     }
 
     fn handle_ui_clicks(
         &mut self, 
+        camera: &mut Camera2D,
         mouse_pos: Vec2, 
         map: &mut TileMap,
         room_metadata: &mut RoomMetadata,
@@ -155,16 +137,16 @@ impl TileMapEditor  {
     ) {
         if is_mouse_button_pressed(MouseButton::Left) {
             for element in &mut self.dynamic_ui {
-                if element.is_mouse_over(mouse_pos, &self.camera) {
-                    element.on_click(map, room_metadata, mouse_pos, &self.camera, other_bounds);
+                if element.is_mouse_over(mouse_pos, camera) {
+                    element.on_click(map, room_metadata, mouse_pos, camera, other_bounds);
                     self.ui_clicked = true;
                     break;
                 }
             }
 
             for element in &mut self.static_ui {
-                if element.is_mouse_over(mouse_pos, &self.camera) {
-                    element.on_click(&mut self.selected_tile, mouse_pos, &self.camera);
+                if element.is_mouse_over(mouse_pos, camera) {
+                    element.on_click(&mut self.selected_tile, mouse_pos, camera);
                     self.ui_clicked = true;
                     break;
                 }
@@ -177,9 +159,9 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_tile_placement(&mut self, mouse_pos: Vec2, map: &mut TileMap) {
-        let mouse_over_ui = self.is_mouse_over_ui(mouse_pos);
-        let hover_pos = self.get_hovered_tile(map);
+    fn handle_tile_placement(&mut self, camera: &Camera2D, mouse_pos: Vec2, map: &mut TileMap) {
+        let mouse_over_ui = self.is_mouse_over_ui(camera, mouse_pos);
+        let hover_pos = self.get_hovered_tile(camera, map);
 
         if !mouse_over_ui {
             if is_mouse_button_down(MouseButton::Left) {
@@ -200,8 +182,8 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_exit_placement(&mut self, map: &TileMap, exits: &mut Vec<Exit>) {
-        if let Some(tile_pos) = self.get_hovered_edge(map) {
+    fn handle_exit_placement(&mut self, camera: &Camera2D, map: &TileMap, exits: &mut Vec<Exit>) {
+        if let Some(tile_pos) = self.get_hovered_edge(camera, map) {
             let exit_direction = self.exit_direction_from_position(tile_pos, map);
             let exit_vec = vec2(tile_pos.x() as f32, tile_pos.y() as f32);
 
@@ -233,6 +215,16 @@ impl TileMapEditor  {
                 }
             }
         }
+    }
+
+    pub fn draw(&self, camera: &Camera2D, map: &TileMap, exits: &Vec<Exit>) {
+        clear_background(WHITE);
+        set_camera(camera);
+        self.draw_map(map);
+        self.draw_exits(map, exits);
+        self.draw_grid(camera, map);
+        self.draw_hover_highlight(camera, map);
+        self.draw_ui(camera);
     }
 
     fn draw_map(&self, map: &TileMap) {
@@ -295,12 +287,12 @@ impl TileMapEditor  {
         );
     }
 
-    fn draw_grid(&self, map: &TileMap) {
+    fn draw_grid(&self, camera: &Camera2D, map: &TileMap) {
         if !self.show_grid {
             return;
         }
 
-        let zoom_scale = self.camera.zoom.x.abs();
+        let zoom_scale = camera.zoom.x.abs();
         let base_width = 0.5;
         let min_line_width = 2.0;
         let max_line_width = 5.0;
@@ -330,14 +322,14 @@ impl TileMapEditor  {
         }
     }
 
-    fn draw_hover_highlight(&self, map: &TileMap) {
+    fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap) {
         let tile_pos = match self.mode {
-            TilemapEditorMode::Tiles => self.get_hovered_tile(map),
-            TilemapEditorMode::Exits => self.get_hovered_edge(map),
+            TilemapEditorMode::Tiles => self.get_hovered_tile(camera, map),
+            TilemapEditorMode::Exits => self.get_hovered_edge(camera, map),
         };
 
         if let Some(tile_pos) = tile_pos {
-            let zoom_scale = self.camera.zoom.x.abs();
+            let zoom_scale = camera.zoom.x.abs();
             let base_width = 0.5;
             let min_line_width = 2.0;
             let max_line_width = 5.0;
@@ -358,10 +350,10 @@ impl TileMapEditor  {
         }
     }
 
-    fn draw_ui(&self) {
+    fn draw_ui(&self, camera: &Camera2D) {
         // Draw scaling UI
         for element in &self.dynamic_ui {
-            element.draw(&self.camera);
+            element.draw(camera);
         }
         
         // Reset to default camera for static UI drawing
@@ -369,7 +361,7 @@ impl TileMapEditor  {
 
         // Draw static UI
         for element in &self.static_ui {
-            element.draw(&self.camera);
+            element.draw(camera);
         }
     }
 
@@ -390,9 +382,9 @@ impl TileMapEditor  {
         Ok(())
     }
 
-    fn get_hovered_tile(&self, map: &TileMap) -> Option<GridPos> {
+    fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap) -> Option<GridPos> {
         let mouse_pos: Vec2 = mouse_position().into();
-        let world_pos = self.camera.screen_to_world(mouse_pos);
+        let world_pos = camera.screen_to_world(mouse_pos);
         let pos = GridPos::from_world(world_pos);
 
         if pos.is_in_bounds(map.width, map.height) {
@@ -402,9 +394,9 @@ impl TileMapEditor  {
         }
     }
 
-    fn get_hovered_edge(&self, map: &TileMap) -> Option<GridPos> {
+    fn get_hovered_edge(&self, camera: &Camera2D, map: &TileMap) -> Option<GridPos> {
         let mouse_pos: Vec2 = mouse_position().into();
-        let world_pos = self.camera.screen_to_world(mouse_pos);
+        let world_pos = camera.screen_to_world(mouse_pos);
         let edge_pos = GridPos::from_world_edge(world_pos, map);
 
         let x_outside = edge_pos.x() < 0 || edge_pos.x() >= map.width as i32;
@@ -418,22 +410,23 @@ impl TileMapEditor  {
         }
     }
 
-    pub fn reset_camera_view(&mut self, map: &TileMap) {
-        let aspect_x = 2.0 / screen_width();
-        let aspect_y = -2.0 / screen_height();
+    pub fn reset_camera_view(&mut self, camera: &mut Camera2D, map: &TileMap) {
+        let aspect_x = 4.0 / screen_width();
+        let aspect_y = 4.0 / screen_height();
         let initial_scale = 1.0 / 2.0;
 
-        self.camera.target = vec2(
+        camera.target = vec2(
             (map.width as f32 * TILE_SIZE) / 2.0,
             (map.height as f32 * TILE_SIZE) / 2.0,
         );
-        self.camera.zoom = vec2(aspect_x * initial_scale, aspect_y * initial_scale);
+        
+        camera.zoom = vec2(aspect_x * initial_scale, aspect_y * initial_scale);
     }
 
-    fn is_mouse_over_ui(&self, mouse_pos: Vec2) -> bool {
+    fn is_mouse_over_ui(&self, camera: &Camera2D, mouse_pos: Vec2) -> bool {
         self.dynamic_ui
         .iter()
-        .any(|element| element.is_mouse_over(mouse_pos, &self.camera))
+        .any(|element| element.is_mouse_over(mouse_pos, camera))
     }
 
     fn exit_direction_from_position(&self, tile_pos: GridPos, map: &TileMap) -> ExitDirection {
@@ -454,6 +447,5 @@ impl TileMapEditor  {
         self.mode = TilemapEditorMode::Tiles;
         self.initialized = false;
         self.ui_clicked = false;
-        self.camera = Camera2D::default();
     }
 }

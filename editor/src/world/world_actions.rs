@@ -1,5 +1,6 @@
 use uuid::Uuid;
 use core::{tilemap::TileMap, world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
+use crate::world::coord;
 use macroquad::prelude::*;
 use crate::{storage::world_storage, world::world_editor::WorldEditor};
 
@@ -119,5 +120,18 @@ impl WorldEditor {
                             (a_rect.x + a_rect.w == b_rect.x || b_rect.x + b_rect.w == a_rect.x);
 
         horizontal_touch || vertical_touch
+    }
+
+
+
+    pub fn draw_coordinates(&self, camera: &Camera2D) {
+        let world_grid = coord::mouse_world_grid(camera);
+
+        let txt = format!("({:.0}, {:.0})", world_grid.x, world_grid.y);
+
+        let margin = 10.0;
+        let x = margin;
+        let y = screen_height() - margin; // baseline is at the bottom
+        draw_text(&txt, x, y, 20.0, BLACK);
     }
 }

@@ -1,0 +1,13 @@
+(
+    variants: [
+        (
+            id: "default",
+            tilemap: (
+                width: 0,
+                height: 0,
+                tiles: [],
+                background: (0.78, 0.78, 0.78, 1.0),
+            ),
+        ),
+    ],
+)
