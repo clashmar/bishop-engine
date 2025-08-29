@@ -3,8 +3,8 @@
         (
             id: "default",
             tilemap: (
-                width: 4,
-                height: 17,
+                width: 10,
+                height: 5,
                 tiles: [
                     [
                         (
@@ -31,8 +31,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -45,20 +43,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -109,8 +93,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -123,20 +105,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -187,8 +155,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -201,20 +167,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -265,8 +217,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -279,20 +229,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -343,8 +279,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
@@ -357,72 +291,6 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                        (
-                            tile_type: r#None,
-                            color: (0.0, 0.0, 0.0, 0.0),
-                            is_walkable: false,
-                            is_solid: false,
-                        ),
-                    ],
-                    [
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),

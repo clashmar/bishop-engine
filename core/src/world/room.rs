@@ -48,32 +48,28 @@ impl RoomMetadata {
     }
 
     pub fn link_exits(&mut self, other_rooms: &[&RoomMetadata]) {
-        let my_size = self.size;
         let epsilon = 0.01; // tolerance for floating-point comparisons
 
         for exit in self.exits.iter_mut() {
             exit.target_room_id = None;
 
-            // Local to world position (Y-flip)
-            let exit_world_pos = self.position + Vec2::new(exit.position.x, my_size.y - exit.position.y - 1.0);
+            // Local to world position
+            let exit_world_pos = self.position + exit.position;
 
             'other_rooms: for (idx, other_room) in other_rooms.iter().enumerate() {
-                let other_size = other_room.size;
-
                 for other_exit in &other_room.exits {
-                    // World position of the other room's exit (Y-flip)
-                    let other_world_pos = other_room.position
-                        + Vec2::new(other_exit.position.x, other_size.y - other_exit.position.y - 1.0);
+                    // World position of the other room's exit
+                    let other_world_pos = other_room.position + other_exit.position;
 
                     let linked = match exit.direction {
                         ExitDirection::Up => {
                             other_exit.direction == ExitDirection::Down &&
-                            (exit_world_pos.y - (other_world_pos.y + 1.0)).abs() < epsilon &&
+                            (exit_world_pos.y - (other_world_pos.y - 1.0)).abs() < epsilon &&
                             (exit_world_pos.x - other_world_pos.x).abs() < epsilon
                         }
                         ExitDirection::Down => {
                             other_exit.direction == ExitDirection::Up &&
-                            (exit_world_pos.y + 1.0 - other_world_pos.y).abs() < epsilon &&
+                            (exit_world_pos.y - 1.0 - other_world_pos.y).abs() < epsilon &&
                             (exit_world_pos.x - other_world_pos.x).abs() < epsilon
                         }
                         ExitDirection::Left => {
@@ -98,11 +94,8 @@ impl RoomMetadata {
     }
 
     pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
-        let room_size = self.size;
         self.exits.iter().map(|exit| {
-            // Flip y-axis: local Y increases up, world Y increases down
-            let world_pos = self.position + Vec2::new(exit.position.x, room_size.y - exit.position.y - 1.0);
-            (world_pos, exit.direction)
+            (self.position + exit.position, exit.direction)
         }).collect()
     }
 }

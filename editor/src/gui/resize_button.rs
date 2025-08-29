@@ -50,13 +50,13 @@ impl DynamicTilemapUiElement for ResizeButton {
         // Compute proposed delta and new size
         let (delta_pos, new_size) = match self.action {
             ResizeAction::AddTop    => (vec2(0.0, -1.0), vec2(map.width as f32, map.height as f32 + 1.0)),
-            ResizeAction::RemoveTop => (vec2(0.0, 1.0),  vec2(map.width as f32, map.height as f32 - 1.0)),
-            ResizeAction::AddBottom => (vec2(0.0, 0.0),  vec2(map.width as f32, map.height as f32 + 1.0)),
+            ResizeAction::RemoveTop => (vec2(0.0,  1.0), vec2(map.width as f32, map.height as f32 - 1.0)),
+            ResizeAction::AddBottom    => (vec2(0.0, 0.0), vec2(map.width as f32, map.height as f32 + 1.0)),
             ResizeAction::RemoveBottom => (vec2(0.0, 0.0), vec2(map.width as f32, map.height as f32 - 1.0)),
             ResizeAction::AddLeft   => (vec2(-1.0, 0.0), vec2(map.width as f32 + 1.0, map.height as f32)),
-            ResizeAction::RemoveLeft=> (vec2(1.0, 0.0),  vec2(map.width as f32 - 1.0, map.height as f32)),
-            ResizeAction::AddRight  => (vec2(0.0, 0.0),  vec2(map.width as f32 + 1.0, map.height as f32)),
-            ResizeAction::RemoveRight => (vec2(0.0, 0.0), vec2(map.width as f32 - 1.0, map.height as f32)),
+            ResizeAction::RemoveLeft=> (vec2( 1.0, 0.0), vec2(map.width as f32 - 1.0, map.height as f32)),
+            ResizeAction::AddRight  => (vec2(0.0, 0.0), vec2(map.width as f32 + 1.0, map.height as f32)),
+            ResizeAction::RemoveRight=> (vec2(0.0, 0.0), vec2(map.width as f32 - 1.0, map.height as f32)),
         };
 
         // Check for overlaps
@@ -79,12 +79,11 @@ impl DynamicTilemapUiElement for ResizeButton {
         // Apply resize
         match self.action {
             ResizeAction::AddTop => {
-                map.tiles.push(vec![Tile::none(); map.width]);
+                map.tiles.insert(0, vec![Tile::none(); map.width]);
                 map.height += 1;
 
                 for exit in &mut room_metadata.exits {
-                    let exit_grid_y = room_size.y - exit.position.y; // convert exit y → grid y
-                    println!("room_position: {}, exit y: {}", room_position, exit_grid_y);
+                    let exit_grid_y = room_size.y - exit.position.y; 
                     if (exit_grid_y - 0.0).abs() < f32::EPSILON {
                         // exit is on the top row
                         exit.position.y += 1.0; // move up in exit-space
@@ -97,7 +96,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             }
             ResizeAction::RemoveTop => {
                 if map.height > 1 {
-                    map.tiles.pop();
+                    map.tiles.remove(0);
                     map.height -= 1;
 
                     for exit in &mut room_metadata.exits {
@@ -113,14 +112,26 @@ impl DynamicTilemapUiElement for ResizeButton {
                 }
             }
             ResizeAction::AddBottom => {
-                map.tiles.insert(0, vec![Tile::none(); map.width]);
+                map.tiles.push(vec![Tile::none(); map.width]);
                 map.height += 1;
+                for exit in &mut room_metadata.exits {
+                    if (exit.position.y - room_size.y).abs() < f32::EPSILON {
+                        // the exit sits on the bottom edge → shift it down
+                        exit.position.y += 1.0;
+                    }
+                }
                 room_size.y += 1.0;
             }
             ResizeAction::RemoveBottom => {
                 if map.height > 1 {
-                    map.tiles.remove(0);
+                    map.tiles.pop();
                     map.height -= 1;
+                    for exit in &mut room_metadata.exits {
+                        if (exit.position.y - room_size.y).abs() < f32::EPSILON {
+                            // the exit sits on the bottom edge → shift it up
+                            exit.position.y -= 1.0;
+                        }
+                    }
                     room_size.y -= 1.0;
                 }
             }
@@ -197,26 +208,26 @@ impl ResizeButton {
 
         add_btn(
             ResizeAction::AddTop,
-            vec2(map_pixel_width / 2.0, map_pixel_height + margin + 60.0),
+            vec2(map_pixel_width / 2.0, -margin - 60.0),
             "+",
             GREEN,
         );
         add_btn(
             ResizeAction::RemoveTop,
-            vec2(map_pixel_width / 2.0, map_pixel_height + margin + 20.0),
+            vec2(map_pixel_width / 2.0, -margin - 20.0),
             "-",
             RED,
         );
 
         add_btn(
             ResizeAction::RemoveBottom,
-            vec2(map_pixel_width / 2.0, -margin - 20.0),
+            vec2(map_pixel_width / 2.0, map_pixel_height + margin + 20.0),
             "-",
             RED,
         );
         add_btn(
             ResizeAction::AddBottom,
-            vec2(map_pixel_width / 2.0, -margin - 60.0),
+            vec2(map_pixel_width / 2.0, map_pixel_height + margin + 60.0),
             "+",
             GREEN,
         );

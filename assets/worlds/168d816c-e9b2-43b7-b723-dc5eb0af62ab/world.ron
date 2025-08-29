@@ -1,0 +1,184 @@
+(
+    id: "168d816c-e9b2-43b7-b723-dc5eb0af62ab",
+    name: "asdf\r",
+    rooms_metadata: [
+        /*[0]*/ (
+            id: "1c494415-e212-4ec6-ba1a-1b3695032f61",
+            name: "untitled",
+            position: (
+                0.0,
+                0.0,
+            ),
+            size: (
+                10.0,
+                5.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "59c1be88-3956-4e8c-8c12-f11a1b78f09c",
+                /*[1]*/ "308a7726-88fe-4e1e-ab17-044913974bd0",
+                /*[2]*/ "1b1358d7-8bc0-420d-ac37-40468c642512",
+            ],
+        ),
+        /*[1]*/ (
+            id: "2edce11b-4dfd-444c-a237-4974849b5f60",
+            name: "untitled",
+            position: (
+                0.0,
+                7.0,
+            ),
+            size: (
+                3.0,
+                3.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "ce6c2769-8b74-4f9b-9248-2e964949e4ac",
+            ],
+        ),
+        /*[2]*/ (
+            id: "f94564b9-1cee-4533-aed3-941ebd2776e5",
+            name: "untitled",
+            position: (
+                5.0,
+                7.0,
+            ),
+            size: (
+                2.0,
+                0.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "1b1358d7-8bc0-420d-ac37-40468c642512",
+            ],
+        ),
+        /*[3]*/ (
+            id: "59209249-380e-4073-a514-b703e68bb293",
+            name: "untitled",
+            position: (
+                5.0,
+                9.0,
+            ),
+            size: (
+                0.0,
+                2.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+        /*[4]*/ (
+            id: "6e70765e-aa09-47d0-9291-9a04538a16ab",
+            name: "untitled",
+            position: (
+                4.0,
+                12.0,
+            ),
+            size: (
+                2.0,
+                2.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+        /*[5]*/ (
+            id: "a6fe37ad-aa63-4f63-8e11-16e84e8eecdc",
+            name: "untitled",
+            position: (
+                -1.0,
+                -4.0,
+            ),
+            size: (
+                3.0,
+                2.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+        /*[6]*/ (
+            id: "59c1be88-3956-4e8c-8c12-f11a1b78f09c",
+            name: "untitled",
+            position: (
+                -3.0,
+                1.0,
+            ),
+            size: (
+                3.0,
+                6.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "1c494415-e212-4ec6-ba1a-1b3695032f61",
+            ],
+        ),
+        /*[7]*/ (
+            id: "308a7726-88fe-4e1e-ab17-044913974bd0",
+            name: "untitled",
+            position: (
+                10.0,
+                -2.0,
+            ),
+            size: (
+                6.0,
+                10.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "1c494415-e212-4ec6-ba1a-1b3695032f61",
+                /*[1]*/ "1b1358d7-8bc0-420d-ac37-40468c642512",
+            ],
+        ),
+        /*[8]*/ (
+            id: "1b1358d7-8bc0-420d-ac37-40468c642512",
+            name: "untitled",
+            position: (
+                7.0,
+                5.0,
+            ),
+            size: (
+                3.0,
+                3.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "1c494415-e212-4ec6-ba1a-1b3695032f61",
+                /*[1]*/ "f94564b9-1cee-4533-aed3-941ebd2776e5",
+                /*[2]*/ "308a7726-88fe-4e1e-ab17-044913974bd0",
+            ],
+        ),
+        /*[9]*/ (
+            id: "ce6c2769-8b74-4f9b-9248-2e964949e4ac",
+            name: "untitled",
+            position: (
+                3.0,
+                7.0,
+            ),
+            size: (
+                1.0,
+                1.0,
+            ),
+            exits: [],
+            adjacent_rooms: [
+                /*[0]*/ "2edce11b-4dfd-444c-a237-4974849b5f60",
+            ],
+        ),
+        /*[10]*/ (
+            id: "55ea8545-4817-4d97-9797-faec1faa486d",
+            name: "untitled",
+            position: (
+                0.0,
+                15.0,
+            ),
+            size: (
+                5.0,
+                1.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+    ],
+    starting_room: Some("1c494415-e212-4ec6-ba1a-1b3695032f61"),
+    starting_position: Some((
+        1.0,
+        1.0,
+    )),
+)

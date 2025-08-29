@@ -229,10 +229,7 @@ impl WorldEditor {
         for room_metadata in rooms_metadata {
             for (exit_world_pos, dir) in room_metadata.world_exit_positions() {
                 for exit in &room_metadata.exits {
-                    let pos = room_metadata.position + Vec2::new(
-                        exit.position.x,
-                        room_metadata.size.y - exit.position.y - 1.0
-                    );
+                    let pos = room_metadata.position + exit.position;
 
                     if (pos - exit_world_pos).length_squared() < 0.01 {
                         // Decide color based on whether it's linked
@@ -249,21 +246,21 @@ impl WorldEditor {
     }
 
     fn draw_exit_marker(&self, exit_world_pos: Vec2, dir: ExitDirection, color: Color) {
-        let thickness = 2.0;
+        let thickness = 4.0;
         let length = TILE_SIZE;
         let offset = 1.0; 
 
         match dir {
             ExitDirection::Up => draw_rectangle(
                 exit_world_pos.x * TILE_SIZE,
-                exit_world_pos.y * TILE_SIZE - offset,
+                exit_world_pos.y * TILE_SIZE + TILE_SIZE,
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Down => draw_rectangle(
                 exit_world_pos.x * TILE_SIZE,
-                exit_world_pos.y * TILE_SIZE + TILE_SIZE - thickness + offset,
+                exit_world_pos.y * TILE_SIZE - thickness + offset,
                 length,
                 thickness,
                 color,
@@ -466,6 +463,10 @@ fn scaled_room_rect(room_metadata: &RoomMetadata) -> Rect {
 /// Compute top-left and size from any two points
 fn rect_from_points(p1: Vec2, p2: Vec2) -> (Vec2, Vec2) {
     let top_left = vec2(p1.x.min(p2.x), p1.y.min(p2.y));
-    let size = vec2((p1.x - p2.x).abs(), (p1.y - p2.y).abs());
+    let size = vec2(
+        (p1.x - p2.x).abs().floor() + 1.0,
+        (p1.y - p2.y).abs().floor() + 1.0,
+    );
+
     (top_left, size)
 }

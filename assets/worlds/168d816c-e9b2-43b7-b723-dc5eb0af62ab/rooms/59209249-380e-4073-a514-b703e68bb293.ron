@@ -4,8 +4,11 @@
             id: "default",
             tilemap: (
                 width: 0,
-                height: 0,
-                tiles: [],
+                height: 2,
+                tiles: [
+                    [],
+                    [],
+                ],
                 background: (0.78, 0.78, 0.78, 1.0),
             ),
         ),
