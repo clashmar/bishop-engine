@@ -1,6 +1,6 @@
 use uuid::Uuid;
 use macroquad::prelude::*;
-use crate::camera_actions;
+use crate::camera_controller::CameraController;
 use crate::controls::controls::Controls;
 use crate::{storage::world_storage, room::room_editor::RoomEditor, world::world_editor::WorldEditor};
 use core::world::room::Room;
@@ -34,7 +34,7 @@ impl Editor {
             world_storage::create_new_world("untitled".to_string())
         };
 
-        let camera = camera_actions::camera_for_room(
+        let camera = CameraController::camera_for_room(
             DEFAULT_ROOM_SIZE,
             DEFAULT_ROOM_POSITION,
         );
@@ -51,6 +51,7 @@ impl Editor {
     }
 
     pub async fn update(&mut self) {
+        CameraController::update(&mut self.camera);
         match self.mode {
             EditorMode::World => {
                 // Update returns the id of the room being edited

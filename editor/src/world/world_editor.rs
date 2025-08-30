@@ -1,7 +1,7 @@
 use core::{constants::TILE_SIZE, world::{room::{ExitDirection, RoomMetadata}, world::World}};
 use macroquad::prelude::*;
 use uuid::Uuid;
-use crate::camera_actions;
+use crate::camera_controller::{self, CameraController};
 use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use crate::world::coord;
 
@@ -10,10 +10,7 @@ const HIGHLIGHT_ERROR_COLOR: Color = Color::new(1.0, 0.0, 0.0, 0.5);
 const LINE_THICKNESS_MULTIPLIER: f32 = 0.02;
 const ROOM_LINE_INSET: f32 = 0.5;
 const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
-const HOVER_LINE_THICKNESS: f32 = 0.05;
-const ZOOM_SPEED_FACTOR: f32 = 0.1;
-const MIN_ZOOM: f32 = 0.0005;
-const MAX_ZOOM: f32 = 0.003;
+const HOVER_LINE_THICKNESS: f32 = 0.02;
 
 pub enum WorldEditorMode {
     Selecting,
@@ -45,7 +42,6 @@ impl WorldEditor {
 
     /// Returns `Some(room_id)` if a room is clicked on.
     pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<Uuid> {
-        self.update_camera(camera);
         world.link_all_exits();
         self.handle_ui_clicks(world).await;
 
@@ -177,15 +173,13 @@ impl WorldEditor {
         };
     }
 
-    pub fn draw(&self, camera: &Camera2D, world: &World) {
+    pub fn draw(&mut self, camera: &Camera2D, world: &World) {
         set_camera(camera);
         clear_background(LIGHTGRAY);
 
         let rooms_metadata = &world.rooms_metadata;
 
-        if self.show_grid {
-            self.draw_grid(camera);
-        }
+        self.draw_grid(camera);
 
         self.draw_rooms(camera, rooms_metadata);
         self.draw_unlinked_exits(rooms_metadata);
@@ -357,7 +351,13 @@ impl WorldEditor {
     set_camera(camera); // back to world camera
 }
     
-    fn draw_grid(&self, camera: &Camera2D) {
+    fn draw_grid(&mut self, camera: &Camera2D) {
+        let scalar = CameraController::scalar_zoom(camera);
+        self.show_grid = scalar >= camera_controller::MIN_ZOOM * 2.0;
+        if !self.show_grid {
+            return;
+        }
+
         let step = TILE_SIZE;
         let line_thickness = LINE_THICKNESS_MULTIPLIER / 2.0 / camera.zoom.x;
 
@@ -423,24 +423,8 @@ impl WorldEditor {
         set_camera(camera); // back to world camera
     }
 
-    pub fn update_camera(&mut self, camera: &mut Camera2D) {
-        // Handle pan
-        if is_mouse_button_down(MouseButton::Middle) {
-            let delta = mouse_delta_position();
-            camera.target -= delta / camera.zoom;
-        }
-
-        let scroll = mouse_wheel().1;
-        if scroll != 0.0 {
-            let zoom_speed = ZOOM_SPEED_FACTOR * camera.zoom.x;
-            let new_zoom = (camera.zoom.x + scroll * zoom_speed).clamp(MIN_ZOOM, MAX_ZOOM);
-            self.show_grid = new_zoom >= MIN_ZOOM * 2.0;
-            camera.zoom = vec2(new_zoom, new_zoom);
-        }
-    }
-
     pub fn center_on_room(&mut self, camera: &mut Camera2D, room_metadata: &RoomMetadata) {
-        *camera = camera_actions::camera_for_room(room_metadata.size, room_metadata.position);
+        *camera = CameraController::camera_for_room(room_metadata.size, room_metadata.position);
     }
 }
 

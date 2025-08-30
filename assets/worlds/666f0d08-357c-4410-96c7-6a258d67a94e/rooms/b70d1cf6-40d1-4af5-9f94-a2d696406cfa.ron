@@ -3,8 +3,8 @@
         (
             id: "default",
             tilemap: (
-                width: 3,
-                height: 3,
+                width: 4,
+                height: 4,
                 tiles: [
                     [
                         (
@@ -25,6 +25,38 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
+                    ],
+                    [
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
                     ],
                     [
                         (
@@ -45,8 +77,20 @@
                             is_walkable: false,
                             is_solid: false,
                         ),
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
                     ],
                     [
+                        (
+                            tile_type: r#None,
+                            color: (0.0, 0.0, 0.0, 0.0),
+                            is_walkable: false,
+                            is_solid: false,
+                        ),
                         (
                             tile_type: r#None,
                             color: (0.0, 0.0, 0.0, 0.0),
