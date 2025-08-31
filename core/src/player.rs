@@ -3,7 +3,7 @@ use macroquad::{color::Color, math::Vec2, prelude::*};
 use crate::{constants::*, tilemap::TileMap, tile::GridPos};
 
 #[derive(Debug, Clone, Copy)]
-pub struct Entity {
+pub struct Player {
     pub grid_position: GridPos,
     pub actual_position: Vec2,
     pub velocity_x: f32,
@@ -13,7 +13,7 @@ pub struct Entity {
     pub color: Color,
 }
 
-impl Entity {
+impl Player {
     pub fn update(&mut self, map: &TileMap) {
         physics::update_physics(self, map);
         self.handle_jump();

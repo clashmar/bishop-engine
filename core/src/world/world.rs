@@ -1,3 +1,4 @@
+use crate::ecs::{world_ecs::WorldEcs};
 use serde_with::FromInto;
 use uuid::Uuid;
 use crate::{world::room::{RoomMetadata}};
@@ -10,6 +11,7 @@ use serde_with::serde_as;
 pub struct World {
     pub id: Uuid,
     pub name: String,
+    pub ecs: WorldEcs,
     pub rooms_metadata: Vec<RoomMetadata>,
     pub starting_room: Option<Uuid>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]

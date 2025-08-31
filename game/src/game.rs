@@ -1,4 +1,4 @@
-use core::{constants::*, entity::Entity, tilemap::{self, TileMap}, tile::GridPos};
+use core::{constants::*, player::Player, tilemap::{self, TileMap}, tile::GridPos};
 use crate::{modes::Mode};
 use macroquad::prelude::*;
 use crate::camera::Camera;
@@ -6,7 +6,7 @@ use crate::camera::Camera;
 #[derive(Debug, Clone)]
 pub struct GameState {
     map: TileMap,
-    player: Entity,
+    player: Player,
     mode: Mode,
     camera: Camera,
 }
@@ -16,7 +16,7 @@ impl GameState {
         let start_pos = GridPos::new(0, 10);
         let map = tilemap::get_current_map();
 
-        let player = Entity { 
+        let player = Player { 
             grid_position: start_pos, 
             actual_position: tilemap::tile_to_world(start_pos, map.height),
             velocity_x: 0.0,

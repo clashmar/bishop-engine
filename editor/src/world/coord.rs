@@ -20,3 +20,8 @@ pub fn mouse_world_grid(camera: &Camera2D) -> Vec2 {
     let world = mouse_world_pos(camera);
     (world / TILE_SIZE).floor()
 }
+
+/// Turn a world‑space `Vec2` into screen coordinates using the current camera.
+pub fn world_to_screen(camera: &Camera2D, world_pos: Vec2) -> Vec2 {
+    camera.world_to_screen(world_pos)
+}

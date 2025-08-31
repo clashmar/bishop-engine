@@ -122,8 +122,6 @@ impl WorldEditor {
         horizontal_touch || vertical_touch
     }
 
-
-
     pub fn draw_coordinates(&self, camera: &Camera2D) {
         let world_grid = coord::mouse_world_grid(camera);
 

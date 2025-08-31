@@ -1,22 +1,22 @@
-use crate::{constants::*, entity::Entity, tilemap::TileMap};
+use crate::{constants::*, player::Player, tilemap::TileMap};
 
-pub fn update_physics(entity: &mut Entity, map: &TileMap) {
+pub fn update_physics(entity: &mut Player, map: &TileMap) {
         apply_gravity(entity);
         resolve_horizontal_movement(entity, map);
         resolve_vertical_movement(entity, map);
         clamp_position(entity, map);
     }
 
-fn apply_gravity(entity: &mut Entity) { 
+fn apply_gravity(entity: &mut Player) { 
     entity.velocity_y += GRAVITY;
 }
 
-fn clamp_position(entity: &mut Entity, map: &TileMap) { 
+fn clamp_position(entity: &mut Player, map: &TileMap) { 
     let max_x = (map.width as f32 * TILE_SIZE) - PLAYER_WIDTH;
     entity.actual_position.x = entity.actual_position.x.clamp(0.0, max_x);
 }
 
-fn resolve_vertical_movement(entity: &mut Entity, map: &TileMap) {
+fn resolve_vertical_movement(entity: &mut Player, map: &TileMap) {
     let map_pixel_height = map.height as f32 * TILE_SIZE;
 
     // Predict next vertical position
@@ -88,7 +88,7 @@ fn resolve_vertical_movement(entity: &mut Entity, map: &TileMap) {
     entity.actual_position.y = map_pixel_height - cartesian_bottom_y - PLAYER_HEIGHT;
 }
 
-fn resolve_horizontal_movement(entity: &mut Entity, map: &TileMap) {
+fn resolve_horizontal_movement(entity: &mut Player, map: &TileMap) {
     let map_pixel_height = map.height as f32 * TILE_SIZE;
 
     let next_x = entity.actual_position.x + entity.velocity_x;

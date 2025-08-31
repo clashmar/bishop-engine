@@ -16,6 +16,6 @@ impl RoomEditor {
         );
 
         let margin = 10.0;
-        draw_text(&txt, margin, screen_height() - margin, 20.0, BLACK);
+        draw_text(&txt, margin, screen_height() - margin, 20.0, BLUE);
     }
 }

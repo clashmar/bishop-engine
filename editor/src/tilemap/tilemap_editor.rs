@@ -69,7 +69,6 @@ impl TileMapEditor  {
         ResizeButton::build_all(map, &mut self.dynamic_ui);
         
         let mouse_pos = mouse_position().into();
-        self.update_camera(camera);
         self.handle_ui_clicks(camera, mouse_pos, map, room_metadata, other_bounds);
         
         let exits = &mut room_metadata.exits;
@@ -98,33 +97,6 @@ impl TileMapEditor  {
             TilemapEditorMode::Exits => TilemapEditorMode::Tiles,
             _ => TilemapEditorMode::Exits,
         };
-    }
-
-    fn update_camera(&mut self, camera: &mut Camera2D) {
-        // Handle zoom
-        let wheel = mouse_wheel().1;
-
-        if wheel != 0.0 {
-            let zoom_speed = 1.1;
-            let zoom_factor = if wheel > 0.0 { zoom_speed } else { 1.0 / zoom_speed };
-
-            // Change world scale by modifying zoom based on screen size
-            let aspect_x = 2.0 / screen_width();
-            let aspect_y = 2.0 / screen_height(); // negative to flip Y
-
-            let current_scale = camera.zoom.x / aspect_x;
-
-            let new_scale = (current_scale * zoom_factor)
-                .clamp(0.25, 4.0); // Min and max zoom levels
-
-            camera.zoom = vec2(aspect_x * new_scale, aspect_y * new_scale);
-        }
-
-        // Handle pan
-        if is_mouse_button_down(MouseButton::Middle) {
-            let delta = mouse_delta_position();
-            camera.target -= delta / camera.zoom;
-        }
     }
 
     fn handle_ui_clicks(
@@ -218,73 +190,12 @@ impl TileMapEditor  {
     }
 
     pub fn draw(&self, camera: &Camera2D, map: &TileMap, exits: &Vec<Exit>) {
-        clear_background(WHITE);
+        clear_background(BLACK);
         set_camera(camera);
-        self.draw_map(map);
-        self.draw_exits(map, exits);
+        map.draw(camera, exits);
         self.draw_grid(camera, map);
         self.draw_hover_highlight(camera, map);
         self.draw_ui(camera);
-    }
-
-    fn draw_map(&self, map: &TileMap) {
-        draw_rectangle(
-            0.0,
-            0.0,
-            map.width as f32 * TILE_SIZE,
-            map.height as f32 * TILE_SIZE,
-            map.background,
-        );
-
-        for y in 0..map.height {
-            for x in 0..map.width {
-                let tile = &map.tiles[y][x];
-                if tile.tile_type != TileType::None {
-                    draw_rectangle(
-                        x as f32 * TILE_SIZE,
-                        y as f32 * TILE_SIZE,
-                        TILE_SIZE,
-                        TILE_SIZE,
-                        tile.color,
-                    );
-                }
-            }
-        }
-    }
-
-    fn draw_exits(&self, _map: &TileMap, exits: &Vec<Exit>) {
-        for exit in exits {
-            self.draw_exit_indicator(exit.position, exit.direction);
-        }
-    }
-
-    /// Draw a yellow exit overlay/arrow at the given position
-    fn draw_exit_indicator(&self, pos: Vec2, direction: ExitDirection) {
-        let tile_size = TILE_SIZE;
-
-        // Position in world coordinates, including outside tiles
-        let x = pos.x * tile_size;
-        let y = pos.y * tile_size;
-
-        // Draw semi-transparent rectangle
-        draw_rectangle(x, y, tile_size, tile_size, LIGHTGRAY);
-
-        let arrow_center = vec2(x + tile_size / 2.0, y + tile_size / 2.0);
-        let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
-
-        let offsets = match direction {
-            ExitDirection::Up => [vec2(0.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0)],
-            ExitDirection::Down => [vec2(0.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0)],
-            ExitDirection::Left => [vec2(-1.0, 0.0), vec2(1.0, -1.0), vec2(1.0, 1.0)],
-            ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
-        };
-
-        draw_triangle(
-            arrow_center + offsets[0] * tile_size / 4.0,
-            arrow_center + offsets[1] * tile_size / 4.0,
-            arrow_center + offsets[2] * tile_size / 4.0,
-            arrow_color
-        );
     }
 
     fn draw_grid(&self, camera: &Camera2D, map: &TileMap) {
@@ -344,7 +255,7 @@ impl TileMapEditor  {
                 }
                 TilemapEditorMode::Exits => {
                     let exit_direction = self.exit_direction_from_position(tile_pos, map);
-                    self.draw_exit_indicator(vec2(tile_pos.x() as f32, tile_pos.y() as f32), exit_direction);
+                    map.draw_exit(vec2(tile_pos.x() as f32, tile_pos.y() as f32), exit_direction);
                 }
             }
         }

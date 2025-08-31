@@ -1,9 +1,8 @@
 use core::{
-    constants::WORLD_SAVE_FOLDER,
-    world::{
+    constants::WORLD_SAVE_FOLDER, ecs::world_ecs::WorldEcs, world::{
         room::{Room, RoomMetadata},
         world::World,
-    },
+    }
 };
 use macroquad::prelude::*;
 use uuid::Uuid;
@@ -18,6 +17,7 @@ type WorldIndex = HashMap<Uuid, String>;
 /// Create a fresh world with a single default room.
 pub fn create_new_world(name: String) -> World {
     let id = Uuid::new_v4();
+    let ecs = WorldEcs::default();
     let first_room_metadata = RoomMetadata::default();
     let room_id = first_room_metadata.id;
     let first_room = Room::default();
@@ -25,6 +25,7 @@ pub fn create_new_world(name: String) -> World {
     let world = World {
         id,
         name: name.clone(),
+        ecs,
         rooms_metadata: vec![first_room_metadata],
         starting_room: Some(room_id),
         starting_position: Some(vec2(1.0, 1.0)),

@@ -72,8 +72,15 @@ impl Editor {
                 let done = {
                     let meta_slice = &mut self.world.rooms_metadata[..];
                     let room = self.current_room.as_mut().expect("room must be loaded");
+
                     // Returns true if escaped
-                    self.room_editor.update(&mut self.camera, room, room_id, meta_slice)
+                    self.room_editor.update(
+                            &mut self.camera, 
+                            room, 
+                            room_id, 
+                            meta_slice,
+                            &mut self.world.ecs,
+                        )
                 };
 
                 if done {
@@ -86,6 +93,8 @@ impl Editor {
                         ) {
                             eprintln!("Could not save room {room_id}: {e}");
                         }
+                        world_storage::save_world(&self.world)
+                            .expect("Could not save world.");
                     }
 
                     // Find the metadata for the room we just left for center_on_room.
@@ -129,7 +138,12 @@ impl Editor {
                 }
 
                 if let Some(ref room) = self.current_room {
-                    self.room_editor.draw(&self.camera, room, meta);
+                    self.room_editor.draw(
+                        &self.camera, 
+                        room, 
+                        meta, 
+                        &mut self.world.ecs
+                    );
                 }
             }
         }

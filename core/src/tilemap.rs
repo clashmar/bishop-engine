@@ -3,9 +3,9 @@ use std::io::BufRead;
 use std::fs::{self, File};
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
-
 use crate::constants::*;
 use crate::tile::{GridPos, Tile, TileType};
+use crate::world::room::{Exit, ExitDirection};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -59,7 +59,10 @@ impl TileMap {
         })
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, camera: &Camera2D, exits: &Vec<Exit>) {
+        clear_background(BLACK);
+        set_camera(camera);
+
         // Draw the background
         draw_rectangle(
             0.0,
@@ -69,9 +72,9 @@ impl TileMap {
             self.background,
         );
 
-        // Draw tiles on top, skipping None tiles
-        for (y, row) in self.tiles.iter().rev().enumerate() {
-            for (x, tile) in row.iter().enumerate() {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let tile = &self.tiles[y][x];
                 if tile.tile_type != TileType::None {
                     draw_rectangle(
                         x as f32 * TILE_SIZE,
@@ -83,6 +86,43 @@ impl TileMap {
                 }
             }
         }
+
+        self.draw_exits(exits);
+    }
+
+    fn draw_exits(&self, exits: &Vec<Exit>) {
+        for exit in exits {
+            self.draw_exit(exit.position, exit.direction);
+        }
+    }
+
+    /// Draw a yellow exit overlay/arrow at the given position
+    pub fn draw_exit(&self, pos: Vec2, direction: ExitDirection) {
+        let tile_size = TILE_SIZE;
+
+        // Position in world coordinates, including outside tiles
+        let x = pos.x * tile_size;
+        let y = pos.y * tile_size;
+
+        // Draw semi-transparent rectangle
+        draw_rectangle(x, y, tile_size, tile_size, LIGHTGRAY);
+
+        let arrow_center = vec2(x + tile_size / 2.0, y + tile_size / 2.0);
+        let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
+
+        let offsets = match direction {
+            ExitDirection::Up => [vec2(0.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0)],
+            ExitDirection::Down => [vec2(0.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0)],
+            ExitDirection::Left => [vec2(-1.0, 0.0), vec2(1.0, -1.0), vec2(1.0, 1.0)],
+            ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
+        };
+
+        draw_triangle(
+            arrow_center + offsets[0] * tile_size / 4.0,
+            arrow_center + offsets[1] * tile_size / 4.0,
+            arrow_center + offsets[2] * tile_size / 4.0,
+            arrow_color
+        );
     }
 
     pub fn get_tile(&self, pos: GridPos) -> Option<&Tile> {
