@@ -1,11 +1,11 @@
 use serde_with::{serde_as, FromInto};
-use std::io::BufRead;
-use std::fs::{self, File};
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use crate::assets::asset_manager::{AssetManager};
 use crate::constants::*;
-use crate::tile::{GridPos, Tile, TileType};
+use crate::ecs::entity::Entity;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::tiles::tile::Tile;
 use crate::world::room::{Exit, ExitDirection};
+use crate::world::world::GridPos;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -24,46 +24,22 @@ impl TileMap {
         Self {
             width,
             height,
-            tiles: vec![vec![Tile::none(); width]; height],
+            tiles: vec![vec![Tile::default(); width]; height],
             background: LIGHTGRAY,
         }
     }
 
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-
-        let mut tiles: Vec<Vec<Tile>> = Vec::new();
-        for line in reader.lines() {
-        let row: Vec<Tile> = line?
-            .chars()
-            .map(|c| match c {
-                '#' => Tile::floor(),
-                '-' => Tile::platform(),
-                '*' => Tile::decoration(),
-                '.' => Tile::none(),
-                _   => Tile::none(),
-            })
-            .collect();
-        tiles.push(row);
-    }
-
-        let height = tiles.len();
-        let width = tiles.get(0).map_or(0, |r| r.len());
-
-        Ok(Self {
-            width,
-            height,
-            tiles: tiles.into_iter().rev().collect(),
-            background: LIGHTGRAY,
-        })
-    }
-
-    pub fn draw(&self, camera: &Camera2D, exits: &Vec<Exit>) {
+    pub fn draw(
+        &self,
+        camera: &Camera2D,
+        exits: &Vec<Exit>,
+        ecs: &WorldEcs,
+        asset_manager: &mut AssetManager,
+    ) {
         clear_background(BLACK);
         set_camera(camera);
 
-        // Draw the background
+        // background rectangle (unchanged)
         draw_rectangle(
             0.0,
             0.0,
@@ -74,19 +50,28 @@ impl TileMap {
 
         for y in 0..self.height {
             for x in 0..self.width {
-                let tile = &self.tiles[y][x];
-                if tile.tile_type != TileType::None {
-                    draw_rectangle(
-                        x as f32 * TILE_SIZE,
-                        y as f32 * TILE_SIZE,
-                        TILE_SIZE,
-                        TILE_SIZE,
-                        tile.color,
-                    );
+                let tile_inst = &self.tiles[y][x];
+                if tile_inst.entity == Entity::null() {
+                    continue;
+                }
+
+                // Sprite component (visual)
+                if let Some(tile_sprite) = ecs.tile_sprites.get(tile_inst.entity) {
+                    let tex = asset_manager.get(tile_sprite.sprite);
+                    let dest = vec2(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
+                    draw_texture_ex(
+                            tex,
+                            dest.x,
+                            dest.y,
+                            WHITE,
+                            DrawTextureParams {
+                                dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
+                                ..Default::default()
+                            },
+                        );
                 }
             }
         }
-
         self.draw_exits(exits);
     }
 
@@ -160,35 +145,6 @@ impl TileMap {
         }
         false
     }
-}
-
-pub fn get_current_map() -> TileMap {
-    let map_dir = PathBuf::from("game/src/maps");
-
-    let maybe_file = fs::read_dir(&map_dir)
-        .ok()
-        .and_then(|mut entries| {
-            entries.find_map(|entry| {
-                let entry = entry.ok()?;
-                let path = entry.path();
-                if path.extension()? == "txt" || path.extension()? == "map" {
-                    Some(path)
-                } else {
-                    None
-                }
-            })
-        });
-
-    if let Some(path) = maybe_file {
-        match TileMap::load_from_file(&path) {
-            Ok(map) => return map,
-            Err(e) => eprintln!("Failed to load map from {:?}: {}", path, e),
-        }
-    } else {
-        eprintln!("No map files found in {:?}", map_dir);
-    }
-
-    TileMap::new(10, 10)
 }
 
 pub fn tile_to_world(grid_position: GridPos, map_height: usize) -> Vec2 {

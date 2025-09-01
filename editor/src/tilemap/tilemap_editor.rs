@@ -2,14 +2,15 @@ use crate::gui::resize_button::ResizeButton;
 use crate::gui::ui_element::{DynamicTilemapUiElement, TilemapUiElement};
 use crate::tilemap::tile_palette::{TilePalette};
 use macroquad::prelude::*;
-use rfd::FileDialog;
-use core::tilemap::TileMap;
-use core::tile::{Tile, GridPos, TileType};
-use core::constants::*;
+use core::assets::asset_manager::{AssetManager};
+use core::{constants::*};
+use core::ecs::component::Position;
+use core::ecs::entity::Entity;
+use core::ecs::world_ecs::WorldEcs;
+use core::tiles::tile::{Tile, TileSprite};
+use core::tiles::tilemap::TileMap;
 use core::world::room::{Exit, ExitDirection, RoomMetadata};
-use std::fs::File;
-use std::path::Path;
-use std::io::Write;
+use core::world::world::GridPos;
 
 pub enum TilemapEditorMode {
     Tiles,
@@ -20,7 +21,7 @@ pub struct TileMapEditor {
     mode: TilemapEditorMode,
     dynamic_ui: Vec<Box<dyn DynamicTilemapUiElement>>,
     static_ui: Vec<Box<dyn TilemapUiElement>>,
-    selected_tile: Tile,
+    pub palette: TilePalette, 
     show_grid: bool,
     ui_clicked: bool,
     initialized: bool, 
@@ -28,20 +29,20 @@ pub struct TileMapEditor {
 
 impl TileMapEditor  {
     pub fn new() -> Self {
-        let mut static_ui_elements: Vec<Box<dyn TilemapUiElement>> = Vec::new();
+        let palette = TilePalette::new(
+            vec2(10.0, 10.0), 
+            32.0,              
+            2,                
+            2,                 
+        );
 
-        static_ui_elements.push(Box::new(TilePalette::new(
-            vec2(10.0, 10.0),
-            32.0,
-            2,
-            2,
-        )));
+        let static_ui_elements: Vec<Box<dyn TilemapUiElement>> = Vec::new();
 
         let editor = Self {
             mode: TilemapEditorMode::Tiles,
             dynamic_ui: Vec::new(),
             static_ui: static_ui_elements,
-            selected_tile: Tile::floor(),
+            palette,
             show_grid: true,
             ui_clicked: false,
             initialized: false,
@@ -56,9 +57,11 @@ impl TileMapEditor  {
         camera: &mut Camera2D,
         map: &mut TileMap, 
         room_metadata: &mut RoomMetadata,
-        other_bounds: &[(Vec2, Vec2)]
+        other_bounds: &[(Vec2, Vec2)],
+        ecs: &mut WorldEcs,
     ) 
         {
+
         if !self.initialized {
             self.reset_camera_view(camera, map);
             self.ui_clicked = true; // Stop any initial tile placements
@@ -74,7 +77,7 @@ impl TileMapEditor  {
         let exits = &mut room_metadata.exits;
         if !self.ui_clicked {
             match self.mode {
-                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map),
+                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map, ecs),
                 TilemapEditorMode::Exits => self.handle_exit_placement(camera, map, exits),
             }
         }
@@ -88,8 +91,6 @@ impl TileMapEditor  {
         if is_key_pressed(KeyCode::E) {
             self.toggle_exits();
         }
-
-        self.handle_save_map(map);
     }
 
     pub fn toggle_exits(&mut self) {
@@ -108,6 +109,12 @@ impl TileMapEditor  {
         other_bounds: &[(Vec2, Vec2)]
     ) {
         if is_mouse_button_pressed(MouseButton::Left) {
+
+            if self.palette.handle_click(mouse_pos, camera) {
+                self.ui_clicked = true;
+                return;
+            }
+
             for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, camera) {
                     element.on_click(map, room_metadata, mouse_pos, camera, other_bounds);
@@ -118,7 +125,7 @@ impl TileMapEditor  {
 
             for element in &mut self.static_ui {
                 if element.is_mouse_over(mouse_pos, camera) {
-                    element.on_click(&mut self.selected_tile, mouse_pos, camera);
+                    element.on_click(&mut Tile::default(), mouse_pos, camera);
                     self.ui_clicked = true;
                     break;
                 }
@@ -131,26 +138,63 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_tile_placement(&mut self, camera: &Camera2D, mouse_pos: Vec2, map: &mut TileMap) {
+    fn handle_tile_placement(
+        &mut self, 
+        camera: &Camera2D, 
+        mouse_pos: Vec2, 
+        map: &mut TileMap,
+        ecs: &mut WorldEcs,
+    ) {
         let mouse_over_ui = self.is_mouse_over_ui(camera, mouse_pos);
-        let hover_pos = self.get_hovered_tile(camera, map);
+        let hover = self.get_hovered_tile(camera, map);
+        if mouse_over_ui || hover.is_none() { return; }
 
-        if !mouse_over_ui {
-            if is_mouse_button_down(MouseButton::Left) {
-                if let Some(pos) = hover_pos {
-                    if let Some((x, y)) = pos.as_usize() {
-                        map.tiles[y][x] = self.selected_tile.clone();
-                    }
-                }
-            }
+        let (x, y) = hover.unwrap().as_usize().unwrap();
 
-            if is_mouse_button_down(MouseButton::Right) {
-                if let Some(pos) = hover_pos {
-                    if let Some((x, y)) = pos.as_usize() {
-                        map.tiles[y][x] = Tile::none();
-                    }
-                }
+        // Remove
+        if is_mouse_button_down(MouseButton::Right) {
+            let old = map.tiles[y][x];
+            if old.entity != Entity::null() {
+                ecs.remove_entity(old.entity);
             }
+            map.tiles[y][x] = Tile::default();
+            return;
+        }
+
+        let (def_id, sprite_id, sprite_path) = match (
+            self.palette.selected_def_opt(),
+            self.palette.selected_sprite_opt(),
+            self.palette.selected_path_opt(),
+        ) {
+            (Some(d), Some(s), Some(p)) => (d, s, p),
+            _ => return, // There is no tile to place
+        };
+
+        // Place
+        if is_mouse_button_down(MouseButton::Left) {
+            // Grab the currently selected definition & sprite from the palette
+            let def = ecs.tile_defs[def_id.0].clone();
+
+            // Build the base entity
+            let mut builder = ecs
+                .create_entity()
+                .with(Position {
+                    position: vec2(
+                        x as f32 * TILE_SIZE,
+                        y as f32 * TILE_SIZE,
+                    ),
+                })
+                .with(TileSprite { 
+                    sprite: sprite_id,
+                    path: sprite_path.to_string(),
+                });
+
+            // Apply the behaviour definition (walkable, solid, damage, …)
+            builder = def.apply(builder);
+
+            // Finish and store the entity id in the grid cell
+            let entity = builder.finish();
+            map.tiles[y][x] = Tile { entity };
         }
     }
 
@@ -173,29 +217,20 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_save_map(&mut self, map: &TileMap) {
-        if is_key_pressed(KeyCode::S) {
-            if let Some(path) = FileDialog::new()
-                .add_filter("Map files", &["map"])
-                .set_file_name("untitled.map")
-                .save_file()
-            {
-                if let Err(e) = self.save_to_file(map, &path) {
-                    eprintln!("Failed to save map: {}", e);
-                } else {
-                    println!("Map saved to {:?}", path);
-                }
-            }
-        }
-    }
-
-    pub fn draw(&self, camera: &Camera2D, map: &TileMap, exits: &Vec<Exit>) {
+    pub fn draw(
+        &mut self, 
+        camera: &Camera2D, 
+        map: &TileMap, 
+        exits: &Vec<Exit>,
+        ecs: &WorldEcs,
+        asset_manager: &mut AssetManager,
+    ) {
         clear_background(BLACK);
         set_camera(camera);
-        map.draw(camera, exits);
+        map.draw(camera, exits, ecs, asset_manager);
         self.draw_grid(camera, map);
         self.draw_hover_highlight(camera, map);
-        self.draw_ui(camera);
+        self.draw_ui(camera, asset_manager);
     }
 
     fn draw_grid(&self, camera: &Camera2D, map: &TileMap) {
@@ -261,7 +296,7 @@ impl TileMapEditor  {
         }
     }
 
-    fn draw_ui(&self, camera: &Camera2D) {
+    fn draw_ui(&mut self, camera: &Camera2D, asset_manager: &mut AssetManager) {
         // Draw scaling UI
         for element in &self.dynamic_ui {
             element.draw(camera);
@@ -270,27 +305,13 @@ impl TileMapEditor  {
         // Reset to default camera for static UI drawing
         set_default_camera();
 
-        // Draw static UI
-        for element in &self.static_ui {
-            element.draw(camera);
-        }
-    }
+        // Palette – **explicit call**
+        self.palette.draw(camera, asset_manager);
 
-    pub fn save_to_file<P: AsRef<Path>>(&self, map: &TileMap, path: P) -> std::io::Result<()> {
-        let mut file = File::create(path)?;
-        for row in map.tiles.iter().rev() {
-            for tile in row {
-                let c = match tile.tile_type {
-                    TileType::None => '.',
-                    TileType::Floor => '#',
-                    TileType::Platform => '-',
-                    TileType::Decoration => '*',
-                };
-                write!(file, "{}", c)?;
-            }
-            writeln!(file)?;
+        // Draw static UI
+        for element in &mut self.static_ui {
+            element.draw(camera, asset_manager);
         }
-        Ok(())
     }
 
     fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap) -> Option<GridPos> {

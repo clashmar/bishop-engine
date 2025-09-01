@@ -57,22 +57,35 @@ impl Component for Velocity {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
-pub struct Sprite {
-    pub name: String,
-
-    /// Optional animation state.
-    pub anim: Option<Animation>,
-}
-
-impl Component for Sprite {
-    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
-        &mut world.sprites
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Animation {
     pub current: String, // e.g. "idle", "run"
     pub timer: f32,    // seconds elapsed in the current frame
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct Walkable(pub bool);
+impl Component for Walkable {
+    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
+        &mut world.walkables
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct Solid(pub bool);
+impl Component for Solid {
+    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
+        &mut world.solids
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct Damage {
+    pub amount: f32,
+}
+
+impl Component for Damage {
+    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
+        &mut world.damages
+    }
 }

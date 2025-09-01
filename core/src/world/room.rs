@@ -1,10 +1,11 @@
+use crate::tiles::tilemap::TileMap;
 use std::{io, path::PathBuf};
 use uuid::Uuid;
 use serde_with::FromInto;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use crate::{constants::*, tilemap::TileMap};
+use crate::{constants::*};
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug)]

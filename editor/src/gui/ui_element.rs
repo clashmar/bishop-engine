@@ -1,4 +1,4 @@
-use core::{tile::Tile, tilemap::TileMap, world::{room::RoomMetadata, world::World}};
+use core::{assets::asset_manager::{AssetManager}, tiles::{tile::Tile, tilemap::TileMap}, world::{room::RoomMetadata, world::World}};
 use std::{future::Future, pin::Pin};
 use macroquad::prelude::*;
 
@@ -22,7 +22,11 @@ pub trait DynamicTilemapUiElement {
 }
 
 pub trait TilemapUiElement {
-    fn draw(&self, camera: &Camera2D);
+    fn draw(
+        &mut self, 
+        camera: &Camera2D,
+        asset_manager: &mut AssetManager,
+    );
     fn is_mouse_over(&self, mouse_pos: Vec2, camera: &Camera2D) -> bool;
     fn on_click(
         &mut self,

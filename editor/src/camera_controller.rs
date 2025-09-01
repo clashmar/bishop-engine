@@ -3,7 +3,7 @@ use core::constants::*;
 
 pub const ZOOM_SPEED_FACTOR: f32 = 0.5;
 pub const MIN_ZOOM: f32 = 0.0005;
-pub const MAX_ZOOM: f32 = 0.003;
+pub const MAX_ZOOM: f32 = 0.01;
 
 pub struct CameraController;
 

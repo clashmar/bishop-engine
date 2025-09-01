@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use core::{constants::TILE_SIZE, tile::Tile, tilemap::TileMap, world::room::{RoomMetadata}};
+use core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::RoomMetadata};
 use crate::gui::{text_button::TextButton, ui_element::{DynamicTilemapUiElement}};
 
 pub struct ResizeButton {
@@ -79,7 +79,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         // Apply resize
         match self.action {
             ResizeAction::AddTop => {
-                map.tiles.insert(0, vec![Tile::none(); map.width]);
+                map.tiles.insert(0, vec![Tile::default(); map.width]);
                 map.height += 1;
 
                 for exit in &mut room_metadata.exits {
@@ -112,7 +112,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 }
             }
             ResizeAction::AddBottom => {
-                map.tiles.push(vec![Tile::none(); map.width]);
+                map.tiles.push(vec![Tile::default(); map.width]);
                 map.height += 1;
                 for exit in &mut room_metadata.exits {
                     if (exit.position.y - room_size.y).abs() < f32::EPSILON {
@@ -136,7 +136,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 }
             }
             ResizeAction::AddLeft => {
-                for row in &mut map.tiles { row.insert(0, Tile::none()); }
+                for row in &mut map.tiles { row.insert(0, Tile::default()); }
                 map.width += 1;
                 room_size.x += 1.0;
                 room_position.x -= 1.0;
@@ -150,7 +150,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 }
             }
             ResizeAction::AddRight => {
-                for row in &mut map.tiles { row.push(Tile::none()); }
+                for row in &mut map.tiles { row.push(Tile::default()); }
                 map.width += 1;
 
                 for exit in &mut room_metadata.exits {

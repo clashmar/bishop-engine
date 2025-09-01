@@ -1,6 +1,6 @@
-use crate::{input, physics};
+use crate::{input, physics, tiles::tilemap::TileMap, world::world::GridPos};
 use macroquad::{color::Color, math::Vec2, prelude::*};
-use crate::{constants::*, tilemap::TileMap, tile::GridPos};
+use crate::{constants::*};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Player {

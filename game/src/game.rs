@@ -66,7 +66,7 @@ impl GameState {
 
         self.camera.update_camera();
 
-        self.map.draw();
+        // self.map.draw();
 
         draw_rectangle(
             self.player.actual_position.x,

@@ -1,5 +1,5 @@
 use crate::{gui::add_entity_button::AddEntityButton, tilemap::tilemap_editor::TileMapEditor, world::coord};
-use core::{constants::*, ecs::{entity::Entity, world_ecs::WorldEcs}, world::room::{Room, RoomMetadata}};
+use core::{assets::asset_manager::AssetManager, constants::*, ecs::{entity::Entity, world_ecs::WorldEcs}, world::room::{Room, RoomMetadata}};
 use macroquad::prelude::*;
 use uuid::Uuid;
 
@@ -36,8 +36,12 @@ impl RoomEditor {
         room: &mut Room,
         room_id: Uuid, 
         rooms_metadata: &mut [RoomMetadata],
-        ecs: &mut WorldEcs
+        ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
     ) -> bool {
+        futures::executor::block_on(
+            self.tilemap_editor.palette.process_create_request(ecs, asset_manager)
+        );
         match self.mode {
             RoomEditorMode::Tilemap => {
                 // Collect bounds for all other rooms to check for intersections
@@ -54,7 +58,7 @@ impl RoomEditor {
                     .find(|m| m.id == room_id)
                     .expect("metadata must still exist");
 
-                self.tilemap_editor.update(camera, tilemap, room_metadata, &other_bounds);
+                self.tilemap_editor.update(camera, tilemap, room_metadata, &other_bounds, ecs);
             }
             RoomEditorMode::Scene => {
                 // Click‑selection
@@ -119,17 +123,24 @@ impl RoomEditor {
         room: &Room,
         room_metadata: &RoomMetadata,
         ecs: &WorldEcs, 
+        asset_manager: &mut AssetManager
     ) {
         match self.mode {
             RoomEditorMode::Tilemap => {
                 let tilemap = &room.variants[0].tilemap;
                 let exits = &room_metadata.exits;
-                self.tilemap_editor.draw(camera, tilemap, exits);
+                self.tilemap_editor.draw(
+                    camera, 
+                    tilemap, 
+                    exits, 
+                    ecs,
+                    asset_manager,
+                );
             }
             RoomEditorMode::Scene => {
                 let tilemap = &room.variants[0].tilemap;
                 let exits = &room_metadata.exits;
-                tilemap.draw(camera, exits);
+                tilemap.draw(camera, exits, ecs, asset_manager);
 
                 let room_min = room_metadata.position;
                 let room_max = room_min

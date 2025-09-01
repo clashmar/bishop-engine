@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::ecs::component::Component;
 use crate::ecs::world_ecs::WorldEcs;  
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
 pub struct Entity(pub Uuid);
 
 impl Entity {

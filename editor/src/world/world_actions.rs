@@ -1,5 +1,6 @@
+use core::tiles::tilemap::TileMap;
 use uuid::Uuid;
-use core::{tilemap::TileMap, world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
+use core::{world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
 use crate::world::coord;
 use macroquad::prelude::*;
 use crate::{storage::world_storage, world::world_editor::WorldEditor};

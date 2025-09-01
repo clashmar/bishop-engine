@@ -10,7 +10,7 @@ use std::{
     collections::HashMap, fs, io, path::{Path}, time::SystemTime
 };
 
-use crate::storage::world_storage;
+use crate::{storage::world_storage, tilemap::tile_palette::TilePalette};
 
 type WorldIndex = HashMap<Uuid, String>;
 
@@ -206,4 +206,33 @@ pub fn most_recent_world_id() -> Option<Uuid> {
     }
 
     best.map(|(id, _)| id)
+}
+
+/// Write the palette to `<world_dir>/palette.ron`
+pub fn save_palette(palette: &TilePalette, world_id: &Uuid) -> io::Result<()> {
+    let dir = Path::new(WORLD_SAVE_FOLDER).join(world_id.to_string());
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("palette.ron");
+    let ron = ron::ser::to_string(palette)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    std::fs::write(path, ron)
+}
+
+/// Load a palette.  If the file does not exist return a default palette.
+pub fn load_palette(world_id: &Uuid) -> io::Result<TilePalette> {
+    let path = Path::new(WORLD_SAVE_FOLDER)
+        .join(world_id.to_string())
+        .join("palette.ron");
+
+    if !path.exists() {
+        return Ok(TilePalette::new(
+            vec2(10.0, 10.0),
+            32.0,             
+            2,               
+            2,                
+        ));
+    }
+
+    let ron = std::fs::read_to_string(path)?;
+    ron::de::from_str(&ron).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }

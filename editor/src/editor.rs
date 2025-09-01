@@ -2,7 +2,9 @@ use uuid::Uuid;
 use macroquad::prelude::*;
 use crate::camera_controller::CameraController;
 use crate::controls::controls::Controls;
+use crate::tilemap::tile_palette::TilePalette;
 use crate::{storage::world_storage, room::room_editor::RoomEditor, world::world_editor::WorldEditor};
+use core::assets::asset_manager::AssetManager;
 use core::world::room::Room;
 use core::world::{world::World};
 use core::constants::*;
@@ -21,6 +23,7 @@ pub struct Editor {
     pub camera: Camera2D, 
     pub current_room: Option<Room>,
     pub current_room_id: Option<Uuid>,
+    pub assets: AssetManager,
 }
 
 impl Editor {
@@ -39,7 +42,21 @@ impl Editor {
             DEFAULT_ROOM_POSITION,
         );
 
-        Ok(Self {
+        let mut assets = AssetManager::new();
+
+        let mut palette = match world_storage::load_palette(&world.id) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("Failed to load palette: {e}");
+                // Fall back to a new palette
+                TilePalette::new(vec2(10.0, 10.0), 32.0, 2, 2)
+            }
+        };
+
+        // Re‑load all sprite textures that belong to the palette.
+        palette.rebuild_runtime(&mut assets).await;
+
+        let mut editor = Self {
             world,
             mode: EditorMode::World,
             world_editor: WorldEditor::new(),
@@ -47,7 +64,13 @@ impl Editor {
             camera,
             current_room: None,
             current_room_id: None,
-        })
+            assets,
+        };
+
+        // Give the palette to the tilemap editor
+        editor.room_editor.tilemap_editor.palette = palette;
+
+        Ok(editor)
     }
 
     pub async fn update(&mut self) {
@@ -60,6 +83,7 @@ impl Editor {
                         Ok(room) => {
                             self.current_room = Some(room);
                             self.current_room_id = Some(room_id);
+                            self.sync_assets();
                             self.mode = EditorMode::Room(room_id);
                         }
                         Err(e) => {
@@ -80,6 +104,7 @@ impl Editor {
                             room_id, 
                             meta_slice,
                             &mut self.world.ecs,
+                            &mut self.assets,
                         )
                 };
 
@@ -95,6 +120,12 @@ impl Editor {
                         }
                         world_storage::save_world(&self.world)
                             .expect("Could not save world.");
+
+                        if let Some(_) = self.current_room_id {
+                            let palette = &mut self.room_editor.tilemap_editor.palette;
+                            world_storage::save_palette(palette, &self.world.id)
+                                .expect("Could not save tile palette");
+                        }
                     }
 
                     // Find the metadata for the room we just left for center_on_room.
@@ -142,9 +173,22 @@ impl Editor {
                         &self.camera, 
                         room, 
                         meta, 
-                        &mut self.world.ecs
+                        &mut self.world.ecs,
+                        &mut self.assets,
                     );
                 }
+            }
+        }
+    }
+
+    fn sync_assets(&mut self) {
+        // Iterate over all tile‑sprite components.
+        for (_entity, tile_sprite) in self.world.ecs.tile_sprites.data.iter_mut() {
+            // If the manager does not yet contain this texture, load it
+            if !self.assets.contains(tile_sprite.sprite) {
+                // Return the new id and replace the old one
+                let new_id = futures::executor::block_on(self.assets.load(&tile_sprite.path));
+                tile_sprite.sprite = new_id;
             }
         }
     }
