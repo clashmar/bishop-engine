@@ -156,9 +156,6 @@ impl RoomEditor {
                     if ecs.tile_sprites.get(*entity).is_some() {
                         continue;
                     }
-                    
-                    println!("entity position: {}, room position: {}, room min: {}, room max: {}", 
-                        pos.position, room_metadata.position, room_min, room_max);
 
                     // Only draw the placeholder if the entity lies inside the current
                     // room’s bounds (after the offset has been applied).

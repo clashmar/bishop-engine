@@ -13,7 +13,7 @@ pub struct RoomMetadata {
     pub id: Uuid, 
     pub name: String,
     #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub position: Vec2,
+    pub position: Vec2, // Top-left origin in pixels
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub size: Vec2,
     pub exits: Vec<Exit>,

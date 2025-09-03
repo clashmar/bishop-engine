@@ -45,10 +45,9 @@ impl DynamicTilemapUiElement for ResizeButton {
 
         let room_position = &mut room_metadata.position;
         let room_size = &mut room_metadata.size;
-        // let exits = &mut room_metadata.exits // Use this?
 
         // Compute proposed delta and new size
-        let (delta_pos, new_size) = match self.action {
+        let (mut delta_pos, mut new_size) = match self.action {
             ResizeAction::AddTop    => (vec2(0.0, -1.0), vec2(map.width as f32, map.height as f32 + 1.0)),
             ResizeAction::RemoveTop => (vec2(0.0,  1.0), vec2(map.width as f32, map.height as f32 - 1.0)),
             ResizeAction::AddBottom    => (vec2(0.0, 0.0), vec2(map.width as f32, map.height as f32 + 1.0)),
@@ -59,13 +58,18 @@ impl DynamicTilemapUiElement for ResizeButton {
             ResizeAction::RemoveRight=> (vec2(0.0, 0.0), vec2(map.width as f32 - 1.0, map.height as f32)),
         };
 
+        delta_pos *= TILE_SIZE;
+        new_size *= TILE_SIZE;
+
         // Check for overlaps
         let proposed_pos = *room_position + delta_pos;
-        let overlaps = other_bounds.iter().any(|(pos, size)| {
+
+        let overlaps = other_bounds.iter().any(|(pos, mut size)| {
+            size *= TILE_SIZE;
             let rect_a_min = proposed_pos;
             let rect_a_max = proposed_pos + new_size;
-            let rect_b_min = *pos;
-            let rect_b_max = *pos + *size;
+            let rect_b_min = pos;
+            let rect_b_max = *pos + size;
             rect_a_min.x < rect_b_max.x &&
             rect_a_max.x > rect_b_min.x &&
             rect_a_min.y < rect_b_max.y &&
@@ -91,7 +95,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 }
 
                 room_size.y += 1.0;
-                room_position.y -= 1.0;
+                room_position.y -= 1.0 * TILE_SIZE;
                 
             }
             ResizeAction::RemoveTop => {
@@ -108,7 +112,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                     }
 
                     room_size.y -= 1.0;
-                    room_position.y += 1.0;
+                    room_position.y += 1.0 * TILE_SIZE;
                 }
             }
             ResizeAction::AddBottom => {
@@ -139,14 +143,14 @@ impl DynamicTilemapUiElement for ResizeButton {
                 for row in &mut map.tiles { row.insert(0, Tile::default()); }
                 map.width += 1;
                 room_size.x += 1.0;
-                room_position.x -= 1.0;
+                room_position.x -= 1.0 * TILE_SIZE;
             }
             ResizeAction::RemoveLeft => {
                 if map.width > 1 {
                     for row in &mut map.tiles { row.remove(0); }
                     map.width -= 1;
                     room_size.x -= 1.0;
-                    room_position.x += 1.0;
+                    room_position.x += 1.0 * TILE_SIZE;
                 }
             }
             ResizeAction::AddRight => {

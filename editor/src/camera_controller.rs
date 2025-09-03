@@ -25,7 +25,7 @@ impl CameraController {
             Self::apply_aspect(camera, scalar);
         } else {
             let scalar = Self::current_scalar(camera);
-            Self::apply_aspect(camera, scalar);
+            Self::apply_aspect(camera, scalar); 
         }
     }
 

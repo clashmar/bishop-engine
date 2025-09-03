@@ -33,6 +33,9 @@ impl AssetManager {
             .await
             .expect("Could not load texture.");
 
+        // Disable smoothing (needed for pixel art)
+        texture.set_filter(FilterMode::Nearest);
+
         // New id is the next free index.
         let id = SpriteId(self.textures.len());
 
