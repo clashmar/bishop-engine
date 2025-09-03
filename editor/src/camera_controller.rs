@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use core::constants::*;
+use core::{constants::*, tiles::tilemap::TileMap};
 
 pub const ZOOM_SPEED_FACTOR: f32 = 0.5;
 pub const MIN_ZOOM: f32 = 0.0005;
@@ -61,9 +61,9 @@ impl CameraController {
         camera.zoom = vec2(zoom_x, zoom_y);
     }
 
-    /// Centers the camera on a room.
+    /// Returns a camera centered on a room.
     pub fn camera_for_room(room_size: Vec2, room_position: Vec2) -> Camera2D {
-        let max_dim_px = (room_size * TILE_SIZE).max_element();
+        let max_dim_px = (room_size * TILE_SIZE).max_element() / 1.5;
         let scalar = WORLD_EDITOR_ZOOM_FACTOR / max_dim_px;
 
         let aspect = screen_width() / screen_height();
@@ -78,6 +78,12 @@ impl CameraController {
             zoom: vec2(zoom_x, zoom_y),
             ..Default::default()
         }
+    }
+
+    /// Reset a `Camera2D` so that the whole room fits the screen.
+    pub fn reset_room_camera(camera: &mut Camera2D, tilemap: &TileMap) {
+        let map_size = vec2(tilemap.width as f32, tilemap.height as f32);
+        *camera = Self::camera_for_room(map_size, Vec2::ZERO);
     }
 }
 

@@ -31,6 +31,16 @@ impl<T> ComponentStore<T> {
     }
 }
 
+macro_rules! ecs_component {
+    ($type:ty, $field:ident) => {
+        impl Component for $type {
+            fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
+                &mut world.$field
+            }
+        }
+    };
+}
+
 #[serde_as]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Position {
@@ -38,11 +48,7 @@ pub struct Position {
     pub position: Vec2,
 }
 
-impl Component for Position {
-    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
-        &mut world.positions
-    }
-}
+ecs_component!(Position, positions);
 
 #[serde_as]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
@@ -51,11 +57,7 @@ pub struct Velocity {
     pub vel: Vec2,
 }
 
-impl Component for Velocity {
-    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
-        &mut world.velocities
-    }
-}
+ecs_component!(Velocity, velocities);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Animation {
@@ -65,27 +67,17 @@ pub struct Animation {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);
-impl Component for Walkable {
-    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
-        &mut world.walkables
-    }
-}
+
+ecs_component!(Walkable, walkables);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Solid(pub bool);
-impl Component for Solid {
-    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
-        &mut world.solids
-    }
-}
+
+ecs_component!(Solid, solids);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Damage {
     pub amount: f32,
 }
 
-impl Component for Damage {
-    fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> {
-        &mut world.damages
-    }
-}
+ecs_component!(Damage, damages);

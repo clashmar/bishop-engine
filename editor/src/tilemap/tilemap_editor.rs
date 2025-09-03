@@ -22,7 +22,6 @@ pub struct TileMapEditor {
     dynamic_ui: Vec<Box<dyn DynamicTilemapUiElement>>,
     static_ui: Vec<Box<dyn TilemapUiElement>>,
     pub palette: TilePalette, 
-    show_grid: bool,
     ui_clicked: bool,
     initialized: bool, 
 }
@@ -43,7 +42,6 @@ impl TileMapEditor  {
             dynamic_ui: Vec::new(),
             static_ui: static_ui_elements,
             palette,
-            show_grid: true,
             ui_clicked: false,
             initialized: false,
         };
@@ -61,9 +59,7 @@ impl TileMapEditor  {
         ecs: &mut WorldEcs,
     ) 
         {
-
         if !self.initialized {
-            self.reset_camera_view(camera, map);
             self.ui_clicked = true; // Stop any initial tile placements
             self.initialized = true;
         }
@@ -82,12 +78,6 @@ impl TileMapEditor  {
             }
         }
 
-        if is_key_pressed(KeyCode::R) {
-            self.reset_camera_view(camera, map);
-        }
-        if is_key_pressed(KeyCode::G) {
-            self.show_grid = !self.show_grid;
-        }
         if is_key_pressed(KeyCode::E) {
             self.toggle_exits();
         }
@@ -185,7 +175,7 @@ impl TileMapEditor  {
                     ),
                 })
                 .with(TileSprite { 
-                    sprite: sprite_id,
+                    sprite_id,
                     path: sprite_path.to_string(),
                 });
 
@@ -228,44 +218,8 @@ impl TileMapEditor  {
         clear_background(BLACK);
         set_camera(camera);
         map.draw(camera, exits, ecs, asset_manager);
-        self.draw_grid(camera, map);
         self.draw_hover_highlight(camera, map);
         self.draw_ui(camera, asset_manager);
-    }
-
-    fn draw_grid(&self, camera: &Camera2D, map: &TileMap) {
-        if !self.show_grid {
-            return;
-        }
-
-        let zoom_scale = camera.zoom.x.abs();
-        let base_width = 0.5;
-        let min_line_width = 2.0;
-        let max_line_width = 5.0;
-        let line_width = (base_width / zoom_scale).clamp(min_line_width, max_line_width);
-        let grid_color = Color::from_rgba(0, 0, 0, 20);
-
-        for y in 0..=map.height {
-            draw_line(
-                0.0,
-                y as f32 * TILE_SIZE,
-                map.width as f32 * TILE_SIZE,
-                y as f32 * TILE_SIZE,
-                line_width,
-                grid_color,
-            );
-        }
-
-        for x in 0..=map.width {
-            draw_line(
-                x as f32 * TILE_SIZE,
-                0.0,
-                x as f32 * TILE_SIZE,
-                map.height as f32 * TILE_SIZE,
-                line_width,
-                grid_color,
-            );
-        }
     }
 
     fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap) {
@@ -340,19 +294,6 @@ impl TileMapEditor  {
         } else {
             None
         }
-    }
-
-    pub fn reset_camera_view(&mut self, camera: &mut Camera2D, map: &TileMap) {
-        let aspect_x = 4.0 / screen_width();
-        let aspect_y = 4.0 / screen_height();
-        let initial_scale = 1.0 / 2.0;
-
-        camera.target = vec2(
-            (map.width as f32 * TILE_SIZE) / 2.0,
-            (map.height as f32 * TILE_SIZE) / 2.0,
-        );
-        
-        camera.zoom = vec2(aspect_x * initial_scale, aspect_y * initial_scale);
     }
 
     fn is_mouse_over_ui(&self, camera: &Camera2D, mouse_pos: Vec2) -> bool {

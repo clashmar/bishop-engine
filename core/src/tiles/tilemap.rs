@@ -57,7 +57,7 @@ impl TileMap {
 
                 // Sprite component (visual)
                 if let Some(tile_sprite) = ecs.tile_sprites.get(tile_inst.entity) {
-                    let tex = asset_manager.get(tile_sprite.sprite);
+                    let tex = asset_manager.get_texture_from_id(tile_sprite.sprite_id);
                     let dest = vec2(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
                     draw_texture_ex(
                             tex,

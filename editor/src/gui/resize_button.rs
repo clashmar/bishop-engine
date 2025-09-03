@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::RoomMetadata};
-use crate::gui::{text_button::TextButton, ui_element::{DynamicTilemapUiElement}};
+use crate::{gui::{text_button::TextButton, ui_element::DynamicTilemapUiElement}, world::coord};
 
 pub struct ResizeButton {
     pub action: ResizeAction,
@@ -47,7 +47,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         let room_size = &mut room_metadata.size;
 
         // Compute proposed delta and new size
-        let (mut delta_pos, mut new_size) = match self.action {
+        let (mut delta_pos, mut proposed_size) = match self.action {
             ResizeAction::AddTop    => (vec2(0.0, -1.0), vec2(map.width as f32, map.height as f32 + 1.0)),
             ResizeAction::RemoveTop => (vec2(0.0,  1.0), vec2(map.width as f32, map.height as f32 - 1.0)),
             ResizeAction::AddBottom    => (vec2(0.0, 0.0), vec2(map.width as f32, map.height as f32 + 1.0)),
@@ -59,25 +59,14 @@ impl DynamicTilemapUiElement for ResizeButton {
         };
 
         delta_pos *= TILE_SIZE;
-        new_size *= TILE_SIZE;
+        proposed_size *= TILE_SIZE;
 
         // Check for overlaps
         let proposed_pos = *room_position + delta_pos;
 
-        let overlaps = other_bounds.iter().any(|(pos, mut size)| {
-            size *= TILE_SIZE;
-            let rect_a_min = proposed_pos;
-            let rect_a_max = proposed_pos + new_size;
-            let rect_b_min = pos;
-            let rect_b_max = *pos + size;
-            rect_a_min.x < rect_b_max.x &&
-            rect_a_max.x > rect_b_min.x &&
-            rect_a_min.y < rect_b_max.y &&
-            rect_a_max.y > rect_b_min.y
-        });
-
-        if overlaps {
-            return; // skip resize if overlapping
+        if coord::overlaps_existing_rooms(proposed_pos, proposed_size, other_bounds) {
+            // Skip the resize
+            return;
         }
 
         // Apply resize

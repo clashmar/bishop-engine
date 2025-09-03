@@ -32,8 +32,6 @@ pub struct TilePalette {
     #[serde(skip)]
     pub sprite_ids: Vec<SpriteId>,
     #[serde(skip)]
-    pub sprite_paths: Vec<String>,
-    #[serde(skip)]
     create_requested: bool,
 }
 
@@ -58,7 +56,6 @@ impl TilePalette {
             selected_index: 0,
             entries: Vec::new(),
             sprite_ids: Vec::new(),
-            sprite_paths: Vec::new(),
             create_requested: false,
         }
     }
@@ -81,19 +78,17 @@ impl TilePalette {
     /// palette is empty (or the index is out of range).
     #[inline]
     pub fn selected_path_opt(&self) -> Option<&str> {
-        self.sprite_paths.get(self.selected_index).map(|s| s.as_str())
+        self.entries.get(self.selected_index).map(|e| e.sprite_path.as_str())
     }
 
     /// Loads every sprite that belongs to the palette and fills the
     /// `sprite_ids` / `sprite_paths` vectors.
     pub async fn rebuild_runtime(&mut self, assets: &mut AssetManager) {
         self.sprite_ids.clear();
-        self.sprite_paths.clear();
 
         for entry in &self.entries {
             let tex_id = assets.load(&entry.sprite_path).await;
             self.sprite_ids.push(tex_id);
-            self.sprite_paths.push(entry.sprite_path.clone());
         }
     }
 
@@ -104,7 +99,7 @@ impl TilePalette {
             let x = self.position.x + col as f32 * self.tile_size;
             let y = self.position.y + row as f32 * self.tile_size;
 
-            let tex = assets.get(self.sprite_ids[i]);
+            let tex = assets.get_texture_from_id(self.sprite_ids[i]);
             draw_texture_ex(
                 tex,
                 x,
@@ -192,11 +187,12 @@ impl TilePalette {
                 self.ui.sprite_path = path.to_string_lossy().into_owned();
             }
         }
-
+        
         // Preview
         if !self.ui.sprite_path.is_empty() {
-            let tex_id = assets.load(&self.ui.sprite_path).await;
-            let tex = assets.get(tex_id);
+            let preview_id = assets.load(&self.ui.sprite_path).await;
+            let tex = assets.get_texture_from_id(preview_id);
+            println!("reached");
             draw_texture_ex(
                 tex,
                 panel.x + panel.w - 50.,
@@ -279,8 +275,8 @@ impl TilePalette {
             def_id,
             sprite_path: self.ui.sprite_path.clone(),
         });
+
         self.sprite_ids.push(sprite_id);
-        self.sprite_paths.push(self.ui.sprite_path.clone());
 
         // Auto‑select the newly created tile
         self.selected_index = self.entries.len() - 1;

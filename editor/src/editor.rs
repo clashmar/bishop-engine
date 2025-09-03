@@ -185,10 +185,10 @@ impl Editor {
         // Iterate over all tile‑sprite components.
         for (_entity, tile_sprite) in self.world.ecs.tile_sprites.data.iter_mut() {
             // If the manager does not yet contain this texture, load it
-            if !self.assets.contains(tile_sprite.sprite) {
+            if !self.assets.contains(tile_sprite.sprite_id) {
                 // Return the new id and replace the old one
                 let new_id = futures::executor::block_on(self.assets.load(&tile_sprite.path));
-                tile_sprite.sprite = new_id;
+                tile_sprite.sprite_id = new_id;
             }
         }
     }

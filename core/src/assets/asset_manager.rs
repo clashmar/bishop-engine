@@ -53,8 +53,8 @@ impl AssetManager {
         id.0 < self.textures.len()
     }
 
-    /// If the texture has not been loaded yet load it synchronously.
-    pub fn get(&mut self, id: SpriteId) -> &Texture2D {
+    /// Returns a texture from a sprite id. If the texture has not been loaded yet load it synchronously.
+    pub fn get_texture_from_id(&mut self, id: SpriteId) -> &Texture2D {
         // Fast path
         if self.contains(id) {
             return &self.textures[id.0];

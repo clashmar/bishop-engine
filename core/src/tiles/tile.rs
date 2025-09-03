@@ -10,7 +10,7 @@ pub struct Tile {
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TileSprite {
     #[serde(skip)] 
-    pub sprite: SpriteId,
+    pub sprite_id: SpriteId,
     pub path: String,
 }
 

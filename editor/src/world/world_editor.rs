@@ -1,15 +1,14 @@
 use core::{constants::TILE_SIZE, world::{room::{ExitDirection, RoomMetadata}, world::World}};
 use macroquad::prelude::*;
 use uuid::Uuid;
-use crate::camera_controller::{self, CameraController};
+use crate::{camera_controller::{CameraController}, canvas::grid};
 use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use crate::world::coord;
 
+pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.02;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
 const HIGHLIGHT_ERROR_COLOR: Color = Color::new(1.0, 0.0, 0.0, 0.5);
-const LINE_THICKNESS_MULTIPLIER: f32 = 0.02;
 const ROOM_LINE_INSET: f32 = 0.5;
-const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
 const HOVER_LINE_THICKNESS: f32 = 0.02;
 
 pub enum WorldEditorMode {
@@ -131,27 +130,18 @@ impl WorldEditor {
         None
     }
 
-    fn intersects_existing_room(&self, rooms_metadata: &Vec<RoomMetadata>, top_left: Vec2, size: Vec2) -> bool {
-        let a_left = top_left.x;
-        let a_right = top_left.x + size.x;
-        let a_top = top_left.y;
-        let a_bottom = top_left.y + size.y;
+    fn intersects_existing_room(
+        &self,
+        rooms_metadata: &Vec<RoomMetadata>,
+        top_left: Vec2,
+        size: Vec2,
+    ) -> bool {
+        let bounds: Vec<(Vec2, Vec2)> = rooms_metadata
+            .iter()
+            .map(|rm| (rm.position, rm.size))
+            .collect();
 
-        for room_metadata in rooms_metadata {
-            let b_left = room_metadata.position.x;
-            let b_right = room_metadata.position.x + room_metadata.size.x;
-            let b_top = room_metadata.position.y;
-            let b_bottom = room_metadata.position.y + room_metadata.size.y;
-
-            // Return true only if the rectangles actually overlap
-            let intersects = a_left < b_right && a_right > b_left &&
-                            a_top < b_bottom && a_bottom > b_top;
-
-            if intersects {
-                return true;
-            }
-        }
-        false
+        coord::overlaps_existing_rooms(top_left * TILE_SIZE, size * TILE_SIZE, &bounds)
     }
 
     fn reset_placing(&mut self) {
@@ -179,7 +169,7 @@ impl WorldEditor {
 
         let rooms_metadata = &world.rooms_metadata;
 
-        self.draw_grid(camera);
+        grid::draw_grid(camera);
 
         self.draw_rooms(camera, rooms_metadata);
         self.draw_exits(rooms_metadata);
@@ -340,42 +330,9 @@ impl WorldEditor {
                     color: BLACK,
                     rotation,
                     ..Default::default()
-                },
-            );
-        }
-    set_camera(camera); // back to world camera
-}
-    
-    fn draw_grid(&mut self, camera: &Camera2D) {
-        let scalar = CameraController::scalar_zoom(camera);
-        self.show_grid = scalar >= camera_controller::MIN_ZOOM * 2.0;
-        if !self.show_grid {
-            return;
-        }
-
-        let step = TILE_SIZE;
-        let line_thickness = LINE_THICKNESS_MULTIPLIER / 2.0 / camera.zoom.x;
-
-        let cam_pos = camera.target;
-        let screen_w = screen_width() / camera.zoom.x;
-        let screen_h = screen_height() / camera.zoom.y;
-
-        let start_x = ((cam_pos.x - screen_w / 2.0) / step).floor() * step;
-        let start_y = ((cam_pos.y - screen_h / 2.0) / step).floor() * step;
-        let end_x = cam_pos.x + screen_w / 2.0 + step;
-        let end_y = cam_pos.y + screen_h / 2.0 + step;
-
-        let mut x = start_x;
-        while x <= end_x {
-            draw_line(x, start_y, x, end_y, line_thickness, GRID_LINE_COLOR);
-            x += step;
-        }
-
-        let mut y = start_y;
-        while y <= end_y {
-            draw_line(start_x, y, end_x, y, line_thickness, GRID_LINE_COLOR);
-            y += step;
-        }
+                });
+            }
+        set_camera(camera); // back to world camera
     }
 
     fn draw_placing_preview(&self, camera: &Camera2D, rooms_metadata: &Vec<RoomMetadata>) {

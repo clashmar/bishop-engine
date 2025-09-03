@@ -1,5 +1,17 @@
-use crate::{gui::add_entity_button::AddEntityButton, tilemap::tilemap_editor::TileMapEditor, world::coord};
-use core::{assets::asset_manager::AssetManager, constants::*, ecs::{entity::Entity, world_ecs::WorldEcs}, world::room::{Room, RoomMetadata}};
+use crate::{
+    camera_controller::{CameraController}, 
+    canvas::grid, 
+    gui::add_entity_button::AddEntityButton, 
+    tilemap::tilemap_editor::TileMapEditor, 
+    world::coord
+};
+use core::{
+    assets::asset_manager::AssetManager, 
+    constants::*, 
+    ecs::{entity::Entity, world_ecs::WorldEcs}, 
+    tiles::tilemap::TileMap, 
+    world::room::{Room, RoomMetadata}
+};
 use macroquad::prelude::*;
 use uuid::Uuid;
 
@@ -13,8 +25,10 @@ pub struct RoomEditor {
     pub tilemap_editor: TileMapEditor,
     add_entity_btn: AddEntityButton,
     selected_entity: Option<Entity>,
+    show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
+    initialized: bool, 
 }
 
 impl RoomEditor {
@@ -24,8 +38,10 @@ impl RoomEditor {
             tilemap_editor: TileMapEditor::new(),
             add_entity_btn: AddEntityButton::new(),
             selected_entity: None,
+            show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
+            initialized: false,
         }
     }
 
@@ -39,9 +55,17 @@ impl RoomEditor {
         ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) -> bool {
+        let tilemap = &mut room.variants[0].tilemap;
+
+        if !self.initialized {
+            CameraController::reset_room_camera(camera, tilemap);
+            self.initialized = true;
+        }
+
         futures::executor::block_on(
             self.tilemap_editor.palette.process_create_request(ecs, asset_manager)
         );
+
         match self.mode {
             RoomEditorMode::Tilemap => {
                 // Collect bounds for all other rooms to check for intersections
@@ -50,8 +74,6 @@ impl RoomEditor {
                     .filter(|m| m.id != room_id)
                     .map(|m| (m.position, m.size))
                     .collect();
-
-                let tilemap = &mut room.variants[0].tilemap;
 
                 let room_metadata = rooms_metadata
                     .iter_mut()
@@ -115,6 +137,14 @@ impl RoomEditor {
             };
         }
 
+        if is_key_pressed(KeyCode::G) {
+            self.show_grid = !self.show_grid;
+        }
+
+        if is_key_pressed(KeyCode::R) {
+            CameraController::reset_room_camera(camera, tilemap);
+        }
+
         false
     }
 
@@ -126,10 +156,11 @@ impl RoomEditor {
         ecs: &WorldEcs, 
         asset_manager: &mut AssetManager
     ) {
+        let tilemap = &room.variants[0].tilemap;
+        let exits = &room_metadata.exits;
+
         match self.mode {
             RoomEditorMode::Tilemap => {
-                let tilemap = &room.variants[0].tilemap;
-                let exits = &room_metadata.exits;
                 self.tilemap_editor.draw(
                     camera, 
                     tilemap, 
@@ -139,61 +170,73 @@ impl RoomEditor {
                 );
             }
             RoomEditorMode::Scene => {
-                let tilemap = &room.variants[0].tilemap;
-                let exits = &room_metadata.exits;
                 tilemap.draw(camera, exits, ecs, asset_manager);
-
-                let room_min = room_metadata.position;
-                let room_max = room_min
-                    + vec2(
-                        tilemap.width  as f32 * TILE_SIZE,
-                        tilemap.height as f32 * TILE_SIZE,
-                    );
-
-                // Draw non‑tile entities.
-                for (entity, pos) in ecs.positions.data.iter() {
-                    // Skip tiles
-                    if ecs.tile_sprites.get(*entity).is_some() {
-                        continue;
-                    }
-
-                    // Only draw the placeholder if the entity lies inside the current
-                    // room’s bounds (after the offset has been applied).
-                    if pos.position.x >= room_min.x
-                        && pos.position.x <= room_max.x
-                        && pos.position.y >= room_min.y 
-                        && pos.position.y <= room_max.y
-                    {
-                        // Adjust the drawing position of the entity
-                        let room_pos = pos.position - room_metadata.position;
-                        draw_entity_placeholder(room_pos);
-                    }
-                }
-                
-                // Draw highlight
-                if let Some(sel) = self.selected_entity {
-                    if let Some(pos) = ecs.positions.get(sel) {
-                        draw_rectangle_lines(
-                            pos.position.x - room_metadata.position.x - 11.0,
-                            pos.position.y - room_metadata.position.y - 11.0,
-                            22.0,
-                            22.0,
-                            2.0,
-                            YELLOW,
-                        );
-                    }
-                }
+                self.draw_entities(ecs, room_metadata, tilemap);
                 set_default_camera();
                 self.add_entity_btn.draw();
             }
         }
+
+        if self.show_grid {
+            set_camera(camera);
+            grid::draw_grid(camera);
+        }
+
         set_default_camera();
         self.draw_coordinates(camera, room_metadata);
+    }
+
+    fn draw_entities(
+        &self, 
+        ecs: &WorldEcs, 
+        room_metadata: &RoomMetadata, 
+        tilemap: &TileMap
+    ) {
+        let room_min = room_metadata.position;
+        let room_max = room_min
+            + vec2(
+                tilemap.width  as f32 * TILE_SIZE,
+                tilemap.height as f32 * TILE_SIZE,
+            );
+
+        for (entity, pos) in ecs.positions.data.iter() {
+            // Skip tiles
+            if ecs.tile_sprites.get(*entity).is_some() {
+                continue;
+            }
+
+            // Only draw the placeholder if the entity lies inside the current
+            // room’s bounds (after the offset has been applied).
+            if pos.position.x >= room_min.x
+                && pos.position.x <= room_max.x
+                && pos.position.y >= room_min.y 
+                && pos.position.y <= room_max.y
+            {
+                // Adjust the drawing position of the entity
+                let room_pos = pos.position - room_metadata.position;
+                draw_entity_placeholder(room_pos);
+            }
+        }
+        
+        // Draw highlight
+        if let Some(sel) = self.selected_entity {
+            if let Some(pos) = ecs.positions.get(sel) {
+                draw_rectangle_lines(
+                    pos.position.x - room_metadata.position.x - 11.0,
+                    pos.position.y - room_metadata.position.y - 11.0,
+                    22.0,
+                    22.0,
+                    2.0,
+                    YELLOW,
+                );
+            }
+        }
     }
 
     pub fn reset(&mut self) {
         self.mode = RoomEditorMode::Tilemap;
         self.selected_entity = None;
+        self.initialized = false;
     }
 }
 
