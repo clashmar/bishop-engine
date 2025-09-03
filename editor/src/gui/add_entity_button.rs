@@ -46,6 +46,7 @@ impl AddEntityButton {
                     vel: Vec2::ZERO,
                 })
                 .finish();
+            println!("{}", start_pos)
         }
     }
 }

@@ -55,12 +55,12 @@ impl RoomMetadata {
             exit.target_room_id = None;
 
             // Local to world position
-            let exit_world_pos = self.position + exit.position;
+            let exit_world_pos = ( self.position / TILE_SIZE ) + exit.position;
 
             'other_rooms: for (idx, other_room) in other_rooms.iter().enumerate() {
                 for other_exit in &other_room.exits {
                     // World position of the other room's exit
-                    let other_world_pos = other_room.position + other_exit.position;
+                    let other_world_pos = (other_room.position / TILE_SIZE) + other_exit.position;
 
                     let linked = match exit.direction {
                         ExitDirection::Up => {
@@ -96,7 +96,7 @@ impl RoomMetadata {
 
     pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
         self.exits.iter().map(|exit| {
-            (self.position + exit.position, exit.direction)
+            (self.position / TILE_SIZE + exit.position, exit.direction)
         }).collect()
     }
 }
@@ -141,6 +141,7 @@ pub enum ExitDirection {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Exit {
     #[serde_as(as = "FromInto<[f32; 2]>")]
+    // Local grid coordinate
     pub position: Vec2,                 
     pub direction: ExitDirection,      
     pub target_room_id: Option<usize>, 

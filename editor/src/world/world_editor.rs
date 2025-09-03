@@ -182,7 +182,7 @@ impl WorldEditor {
         self.draw_grid(camera);
 
         self.draw_rooms(camera, rooms_metadata);
-        self.draw_unlinked_exits(rooms_metadata);
+        self.draw_exits(rooms_metadata);
 
         // Highlight hovered room in select or delete mode
         match self.mode {
@@ -219,56 +219,51 @@ impl WorldEditor {
         }
     }
 
-    fn draw_unlinked_exits(&self, rooms_metadata: &Vec<RoomMetadata>) {
+    fn draw_exits(&self, rooms_metadata: &Vec<RoomMetadata>) {
         for room_metadata in rooms_metadata {
-            for (exit_world_pos, dir) in room_metadata.world_exit_positions() {
-                for exit in &room_metadata.exits {
-                    let pos = room_metadata.position + exit.position;
-
-                    if (pos - exit_world_pos).length_squared() < 0.01 {
-                        // Decide color based on whether it's linked
-                        let color = if exit.target_room_id.is_some() {
-                            GREEN
-                        } else {
-                            RED
-                        };
-                        self.draw_exit_marker(exit_world_pos, dir, color);
-                    }
-                }
+            for exit in &room_metadata.exits {
+                let exit_world_coord = (room_metadata.position / TILE_SIZE) + exit.position;
+                // Decide color based on whether it's linked
+                let color = if exit.target_room_id.is_some() {
+                    GREEN
+                } else {
+                    RED
+                };
+                self.draw_exit_marker(exit_world_coord, exit.direction, color);
             }
         }
     }
 
-    fn draw_exit_marker(&self, exit_world_pos: Vec2, dir: ExitDirection, color: Color) {
+    fn draw_exit_marker(&self, exit_world_coord: Vec2, dir: ExitDirection, color: Color) {
         let thickness = 4.0;
         let length = TILE_SIZE;
         let offset = 1.0; 
 
         match dir {
             ExitDirection::Up => draw_rectangle(
-                exit_world_pos.x * TILE_SIZE,
-                exit_world_pos.y * TILE_SIZE + TILE_SIZE,
+                exit_world_coord.x * TILE_SIZE,
+                exit_world_coord.y * TILE_SIZE + TILE_SIZE,
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Down => draw_rectangle(
-                exit_world_pos.x * TILE_SIZE,
-                exit_world_pos.y * TILE_SIZE - thickness + offset,
+                exit_world_coord.x * TILE_SIZE,
+                exit_world_coord.y * TILE_SIZE - thickness + offset,
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Left => draw_rectangle(
-                (exit_world_pos.x + 1.0) * TILE_SIZE - offset,
-                exit_world_pos.y * TILE_SIZE,
+                (exit_world_coord.x + 1.0) * TILE_SIZE - offset,
+                exit_world_coord.y * TILE_SIZE,
                 thickness,
                 length,
                 color,
             ),
             ExitDirection::Right => draw_rectangle(
-                (exit_world_pos.x - 1.0) * TILE_SIZE + TILE_SIZE - thickness + offset,
-                exit_world_pos.y * TILE_SIZE,
+                (exit_world_coord.x - 1.0) * TILE_SIZE + TILE_SIZE - thickness + offset,
+                exit_world_coord.y * TILE_SIZE,
                 thickness,
                 length,
                 color,
@@ -437,8 +432,8 @@ pub fn mouse_over_rect(rect: Rect) -> bool {
 fn scaled_room_rect(room_metadata: &RoomMetadata) -> Rect {
     let size = room_metadata.size;
     Rect::new(
-        room_metadata.position.x * TILE_SIZE,
-        room_metadata.position.y * TILE_SIZE,
+        room_metadata.position.x,
+        room_metadata.position.y,
         size.x * TILE_SIZE,
         size.y * TILE_SIZE,
     )
@@ -451,6 +446,5 @@ fn rect_from_points(p1: Vec2, p2: Vec2) -> (Vec2, Vec2) {
         (p1.x - p2.x).abs().floor() + 1.0,
         (p1.y - p2.y).abs().floor() + 1.0,
     );
-
     (top_left, size)
 }

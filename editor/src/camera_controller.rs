@@ -74,7 +74,7 @@ impl CameraController {
         };
 
         Camera2D {
-            target: (room_position + room_size / 2.0) * TILE_SIZE,
+            target: (room_position + (room_size * TILE_SIZE) / 2.0),
             zoom: vec2(zoom_x, zoom_y),
             ..Default::default()
         }

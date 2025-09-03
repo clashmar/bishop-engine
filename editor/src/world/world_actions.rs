@@ -1,4 +1,4 @@
-use core::tiles::tilemap::TileMap;
+use core::{constants::TILE_SIZE, tiles::tilemap::TileMap};
 use uuid::Uuid;
 use core::{world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
 use crate::world::coord;
@@ -101,8 +101,10 @@ impl WorldEditor {
         top_left: Vec2,
         size: Vec2,
     ) -> Uuid {
+        let origin_in_pixels = top_left * TILE_SIZE;
+
         // The name could be generated automatically or asked from the UI.
-        let new_id = self.create_room(world, "untitled", top_left, size);
+        let new_id = self.create_room(world, "untitled", origin_in_pixels, size);
 
         if let Err(e) = world_storage::save_world(world) {
             eprintln!("Could not save world after placing room: {e}");
