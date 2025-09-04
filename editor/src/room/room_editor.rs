@@ -1,7 +1,7 @@
 use crate::{
-    camera_controller::{CameraController}, 
-    canvas::grid, 
-    gui::add_entity_button::AddEntityButton, 
+    camera_controller::CameraController, 
+    canvas::grid, gui::*, 
+    room::entity_palette::EntityPalette, 
     tilemap::tilemap_editor::TileMapEditor, 
     world::coord
 };
@@ -23,7 +23,7 @@ pub enum RoomEditorMode {
 pub struct RoomEditor {
     pub mode: RoomEditorMode,
     pub tilemap_editor: TileMapEditor,
-    add_entity_btn: AddEntityButton,
+    pub entity_palette: EntityPalette,
     selected_entity: Option<Entity>,
     show_grid: bool,
     drag_offset: Vec2,
@@ -33,10 +33,17 @@ pub struct RoomEditor {
 
 impl RoomEditor {
     pub fn new() -> Self {
+        let palette = EntityPalette::new(
+            vec2(10.0, 10.0), 
+            48.0,              
+            4,                 
+            2,
+        );
+
         Self {
             mode: RoomEditorMode::Scene,
             tilemap_editor: TileMapEditor::new(),
-            add_entity_btn: AddEntityButton::new(),
+            entity_palette: palette,
             selected_entity: None,
             show_grid: true,
             drag_offset: Vec2::ZERO,
@@ -52,8 +59,9 @@ impl RoomEditor {
         room: &mut Room,
         room_id: Uuid, 
         rooms_metadata: &mut [RoomMetadata],
-        ecs: &mut WorldEcs,
+        world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
+        world_id: &Uuid,
     ) -> bool {
         let tilemap = &mut room.variants[0].tilemap;
 
@@ -81,13 +89,17 @@ impl RoomEditor {
                     tilemap, 
                     room_metadata, 
                     &other_bounds, 
-                    ecs, 
+                    world_ecs, 
                     asset_manager
                 );
             }
             RoomEditorMode::Scene => {
                 // Click‑selection
                 let mouse_screen: Vec2 = mouse_position().into();
+                if self.entity_palette.handle_click(mouse_screen) {
+                    // Click was on the palette, stop any drag that might be in progress
+                    self.dragging = false;
+                }
 
                 let room_metadata = rooms_metadata
                     .iter_mut()
@@ -95,8 +107,15 @@ impl RoomEditor {
                     .expect("metadata must still exist");
 
                 if is_mouse_button_pressed(MouseButton::Left) && !self.dragging {
+                    if let Some(prefab) = self.entity_palette.selected_prefab(world_id) {
+                        let world_pos = coord::mouse_world_pos(camera);
+                        // This creates an entity in the editor
+                        let _entity = prefab.instantiate_entity(world_pos, asset_manager, world_ecs);
+                        return false;
+                    }
+
                     self.selected_entity = None;
-                    for (entity, position) in ecs.positions.data.iter() {
+                    for (entity, position) in world_ecs.positions.data.iter() {
                         let room_position = position.position - room_metadata.position;
                         let screen = coord::world_to_screen(camera, room_position);
                         let hit = Rect::new(screen.x - 10.0, screen.y - 10.0, 20.0, 20.0);
@@ -113,7 +132,7 @@ impl RoomEditor {
                 // Dragging
                 if self.dragging {
                     if let Some(entity) = self.selected_entity {
-                        if let Some(position) = ecs.positions.get_mut(entity) {
+                        if let Some(position) = world_ecs.positions.get_mut(entity) {
                             let mouse_world = coord::mouse_world_pos(camera);
                             position.position = mouse_world + room_metadata.position + self.drag_offset;
                         }
@@ -123,7 +142,26 @@ impl RoomEditor {
                     }
                 }
 
-                self.add_entity_btn.try_click(ecs, room_metadata);
+                // ---------------------------------------------------------
+                // 4️⃣ “Edit Entity” button – appears next to the palette UI
+                // ---------------------------------------------------------
+                // We draw a tiny button here; the actual drawing happens in
+                // `draw()` (see later).  Here we only react to the click.
+                if let Some(entity) = self.selected_entity {
+                    self.entity_palette.enter_entity_edit_mode(entity);
+                }
+
+                // ---------------------------------------------------------
+                // 5️⃣ Process any pending prefab create / edit / delete requests
+                // ---------------------------------------------------------
+                // This must be awaited because the request may need to load a
+                // texture asynchronously.
+                futures::executor::block_on(self.entity_palette.process_requests(
+                    &room_metadata,
+                    world_id,
+                    asset_manager,
+                    world_ecs,
+                ));
             }
         }
 
@@ -156,7 +194,7 @@ impl RoomEditor {
         camera: &Camera2D,
         room: &Room,
         room_metadata: &RoomMetadata,
-        ecs: &WorldEcs, 
+        world_ecs: &mut WorldEcs, 
         asset_manager: &mut AssetManager
     ) {
         let tilemap = &room.variants[0].tilemap;
@@ -168,15 +206,15 @@ impl RoomEditor {
                     camera, 
                     tilemap, 
                     exits, 
-                    ecs,
+                    world_ecs,
                     asset_manager,
                 );
             }
             RoomEditorMode::Scene => {
-                tilemap.draw(camera, exits, ecs, asset_manager);
-                self.draw_entities(ecs, room_metadata, tilemap);
+                tilemap.draw(camera, exits, world_ecs, asset_manager);
+                self.draw_entities(world_ecs, room_metadata, tilemap, asset_manager);
                 set_default_camera();
-                self.add_entity_btn.draw();
+                self.entity_palette.draw(asset_manager, world_ecs);
             }
         }
 
@@ -193,7 +231,8 @@ impl RoomEditor {
         &self, 
         ecs: &WorldEcs, 
         room_metadata: &RoomMetadata, 
-        tilemap: &TileMap
+        tilemap: &TileMap,
+        asset_manager: &mut AssetManager,
     ) {
         let room_min = room_metadata.position;
         let room_max = room_min
@@ -217,11 +256,43 @@ impl RoomEditor {
             {
                 // Adjust the drawing position of the entity
                 let room_pos = pos.position - room_metadata.position;
-                draw_entity_placeholder(room_pos);
+                
+                // -----------------------------------------------------------------
+                // 1️⃣  Draw the sprite (if the entity has a Sprite component)
+                // -----------------------------------------------------------------
+                if let Some(sprite) = ecs.sprites.get(*entity) {
+                    // The Sprite component only stores a texture ID.
+                    // The AssetManager knows how to turn that ID into a Texture2D.
+                    let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
+                    // Draw the texture centred on the entity’s position.
+                    // You can adjust the offset if your sprites are not 32×32.
+                    draw_texture_ex(
+                        tex,
+                        room_pos.x - TILE_SIZE / 2.0,
+                        room_pos.y - TILE_SIZE / 2.0,
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
+                            ..Default::default()
+                        },
+                    );
+                } else {
+                    // Fallback placeholder (magenta square) – useful while you
+                    // are still creating sprites.
+                    draw_rectangle(
+                        room_pos.x - 10.0,
+                        room_pos.y - 10.0,
+                        20.0,
+                        20.0,
+                        MAGENTA,
+                    );
+                }
             }
         }
         
-        // Draw highlight
+        // -----------------------------------------------------------------
+        // 2️⃣  Highlight the currently selected entity (yellow box)
+        // -----------------------------------------------------------------
         if let Some(sel) = self.selected_entity {
             if let Some(pos) = ecs.positions.get(sel) {
                 draw_rectangle_lines(
@@ -237,18 +308,8 @@ impl RoomEditor {
     }
 
     pub fn reset(&mut self) {
-        self.mode = RoomEditorMode::Tilemap;
+        self.mode = RoomEditorMode::Scene;
         self.selected_entity = None;
         self.initialized = false;
     }
-}
-
-fn draw_entity_placeholder(pos: Vec2) {
-    draw_rectangle(
-        pos.x - 10.0,
-        pos.y - 10.0,
-        20.0,
-        20.0,
-        MAGENTA,
-    );
 }

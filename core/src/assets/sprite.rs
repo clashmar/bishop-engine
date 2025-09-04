@@ -12,13 +12,15 @@ pub struct SpriteId(pub Uuid);
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Sprite {
     /// Reference to the texture that was loaded by the AssetManager.
-    pub tex_id: SpriteId,
+    pub sprite_id: SpriteId,
+    pub path: String,
 }
 
 impl Default for Sprite {
     fn default() -> Self {
         Self {
-            tex_id: SpriteId(Uuid::new_v4()),
+            sprite_id: SpriteId(Uuid::new_v4()),
+            path: String::new(),
         }
     }
 }

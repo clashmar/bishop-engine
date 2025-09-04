@@ -2,7 +2,7 @@ use std::path::Path;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use std::collections::HashMap;
-use crate::assets::sprites::SpriteId;
+use crate::assets::sprite::SpriteId;
 
 pub struct AssetManager {
     textures: HashMap<SpriteId, Texture2D>,

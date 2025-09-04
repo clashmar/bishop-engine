@@ -2,7 +2,6 @@ pub mod resize_button;
 pub mod text_button;
 pub mod ui_element;
 pub mod world_ui;
-pub mod add_entity_button;
 
 use macroquad::prelude::*;
 use std::collections::HashMap;

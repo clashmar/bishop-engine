@@ -1,0 +1,76 @@
+(
+    id: "fe71a24e-c834-41ee-ae11-b6300a0b7e7c",
+    name: "World\r",
+    world_ecs: (
+        positions: (
+            data: {
+                ("c2c2df1b-b056-49b3-9fd8-47e8d5827fa2"): (
+                    position: (
+                        153.0667,
+                        84.40558,
+                    ),
+                ),
+            },
+        ),
+        velocities: (
+            data: {},
+        ),
+        sprites: (
+            data: {
+                ("c2c2df1b-b056-49b3-9fd8-47e8d5827fa2"): (
+                    sprite_id: ("50a2772f-ccc2-4a3b-87cd-6ba98999d630"),
+                    path: "/Users/charliesovn/Projects/Aseprite/Entity1.png",
+                ),
+            },
+        ),
+        walkables: (
+            data: {},
+        ),
+        solids: (
+            data: {},
+        ),
+        damages: (
+            data: {},
+        ),
+        tile_defs: {},
+        tile_sprites: (
+            data: {},
+        ),
+        component: (),
+    ),
+    rooms_metadata: [
+        /*[0]*/ (
+            id: "8aaff134-fe7f-41d0-bc8f-d9526473fc4c",
+            name: "untitled",
+            position: (
+                0.0,
+                0.0,
+            ),
+            size: (
+                10.0,
+                5.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+        /*[1]*/ (
+            id: "b5f621ef-e38c-446e-a466-e3eaad18ea79",
+            name: "untitled",
+            position: (
+                0.0,
+                160.0,
+            ),
+            size: (
+                10.0,
+                4.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+    ],
+    starting_room: Some("8aaff134-fe7f-41d0-bc8f-d9526473fc4c"),
+    starting_position: Some((
+        1.0,
+        1.0,
+    )),
+)

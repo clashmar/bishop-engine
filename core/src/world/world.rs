@@ -13,7 +13,7 @@ use serde_with::serde_as;
 pub struct World {
     pub id: Uuid,
     pub name: String,
-    pub ecs: WorldEcs,
+    pub world_ecs: WorldEcs,
     pub rooms_metadata: Vec<RoomMetadata>,
     pub starting_room: Option<Uuid>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]

@@ -1,5 +1,5 @@
 use core::{
-    assets::{asset_manager::AssetManager, sprites::SpriteId},
+    assets::{asset_manager::AssetManager, sprite::SpriteId},
     ecs::world_ecs::WorldEcs,
     tiles::{
         tile_def::{TileComponentSpec, TileDef, TileDefId}
@@ -429,17 +429,13 @@ impl TilePalette {
             let def_id = self.entries[idx].def_id;
             world_ecs.tile_defs.remove(&def_id);
 
-            // 2️⃣ Remove any tiles that still reference the now‑deleted entity
-            //    (they hold an Entity, not a DefId, so we must scan the map later.
-            //    For simplicity we just clear the cell if it contains the old entity.)
-            //    This will be handled in TileMapEditor.handle_tile_placement
-            //    by checking `ecs.tile_defs.len()` before using a def.
-
             // Remove palette entry and sprite id
             self.entries.remove(idx);
             self.sprite_ids.remove(idx);
+
             // Adjust selected index safely
             self.selected_index = self.entries.len().saturating_sub(1);
+            
             // Re‑compute rows
             self.rows = (self.entries.len() + self.columns - 1) / self.columns;
         }

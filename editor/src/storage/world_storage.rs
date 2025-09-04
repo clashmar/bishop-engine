@@ -25,7 +25,7 @@ pub fn create_new_world(name: String) -> World {
     let world = World {
         id,
         name: name.clone(),
-        ecs,
+        world_ecs: ecs,
         rooms_metadata: vec![first_room_metadata],
         starting_room: Some(room_id),
         starting_position: Some(vec2(1.0, 1.0)),

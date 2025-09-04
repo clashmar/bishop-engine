@@ -69,6 +69,7 @@ impl Editor {
 
         // Give the palette to the tilemap editor
         editor.room_editor.tilemap_editor.palette = palette;
+        editor.room_editor.entity_palette.load_prefabs_from_disk(&editor.world.id, &mut editor.assets);
 
         Ok(editor)
     }
@@ -103,8 +104,9 @@ impl Editor {
                             room, 
                             room_id, 
                             meta_slice,
-                            &mut self.world.ecs,
+                            &mut self.world.world_ecs,
                             &mut self.assets,
+                            &self.world.id,
                         )
                 };
 
@@ -173,7 +175,7 @@ impl Editor {
                         &self.camera, 
                         room, 
                         meta, 
-                        &mut self.world.ecs,
+                        &mut self.world.world_ecs,
                         &mut self.assets,
                     );
                 }
@@ -182,11 +184,17 @@ impl Editor {
     }
 
     fn sync_assets(&mut self) {
-        // Iterate over all tile‑sprite components.
-        for (_entity, tile_sprite) in self.world.ecs.tile_sprites.data.iter_mut() {
-            // If the manager does not yet contain this texture, load it
+        // Iterate over all non-tile sprites
+        for (_entity, sprite) in self.world.world_ecs.sprites.data.iter_mut() {
+            if !self.assets.contains(sprite.sprite_id) {
+                let id = futures::executor::block_on(self.assets.load(&sprite.path));
+                sprite.sprite_id = id;
+            }
+        }
+
+        // Iterate over all tile‑sprites
+        for (_entity, tile_sprite) in self.world.world_ecs.tile_sprites.data.iter_mut() {
             if !self.assets.contains(tile_sprite.sprite_id) {
-                // Return the new id and replace the old one
                 let new_id = futures::executor::block_on(self.assets.load(&tile_sprite.path));
                 tile_sprite.sprite_id = new_id;
             }

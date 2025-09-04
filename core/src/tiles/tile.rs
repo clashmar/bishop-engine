@@ -1,4 +1,4 @@
-use crate::{assets::sprites::SpriteId, ecs::{component::{Component, ComponentStore}, entity::Entity, world_ecs::WorldEcs}};
+use crate::{assets::sprite::SpriteId, ecs::{component::{Component, ComponentStore}, entity::Entity, world_ecs::WorldEcs}};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 

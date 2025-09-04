@@ -7,6 +7,14 @@ use macroquad::prelude::*;
 
 use crate::ecs::entity::Entity; 
 
+/// Serialisable description of a component.
+#[derive(Clone, Serialize, Deserialize)]
+pub enum ComponentSpec {
+    Walkable(bool),
+    Solid(bool),
+    Damage(f32),
+}
+
 pub trait Component {
     fn store_mut(world: &mut WorldEcs) -> &mut ComponentStore<Self> where Self: Sized;
 }

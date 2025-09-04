@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    assets::sprites::Sprite, 
+    assets::sprite::Sprite, 
     ecs::{component::*, entity::{Entity, EntityBuilder}}, 
     tiles::{tile::TileSprite, tile_def::{TileDef, TileDefId}}
 }; 
