@@ -7,6 +7,7 @@ use core::{
 };
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use crate::gui::*;
 use serde_with::serde_as;
 use serde_with::FromInto;
@@ -14,6 +15,7 @@ use serde_with::FromInto;
 #[derive(Serialize, Deserialize)]
 struct PaletteEntry {
     def_id: TileDefId,
+    sprite_id: SpriteId,
     sprite_path: String,
 }
 
@@ -210,8 +212,11 @@ impl TilePalette {
 
         if self.ui.edit_initialized && self.ui.name.is_empty() {
             let entry = &self.entries[self.ui.edit_index];
-            let def_id = entry.def_id;
-            let def = &world_ecs.tile_defs[def_id.0];
+            
+            let def = world_ecs.tile_defs
+                .get(&entry.def_id)
+                .expect("def must exist");
+
             self.ui.name = def.name.clone();
             self.ui.sprite_path = entry.sprite_path.clone();
             // Walk through the component specs
@@ -361,13 +366,14 @@ impl TilePalette {
             components: comps,
         };
 
-        // Store the definition in the world and remember the IDs
-        let def_id = TileDefId(world_ecs.tile_defs.len());
-        world_ecs.tile_defs.push(def);
+        // Insert the definition into the world map.
+        let def_id = TileDefId(Uuid::new_v4());
+        world_ecs.tile_defs.insert(def_id, def);
 
         // Persist the palette entry
         self.entries.push(PaletteEntry {
             def_id,
+            sprite_id,
             sprite_path: self.ui.sprite_path.clone(),
         });
 
@@ -408,21 +414,20 @@ impl TilePalette {
             components: comps,
         };
 
-        // Overwrite the existing definition
+        // Overwrite the existing definition.
         let entry = &self.entries[self.ui.edit_index];
-        world_ecs.tile_defs[entry.def_id.0] = def;
-        // Update the stored sprite path (in case the user changed it)
+        world_ecs.tile_defs.insert(entry.def_id, def);
+
+        // Update the palette entry (path + sprite id may have changed).
         self.entries[self.ui.edit_index].sprite_path = self.ui.sprite_path.clone();
-        // Keep the original SpriteId – it may already be loaded.
-        // If the path changed, replace the id in `sprite_ids`.
-        self.sprite_ids[self.ui.edit_index] = sprite_id;
+        self.entries[self.ui.edit_index].sprite_id = sprite_id;
     }
 
     pub async fn process_delete_request(&mut self, world_ecs: &mut WorldEcs) {
         if let Some(idx) = self.delete_requested.take() {
             // Remove the definition from the world
             let def_id = self.entries[idx].def_id;
-            world_ecs.tile_defs.remove(def_id.0);
+            world_ecs.tile_defs.remove(&def_id);
 
             // 2️⃣ Remove any tiles that still reference the now‑deleted entity
             //    (they hold an Entity, not a DefId, so we must scan the map later.

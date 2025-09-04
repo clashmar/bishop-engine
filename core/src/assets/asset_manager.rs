@@ -1,20 +1,21 @@
 use std::path::Path;
 use macroquad::prelude::*;
+use uuid::Uuid;
 use std::collections::HashMap;
 use crate::assets::sprites::SpriteId;
 
 pub struct AssetManager {
-    textures: Vec<Texture2D>,
+    textures: HashMap<SpriteId, Texture2D>,
     path_to_id: HashMap<String, SpriteId>,
-    id_to_path: Vec<String>, 
+    id_to_path: HashMap<SpriteId, String>,
 }
 
 impl AssetManager {
     pub fn new() -> Self {
         Self {
-            textures: Vec::new(),
+            textures: HashMap::new(),
             path_to_id: HashMap::new(),
-            id_to_path: Vec::new(),
+            id_to_path: HashMap::new(),
         }
     }
 
@@ -36,38 +37,36 @@ impl AssetManager {
         // Disable smoothing (needed for pixel art)
         texture.set_filter(FilterMode::Nearest);
 
-        // New id is the next free index.
-        let id = SpriteId(self.textures.len());
+        // Create a fresh UUID for this texture
+        let id = SpriteId(Uuid::new_v4());
 
-        // Store everything.
-        self.textures.push(texture);
+        // Store everything
+        self.textures.insert(id, texture);
         self.path_to_id.insert(key.clone(), id);
-        self.id_to_path.push(key); // keep the reverse lookup
-
+        self.id_to_path.insert(id, key);
         id
     }
 
     /// Returns true if the texture for `id` is already present.
     #[inline]
     pub fn contains(&self, id: SpriteId) -> bool {
-        id.0 < self.textures.len()
+        self.textures.contains_key(&id)
     }
 
     /// Returns a texture from a sprite id. If the texture has not been loaded yet load it synchronously.
     pub fn get_texture_from_id(&mut self, id: SpriteId) -> &Texture2D {
         // Fast path
         if self.contains(id) {
-            return &self.textures[id.0];
+            return self.textures.get(&id).unwrap();
         }
 
         // Look up the original path and load it now.
-        let path: String = self
+        let path = self
             .id_to_path
-            .get(id.0)
+            .get(&id)
             .expect("SpriteId out of range and no stored path")
             .clone();
-
         futures::executor::block_on(self.load(path));
-        &self.textures[id.0]
+        self.textures.get(&id).unwrap()
     }
 }

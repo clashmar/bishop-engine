@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use crate::ecs::{component::{Damage, Solid, Walkable}, entity::EntityBuilder};
 
 /// Opaque identifier used by the editor and by the TileMap.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TileDefId(pub usize);
+pub struct TileDefId(pub Uuid);
 
 /// A list of component adding closures.
 #[derive(Clone, Serialize, Deserialize)]

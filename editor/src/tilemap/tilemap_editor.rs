@@ -3,7 +3,7 @@ use crate::gui::ui_element::{DynamicTilemapUiElement, TilemapUiElement};
 use crate::tilemap::tile_palette::{TilePalette};
 use macroquad::prelude::*;
 use core::assets::asset_manager::{AssetManager};
-use core::{constants::*, ecs};
+use core::{constants::*};
 use core::ecs::component::Position;
 use core::ecs::entity::Entity;
 use core::ecs::world_ecs::WorldEcs;
@@ -167,8 +167,12 @@ impl TileMapEditor  {
 
         // Place
         if is_mouse_button_down(MouseButton::Left) {
-            // Grab the currently selected definition & sprite from the palette
-            let def = ecs.tile_defs[def_id.0].clone();
+            // Grab the definition from the world
+            let def = ecs
+                .tile_defs
+                .get(&def_id)
+                .expect("definition must exist")
+                .clone();
 
             // Build the base entity
             let mut builder = ecs

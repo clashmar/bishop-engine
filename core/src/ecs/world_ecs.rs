@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use crate::{
     assets::sprites::Sprite, 
     ecs::{component::*, entity::{Entity, EntityBuilder}}, 
-    tiles::{tile::TileSprite, tile_def::TileDef}
+    tiles::{tile::TileSprite, tile_def::{TileDef, TileDefId}}
 }; 
 use serde::{Deserialize, Serialize};
 use macroquad::prelude::*;
@@ -14,7 +16,7 @@ pub struct WorldEcs {
     pub walkables: ComponentStore<Walkable>,
     pub solids: ComponentStore<Solid>,
     pub damages: ComponentStore<Damage>,
-    pub tile_defs: Vec<TileDef>,
+    pub tile_defs: HashMap<TileDefId, TileDef>,
     pub tile_sprites: ComponentStore<TileSprite>,
     component: (),
 }
