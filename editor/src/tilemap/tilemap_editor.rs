@@ -3,7 +3,7 @@ use crate::gui::ui_element::{DynamicTilemapUiElement, TilemapUiElement};
 use crate::tilemap::tile_palette::{TilePalette};
 use macroquad::prelude::*;
 use core::assets::asset_manager::{AssetManager};
-use core::{constants::*};
+use core::{constants::*, ecs};
 use core::ecs::component::Position;
 use core::ecs::entity::Entity;
 use core::ecs::world_ecs::WorldEcs;
@@ -56,13 +56,18 @@ impl TileMapEditor  {
         map: &mut TileMap, 
         room_metadata: &mut RoomMetadata,
         other_bounds: &[(Vec2, Vec2)],
-        ecs: &mut WorldEcs,
+        world_ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
     ) 
         {
         if !self.initialized {
             self.ui_clicked = true; // Stop any initial tile placements
             self.initialized = true;
         }
+
+        futures::executor::block_on(
+            self.palette.process_requests(world_ecs, asset_manager)
+        );
 
         self.dynamic_ui.clear();
         ResizeButton::build_all(map, &mut self.dynamic_ui);
@@ -73,7 +78,7 @@ impl TileMapEditor  {
         let exits = &mut room_metadata.exits;
         if !self.ui_clicked {
             match self.mode {
-                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map, ecs),
+                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map, world_ecs),
                 TilemapEditorMode::Exits => self.handle_exit_placement(camera, map, exits),
             }
         }
@@ -219,7 +224,7 @@ impl TileMapEditor  {
         set_camera(camera);
         map.draw(camera, exits, ecs, asset_manager);
         self.draw_hover_highlight(camera, map);
-        self.draw_ui(camera, asset_manager);
+        self.draw_ui(camera, asset_manager, ecs);
     }
 
     fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap) {
@@ -250,7 +255,12 @@ impl TileMapEditor  {
         }
     }
 
-    fn draw_ui(&mut self, camera: &Camera2D, asset_manager: &mut AssetManager) {
+    fn draw_ui(
+        &mut self, 
+        camera: &Camera2D, 
+        asset_manager: &mut AssetManager,
+        ecs: &WorldEcs,
+    ) {
         // Draw scaling UI
         for element in &self.dynamic_ui {
             element.draw(camera);
@@ -259,8 +269,8 @@ impl TileMapEditor  {
         // Reset to default camera for static UI drawing
         set_default_camera();
 
-        // Palette – **explicit call**
-        self.palette.draw(camera, asset_manager);
+        // Palette
+        self.palette.draw(asset_manager, ecs);
 
         // Draw static UI
         for element in &mut self.static_ui {

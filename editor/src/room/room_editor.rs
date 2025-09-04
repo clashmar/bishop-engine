@@ -34,7 +34,7 @@ pub struct RoomEditor {
 impl RoomEditor {
     pub fn new() -> Self {
         Self {
-            mode: RoomEditorMode::Tilemap,
+            mode: RoomEditorMode::Scene,
             tilemap_editor: TileMapEditor::new(),
             add_entity_btn: AddEntityButton::new(),
             selected_entity: None,
@@ -62,10 +62,6 @@ impl RoomEditor {
             self.initialized = true;
         }
 
-        futures::executor::block_on(
-            self.tilemap_editor.palette.process_create_request(ecs, asset_manager)
-        );
-
         match self.mode {
             RoomEditorMode::Tilemap => {
                 // Collect bounds for all other rooms to check for intersections
@@ -80,7 +76,14 @@ impl RoomEditor {
                     .find(|m| m.id == room_id)
                     .expect("metadata must still exist");
 
-                self.tilemap_editor.update(camera, tilemap, room_metadata, &other_bounds, ecs);
+                self.tilemap_editor.update(
+                    camera, 
+                    tilemap, 
+                    room_metadata, 
+                    &other_bounds, 
+                    ecs, 
+                    asset_manager
+                );
             }
             RoomEditorMode::Scene => {
                 // Click‑selection
