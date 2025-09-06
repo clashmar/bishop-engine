@@ -50,18 +50,16 @@ pub struct EntityPalette {
 }
 
 #[derive(Clone, Default, PartialEq)]
-pub enum PrefabPaletteUiMode {
+pub enum EntityPaletteUiMode {
     #[default]
     Create,
     EditEntity,
-    EditPrefab,
-    SavePrefab, 
 }
 
 #[derive(Clone, Default)]
 pub struct EntityPaletteUi {
     pub open: bool,
-    pub mode: PrefabPaletteUiMode,
+    pub mode: EntityPaletteUiMode,
     pub edit_initialized: bool,
     pub edit_index: usize,
     pub name: String,
@@ -123,36 +121,9 @@ impl EntityPalette {
         }
     }
 
-    /// Returns `true` if the mouse click was consumed by the palette UI.
-    pub fn handle_click(&mut self, mouse_pos: Vec2) -> bool {
-        // Select prefab
-        if self.is_mouse_over_grid(mouse_pos) {
-            let local = mouse_pos - self.position;
-            let col = (local.x / self.tile_size) as usize;
-            let row = (local.y / self.tile_size) as usize;
-            let idx = row * self.columns + col;
-            if idx < self.entries.len() {
-                self.selected = idx;
-                // Switch UI to prefab‑edit mode.
-                self.ui.mode = PrefabPaletteUiMode::EditPrefab;
-                self.ui.edit_index = idx;
-                self.ui.edit_initialized = true;
-                return true;
-            }
-        }
-        false
-    }
-
-    #[inline]
-    fn is_mouse_over_grid(&self, mouse_pos: Vec2) -> bool {
-        let w = self.columns as f32 * self.tile_size;
-        let h = self.rows as f32 * self.tile_size;
-        Rect::new(self.position.x, self.position.y, w, h).contains(mouse_pos)
-    }
-
     /// Called by `RoomEditor` when the user selects an entity in the scene.
     pub fn enter_entity_edit_mode(&mut self, entity: Entity) {
-        self.ui.mode = PrefabPaletteUiMode::EditEntity;
+        self.ui.mode = EntityPaletteUiMode::EditEntity;
         self.ui.selected_entity = Some(entity);
         self.ui.edit_initialized = true; // fill fields on first draw
         self.ui.open = true;  
@@ -207,23 +178,7 @@ impl EntityPalette {
         if gui_button(btn_add, "Add") {
             self.ui = EntityPaletteUi::default(); // reset fields
             self.ui.open = true;
-            self.ui.mode = PrefabPaletteUiMode::Create;
-        }
-
-        // Edit Prefab button (only when a prefab exists)
-        if !self.entries.is_empty() {
-            let btn_edit_prefab = Rect::new(
-                btn_add.x + btn_add.w + 5.0,
-                base_y,
-                btn_add.w,
-                btn_add.h,
-            );
-            if gui_button(btn_edit_prefab, "Edit prefab") {
-                self.ui.mode = PrefabPaletteUiMode::EditPrefab;
-                self.ui.edit_index = self.selected;
-                self.ui.edit_initialized = true;
-                self.ui.open = true;
-            }
+            self.ui.mode = EntityPaletteUiMode::Create;
         }
     }
 
@@ -239,24 +194,7 @@ impl EntityPalette {
         // Fill fields on edit
         if self.ui.edit_initialized && self.ui.name.is_empty() {
             match self.ui.mode {
-                PrefabPaletteUiMode::EditPrefab => {
-                    // Load the prefab from disk (the file already exists).
-                    let entry = &self.entries[self.ui.edit_index];
-                    if let Ok(prefs) = prefab_storage::load_all(&Uuid::nil()) {
-                        if let Some(pref) = prefs.into_iter().find(|p| p.id == entry.id) {
-                            self.ui.name = pref.name.clone();
-                            self.ui.sprite_path = pref.sprite_path.clone();
-                            for spec in pref.components {
-                                match spec {
-                                    ComponentSpec::Walkable(v) => self.ui.walkable = v,
-                                    ComponentSpec::Solid(v) => self.ui.solid = v,
-                                    ComponentSpec::Damage(v) => self.ui.damage = v,
-                                }
-                            }
-                        }
-                    }
-                }
-                PrefabPaletteUiMode::EditEntity => {
+                EntityPaletteUiMode::EditEntity => {
                     // Populate fields from the *live* entity
                     if let Some(entity) = self.ui.selected_entity {
                         // Use a placeholder that the user can edit
@@ -348,24 +286,17 @@ impl EntityPalette {
 
         // OK / Cancel
         let ok_label = match self.ui.mode {
-            PrefabPaletteUiMode::Create => "Create",
-            PrefabPaletteUiMode::EditPrefab => "Update",
-            PrefabPaletteUiMode::EditEntity => "Apply",
-            PrefabPaletteUiMode::SavePrefab => "Save",
+            EntityPaletteUiMode::Create => "Create",
+            EntityPaletteUiMode::EditEntity => "Apply",
         };
         let btn_ok = Rect::new(panel.x + 30.0, panel.y + 220.0, 100.0, 30.0);
         if gui_button(btn_ok, ok_label) {
             match self.ui.mode {
-                PrefabPaletteUiMode::Create => {
+                EntityPaletteUiMode::Create => {
                     self.create_entity_requested = true; // flag for optional save
                 }
-                PrefabPaletteUiMode::EditPrefab   => self.edit_requested   = true,
-                PrefabPaletteUiMode::EditEntity => {
-                    self.apply_entity_edits(world_ecs, asset_manager);
-                }
-                PrefabPaletteUiMode::SavePrefab => {
-                    // Force a save even if the user never pressed “Create” before
-                    self.create_entity_requested = true;
+                EntityPaletteUiMode::EditEntity => {
+                    self.apply_entity_edits(world_ecs, asset_manager).await;
                 }
             }
             self.ui.open = false;
@@ -377,13 +308,13 @@ impl EntityPalette {
         }
 
         // Delete
-        if matches!(self.ui.mode, PrefabPaletteUiMode::EditPrefab) {
-            let btn_del = Rect::new(panel.x + 30.0, panel.y + 260.0, 240.0, 30.0);
-            if gui_button(btn_del, "Delete") {
-                self.delete_requested = Some(self.ui.edit_index);
-                self.ui.open = false;
-            }
-        }
+        // if matches!(self.ui.mode, EntityPaletteUiMode::EditEntity) {
+        //     let btn_del = Rect::new(panel.x + 30.0, panel.y + 260.0, 240.0, 30.0);
+        //     if gui_button(btn_del, "Delete") {
+        //         self.delete_requested = Some(self.ui.edit_index);
+        //         self.ui.open = false;
+        //     }
+        // }
     }
 
     /// Called once per frame from `RoomEditor::update`.
@@ -448,42 +379,6 @@ impl EntityPalette {
         let _entity = builder.finish();
     }
 
-    async fn process_save_prefab_request(
-        &mut self,
-        world_id: &Uuid,
-        assets: &mut AssetManager,
-    ) {
-        // Build the prefab from the UI fields (same as before)
-        let prefab = EntityPrefab {
-            id: Uuid::new_v4(),
-            name: self.ui.name.clone(),
-            sprite_path: self.ui.sprite_path.clone(),
-            components: vec![
-                ComponentSpec::Walkable(self.ui.walkable),
-                ComponentSpec::Solid(self.ui.solid),
-                ComponentSpec::Damage(self.ui.damage),
-            ],
-        };
-
-        // Persist to disk
-        if let Err(e) = prefab_storage::save(&prefab, world_id) {
-            eprintln!("Failed to save prefab: {e}");
-            return;
-        }
-
-        // Add a palette entry so the user can reuse it later
-        let sprite_id = assets.load(&prefab.sprite_path).await;
-        self.entries.push(PrefabEntry {
-            id: prefab.id,
-            sprite_id,
-            sprite_path: prefab.sprite_path.clone(),
-        });
-
-        self.sprite_ids.push(sprite_id);
-        self.selected = self.entries.len() - 1;
-        self.rows = (self.entries.len() + self.columns - 1) / self.columns;
-    }
-
     async fn process_edit_request(
         &mut self,
         world_id: &Uuid,
@@ -522,71 +417,39 @@ impl EntityPalette {
     }
 
     async fn process_delete_request(&mut self, world_id: &Uuid) {
-        if let Some(idx) = self.delete_requested.take() {
-            let entry = self.entries.remove(idx);
-            self.sprite_ids.remove(idx);
-
-            // Delete the file on disk.
-            let file = prefab_storage::prefab_dir(world_id)
-                .join(format!("{}.ron", entry.id));
-            let _ = std::fs::remove_file(file); // ignore error
-
-            // Keep selection in range.
-            self.selected = self.entries.len().saturating_sub(1);
-            self.rows = (self.entries.len() + self.columns - 1) / self.columns;
-        }
+ 
     }
 
-    /* ---------------------------------------------------------------------- */
-    /*                         Helper – entity edit                           */
-    /* ---------------------------------------------------------------------- */
-
-    /// Called from the dialog when the user presses **Apply** in EntityEdit mode.
-    pub fn apply_entity_edits(&mut self, ecs: &mut WorldEcs, assets: &mut AssetManager) {
+    pub async fn apply_entity_edits(&mut self, ecs: &mut WorldEcs, assets: &mut AssetManager) {
         if let Some(ent) = self.ui.selected_entity {
-            // ---- Walkable -------------------------------------------------
             if self.ui.walkable {
                 ecs.walkables.insert(ent, Walkable(true));
             } else {
                 ecs.walkables.remove(ent);
             }
 
-            // ---- Solid ----------------------------------------------------
             if self.ui.solid {
                 ecs.solids.insert(ent, Solid(true));
             } else {
                 ecs.solids.remove(ent);
             }
 
-            // ---- Damage ---------------------------------------------------
             if self.ui.damage > 0.0 {
                 ecs.damages.insert(ent, Damage { amount: self.ui.damage });
             } else {
                 ecs.damages.remove(ent);
             }
 
-            // ---- Sprite (optional) ----------------------------------------
             if !self.ui.sprite_path.is_empty() {
-                // Load (or reuse) the texture.
-                let new_sprite_id = futures::executor::block_on(assets.load(&self.ui.sprite_path));
-                ecs.sprites.insert(ent, Sprite { 
-                    sprite_id: new_sprite_id,
-                    path: self.ui.sprite_path.clone(),
-                });
+                let new_sprite_id = assets.load(&self.ui.sprite_path).await;
+                ecs.sprites.insert(
+                    ent,
+                    Sprite {
+                        sprite_id: new_sprite_id,
+                        path: self.ui.sprite_path.clone(),
+                    },
+                );
             }
         }
-    }
-
-    /// Retrieve the runtime prefab that matches the currently
-    /// selected grid entry.
-    pub fn selected_prefab(&self, world_id: &Uuid) -> Option<EntityPrefab> {
-        if self.entries.is_empty() {
-            return None;
-        }
-        let entry = &self.entries[self.selected];
-        prefab_storage::load_all(world_id)
-            .ok()?
-            .into_iter()
-            .find(|p| p.id == entry.id)
     }
 }

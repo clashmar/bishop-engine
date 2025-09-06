@@ -1,1 +1,1 @@
-(position:(10.0,10.0),tile_size:32.0,columns:2,rows:2,selected_index:0,entries:[],edit_requested:false,delete_requested:None)
+(position:(10.0,10.0),tile_size:32.0,columns:2,rows:1,selected_index:0,entries:[(def_id:("f653f145-257e-4dbb-8f57-4be1908a85bd"),sprite_id:("3907379f-5da0-49cc-b53d-8a623bad5e5e"),sprite_path:"/Users/charliesovn/Projects/Aseprite/Tile3.png")],edit_requested:false,delete_requested:None)
