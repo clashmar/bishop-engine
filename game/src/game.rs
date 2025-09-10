@@ -1,4 +1,4 @@
-use core::{constants::*, player::Player, tilemap::{self, TileMap}, tile::GridPos};
+use engine_core::{constants::*, player::Player, tilemap::{self, TileMap}, tile::GridPos};
 use crate::{modes::Mode};
 use macroquad::prelude::*;
 use crate::camera::Camera;

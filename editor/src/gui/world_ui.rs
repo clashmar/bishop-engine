@@ -1,4 +1,4 @@
-use core::{world::world::World};
+use engine_core::{world::world::World};
 use std::{future::Future, pin::Pin};
 
 use crate::{gui::ui_element::WorldUiElement, storage::world_storage, world::world_editor::mouse_over_rect};

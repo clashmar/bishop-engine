@@ -1,17 +1,28 @@
-use core::{assets::asset_manager::AssetManager, ecs::{entity::Entity, world_ecs::WorldEcs}};
-use crate::gui::{gui_button, inspector::{
-    module::InspectorModule, 
-    sprite::SpriteModule, 
-    transform::TransformModule
-}};
+// editor/src/gui/inspector/panel.rs
 use macroquad::prelude::*;
+use engine_core::{
+    assets::asset_manager::AssetManager, 
+    ecs::{
+        component::Weapon, 
+        entity::Entity, 
+        world_ecs::WorldEcs
+    }
+};
+use crate::gui::{
+    gui_button, 
+    inspector::{
+        generic::GenericModule, 
+        module::{CollapsibleModule, InspectorModule}, 
+        transform::TransformModule
+    }
+};
 
 /// The panel that lives on the right‑hand side of the room editor window.
 pub struct InspectorPanel {
     /// Geometry of the panel.
     rect: Rect,
     /// Currently inspected entity
-    target: Option<Entity>,
+    pub target: Option<Entity>,
     /// All sub‑modules that can draw UI.
     modules: Vec<Box<dyn InspectorModule>>,
 }
@@ -20,8 +31,14 @@ impl InspectorPanel {
     /// Create a fresh panel with the default set of modules.
     pub fn new() -> Self {
         let mut modules: Vec<Box<dyn InspectorModule>> = Vec::new();
-        modules.push(Box::new(TransformModule::default()));
-        modules.push(Box::new(SpriteModule::default()));
+        // Wrap each concrete module in a CollapsibleModule.
+        modules.push(Box::new(
+            CollapsibleModule::new(TransformModule::default())
+                .with_title("Transform"),
+        ));
+
+        modules.push(Box::new(CollapsibleModule::new(GenericModule::<Weapon>::default())
+            .with_title("Weapon")));
 
         Self {
             rect: Rect::new(0., 0., 0., 0.),
@@ -57,19 +74,15 @@ impl InspectorPanel {
             self.rect.h - INSET * 2.0,    
         );
 
-        // No entity selected
+        // No entity selected, draw create button
         if self.target.is_none() {
-            println!("here");
-            let btn = Rect::new(
+            let button = Rect::new(
                 inner.x + inner.w - BTN_W - BTN_MARGIN, 
                 inner.y + BTN_MARGIN,                 
                 BTN_W,
                 BTN_H,
             );
-
-            // No background is drawn in this state – the button is the only
-            // visible UI element.
-            return gui_button(btn, "Create");
+            return gui_button(button, "Create");
         }
 
         // Background
@@ -96,9 +109,10 @@ impl InspectorPanel {
 
         for module in &mut self.modules {
             if module.visible(ecs, entity) {
-                let sub_rect = Rect::new(inner.x + 10.0, y, inner.w - 20.0, 80.0);
+                let h = module.height();  // dynamic height                     
+                let sub_rect = Rect::new(inner.x + 10.0, y, inner.w - 20.0, h);
                 module.draw(sub_rect, assets, ecs, entity);
-                y += sub_rect.h + 10.0;
+                y += h + 10.0; // space between modules                               
             }
         }
 

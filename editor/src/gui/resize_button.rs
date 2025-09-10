@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::RoomMetadata};
+use engine_core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::RoomMetadata};
 use crate::{gui::{text_button::TextButton, ui_element::DynamicTilemapUiElement}, world::coord};
 
 pub struct ResizeButton {

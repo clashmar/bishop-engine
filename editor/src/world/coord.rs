@@ -1,5 +1,6 @@
+// editor/src/world/coord.rs
 use macroquad::prelude::*;
-use core::constants::*;
+use engine_core::constants::*;
 
 /// Convert the current mouse position (screen pixels) to world
 /// coordinates using the supplied camera.

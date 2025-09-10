@@ -1,4 +1,4 @@
-use core::{assets::asset_manager::{AssetManager}, tiles::{tile::Tile, tilemap::TileMap}, world::{room::RoomMetadata, world::World}};
+use engine_core::{assets::asset_manager::{AssetManager}, tiles::{tile::Tile, tilemap::TileMap}, world::{room::RoomMetadata, world::World}};
 use std::{future::Future, pin::Pin};
 use macroquad::prelude::*;
 

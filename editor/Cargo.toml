@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-core = { path = "../core" }
+engine_core = { path = "../engine_core" }
+reflect_derive = { path = "../reflect_derive" }
 macroquad = "0.4"
 rfd = "0.13"
 serde = { version = "1.0", features = ["derive"] }

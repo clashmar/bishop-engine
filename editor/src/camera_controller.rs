@@ -1,5 +1,6 @@
+// editor/src/camera_controller.rs
 use macroquad::prelude::*;
-use core::{constants::*, tiles::tilemap::TileMap};
+use engine_core::{constants::*, tiles::tilemap::TileMap};
 
 pub const ZOOM_SPEED_FACTOR: f32 = 0.5;
 pub const MIN_ZOOM: f32 = 0.0005;

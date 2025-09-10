@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "core",
+    "engine_core",
     "game",
-    "editor"
-]
+    "editor",
+    "reflect_derive",
+    ]

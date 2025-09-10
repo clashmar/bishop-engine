@@ -1,11 +1,16 @@
+// editor/src/room/room_editor.rs
 use crate::{
-    camera_controller::CameraController, canvas::grid, gui::inspector::panel::InspectorPanel, room::entity_palette::EntityPalette, tilemap::tilemap_editor::TileMapEditor, world::coord
+    camera_controller::CameraController, 
+    canvas::grid, 
+    gui::inspector::panel::InspectorPanel, 
+    tilemap::tilemap_editor::TileMapEditor, 
+    world::coord
 };
-use core::{
-    assets::asset_manager::AssetManager, 
+use engine_core::{
+    assets::{asset_manager::AssetManager, sprite::Sprite}, 
     constants::*, 
-    ecs::{entity::Entity, world_ecs::WorldEcs}, 
-    tiles::tilemap::TileMap, 
+    ecs::{component::Position, entity::Entity, world_ecs::WorldEcs}, 
+    tiles::{tile::TileSprite, tilemap::TileMap}, 
     world::room::{Room, RoomMetadata}
 };
 use macroquad::prelude::*;
@@ -19,34 +24,27 @@ pub enum RoomEditorMode {
 pub struct RoomEditor {
     pub mode: RoomEditorMode,
     pub tilemap_editor: TileMapEditor,
-    pub entity_palette: EntityPalette,
     pub inspector: InspectorPanel,
     selected_entity: Option<Entity>,
     show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
     initialized: bool, 
+    create_entity_requested: bool,
 }
 
 impl RoomEditor {
     pub fn new() -> Self {
-        let palette = EntityPalette::new(
-            vec2(10.0, 10.0), 
-            48.0,              
-            4,                 
-            2,
-        );
-
         Self {
             mode: RoomEditorMode::Scene,
             tilemap_editor: TileMapEditor::new(),
-            entity_palette: palette,
             inspector: InspectorPanel::new(),
             selected_entity: None,
             show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
             initialized: false,
+            create_entity_requested: false,
         }
     }
 
@@ -66,6 +64,22 @@ impl RoomEditor {
         if !self.initialized {
             CameraController::reset_room_camera(camera, tilemap);
             self.initialized = true;
+        }
+
+        let inspector_rect = Rect::new(
+            screen_width() * 0.75, 
+            0.0,                  
+            screen_width() * 0.25, 
+            screen_height(),       
+        );
+
+        // Click‑selection
+        let mouse_screen: Vec2 = mouse_position().into();
+
+        let mut ui_was_clicked = false;
+        
+        if inspector_rect.contains(mouse_screen) && is_mouse_button_pressed(MouseButton::Left) {
+            ui_was_clicked = true;
         }
 
         match self.mode {
@@ -92,17 +106,14 @@ impl RoomEditor {
                 );
             }
             RoomEditorMode::Scene => {
-                // Click‑selection
-                let mouse_screen: Vec2 = mouse_position().into();
-
                 let room_metadata = rooms_metadata
                     .iter_mut()
                     .find(|m| m.id == room_id)
                     .expect("metadata must still exist");
 
-                if is_mouse_button_pressed(MouseButton::Left) && !self.dragging {
+                if !ui_was_clicked && is_mouse_button_pressed(MouseButton::Left) && !self.dragging {
                     self.selected_entity = None;
-                    for (entity, position) in world_ecs.positions.data.iter() {
+                    for (entity, position) in world_ecs.get_store::<Position>().data.iter() {
                         let room_position = position.position - room_metadata.position;
                         let screen = coord::world_to_screen(camera, room_position);
                         let hit = Rect::new(screen.x - 10.0, screen.y - 10.0, 20.0, 20.0);
@@ -119,7 +130,7 @@ impl RoomEditor {
                 // Dragging
                 if self.dragging {
                     if let Some(entity) = self.selected_entity {
-                        if let Some(position) = world_ecs.positions.get_mut(entity) {
+                        if let Some(position) = world_ecs.get_store_mut::<Position>().get_mut(entity) {
                             let mouse_world = coord::mouse_world_pos(camera);
                             position.position = mouse_world + room_metadata.position + self.drag_offset;
                         }
@@ -129,17 +140,19 @@ impl RoomEditor {
                     }
                 }
 
-                if let Some(entity) = self.selected_entity {
-                    self.entity_palette.enter_entity_edit_mode(entity);
-                }
+                // Create a new entity if create was pressed
+                if self.create_entity_requested && self.inspector.target.is_none() {
+                    // Build the entity
+                    let entity = world_ecs
+                        .create_entity()
+                        .with(Position { position: room_metadata.position })
+                        .finish();
 
-                // Process any pending requests
-                futures::executor::block_on(self.entity_palette.process_requests(
-                    &room_metadata,
-                    world_id,
-                    asset_manager,
-                    world_ecs,
-                ));
+                    // Immediately select it so the inspector shows the newly‑created entity
+                    self.selected_entity = Some(entity);
+                    self.inspector.set_target(Some(entity));
+                    self.create_entity_requested = false;
+                }
             }
         }
 
@@ -192,13 +205,13 @@ impl RoomEditor {
                 tilemap.draw(camera, exits, world_ecs, asset_manager);
                 self.draw_entities(world_ecs, room_metadata, tilemap, asset_manager);
                 set_default_camera();
-                self.entity_palette.draw(asset_manager, world_ecs);
                 
                 // Inspector
                 let inspector_rect = Rect::new(
                     screen_width() * 0.75, 
-                    0.0, screen_height() * 
-                    0.25, screen_height()
+                    0.0, 
+                    screen_width() * 0.25, 
+                    screen_height()
                 );
 
                 self.inspector.set_rect(inspector_rect);
@@ -210,7 +223,7 @@ impl RoomEditor {
                     self.inspector.set_target(None); // clears the panel
                 }
                 
-                self.inspector.draw(asset_manager, world_ecs);
+                self.create_entity_requested = self.inspector.draw(asset_manager, world_ecs);
             }
         }
 
@@ -225,7 +238,7 @@ impl RoomEditor {
 
     fn draw_entities(
         &self, 
-        ecs: &WorldEcs, 
+        world_ecs: &WorldEcs, 
         room_metadata: &RoomMetadata, 
         tilemap: &TileMap,
         asset_manager: &mut AssetManager,
@@ -237,9 +250,9 @@ impl RoomEditor {
                 tilemap.height as f32 * TILE_SIZE,
             );
 
-        for (entity, pos) in ecs.positions.data.iter() {
+        for (entity, pos) in world_ecs.get_store::<Position>().data.iter() {
             // Skip tiles
-            if ecs.tile_sprites.get(*entity).is_some() {
+            if world_ecs.get_store::<TileSprite>().get(*entity).is_some() {
                 continue;
             }
 
@@ -254,7 +267,7 @@ impl RoomEditor {
                 let room_pos = pos.position - room_metadata.position;
                 
                 // Draw the sprite (if the entity has a Sprite component)
-                if let Some(sprite) = ecs.sprites.get(*entity) {
+                if let Some(sprite) = world_ecs.get_store::<Sprite>().get(*entity) {
                     let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
                     // Draw the texture centred on the entity’s position.
                     draw_texture_ex(
@@ -282,7 +295,7 @@ impl RoomEditor {
         
         // Highlight the currently selected entity (yellow box)
         if let Some(sel) = self.selected_entity {
-            if let Some(pos) = ecs.positions.get(sel) {
+            if let Some(pos) = world_ecs.get_store::<Position>().get(sel) {
                 draw_rectangle_lines(
                     pos.position.x - room_metadata.position.x - 11.0,
                     pos.position.y - room_metadata.position.y - 11.0,

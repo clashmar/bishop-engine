@@ -1,16 +1,17 @@
-use core::{
-    assets::{asset_manager::AssetManager, sprite::SpriteId},
-    ecs::world_ecs::WorldEcs,
-    tiles::{
-        tile_def::{TileComponentSpec, TileDef, TileDefId}
-    },
-};
+// editor/src/tilemap/tile_palette.rs
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::gui::*;
 use serde_with::serde_as;
 use serde_with::FromInto;
+use engine_core::{
+    assets::{asset_manager::AssetManager, sprite::SpriteId},
+    ecs::world_ecs::WorldEcs,
+    tiles::{
+        tile_def::{TileComponentSpec, TileDef, TileDefId}
+    },
+};
 
 #[derive(Serialize, Deserialize)]
 struct PaletteEntry {

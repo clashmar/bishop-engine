@@ -1,4 +1,5 @@
-use core::{constants::TILE_SIZE};
+// editor/src/canvas/grid.rs
+use engine_core::{constants::TILE_SIZE};
 use macroquad::prelude::*;
 use crate::{camera_controller::{self, CameraController}, world::world_editor::LINE_THICKNESS_MULTIPLIER};
 

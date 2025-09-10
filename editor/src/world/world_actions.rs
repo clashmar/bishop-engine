@@ -1,6 +1,7 @@
-use core::{constants::TILE_SIZE, tiles::tilemap::TileMap};
+// editor/src/world/world_actions.rs
+use engine_core::{constants::TILE_SIZE, tiles::tilemap::TileMap};
 use uuid::Uuid;
-use core::{world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
+use engine_core::{world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
 use crate::world::coord;
 use macroquad::prelude::*;
 use crate::{storage::world_storage, world::world_editor::WorldEditor};

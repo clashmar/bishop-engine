@@ -1,14 +1,21 @@
-use uuid::Uuid;
-use macroquad::prelude::*;
-use crate::camera_controller::CameraController;
-use crate::controls::controls::Controls;
-use crate::tilemap::tile_palette::TilePalette;
-use crate::{storage::world_storage, room::room_editor::RoomEditor, world::world_editor::WorldEditor};
-use core::assets::asset_manager::AssetManager;
-use core::world::room::Room;
-use core::world::{world::World};
-use core::constants::*;
+// editor/src/editor.rs
 use std::io;
+use macroquad::prelude::*;
+use uuid::Uuid;
+use crate::{
+    camera_controller::CameraController,
+    controls::controls::Controls,
+    room::room_editor::RoomEditor,
+    storage::world_storage,
+    tilemap::tile_palette::TilePalette,
+    world::world_editor::WorldEditor,
+};
+use engine_core::{
+    assets::{asset_manager::AssetManager, sprite::Sprite}, constants::*, tiles::tile::TileSprite, world::{
+        room::Room,
+        world::World,
+    }
+};
 
 pub enum EditorMode {
     World,
@@ -69,7 +76,6 @@ impl Editor {
 
         // Give the palette to the tilemap editor
         editor.room_editor.tilemap_editor.palette = palette;
-        editor.room_editor.entity_palette.load_prefabs_from_disk(&editor.world.id, &mut editor.assets);
 
         Ok(editor)
     }
@@ -84,7 +90,7 @@ impl Editor {
                         Ok(room) => {
                             self.current_room = Some(room);
                             self.current_room_id = Some(room_id);
-                            self.sync_assets();
+                            self.sync_assets().await;
                             self.mode = EditorMode::Room(room_id);
                         }
                         Err(e) => {
@@ -183,20 +189,20 @@ impl Editor {
         }
     }
 
-    fn sync_assets(&mut self) {
+    async fn sync_assets(&mut self) {
         // Iterate over all non-tile sprites
-        for (_entity, sprite) in self.world.world_ecs.sprites.data.iter_mut() {
+        for (_entity, sprite) in self.world.world_ecs.get_store_mut::<Sprite>().data.iter_mut() {
             if !self.assets.contains(sprite.sprite_id) {
-                let id = futures::executor::block_on(self.assets.load(&sprite.path));
+                let id = self.assets.load(&sprite.path).await;
                 sprite.sprite_id = id;
             }
         }
 
         // Iterate over all tile‑sprites
-        for (_entity, tile_sprite) in self.world.world_ecs.tile_sprites.data.iter_mut() {
+        for (_entity, tile_sprite) in self.world.world_ecs.get_store_mut::<TileSprite>().data.iter_mut() {
             if !self.assets.contains(tile_sprite.sprite_id) {
-                let new_id = futures::executor::block_on(self.assets.load(&tile_sprite.path));
-                tile_sprite.sprite_id = new_id;
+                let id = self.assets.load(&tile_sprite.path).await;
+                tile_sprite.sprite_id = id;
             }
         }
     }

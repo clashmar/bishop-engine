@@ -177,6 +177,8 @@ pub fn gui_button(rect: Rect, label: &str) -> bool {
 /// optional leading minus sign. Returns the parsed `f32`; on parse error the
 /// original `current` value is returned.
 pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
+    use std::f32::EPSILON;
+
     thread_local! {
         static STATE: RefCell<HashMap<(i32, i32, i32, i32), (String, usize, bool)>> =
             RefCell::new(HashMap::new());
@@ -184,8 +186,9 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
 
     // Load or initialise state
     let mut txt = current.to_string();
-    let mut cursor = 0usize;
+    let mut cursor = txt.len(); // Place the cursor at the end
     let mut focused = false;
+
     STATE.with(|s| {
         let mut map = s.borrow_mut();
         let key = (
@@ -194,14 +197,27 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
             rect.w.round() as i32,
             rect.h.round() as i32,
         );
+        // If we already have a state entry, use it.
         if let Some((saved_txt, saved_cur, saved_foc)) = map.get(&key) {
             txt = saved_txt.clone();
             cursor = *saved_cur;
             focused = *saved_foc;
         } else {
+            // First time we see this widget store the initial state.
             map.insert(key, (txt.clone(), cursor, focused));
         }
     });
+
+    // If the widget is not focused, force‑sync the displayed
+    // text with the latest current value.
+    if !focused {
+        // Only replace when the numeric value actually differs. This
+        // avoids flickering the cursor position when the user is typing.
+        if (txt.parse::<f32>().unwrap_or(0.0) - current).abs() > EPSILON {
+            txt = current.to_string();
+            cursor = txt.len(); // put cursor at the end of the new text
+        }
+    }
 
     // Draw background and current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));

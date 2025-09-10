@@ -1,4 +1,5 @@
-use core::world::room::RoomMetadata;
+// editor/src/room/room_actions.rs
+use engine_core::world::room::RoomMetadata;
 use crate::room::room_editor::RoomEditor;
 use macroquad::prelude::*;
 use crate::world::coord;

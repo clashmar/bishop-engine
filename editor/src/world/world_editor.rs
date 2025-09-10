@@ -1,4 +1,5 @@
-use core::{constants::TILE_SIZE, world::{room::{ExitDirection, RoomMetadata}, world::World}};
+// editor/src/world/world_editor.rs
+use engine_core::{constants::TILE_SIZE, world::{room::{ExitDirection, RoomMetadata}, world::World}};
 use macroquad::prelude::*;
 use uuid::Uuid;
 use crate::{camera_controller::{CameraController}, canvas::grid};

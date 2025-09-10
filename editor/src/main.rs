@@ -1,3 +1,4 @@
+// editor/src/main.rs
 use crate::editor::Editor;
 use macroquad::prelude::*;
 

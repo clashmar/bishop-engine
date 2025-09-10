@@ -1,16 +1,29 @@
-use crate::gui::resize_button::ResizeButton;
-use crate::gui::ui_element::{DynamicTilemapUiElement, TilemapUiElement};
-use crate::tilemap::tile_palette::{TilePalette};
+// editor/src/tilemap/tilemap_editor.rs
 use macroquad::prelude::*;
-use core::assets::asset_manager::{AssetManager};
-use core::{constants::*};
-use core::ecs::component::Position;
-use core::ecs::entity::Entity;
-use core::ecs::world_ecs::WorldEcs;
-use core::tiles::tile::{Tile, TileSprite};
-use core::tiles::tilemap::TileMap;
-use core::world::room::{Exit, ExitDirection, RoomMetadata};
-use core::world::world::GridPos;
+
+use crate::gui::{
+    resize_button::ResizeButton,
+    ui_element::{DynamicTilemapUiElement, TilemapUiElement},
+};
+use crate::tilemap::tile_palette::TilePalette;
+
+use engine_core::{
+    assets::asset_manager::AssetManager,
+    constants::*,
+    ecs::{
+        component::Position,
+        entity::Entity,
+        world_ecs::WorldEcs,
+    },
+    tiles::{
+        tile::{Tile, TileSprite},
+        tilemap::TileMap,
+    },
+    world::{
+        room::{Exit, ExitDirection, RoomMetadata},
+        world::GridPos,
+    },
+};
 
 pub enum TilemapEditorMode {
     Tiles,

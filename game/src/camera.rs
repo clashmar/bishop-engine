@@ -1,5 +1,5 @@
-use core::input;
-use core::constants::*;
+use engine_core::input;
+use engine_core::constants::*;
 use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy)]

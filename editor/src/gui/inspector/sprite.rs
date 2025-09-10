@@ -1,20 +1,28 @@
-use core::{assets::asset_manager::AssetManager, ecs::{entity::Entity, world_ecs::WorldEcs}};
+// editor/src/gui/inspector/sprite.rs
 use macroquad::prelude::*;
 use crate::gui::inspector::module::InspectorModule;
+use engine_core::{
+    assets::{
+        asset_manager::AssetManager, sprite::Sprite
+    }, 
+    ecs::{
+        entity::Entity, world_ecs::WorldEcs
+    }
+};
 
 #[derive(Default)]
 pub struct SpriteModule {}
 
 impl InspectorModule for SpriteModule {
-    fn visible(&self, ecs: &WorldEcs, entity: Entity) -> bool {
-        ecs.sprites.get(entity).is_some()
+    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+        world_ecs.get::<Sprite>(entity).is_some()
     }
 
     fn draw(
         &mut self,
         rect: Rect,
-        _assets: &mut AssetManager,
-        _ecs: &mut WorldEcs,
+        _asset_manager: &mut AssetManager,
+        _world_ecs: &mut WorldEcs,
         _entity: Entity,
     ) {
         draw_text(
