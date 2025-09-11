@@ -1,6 +1,7 @@
 mod camera;
 mod game;
 mod modes;
+mod test_component;
 
 use crate::game::GameState;
 use macroquad::prelude::*;

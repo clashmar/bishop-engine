@@ -15,7 +15,7 @@ pub struct FieldInfo<'a> {
 
 /// Trait that every component needs to expose.
 pub trait Reflect {
-    /// Returns a vector of mutable descriptors for *all* fields.
+    /// Returns a vector of mutable descriptors for all fields.
     fn fields(&mut self) -> Vec<FieldInfo<'_>>;
 }
 

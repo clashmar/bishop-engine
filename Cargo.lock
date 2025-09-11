@@ -387,6 +387,7 @@ dependencies = [
  "async-std",
  "engine_core",
  "futures",
+ "inventory",
  "macroquad",
  "reflect_derive",
  "rfd",

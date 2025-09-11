@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 use crate::{
     ecs::{
         component::*, 
+        component_registry::{ComponentReg, StoredComponent}, 
         entity::{Entity, EntityBuilder}
     }, 
     tiles::tile_def::{TileDef, TileDefId}
@@ -110,6 +111,16 @@ impl WorldEcs {
     {
         // Store in the typed store (engine code can still use it directly)
         self.get_store_mut::<T>().insert(entity, component.clone());
+    }
+
+    /// Insert a component on an existing entity.
+    /// If the component already exists it will be overwritten.
+    pub fn add_component_to_entity<T>(&mut self, entity: Entity, component: T)
+    where
+        T: Component + Serialize + for<'de> Deserialize<'de> + Clone + Default + 'static,
+    {
+        // Store it in the typed store – the same place the engine uses directly.
+        self.get_store_mut::<T>().insert(entity, component);
     }
 }
 

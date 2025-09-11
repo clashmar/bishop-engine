@@ -1,12 +1,14 @@
 // editor/src/gui/inspector/sprite.rs
 use macroquad::prelude::*;
-use crate::gui::inspector::module::InspectorModule;
 use engine_core::{
     assets::{
-        asset_manager::AssetManager, sprite::Sprite
+        asset_manager::AssetManager, 
+        sprite::Sprite
     }, 
     ecs::{
-        entity::Entity, world_ecs::WorldEcs
+        entity::Entity, 
+        module::InspectorModule, 
+        world_ecs::WorldEcs
     }
 };
 

@@ -1,11 +1,13 @@
 // editor/src/gui/inspector/transform.rs
 use macroquad::prelude::*;
-use crate::gui::inspector::module::InspectorModule;
 use crate::gui::*;
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::{
-        component::Position, entity::Entity, world_ecs::WorldEcs
+        component::Position, 
+        entity::Entity, 
+        module::InspectorModule, 
+        world_ecs::WorldEcs
     }
 };
 

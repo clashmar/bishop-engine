@@ -1,9 +1,9 @@
-// editor/src/gui/inspector/module.rs
-use crate::gui::*;
+// engine_core/src/ecs/module.rs
+use crate::ui::widgets::*;
 use macroquad::prelude::*;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::world_ecs::WorldEcs;
-use engine_core::ecs::entity::Entity;
+use crate::assets::asset_manager::AssetManager;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::ecs::entity::Entity;
 
 /// Every inspector sub‑module implements this trait.
 pub trait InspectorModule {

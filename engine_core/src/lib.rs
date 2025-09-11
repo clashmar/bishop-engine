@@ -6,3 +6,4 @@ pub mod world;
 pub mod ecs;
 pub mod tiles;
 pub mod assets;
+pub mod ui;

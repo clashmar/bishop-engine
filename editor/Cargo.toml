@@ -14,3 +14,4 @@ uuid = { version = "1.18", features = ["serde", "v4"] }
 async-std   = { version = "1.12", features = ["attributes"] }
 futures = "0.3"
 serde_with = "3.14.0"
+inventory = "0.1"  

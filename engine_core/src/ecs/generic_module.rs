@@ -1,7 +1,7 @@
-// editor/src/gui/inspector/generic.rs
-use crate::gui::inspector::module::InspectorModule;
-use crate::gui::*;
-use engine_core::{
+// engine_core/src/ecs/generic_module.rs
+use crate::ecs::module::InspectorModule;
+use crate::ui::widgets::*;
+use crate::{
     assets::asset_manager::AssetManager, 
     ecs::{
         component::Component,
@@ -10,16 +10,17 @@ use engine_core::{
         world_ecs::WorldEcs
 }};
 use macroquad::prelude::*;
+use std::{borrow::Cow, marker::PhantomData};
 
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
-    _phantom: std::marker::PhantomData<T>,
+    _phantom: PhantomData<T>,
 }
 
 impl<T> Default for GenericModule<T> {
     fn default() -> Self {
         Self { 
-            _phantom: std::marker::PhantomData 
+            _phantom: PhantomData 
         }
     }
 }
@@ -40,15 +41,6 @@ where
         world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
-        // Header with the concrete type name
-        draw_text(
-            std::any::type_name::<T>(),
-            rect.x,
-            rect.y + 20.0,
-            18.0,
-            LIGHTGRAY,
-        );
-
         // Grab a mutable reference to the component instance.
         let component = world_ecs
             .get_store_mut::<T>()
@@ -56,15 +48,17 @@ where
             .expect("Component must exist for selected entity");
 
         // Layout constants
-        let mut y = rect.y + 30.0;
+        let mut y = rect.y + 10.0;
         let label_w = 80.0;
         let field_h = 30.0;
         let spacing = 5.0;
 
         // Iterate over the fields supplied by the `Reflect` impl.
         for field in component.fields() {
+
             // Draw the field label.
-            draw_text(field.name, rect.x, y + 22.0, 18.0, WHITE);
+            let label = capitalise(field.name);
+            draw_text(&label, rect.x, y + 22.0, 18.0, WHITE);
 
             // Widget rectangle.
             let widget_rect = Rect::new(rect.x + label_w, y, rect.w - label_w - 10.0, field_h);
@@ -102,5 +96,26 @@ where
         // Rough estimate – the inspector will call `draw` each frame,
         // so returning a generous constant is fine.
         200.0
+    }
+}
+
+fn capitalise(name: &str) -> Cow<str> {
+    // Fast path – already starts with an ASCII upper‑case letter.
+    if name
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_uppercase())
+        .unwrap_or(false)
+    {
+        return Cow::Borrowed(name);
+    }
+
+    // Build a new owned string with the first char upper‑cased.
+    let mut chars = name.chars();
+    let first = chars.next().map(|c| c.to_ascii_uppercase());
+    let rest: String = chars.collect();
+    match first {
+        Some(f) => Cow::Owned(format!("{}{}", f, rest)),
+        None => Cow::Borrowed(name), // empty string – should never happen
     }
 }

@@ -1,0 +1,58 @@
+(
+    id: "862a632e-ae2d-4c51-9043-c4a6626d0a19",
+    name: "World\r",
+    world_ecs: (
+        components: [
+            /*[0]*/ (
+                type_name: "Sprite",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[1]*/ (
+                type_name: "Weapon",
+                data: "(\n    data: {\n        (\"c1d58848-5445-41ff-b8c1-fbd5efd77023\"): (\n            name: \"Handgun\",\n            damage: 0.0,\n            range: 0.0,\n            cooldown: 0.0,\n        ),\n    },\n)",
+            ),
+            /*[2]*/ (
+                type_name: "TileSprite",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[3]*/ (
+                type_name: "Damage",
+                data: "(\n    data: {\n        (\"c1d58848-5445-41ff-b8c1-fbd5efd77023\"): (\n            amount: 0.0,\n        ),\n    },\n)",
+            ),
+            /*[4]*/ (
+                type_name: "Solid",
+                data: "(\n    data: {\n        (\"c1d58848-5445-41ff-b8c1-fbd5efd77023\"): (false),\n    },\n)",
+            ),
+            /*[5]*/ (
+                type_name: "Walkable",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[6]*/ (
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"c1d58848-5445-41ff-b8c1-fbd5efd77023\"): (\n            position: (80.272736, 68.80065),\n        ),\n    },\n)",
+            ),
+        ],
+        tile_defs: {},
+    ),
+    rooms_metadata: [
+        /*[0]*/ (
+            id: "71a46f3d-b004-4f38-b5ba-6ae31ae91231",
+            name: "untitled",
+            position: (
+                0.0,
+                0.0,
+            ),
+            size: (
+                10.0,
+                5.0,
+            ),
+            exits: [],
+            adjacent_rooms: [],
+        ),
+    ],
+    starting_room: Some("71a46f3d-b004-4f38-b5ba-6ae31ae91231"),
+    starting_position: Some((
+        1.0,
+        1.0,
+    )),
+)

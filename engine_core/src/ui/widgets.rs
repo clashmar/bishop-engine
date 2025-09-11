@@ -1,10 +1,4 @@
-// editor/src/gui/mod.rs
-pub mod resize_button;
-pub mod text_button;
-pub mod ui_element;
-pub mod world_ui;
-pub mod inspector;
-
+// engine_core/src/ui/widgets.rs
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
