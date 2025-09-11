@@ -30,7 +30,7 @@ where
     T: Reflect + Component + 'static,
 {
     fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
-        // Use the new `get_store` helper.
+        // Use the new `get_store` helper
         world_ecs.get_store::<T>().contains(entity)
     }
 
@@ -41,7 +41,7 @@ where
         world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
-        // Grab a mutable reference to the component instance.
+        // Grab a mutable reference to the component instance
         let component = world_ecs
             .get_store_mut::<T>()
             .get_mut(entity)
@@ -53,17 +53,17 @@ where
         let field_h = 30.0;
         let spacing = 5.0;
 
-        // Iterate over the fields supplied by the `Reflect` impl.
+        // Iterate over the fields supplied by the `Reflect` impl
         for field in component.fields() {
 
-            // Draw the field label.
+            // Draw the field label
             let label = capitalise(field.name);
             draw_text(&label, rect.x, y + 22.0, 18.0, WHITE);
 
-            // Widget rectangle.
+            // Widget rectangle
             let widget_rect = Rect::new(rect.x + label_w, y, rect.w - label_w - 10.0, field_h);
 
-            // Dispatch based on the enum variant.
+            // Dispatch based on the enum variant
             match field.value {
                 FieldValue::Text(txt) => {
                     // `txt` is `&mut String`.
@@ -73,14 +73,14 @@ where
                     }
                 }
                 FieldValue::Float(num) => {
-                    // `num` is `&mut f32`.
+                    // `num` is `&mut f32`
                     let new = gui_input_number(widget_rect, *num);
                     if (new - *num).abs() > f32::EPSILON {
                         *num = new;
                     }
                 }
                 FieldValue::Bool(b) => {
-                    // `b` is `&mut bool`.
+                    // `b` is `&mut bool`
                     let mut v = *b;
                     if gui_checkbox(widget_rect, &mut v) {
                         *b = v;
@@ -93,14 +93,19 @@ where
     }
 
     fn height(&self) -> f32 {
-        // Rough estimate – the inspector will call `draw` each frame,
-        // so returning a generous constant is fine.
+        // Rough estimate – the inspector will call `draw` each frame
         200.0
+    }
+
+    fn removable(&self) -> bool { true }
+
+    fn remove(&mut self, world_ecs: &mut WorldEcs, entity: Entity) {
+        world_ecs.get_store_mut::<T>().remove(entity);
     }
 }
 
 fn capitalise(name: &str) -> Cow<str> {
-    // Fast path – already starts with an ASCII upper‑case letter.
+    // Fast path – already starts with an ASCII upper‑case letter
     if name
         .chars()
         .next()
@@ -110,7 +115,7 @@ fn capitalise(name: &str) -> Cow<str> {
         return Cow::Borrowed(name);
     }
 
-    // Build a new owned string with the first char upper‑cased.
+    // Build a new owned string with the first char upper‑cased
     let mut chars = name.chars();
     let first = chars.next().map(|c| c.to_ascii_uppercase());
     let rest: String = chars.collect();

@@ -29,11 +29,13 @@ impl ReflectField for String {
         FieldInfo { name, value: FieldValue::Text(field) }
     }
 }
+
 impl ReflectField for f32 {
     fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
         FieldInfo { name, value: FieldValue::Float(field) }
     }
 }
+
 impl ReflectField for bool {
     fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
         FieldInfo { name, value: FieldValue::Bool(field) }

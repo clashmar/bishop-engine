@@ -112,7 +112,6 @@ impl Editor {
                             meta_slice,
                             &mut self.world.world_ecs,
                             &mut self.assets,
-                            &self.world.id,
                         )
                 };
 

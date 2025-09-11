@@ -12,10 +12,11 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
             RefCell::new(HashMap::new());
     }
 
-    // Load or initialise widget state
+    // Load / initialise widget state
     let mut text = current.to_string();
-    let mut cursor = 0usize;
+    let mut cursor_char = 0usize;   // cursor expressed in *characters*
     let mut focused = false;
+
     STATE.with(|s| {
         let mut map = s.borrow_mut();
         let key = (
@@ -26,18 +27,17 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
         );
         if let Some((saved, saved_cur, saved_foc)) = map.get(&key) {
             text = saved.clone();
-            cursor = *saved_cur;
+            cursor_char = *saved_cur;
             focused = *saved_foc;
         } else {
-            map.insert(key, (text.clone(), cursor, focused));
+            map.insert(key, (text.clone(), cursor_char, focused));
         }
     });
 
-    // Draw background
+    // Draw background & current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
 
-    // Render text
     let placeholder = "<type here>";
     let display = if text.is_empty() { placeholder } else { &text };
     draw_text_ex(
@@ -58,27 +58,42 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
         focused = mouse_over;
     }
 
-    // Keyboard input
+    // Keyboard input (only when focused)
     if focused {
-        if is_key_pressed(KeyCode::Backspace) && cursor > 0 {
-            text.remove(cursor - 1);
-            cursor -= 1;
+        // Backspace 
+        if is_key_pressed(KeyCode::Backspace) && cursor_char > 0 {
+            let start = byte_offset(&text, cursor_char - 1);
+            let end   = byte_offset(&text, cursor_char);
+            text.drain(start..end);
+            cursor_char -= 1;
         }
-        if is_key_pressed(KeyCode::Delete) && cursor < text.len() {
-            text.remove(cursor);
+
+        // Delete 
+        if is_key_pressed(KeyCode::Delete) && cursor_char < text.chars().count() {
+            let start = byte_offset(&text, cursor_char);
+            let end   = byte_offset(&text, cursor_char + 1);
+            text.drain(start..end);
         }
-        if is_key_pressed(KeyCode::Left) && cursor > 0 {
-            cursor -= 1;
+
+        // Arrow keys (move cursor)
+        if is_key_pressed(KeyCode::Left) && cursor_char > 0 {
+            cursor_char -= 1;
         }
-        if is_key_pressed(KeyCode::Right) && cursor < text.len() {
-            cursor += 1;
+        if is_key_pressed(KeyCode::Right) && cursor_char < text.chars().count() {
+            cursor_char += 1;
         }
+
+        // Typed characters
         while let Some(chr) = get_char_pressed() {
-            if !chr.is_control() {
-                text.insert(cursor, chr);
-                cursor += 1;
+            // Accept only printable ASCII characters
+            if chr.is_ascii_graphic() {
+                let pos = byte_offset(&text, cursor_char);
+                text.insert(pos, chr);
+                cursor_char += 1;
             }
         }
+
+        // Escape
         if is_key_pressed(KeyCode::Escape) {
             focused = false;
         }
@@ -87,7 +102,9 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
     // Blinking cursor
     let now = get_time();
     if focused && ((now * 2.0) as i32 % 2 == 0) {
-        let prefix = &text[..cursor];
+        // Convert the *character* cursor to a byte offset for slicing
+        let byte_pos = byte_offset(&text, cursor_char);
+        let prefix = &text[..byte_pos];
         let cursor_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
         draw_line(
             cursor_x,
@@ -108,7 +125,7 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
             rect.w.round() as i32,
             rect.h.round() as i32,
         );
-        map.insert(key, (text.clone(), cursor, focused));
+        map.insert(key, (text.clone(), cursor_char, focused));
     });
 
     text
@@ -309,4 +326,13 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
     });
 
     txt.parse::<f32>().unwrap_or(current)
+}
+
+/// Returns the byte offset of the `char_idx`‑th character in `s`.
+/// If `char_idx` is out of range, returns `s.len()`.
+fn byte_offset(s: &str, char_idx: usize) -> usize {
+    s.char_indices()
+        .nth(char_idx)
+        .map(|(b, _)| b)
+        .unwrap_or_else(|| s.len())
 }

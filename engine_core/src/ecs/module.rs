@@ -33,6 +33,14 @@ pub trait InspectorModule {
             .next()
             .unwrap_or("Module")
     }
+
+    /// Return true if the module should get a “Remove” button in the header.
+    /// Default is false.
+    fn removable(&self) -> bool { false }
+
+    /// Called when the user clicks the remove component button.
+    /// Default implementation does nothing.
+    fn remove(&mut self, _ecs: &mut WorldEcs, _entity: Entity) {}
 }
 
 /// Generic wrapper that adds a collapsible header around any concrete
@@ -68,7 +76,7 @@ impl<T: InspectorModule> CollapsibleModule<T> {
         }
     }
 
-    /// The clickable area that contains the “‑/＋” button and the title.
+    /// The clickable area that contains the “‑/＋” button, title and remove button.
     const HEADER_HEIGHT: f32 = 24.0;
 }
 
@@ -99,6 +107,23 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
         let symbol = if self.expanded { "-" } else { "+" };
         if gui_button(btn, symbol) {
             self.expanded = !self.expanded;
+        }
+
+        // Remove component
+        if self.inner.removable() {
+            const BTN_W: f32 = 20.0;
+            const BTN_H: f32 = 20.0;
+            // Right‑aligned, vertically centred in the header
+            let btn_rect = Rect::new(
+                rect.x + rect.w - BTN_W - 4.0,
+                rect.y + (Self::HEADER_HEIGHT - BTN_H) / 2.0,
+                BTN_W,
+                BTN_H,
+            );
+            if gui_button(btn_rect, "x") {
+                self.inner.remove(ecs, entity);
+                return; // Don't draw the rest of the module
+            }
         }
 
         // Body, when expanded

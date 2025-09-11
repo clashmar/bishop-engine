@@ -1,6 +1,6 @@
 // editor/src/gui/inspector/transform.rs
 use macroquad::prelude::*;
-use crate::gui::*;
+use engine_core::ui::widgets::*;
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::{

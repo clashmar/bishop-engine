@@ -25,6 +25,8 @@ pub struct ComponentReg {
     pub factory: fn(&mut WorldEcs, Entity),
     /// Returns true if the supplied entity already owns this component.
     pub has: fn(&WorldEcs, Entity) -> bool,
+    // Removes the component for `entity` from the concrete store.
+    pub remove: fn(&mut WorldEcs, Entity),
 }
 
 /// Factory that works for any component that implements `Component + Default`.
@@ -41,6 +43,14 @@ where
     T: Component + 'static,
 {
     world.get_store::<T>().contains(entity)
+}
+
+/// Helper that erases an entity from a concrete `ComponentStore<T>`.
+pub fn erase_from_store<T>(world_ecs: &mut WorldEcs, entity: Entity)
+where
+    T: Component + 'static,
+{
+    world_ecs.get_store_mut::<T>().remove(entity);
 }
 
 /// Register a component type and wire it into the dynamic store map.
@@ -90,6 +100,7 @@ macro_rules! ecs_component {
                 from_ron: <$ty>::from_ron,
                 factory: $crate::ecs::component_registry::generic_factory::<$ty>,
                 has: $crate::ecs::component_registry::has_component::<$ty>,
+                remove: $crate::ecs::component_registry::erase_from_store::<$ty>,
             }
         }
     };

@@ -2,7 +2,7 @@
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::gui::*;
+use engine_core::ui::widgets::*;
 use serde_with::serde_as;
 use serde_with::FromInto;
 use engine_core::{

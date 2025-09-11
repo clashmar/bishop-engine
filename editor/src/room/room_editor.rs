@@ -57,7 +57,6 @@ impl RoomEditor {
         rooms_metadata: &mut [RoomMetadata],
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
-        world_id: &Uuid,
     ) -> bool {
         let tilemap = &mut room.variants[0].tilemap;
 
@@ -224,6 +223,10 @@ impl RoomEditor {
                 }
                 
                 self.create_entity_requested = self.inspector.draw(asset_manager, world_ecs);
+
+                if self.inspector.target.is_none() {
+                    self.selected_entity = None;
+                }
             }
         }
 

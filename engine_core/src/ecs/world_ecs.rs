@@ -58,8 +58,8 @@ impl WorldEcs {
 
     /// Remove all component data that belongs to `entity`.
     pub fn remove_entity(&mut self, entity: Entity) {
-        for (_, store) in self.stores.iter_mut() {
-            erase_from_store(store, entity);
+        for reg in inventory::iter::<ComponentReg> {
+            (reg.remove)(self, entity);
         }
     }
 
@@ -214,15 +214,3 @@ static TYPE_NAME_FOR_ID: Lazy<HashMap<TypeId, &'static str>> = Lazy::new(|| {
     }
     map
 });
-
-/// Helper that erases an entity from a type‑erased `ComponentStore<_>`.
-fn erase_from_store(store: &mut Box<dyn Any + Send>, entity: Entity) {
-    // SAFETY: all `ComponentStore<T>` have the same memory layout:
-    // a single `HashMap<Entity, T>`.  We only call `remove`,
-    // which does not touch the generic `T`.
-    unsafe {
-        let raw = store.as_mut() as *mut dyn Any;
-        let cs = &mut *(raw as *mut ComponentStore<u8>);
-        cs.remove(entity);
-    }
-}

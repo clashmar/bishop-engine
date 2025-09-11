@@ -24,7 +24,9 @@ pub trait InspectorModuleFactory {
 
 /// One entry per component type.
 pub struct ModuleFactoryEntry {
-    pub creator: fn() -> Box<dyn InspectorModule>,
+    pub title: &'static str,
+    /// Factory that builds the concrete UI module.
+    pub factory: fn() -> Box<dyn InspectorModule>,
 }
 
 // Tell `inventory` to keep a list of those entries.
@@ -51,7 +53,8 @@ macro_rules! inspector_module {
         // Register a factory entry for `$ty`.
         inventory::submit! {
             crate::ecs::module_factory::ModuleFactoryEntry {
-                creator: || crate::ecs::module_factory::make_module::<$ty>(<$ty>::TYPE_NAME),
+                title: <$ty>::TYPE_NAME,
+                factory: || crate::ecs::module_factory::make_module::<$ty>(<$ty>::TYPE_NAME),
             }
         }
     };
