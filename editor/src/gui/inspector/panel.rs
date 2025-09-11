@@ -188,6 +188,7 @@ impl InspectorPanel {
         const ENTRY_H: f32 = 30.0;
         const DEFAULT_MENU_W: f32 = 200.0;
         const MIN_INSET: f32 = 10.0;
+
         // Determine needed width (widest entry + padding)
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
@@ -197,11 +198,14 @@ impl InspectorPanel {
                 needed_w = w;
             }
         }
+
         // Clamp width to usable screen area
         let max_w = screen_width() - 2.0 * MIN_INSET;
         let menu_w = needed_w.min(max_w);
+        
         // Height depends on number of entries
         let menu_h = (shown.len() as f32) * ENTRY_H + 10.0;
+
         // Horizontal position: shift left if it would overflow the right edge
         let mut menu_x = button_rect.x;
         if menu_x + menu_w > screen_width() - MIN_INSET {
@@ -210,9 +214,10 @@ impl InspectorPanel {
         if menu_x < MIN_INSET {
             menu_x = MIN_INSET;
         }
-        // Vertical position: directly below the button
-        let menu_y = button_rect.y + button_rect.h;
+        // Vertical position: just directly below the button
+        let menu_y = button_rect.y + button_rect.h + MIN_INSET;
         let menu_rect = Rect::new(menu_x, menu_y, menu_w, menu_h);
+
         // Background & border
         draw_rectangle(
             menu_rect.x,

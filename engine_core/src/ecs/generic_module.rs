@@ -93,8 +93,8 @@ where
     }
 
     fn height(&self) -> f32 {
-        // Rough estimate – the inspector will call `draw` each frame
-        200.0
+        // Rough estimate for now
+        150.0
     }
 
     fn removable(&self) -> bool { true }

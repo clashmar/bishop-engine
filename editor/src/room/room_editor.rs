@@ -9,7 +9,7 @@ use crate::{
 use engine_core::{
     assets::{asset_manager::AssetManager, sprite::Sprite}, 
     constants::*, 
-    ecs::{component::Position, entity::Entity, world_ecs::WorldEcs}, 
+    ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, 
     tiles::{tile::TileSprite, tilemap::TileMap}, 
     world::room::{Room, RoomMetadata}
 };
@@ -58,6 +58,12 @@ impl RoomEditor {
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) -> bool {
+        if is_key_pressed(KeyCode::Escape) {
+            self.tilemap_editor.reset();
+            self.reset();
+            return true;
+        }
+
         let tilemap = &mut room.variants[0].tilemap;
 
         if !self.initialized {
@@ -145,6 +151,7 @@ impl RoomEditor {
                     let entity = world_ecs
                         .create_entity()
                         .with(Position { position: room_metadata.position })
+                        .with(CurrentRoom(room_id))
                         .finish();
 
                     // Immediately select it so the inspector shows the newly‑created entity
@@ -153,12 +160,6 @@ impl RoomEditor {
                     self.create_entity_requested = false;
                 }
             }
-        }
-
-        if is_key_pressed(KeyCode::Escape) {
-            self.tilemap_editor.reset();
-            self.reset();
-            return true;
         }
 
         if is_key_pressed(KeyCode::Tab) {
@@ -240,66 +241,60 @@ impl RoomEditor {
     }
 
     fn draw_entities(
-        &self, 
-        world_ecs: &WorldEcs, 
-        room_metadata: &RoomMetadata, 
-        tilemap: &TileMap,
+        &self,
+        world_ecs: &WorldEcs,
+        room_metadata: &RoomMetadata,
+        _tilemap: &TileMap,
         asset_manager: &mut AssetManager,
     ) {
-        let room_min = room_metadata.position;
-        let room_max = room_min
-            + vec2(
-                tilemap.width  as f32 * TILE_SIZE,
-                tilemap.height as f32 * TILE_SIZE,
-            );
+        // Cache the stores – no extra hashmap look‑ups inside the loop
+        let pos_store   = world_ecs.get_store::<Position>();
+        let tile_store  = world_ecs.get_store::<TileSprite>();
+        let room_store  = world_ecs.get_store::<CurrentRoom>();
+        let sprite_store= world_ecs.get_store::<Sprite>();
 
-        for (entity, pos) in world_ecs.get_store::<Position>().data.iter() {
+        for (entity, pos) in pos_store.data.iter() {
             // Skip tiles
-            if world_ecs.get_store::<TileSprite>().get(*entity).is_some() {
+            if tile_store.get(*entity).is_some() {
                 continue;
             }
 
-            // Only draw the placeholder if the entity lies inside the current
-            // room’s bounds (after the offset has been applied).
-            if pos.position.x >= room_min.x
-                && pos.position.x <= room_max.x
-                && pos.position.y >= room_min.y 
-                && pos.position.y <= room_max.y
-            {
-                // Adjust the drawing position of the entity
-                let room_pos = pos.position - room_metadata.position;
-                
-                // Draw the sprite (if the entity has a Sprite component)
-                if let Some(sprite) = world_ecs.get_store::<Sprite>().get(*entity) {
-                    // Only draw when the manager knows the id.
-                    if asset_manager.contains(sprite.sprite_id) {
-                        let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
-                        draw_texture_ex(
-                            tex,
-                            room_pos.x - TILE_SIZE / 2.0,
-                            room_pos.y - TILE_SIZE / 2.0,
-                            WHITE,
-                            DrawTextureParams {
-                                dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
-                                ..Default::default()
-                            },
-                        );
-                    } 
-                    else {
-                        // Placeholder for no texture
-                        self.draw_entity_placeholder(room_pos);
-                    }
+            // Draw only if the entity belongs to the current room
+            if let Some(cur) = room_store.get(*entity) {
+                if cur.0 != room_metadata.id {
+                    continue;
                 }
-                else {
-                    // Placeholder for no sprite
-                    self.draw_entity_placeholder(room_pos);
+            } else {
+                continue;
+            }
+
+            // Position relative to the room origin
+            let room_pos = pos.position - room_metadata.position;
+
+            // Sprite handling – one branch instead of three
+            if let Some(sprite) = sprite_store.get(*entity) {
+                if asset_manager.contains(sprite.sprite_id) {
+                    let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
+                    draw_texture_ex(
+                        tex,
+                        room_pos.x - TILE_SIZE / 2.0,
+                        room_pos.y - TILE_SIZE / 2.0,
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
+                            ..Default::default()
+                        },
+                    );
+                    continue; // sprite drawn, go to next entity
                 }
             }
+            // Fallback placeholder (no sprite or missing texture)
+            self.draw_entity_placeholder(room_pos);
         }
-        
-        // Highlight the currently selected entity (yellow box)
+
+        // Highlight the selected entity
         if let Some(sel) = self.selected_entity {
-            if let Some(pos) = world_ecs.get_store::<Position>().get(sel) {
+            if let Some(pos) = pos_store.get(sel) {
                 draw_rectangle_lines(
                     pos.position.x - room_metadata.position.x - 11.0,
                     pos.position.y - room_metadata.position.y - 11.0,

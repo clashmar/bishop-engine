@@ -1,5 +1,6 @@
 // engine_core/src/ecs/component.rs
 use reflect_derive::Reflect;
+use uuid::Uuid;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
@@ -60,6 +61,11 @@ pub struct Position {
 }
 
 ecs_component!(Position);
+
+/// Component that stores the room identifier an entity belongs to.
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct CurrentRoom(pub Uuid);
+ecs_component!(CurrentRoom);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);
