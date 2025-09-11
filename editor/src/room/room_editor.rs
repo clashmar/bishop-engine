@@ -271,27 +271,28 @@ impl RoomEditor {
                 
                 // Draw the sprite (if the entity has a Sprite component)
                 if let Some(sprite) = world_ecs.get_store::<Sprite>().get(*entity) {
-                    let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
-                    // Draw the texture centred on the entity’s position.
-                    draw_texture_ex(
-                        tex,
-                        room_pos.x - TILE_SIZE / 2.0,
-                        room_pos.y - TILE_SIZE / 2.0,
-                        WHITE,
-                        DrawTextureParams {
-                            dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
-                            ..Default::default()
-                        },
-                    );
-                } else {
-                    // Fallback placeholder (magenta square)
-                    draw_rectangle(
-                        room_pos.x - 10.0,
-                        room_pos.y - 10.0,
-                        20.0,
-                        20.0,
-                        MAGENTA,
-                    );
+                    // Only draw when the manager knows the id.
+                    if asset_manager.contains(sprite.sprite_id) {
+                        let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
+                        draw_texture_ex(
+                            tex,
+                            room_pos.x - TILE_SIZE / 2.0,
+                            room_pos.y - TILE_SIZE / 2.0,
+                            WHITE,
+                            DrawTextureParams {
+                                dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
+                                ..Default::default()
+                            },
+                        );
+                    } 
+                    else {
+                        // Placeholder for no texture
+                        self.draw_entity_placeholder(room_pos);
+                    }
+                }
+                else {
+                    // Placeholder for no sprite
+                    self.draw_entity_placeholder(room_pos);
                 }
             }
         }
@@ -315,5 +316,15 @@ impl RoomEditor {
         self.mode = RoomEditorMode::Scene;
         self.selected_entity = None;
         self.initialized = false;
+    }
+
+    pub fn draw_entity_placeholder(&self, pos: Vec2) {
+        draw_rectangle(
+            pos.x - 10.0,
+            pos.y - 10.0,
+            20.0,
+            20.0,
+            MAGENTA,
+        );
     }
 }

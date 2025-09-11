@@ -1,3 +1,3 @@
 pub mod panel;
-pub mod sprite;
+pub mod sprite_module;
 pub mod transform;
