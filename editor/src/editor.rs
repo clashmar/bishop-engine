@@ -56,7 +56,7 @@ impl Editor {
             Err(e) => {
                 eprintln!("Failed to load palette: {e}");
                 // Fall back to a new palette
-                TilePalette::new(vec2(10.0, 10.0), 32.0, 2, 2)
+                TilePalette::new()
             }
         };
 
@@ -75,7 +75,7 @@ impl Editor {
         };
 
         // Give the palette to the tilemap editor
-        editor.room_editor.tilemap_editor.palette = palette;
+        editor.room_editor.tilemap_editor.panel.palette = palette;
 
         Ok(editor)
     }
@@ -129,7 +129,7 @@ impl Editor {
                             .expect("Could not save world.");
 
                         if let Some(_) = self.current_room_id {
-                            let palette = &mut self.room_editor.tilemap_editor.palette;
+                            let palette = &mut self.room_editor.tilemap_editor.panel.palette;
                             world_storage::save_palette(palette, &self.world.id)
                                 .expect("Could not save tile palette");
                         }

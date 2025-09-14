@@ -1,4 +1,4 @@
-// editor/src/gui/inspector/transform.rs
+// editor/src/gui/inspector/transform_module.rs
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::{

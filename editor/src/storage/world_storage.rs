@@ -228,12 +228,7 @@ pub fn load_palette(world_id: &Uuid) -> io::Result<TilePalette> {
         .join("palette.ron");
 
     if !path.exists() {
-        return Ok(TilePalette::new(
-            vec2(10.0, 10.0),
-            32.0,             
-            2,               
-            2,                
-        ));
+        return Ok(TilePalette::new());
     }
 
     let ron = std::fs::read_to_string(path)?;

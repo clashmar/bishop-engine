@@ -2,7 +2,7 @@
 use crate::{
     camera_controller::CameraController, 
     canvas::grid, 
-    gui::inspector::panel::InspectorPanel, 
+    gui::inspector::inspector_panel::InspectorPanel, 
     tilemap::tilemap_editor::TileMapEditor, 
     world::coord
 };
@@ -71,21 +71,10 @@ impl RoomEditor {
             self.initialized = true;
         }
 
-        let inspector_rect = Rect::new(
-            screen_width() * 0.75, 
-            0.0,                  
-            screen_width() * 0.25, 
-            screen_height(),       
-        );
-
         // Click‑selection
         let mouse_screen: Vec2 = mouse_position().into();
 
         let mut ui_was_clicked = false;
-        
-        if inspector_rect.contains(mouse_screen) && is_mouse_button_pressed(MouseButton::Left) {
-            ui_was_clicked = true;
-        }
 
         match self.mode {
             RoomEditorMode::Tilemap => {
@@ -111,6 +100,10 @@ impl RoomEditor {
                 );
             }
             RoomEditorMode::Scene => {
+                if self.inspector.was_clicked(mouse_screen) {
+                    ui_was_clicked = true;
+                }
+                
                 let room_metadata = rooms_metadata
                     .iter_mut()
                     .find(|m| m.id == room_id)
@@ -191,8 +184,17 @@ impl RoomEditor {
         let tilemap = &room.variants[0].tilemap;
         let exits = &room_metadata.exits;
 
+        // Panel rect for inspector and tilemap editor
+                let inspector_rect = Rect::new(
+                    screen_width() * 0.75, 
+                    0.0, 
+                    screen_width() * 0.25, 
+                    screen_height()
+                );
+
         match self.mode {
             RoomEditorMode::Tilemap => {
+                self.tilemap_editor.panel.set_rect(inspector_rect);
                 self.tilemap_editor.draw(
                     camera, 
                     tilemap, 
@@ -202,20 +204,11 @@ impl RoomEditor {
                 );
             }
             RoomEditorMode::Scene => {
+                self.inspector.set_rect(inspector_rect);
                 tilemap.draw(camera, exits, world_ecs, asset_manager);
                 self.draw_entities(world_ecs, room_metadata, tilemap, asset_manager);
                 set_default_camera();
                 
-                // Inspector
-                let inspector_rect = Rect::new(
-                    screen_width() * 0.75, 
-                    0.0, 
-                    screen_width() * 0.25, 
-                    screen_height()
-                );
-
-                self.inspector.set_rect(inspector_rect);
-
                 // If an entity is selected, forward it to the inspector.
                 if let Some(entity) = self.selected_entity {
                     self.inspector.set_target(Some(entity));

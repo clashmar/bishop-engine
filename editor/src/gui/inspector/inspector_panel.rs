@@ -1,4 +1,4 @@
-// editor/src/gui/inspector/panel.rs
+// editor/src/gui/inspector/inspector_panel.rs
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::{
@@ -11,7 +11,7 @@ use engine_core::{
         world_ecs::WorldEcs,
     },
 };
-use crate::gui::inspector::transform::TransformModule;
+use crate::gui::inspector::transform_module::TransformModule;
 
 /// The panel that lives on the right‑hand side of the room editor window
 pub struct InspectorPanel {
@@ -25,46 +25,58 @@ pub struct InspectorPanel {
     add_mode: bool,
     /// Component name that the user selected from the menu
     pending_add: Option<String>,
+    /// Rectangles that were drawn this frame and are therefore active.
+    active_rects: Vec<Rect>,
 }
+
 impl InspectorPanel {
     /// Create a fresh panel with the default set of modules
     pub fn new() -> Self {
         let mut modules: Vec<Box<dyn InspectorModule>> = Vec::new();
+
         // Wrap each concrete module in a CollapsibleModule
         modules.push(Box::new(
             CollapsibleModule::new(TransformModule::default()).with_title("Transform"),
         ));
+
         // Add generic modules here
         for entry in MODULES.iter() {
             modules.push((entry.factory)());
         }
+        
         Self {
             rect: Rect::new(0., 0., 0., 0.),
             target: None,
             modules,
             add_mode: false,
             pending_add: None,
+            active_rects: Vec::new(),
         }
     }
+
     /// Called by the editor each frame to place the panel
     pub fn set_rect(&mut self, rect: Rect) {
         self.rect = rect;
     }
+
     /// Tell the inspector which entity is currently selected
     pub fn set_target(&mut self, entity: Option<Entity>) {
         self.target = entity;
     }
+
     /// Render the panel and any visible sub‑modules
     /// Returns true if 'Create' was pressed
     pub fn draw(
         &mut self,
-        assets: &mut AssetManager,
+        asset_manager: &mut AssetManager,
         world_ecs: &mut WorldEcs,
     ) -> bool {
-        const INSET: f32 = 10.0;      // gap between UI elements
-        const BTN_H: f32 = 30.0;      // button height
-        const BTN_MARGIN: f32 = 10.0; // margin used for the old “Create” button
-        const SPACING: f32 = 10.0;    // space between the two top buttons
+        self.active_rects.clear();
+
+        const INSET: f32 = 10.0;      
+        const BTN_HEIGHT: f32 = 30.0;
+        const BTN_MARGIN: f32 = 10.0;
+        const SPACING: f32 = 10.0;    
         const PADDING: f32 = 20.0;
 
         // When an entity is selected we show “Remove” and “Add Component”
@@ -84,8 +96,14 @@ impl InspectorPanel {
             let x_start = screen_width() - INSET - total_w;
 
             // Build rectangles
-            let remove_rect = Rect::new(x_start, INSET, btn_w_remove, BTN_H);
-            let add_rect = Rect::new(x_start + btn_w_remove + SPACING, INSET, btn_w_add, BTN_H);
+            let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
+
+            let add_rect = self.register_rect(Rect::new(
+                x_start + btn_w_remove + SPACING,
+                INSET,
+                btn_w_add,
+                BTN_HEIGHT,
+            ));
 
             // Remove button
             if gui_button(remove_rect, remove_label) {
@@ -110,7 +128,8 @@ impl InspectorPanel {
             // Normal inspector UI (hidden while add_mode is true)
             if !self.add_mode {
                 // Compute the top offset for the panel
-                let top_offset = add_rect.y + BTN_H + INSET;
+                let top_offset = add_rect.y + BTN_HEIGHT + INSET;
+
                 // Reduce the height so the panel still fits
                 let inner = Rect::new(
                     self.rect.x,
@@ -118,7 +137,8 @@ impl InspectorPanel {
                     self.rect.w - INSET,
                     self.rect.h - (top_offset - self.rect.y) - INSET,
                 );
-                // Background & outline
+
+                // Background
                 draw_rectangle(
                     inner.x,
                     inner.y,
@@ -126,14 +146,17 @@ impl InspectorPanel {
                     inner.h,
                     Color::new(0., 0., 0., 0.6),
                 );
+
+                // Outline 
                 draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
+
                 // Layout the modules vertically
                 let mut y = inner.y + 10.0;
                 for module in &mut self.modules {
                     if module.visible(world_ecs, entity) {
                         let h = module.height(); // dynamic height
                         let sub_rect = Rect::new(inner.x + 10.0, y, inner.w - 20.0, h);
-                        module.draw(sub_rect, assets, world_ecs, entity);
+                        module.draw(sub_rect, asset_manager, world_ecs, entity);
                         y += h + 10.0;
                     }
                 }
@@ -142,12 +165,12 @@ impl InspectorPanel {
             // No entity selected – show the old “Create” button
             let create_label = "Create";
             let txt_create = measure_text(create_label, None, 20, 1.0);
-            let button = Rect::new(
+            let button = self.register_rect(Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - PADDING,
                 self.rect.y + BTN_MARGIN,
                 txt_create.width + PADDING,
-                BTN_H,
-            );
+                BTN_HEIGHT,
+            ));
             return gui_button(button, create_label);
         }
 
@@ -170,6 +193,7 @@ impl InspectorPanel {
         };
         // Collect the components that can be added
         let mut shown: Vec<&ComponentReg> = Vec::new();
+
         for entry in MODULES.iter() {
             let type_name = entry.title;
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
@@ -216,7 +240,7 @@ impl InspectorPanel {
         }
         // Vertical position: just directly below the button
         let menu_y = button_rect.y + button_rect.h + MIN_INSET;
-        let menu_rect = Rect::new(menu_x, menu_y, menu_w, menu_h);
+        let menu_rect = self.register_rect(Rect::new(menu_x, menu_y, menu_w, menu_h));
 
         // Background & border
         draw_rectangle(
@@ -227,6 +251,7 @@ impl InspectorPanel {
             Color::new(0.0, 0.0, 0.0, 0.8),
         );
         draw_rectangle_lines(menu_rect.x, menu_rect.y, menu_rect.w, menu_rect.h, 2.0, WHITE);
+
         // Entries
         for (idx, reg) in shown.iter().enumerate() {
             let entry_rect = Rect::new(
@@ -259,7 +284,24 @@ impl InspectorPanel {
         }
         false
     }
+
+    #[inline]
+    fn register_rect(&mut self, rect: Rect) -> Rect {
+        self.active_rects.push(rect);
+        rect
+    }
+
+    fn is_mouse_over(&self, mouse_screen: Vec2) -> bool {
+        self.active_rects.iter().any(|r| r.contains(mouse_screen))
+        || (self.rect.contains(mouse_screen) && self.target.is_some())
+    }
+
+    /// Checks whether the inspector was clicked during this frame.
+    pub fn was_clicked(&self, mouse_screen: Vec2) -> bool {
+        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over(mouse_screen)
+    }
 }
+
 /// Utility function used by both the panel and the menu
 fn entity_has_component(
     world_ecs: &WorldEcs,
