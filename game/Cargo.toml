@@ -8,3 +8,11 @@ engine_core = { path = "../engine_core" }
 macroquad = "0.4" 
 serde = { version = "1.0", features = ["derive"] }
 ron = "0.9"
+
+[[bin]]
+name = "game"
+path = "src/main.rs"
+
+[[bin]]
+name = "game-playtest"
+path = "src/playtest_main.rs"

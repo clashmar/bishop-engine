@@ -1,20 +1,27 @@
 // editor/src/editor.rs
 use std::io;
+use async_std::path::PathBuf;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use crate::{
     camera_controller::CameraController,
     controls::controls::Controls,
     room::room_editor::RoomEditor,
-    storage::world_storage,
+    storage::editor_storage,
     tilemap::tile_palette::TilePalette,
     world::world_editor::WorldEditor,
+    playtest::room_playtest,
 };
 use engine_core::{
-    assets::{asset_manager::AssetManager, sprite::Sprite}, constants::*, tiles::tile::TileSprite, world::{
+    assets::
+        asset_manager::AssetManager
+    , 
+    constants::*, 
+    world::{
         room::Room,
         world::World,
-    }
+    },
+    storage::core_storage,
 };
 
 pub enum EditorMode {
@@ -30,18 +37,18 @@ pub struct Editor {
     pub camera: Camera2D, 
     pub current_room: Option<Room>,
     pub current_room_id: Option<Uuid>,
-    pub assets: AssetManager,
+    pub asset_manager: AssetManager,
 }
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
-        let world = if let Some(latest_id) = world_storage::most_recent_world_id() {
-             world_storage::load_world_by_id(&latest_id).expect("Could not load world")
-        } else if let Some(name) = world_storage::prompt_user_input().await {
-            world_storage::create_new_world(name)
+        let mut world = if let Some(latest_id) = editor_storage::most_recent_world_id() {
+            core_storage::load_world_by_id(&latest_id).expect("Could not load world")
+        } else if let Some(name) = editor_storage::prompt_user_input().await {
+            editor_storage::create_new_world(name)
         } else {
             // User pressed Escape
-            world_storage::create_new_world("untitled".to_string())
+            editor_storage::create_new_world("untitled".to_string())
         };
 
         let camera = CameraController::camera_for_room(
@@ -49,9 +56,9 @@ impl Editor {
             DEFAULT_ROOM_POSITION,
         );
 
-        let mut assets = AssetManager::new();
+        let mut assets = AssetManager::new(&mut world.world_ecs).await;
 
-        let mut palette = match world_storage::load_palette(&world.id) {
+        let mut palette = match editor_storage::load_palette(&world.id) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Failed to load palette: {e}");
@@ -71,7 +78,7 @@ impl Editor {
             camera,
             current_room: None,
             current_room_id: None,
-            assets,
+            asset_manager: assets,
         };
 
         // Give the palette to the tilemap editor
@@ -86,11 +93,10 @@ impl Editor {
             EditorMode::World => {
                 // Update returns the id of the room being edited
                 if let Some(room_id) = self.world_editor.update(&mut self.camera, &mut self.world).await {
-                    match world_storage::load_room(&self.world.id, room_id) {
+                    match editor_storage::load_room(&self.world.id, room_id) {
                         Ok(room) => {
                             self.current_room = Some(room);
                             self.current_room_id = Some(room_id);
-                            self.sync_assets().await;
                             self.mode = EditorMode::Room(room_id);
                         }
                         Err(e) => {
@@ -111,26 +117,67 @@ impl Editor {
                             room_id, 
                             meta_slice,
                             &mut self.world.world_ecs,
-                            &mut self.assets,
+                            &mut self.asset_manager,
                         ).await
                 };
+
+                // -------------------------------------------------------------
+                // 3️⃣  Launch play‑test if the button was pressed
+                // -------------------------------------------------------------
+                if self.room_editor.request_play {
+                    // The room is already loaded in `self.current_room`
+                    if let (Some(room), Some(meta)) = (&self.current_room, self.world.rooms_metadata.iter()
+                        .find(|m| m.id == room_id)) {
+
+                        // 1️⃣  Serialize everything the play‑test binary needs
+                        let payload_path = room_playtest::write_playtest_payload(room, meta, &self.world.world_ecs);
+
+                        // 2️⃣  Spawn the play‑test binary as a child process.
+                        //    The binary is the second binary defined in Cargo.toml:
+                        //    `game-playtest`.
+                        #[cfg(target_os = "windows")]
+                        let exe_name = "game-playtest.exe";
+                        #[cfg(not(target_os = "windows"))]
+                        let exe_name = "game-playtest";
+
+                        // Resolve the path relative to the workspace root.
+                        // `env!("CARGO_MANIFEST_DIR")` points to `editor/`.
+                        let mut exe_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+                        exe_path.pop(); // go up to workspace root
+                        exe_path.push("target");
+                        exe_path.push("debug");
+                        exe_path.push(exe_name);
+
+                        // Launch – we deliberately ignore the child’s stdout/stderr; the
+                        // editor continues running.
+                        if let Err(e) = std::process::Command::new(exe_path)
+                            .arg(&payload_path)
+                            .spawn()
+                        {
+                            eprintln!("Failed to launch play‑test: {e}");
+                        }
+                    }
+
+                    // Prevent a million games being spawned and ruining everything
+                    self.room_editor.request_play = false; 
+                }
 
                 if done {
                     // Take the edited room out of the editor
                     if let Some(ref edited_room) = self.current_room {
-                        if let Err(e) = world_storage::save_room(
+                        if let Err(e) = editor_storage::save_room(
                             &self.world.id,
                             room_id,
                             edited_room,
                         ) {
                             eprintln!("Could not save room {room_id}: {e}");
                         }
-                        world_storage::save_world(&self.world)
+                        editor_storage::save_world(&self.world)
                             .expect("Could not save world.");
 
                         if let Some(_) = self.current_room_id {
                             let palette = &mut self.room_editor.tilemap_editor.panel.palette;
-                            world_storage::save_palette(palette, &self.world.id)
+                            editor_storage::save_palette(palette, &self.world.id)
                                 .expect("Could not save tile palette");
                         }
                     }
@@ -151,7 +198,7 @@ impl Editor {
         }
 
         if Controls::save() {
-            world_storage::save_world(&self.world)
+            editor_storage::save_world(&self.world)
                 .expect("Could not save world.");
         }
     }
@@ -169,7 +216,7 @@ impl Editor {
 
                 // The room should already be loaded but lazy loads if not
                 if self.current_room.is_none() {
-                    match world_storage::load_room(&self.world.id, room_id) {
+                    match editor_storage::load_room(&self.world.id, room_id) {
                         Ok(room) => self.current_room = Some(room),
                         Err(e) => eprintln!("Failed to load room {room_id}: {e}"),
                     }
@@ -181,27 +228,9 @@ impl Editor {
                         room, 
                         meta, 
                         &mut self.world.world_ecs,
-                        &mut self.assets,
+                        &mut self.asset_manager,
                     );
                 }
-            }
-        }
-    }
-
-    async fn sync_assets(&mut self) {
-        // Iterate over all non-tile sprites
-        for (_entity, sprite) in self.world.world_ecs.get_store_mut::<Sprite>().data.iter_mut() {
-            if !self.assets.contains(sprite.sprite_id) {
-                let id = self.assets.load(&sprite.path).await;
-                sprite.sprite_id = id;
-            }
-        }
-
-        // Iterate over all tile‑sprites
-        for (_entity, tile_sprite) in self.world.world_ecs.get_store_mut::<TileSprite>().data.iter_mut() {
-            if !self.assets.contains(tile_sprite.sprite_id) {
-                let id = self.assets.load(&tile_sprite.path).await;
-                tile_sprite.sprite_id = id;
             }
         }
     }

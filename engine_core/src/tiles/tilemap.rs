@@ -148,9 +148,9 @@ impl TileMap {
     }
 }
 
-pub fn tile_to_world(grid_position: GridPos, map_height: usize) -> Vec2 {
+pub fn tile_to_world(grid_position: GridPos) -> Vec2 {
     Vec2::new(
         grid_position.x() as f32 * TILE_SIZE,
-        (map_height as f32 - 1.0 - grid_position.y() as f32) * TILE_SIZE,
+        grid_position.y() as f32 * TILE_SIZE,
     )
 }

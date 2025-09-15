@@ -1,10 +1,12 @@
+// editor/src/tilemap/background_module.rs
 use engine_core::{
     tiles::tilemap::TileMap, 
     ui::widgets::*
 };
 use macroquad::prelude::*;
 
-/// Responsible for editing the background of a tilemap.
+// TODO: Add more complex backgrounds
+/// Responsible for editing the background of a tilemap. 
 pub struct BackgroundModule {}
 
 impl BackgroundModule {

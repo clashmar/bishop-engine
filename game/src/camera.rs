@@ -2,26 +2,24 @@ use engine_core::input;
 use engine_core::constants::*;
 use macroquad::prelude::*;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Camera {
+#[derive(Debug)]
+pub struct GameCamera {
     pub position: Vec2,
+    pub camera: Camera2D,
 }
 
-impl Camera {
-    pub fn update_camera(&self) {
+impl GameCamera {
+    pub fn update_camera(&mut self) {
         let cam_x = self.position.x as f32 + TILE_SIZE / 2.0;
 
         // Offset the camera upwards
         let vertical_offset = screen_height() / 2.0;
         let cam_y = self.position.y + TILE_SIZE / 2.0 - vertical_offset;
 
-        let camera = Camera2D {
-            target: vec2(cam_x, cam_y),
-            zoom: vec2(1.2 / screen_width(), 1.2 / screen_height()),
-            ..Default::default()
-        };
+        self.camera.target = vec2(cam_x, cam_y);
+        self.camera.zoom = vec2(1.2 / screen_width(), 1.2 / screen_height());
 
-        set_camera(&camera);
+        set_camera(&self.camera);
     }
 
     pub fn move_camera(&mut self) {

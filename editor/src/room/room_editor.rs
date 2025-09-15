@@ -4,9 +4,11 @@ use crate::{
     canvas::grid, 
     gui::inspector::inspector_panel::InspectorPanel, 
     tilemap::tilemap_editor::TileMapEditor, 
-    world::coord
+    world::coord,
+    gui::gui_constants::*,
 };
 use engine_core::{
+    ui::widgets::*,
     assets::{asset_manager::AssetManager, sprite::Sprite}, 
     constants::*, 
     ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, 
@@ -31,6 +33,7 @@ pub struct RoomEditor {
     dragging: bool,
     initialized: bool, 
     create_entity_requested: bool,
+    pub request_play: bool,
 }
 
 impl RoomEditor {
@@ -45,6 +48,7 @@ impl RoomEditor {
             dragging: false,
             initialized: false,
             create_entity_requested: false,
+            request_play: false,
         }
     }
 
@@ -181,16 +185,18 @@ impl RoomEditor {
         world_ecs: &mut WorldEcs, 
         asset_manager: &mut AssetManager
     ) {
+        self.request_play = false; // This is very important
+
         let tilemap = &mut room.variants[0].tilemap;
         let exits = &room_metadata.exits;
 
         // Panel rect for inspector and tilemap editor
-                let inspector_rect = Rect::new(
-                    screen_width() * 0.75, 
-                    0.0, 
-                    screen_width() * 0.25, 
-                    screen_height()
-                );
+        let inspector_rect = Rect::new(
+            screen_width() * 0.75, 
+            0.0, 
+            screen_width() * 0.25, 
+            screen_height()
+        );
 
         match self.mode {
             RoomEditorMode::Tilemap => {
@@ -230,6 +236,20 @@ impl RoomEditor {
         }
 
         set_default_camera();
+
+        // Play‑test button
+        if matches!(self.mode, RoomEditorMode::Scene) {
+            // Build button
+            let play_label = "Play";
+            let play_width = measure_text(play_label, None, 20, 1.0).width + PADDING;
+            let play_x = (screen_width() - play_width) / 2.0;
+            let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
+
+            if gui_button(play_rect, play_label) {
+                self.request_play = true;
+            }
+        }
+        
         self.draw_coordinates(camera, room_metadata);
     }
 
@@ -304,6 +324,7 @@ impl RoomEditor {
         self.mode = RoomEditorMode::Scene;
         self.selected_entity = None;
         self.initialized = false;
+        self.request_play = false;
     }
 
     pub fn draw_entity_placeholder(&self, pos: Vec2) {

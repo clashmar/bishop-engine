@@ -3,7 +3,7 @@ use macroquad::{color::Color, math::Vec2, prelude::*};
 use crate::{constants::*};
 
 #[derive(Debug, Clone, Copy)]
-pub struct Player {
+pub struct PlayerOld {
     pub grid_position: GridPos,
     pub actual_position: Vec2,
     pub velocity_x: f32,
@@ -13,7 +13,7 @@ pub struct Player {
     pub color: Color,
 }
 
-impl Player {
+impl PlayerOld {
     pub fn update(&mut self, map: &TileMap) {
         physics::update_physics(self, map);
         self.handle_jump();

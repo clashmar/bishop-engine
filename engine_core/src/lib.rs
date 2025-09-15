@@ -7,3 +7,4 @@ pub mod ecs;
 pub mod tiles;
 pub mod assets;
 pub mod ui;
+pub mod storage;

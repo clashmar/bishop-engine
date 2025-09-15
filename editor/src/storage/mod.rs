@@ -1,1 +1,1 @@
-pub mod world_storage;
+pub mod editor_storage;

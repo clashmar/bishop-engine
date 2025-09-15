@@ -1,53 +1,81 @@
-use engine_core::{constants::*, player::Player, tiles::{tilemap::{self, TileMap}}, world::world::GridPos};
+use engine_core::{
+    assets::asset_manager::AssetManager, constants::*, ecs::{
+        component::{CurrentRoom, Player, Position}, 
+        entity::Entity
+    }, storage::core_storage, world::{room::Room, world::World}
+};
 use crate::{modes::Mode};
 use macroquad::prelude::*;
-use crate::camera::Camera;
+use crate::camera::GameCamera;
 
-#[derive(Debug, Clone)]
+// #[derive(Debug, Clone)]
 pub struct GameState {
-    map: TileMap,
-    player: Player,
+    /// The whole world, including its persistent ECS.
+    world: World,
+    /// Cached handle to the player entity.
+    player_entity: Entity,
+    /// Camera that follows the player.
+    camera: GameCamera,
+    /// Current room.
+    current_room: Room,
+    /// Current mode.
     mode: Mode,
-    camera: Camera,
+    /// Asset Manager.
+    asset_manager: AssetManager,
 }
 
 impl GameState {
-    pub fn new() -> Self {
-        let start_pos = GridPos::new(0, 10);
-        let map = TileMap::new(5, 9);
+    pub async fn new() -> Self {
+        let world_id = core_storage::most_recent_world_id()
+            .expect("No world folder found in assets/worlds");
 
-        let player = Player { 
-            grid_position: start_pos, 
-            actual_position: tilemap::tile_to_world(start_pos, map.height),
-            velocity_x: 0.0,
-            velocity_y: 0.0,
-            is_airborne: false,
-            has_double_jump: true,
-            color: BLUE ,
+        let mut world = core_storage::load_world_by_id(&world_id)
+            .expect("Failed to deserialize world.ron");
+
+        let start_room_id = world
+            .starting_room
+            .or_else(|| world.rooms_metadata.first().map(|m| m.id))
+            .expect("World has no starting room nor any room metadata");
+
+        let current_room = core_storage::load_room(&world.id, start_room_id)
+            .expect("Failed to load the starting room");
+
+        let starting_position = world.starting_position.unwrap();
+
+        let player_entity = world.world_ecs
+            .create_entity()
+            .with(Position { position: starting_position })
+            .with(CurrentRoom(start_room_id))
+            .with(Player)
+            .finish();
+
+        let camera = GameCamera {
+            position: starting_position,
+            camera: Camera2D::default(),
         };
 
+        let asset_manager = AssetManager::new(&mut world.world_ecs).await;
+
         Self {
-            map,
-            player: player,
+            world,
+            player_entity,
+            camera,
+            current_room,
             mode: Mode::Explore,
-            camera: Camera { 
-                position: player.actual_position,
-            },
+            asset_manager,
         }
     }
 
     pub fn update(&mut self) {
-        match self.mode {
-            Mode::Explore => {
-                self.player.update(&self.map);
+        let player_position = self
+            .world
+            .world_ecs
+            .get_store::<Position>()
+            .get(self.player_entity)
+            .unwrap()
+            .position;
 
-                // Keep camera locked on player in explore mode
-                self.camera.position = self.player.actual_position;
-            }
-            Mode::Combat => {
-                self.camera.move_camera();
-            }
-        }
+        self.camera.position = player_position;
 
         if is_key_pressed(KeyCode::C) {
             self.toggle_mode();
@@ -61,19 +89,23 @@ impl GameState {
         };
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&mut self) {
         clear_background(BLACK);
-
         self.camera.update_camera();
-
-        // self.map.draw();
+        
+        self.current_room.variants[0].tilemap.draw(
+            &self.camera.camera,
+            &Vec::new(),
+            &self.world.world_ecs,
+            &mut self.asset_manager,
+        );
 
         draw_rectangle(
-            self.player.actual_position.x,
-            self.player.actual_position.y,
+            self.camera.position.x,
+            self.camera.position.y,
             PLAYER_WIDTH,
             PLAYER_HEIGHT,
-            self.player.color,
+            BLUE,
         );
     }
 }

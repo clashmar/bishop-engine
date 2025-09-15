@@ -1,6 +1,5 @@
 // editor/src/tilemap/tilemap_editor.rs
 use macroquad::prelude::*;
-
 use crate::{gui::{
     resize_button::ResizeButton,
     ui_element::{DynamicTilemapUiElement},

@@ -1,4 +1,4 @@
-// editor/src/storage/world_storage.rs
+// editor/src/storage/editor_storage.rs
 use macroquad::prelude::*;
 use uuid::Uuid;
 use engine_core::{
@@ -11,7 +11,7 @@ use std::{
     collections::HashMap, fs, io, path::{Path}, time::SystemTime
 };
 use crate::{
-    storage::world_storage, 
+    storage::editor_storage, 
     tilemap::tile_palette::TilePalette
 };
 
@@ -35,12 +35,12 @@ pub fn create_new_world(name: String) -> World {
     };
 
     // Save the world.
-    if let Err(e) = world_storage::save_world(&world) {
+    if let Err(e) = editor_storage::save_world(&world) {
         eprintln!("Could not save the initial room: {e}");
     }
 
     // Save the room.
-    if let Err(e) = world_storage::save_room(
+    if let Err(e) = editor_storage::save_room(
         &world.id,             
         room_id,             
         &first_room,        
@@ -82,15 +82,6 @@ pub fn save_world(world: &World) -> io::Result<()> {
 
     fs::create_dir_all(&dir_path)?;
     fs::write(file_path, ron_string)
-}
-
-/// Load a world from its *.ron* file.
-pub fn load_world_by_id(id: &Uuid) -> io::Result<World> {
-    let path = Path::new(WORLD_SAVE_FOLDER)
-        .join(id.to_string())
-        .join("world.ron");
-    let ron_string = fs::read_to_string(path)?;
-    ron::from_str(&ron_string).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
 /// Save a single room. Called automatically when the user leaves the room editor.

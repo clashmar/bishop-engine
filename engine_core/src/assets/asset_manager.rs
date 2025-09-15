@@ -3,7 +3,11 @@ use std::path::Path;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use std::collections::HashMap;
-use crate::assets::sprite::SpriteId;
+use crate::{
+    assets::sprite::{Sprite, SpriteId}, 
+    ecs::world_ecs::WorldEcs, 
+    tiles::tile::TileSprite
+};
 
 pub struct AssetManager {
     textures: HashMap<SpriteId, Texture2D>,
@@ -12,12 +16,16 @@ pub struct AssetManager {
 }
 
 impl AssetManager {
-    pub fn new() -> Self {
-        Self {
+    /// Initializes a new asset manager with all sprite textures loaded.
+    pub async fn new(world_ecs: &mut WorldEcs) -> Self {
+        let mut asset_manager = Self {
             textures: HashMap::new(),
             path_to_id: HashMap::new(),
             id_to_path: HashMap::new(),
-        }
+        };
+
+        asset_manager.sync_all_assets(world_ecs).await;
+        asset_manager
     }
 
     /// Load a texture from the assets folder.
@@ -69,5 +77,23 @@ impl AssetManager {
             .clone();
         futures::executor::block_on(self.load(path));
         self.textures.get(&id).unwrap()
+    }
+
+    /// Syncs all the sprite assets for a world.
+    pub async fn sync_all_assets(&mut self, world_ecs: &mut WorldEcs) {
+        // Load all non‑tile sprites
+        for (_entity, sprite) in world_ecs.get_store_mut::<Sprite>().data.iter_mut() {
+            if !self.contains(sprite.sprite_id) {
+                let id = self.load(&sprite.path).await;
+                sprite.sprite_id = id;
+            }
+        }
+        // Load all tile‑sprites
+        for (_entity, tile_sprite) in world_ecs.get_store_mut::<TileSprite>().data.iter_mut() {
+            if !self.contains(tile_sprite.sprite_id) {
+                let id = self.load(&tile_sprite.path).await;
+                tile_sprite.sprite_id = id;
+            }
+        }
     }
 }

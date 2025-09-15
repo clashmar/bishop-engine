@@ -11,7 +11,7 @@ mod tilemap;
 mod world;
 mod camera_controller;
 mod canvas;
-mod entities;
+mod playtest;
 
 #[macroquad::main("World Editor")]
 async fn main() -> std::io::Result<()> {

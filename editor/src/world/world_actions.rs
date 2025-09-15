@@ -4,7 +4,7 @@ use uuid::Uuid;
 use engine_core::{world::{room::{Room, RoomMetadata, RoomVariant}, world::World}};
 use crate::world::coord;
 use macroquad::prelude::*;
-use crate::{storage::world_storage, world::world_editor::WorldEditor};
+use crate::{storage::editor_storage, world::world_editor::WorldEditor};
 
 impl WorldEditor {
     /// Create a new room and return its Uuid.
@@ -52,7 +52,7 @@ impl WorldEditor {
         };
 
         // Save the new room to disk
-        if let Err(e) = world_storage::save_room(&world.id, new_id, &room) {
+        if let Err(e) = editor_storage::save_room(&world.id, new_id, &room) {
             eprintln!("Could not save the newly created room {new_id}: {e}");
         }
 
@@ -90,7 +90,7 @@ impl WorldEditor {
         }
 
         // Delete file on disk
-        if let Err(e) = world_storage::delete_room_file(&world.id, room_id) {
+        if let Err(e) = editor_storage::delete_room_file(&world.id, room_id) {
             eprintln!("Could not delete room file {room_id}: {e}");
         }
     }
@@ -107,7 +107,7 @@ impl WorldEditor {
         // The name could be generated automatically or asked from the UI.
         let new_id = self.create_room(world, "untitled", origin_in_pixels, size);
 
-        if let Err(e) = world_storage::save_world(world) {
+        if let Err(e) = editor_storage::save_world(world) {
             eprintln!("Could not save world after placing room: {e}");
         }
         new_id
