@@ -51,7 +51,7 @@ impl TileMapEditor  {
     }
 
     /// Update the editor with a mutable reference to the map
-    pub fn update(
+    pub async fn update(
         &mut self, 
         camera: &mut Camera2D,
         map: &mut TileMap, 
@@ -66,21 +66,18 @@ impl TileMapEditor  {
             self.initialized = true;
         }
 
-        futures::executor::block_on(
-            self.panel.palette.process_requests(world_ecs, asset_manager)
-        );
+        self.panel.update(world_ecs, asset_manager).await;
 
         self.dynamic_ui.clear();
         ResizeButton::build_all(map, &mut self.dynamic_ui);
         
         let mouse_pos = mouse_position().into();
-        self.handle_ui_clicks(camera, mouse_pos, map, room_metadata, other_bounds);
-        
-        let exits = &mut room_metadata.exits;
+        self.consume_ui_click(camera, mouse_pos, map, room_metadata, other_bounds);
+
         if !self.ui_was_clicked {
             match self.mode {
                 TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map, world_ecs),
-                TilemapEditorMode::Exits => self.handle_exit_placement(camera, map, exits),
+                TilemapEditorMode::Exits => self.handle_exit_placement(camera, map, &mut room_metadata.exits),
             }
         }
 
@@ -96,7 +93,7 @@ impl TileMapEditor  {
         };
     }
 
-    fn handle_ui_clicks(
+    fn consume_ui_click(
         &mut self, 
         camera: &mut Camera2D,
         mouse_pos: Vec2, 
@@ -104,7 +101,7 @@ impl TileMapEditor  {
         room_metadata: &mut RoomMetadata,
         other_bounds: &[(Vec2, Vec2)]
     ) {
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
 
             if self.panel.handle_click(mouse_pos, self.panel.rect) {
                 self.ui_was_clicked = true;
@@ -212,7 +209,7 @@ impl TileMapEditor  {
     pub fn draw(
         &mut self, 
         camera: &Camera2D, 
-        map: &TileMap, 
+        map: &mut TileMap, 
         exits: &Vec<Exit>,
         world_ecs: &WorldEcs,
         asset_manager: &mut AssetManager,
@@ -221,7 +218,7 @@ impl TileMapEditor  {
         set_camera(camera);
         map.draw(camera, exits, world_ecs, asset_manager);
         self.draw_hover_highlight(camera, map);
-        self.draw_ui(camera, asset_manager, world_ecs);
+        self.draw_ui(camera, asset_manager, world_ecs, map);
     }
 
     fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap) {
@@ -257,6 +254,7 @@ impl TileMapEditor  {
         camera: &Camera2D, 
         asset_manager: &mut AssetManager,
         world_ecs: &WorldEcs,
+        map: &mut TileMap,
     ) {
         // Draw scaling UI
         for element in &self.dynamic_ui {
@@ -267,7 +265,7 @@ impl TileMapEditor  {
         set_default_camera();
 
         // Draw panel
-        self.panel.draw(asset_manager, world_ecs);
+        self.panel.draw(asset_manager, world_ecs, map);
     }
 
     fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap) -> Option<GridPos> {
@@ -299,9 +297,10 @@ impl TileMapEditor  {
     }
 
     fn is_mouse_over_ui(&self, camera: &Camera2D, mouse_pos: Vec2) -> bool {
-        self.dynamic_ui
-        .iter()
-        .any(|element| element.is_mouse_over(mouse_pos, camera))
+        self.panel.is_mouse_over(mouse_pos)
+        || self.dynamic_ui
+            .iter()
+            .any(|element| element.is_mouse_over(mouse_pos, camera))
     }
 
     fn exit_direction_from_position(&self, tile_pos: GridPos, map: &TileMap) -> ExitDirection {

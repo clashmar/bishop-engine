@@ -1,4 +1,5 @@
 // editor/src/tilemap/tile_palette.rs
+use std::collections::VecDeque;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -32,10 +33,10 @@ pub struct TilePalette {
     #[serde(skip)]
     pub sprite_ids: Vec<SpriteId>,
     #[serde(skip)]
-    create_requested: bool,
-    edit_requested: bool,
-    delete_requested: Option<usize>,
+    command_queue: VecDeque<PaletteCmd>,
 }
+
+enum PaletteCmd { Create, Edit, Delete(usize) }
 
 #[derive(Clone, Default, PartialEq)]
 pub enum TilePaletteUiMode {
@@ -67,9 +68,21 @@ impl TilePalette {
             selected_index: 0,
             entries: Vec::new(),
             sprite_ids: Vec::new(),
-            create_requested: false,
-            edit_requested: false,
-            delete_requested: None,
+            command_queue: VecDeque::new(),
+        }
+    }
+
+    pub async fn update(
+        &mut self,
+        world_ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
+    ) {
+        while let Some(cmd) = self.command_queue.pop_front() {
+            match cmd {
+                PaletteCmd::Create => self.create_tile(world_ecs, asset_manager).await,
+                PaletteCmd::Edit => self.edit_tile(world_ecs, asset_manager).await,
+                PaletteCmd::Delete(i) => self.delete_tile(i, world_ecs).await,
+            }
         }
     }
 
@@ -111,21 +124,19 @@ impl TilePalette {
         asset_manager: &mut AssetManager,
         world_ecs: &WorldEcs,
     ) {
-
-
         // Draw grid
         for i in 0..self.entries.len() {
             let col = i % self.columns;
             let row = i / self.columns;
-
-            // Y includes the scroll offset
             let y = rect.y + (row as f32 * TILE_SIZE);
+
             // Skip rows that are completely outside the visible area
             if y + self.tile_size < rect.y
                 || y > rect.y + TILE_SIZE * 5.0
             {
                 continue;
             }
+
             let x = rect.x + col as f32 * self.tile_size;
 
             let tex = asset_manager.get_texture_from_id(self.sprite_ids[i]);
@@ -263,15 +274,12 @@ impl TilePalette {
         // Create/Update
         let btn_ok = Rect::new(panel.x + 30., panel.y + 220., 100., 30.);
         if gui_button(btn_ok, btn_label) {
-            // Signal the request – the editor will pick it up next frame.
-            match self.ui.mode {
-                TilePaletteUiMode::Create => {
-                    self.create_requested = true;
-                },
-                TilePaletteUiMode::Edit => {
-                    self.edit_requested = true;
-                }
-            }
+            // Add the request to the queue, it will be excecuted next frame
+            let cmd = match self.ui.mode {
+                TilePaletteUiMode::Create => PaletteCmd::Create,
+                TilePaletteUiMode::Edit   => PaletteCmd::Edit,
+            };
+            self.command_queue.push_back(cmd);
             self.ui.open = false;
         }
 
@@ -285,39 +293,19 @@ impl TilePalette {
         if self.ui.mode == TilePaletteUiMode::Edit {
             let btn_del = Rect::new(panel.x + 30., panel.y + 260., 240., 30.);
             if gui_button(btn_del, "Delete") {
-                self.delete_requested = Some(self.ui.edit_index);
+                //Add the request to the queue
+                let cmd = PaletteCmd::Delete(self.ui.edit_index);
+                self.command_queue.push_back(cmd);
                 self.ui.open = false;
             }
         }
     }
 
-    pub async fn process_requests(
-        &mut self, 
-        world_ecs: &mut WorldEcs,
-        asset_manager: &mut AssetManager,
-    ) {
-        if self.create_requested {
-            self.process_create_request(world_ecs, asset_manager).await;
-        }
-        if self.edit_requested {
-            self.process_edit_request(world_ecs, asset_manager).await;
-        }
-        if self.delete_requested.is_some() {
-            self.process_delete_request(world_ecs).await;
-        }
-    }
-
-    pub async fn process_create_request(
+    pub async fn create_tile(
         &mut self,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) {
-        if !self.create_requested {
-            return;
-        }
-        // Reset early to avoid double-processing.
-        self.create_requested = false;
-
         // Load sprite
         let sprite_id = asset_manager.load(&self.ui.sprite_path).await;
 
@@ -356,17 +344,11 @@ impl TilePalette {
         self.rows = (needed + self.columns - 1) / self.columns; // ceil‑div
     }
 
-    pub async fn process_edit_request(
+    pub async fn edit_tile(
         &mut self,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) {
-        if !self.edit_requested {
-            return;
-        }
-        // Reset early to avoid double-processing.
-        self.edit_requested = false;
-
         // Load sprite
         let sprite_id = asset_manager.load(&self.ui.sprite_path).await;
 
@@ -392,22 +374,20 @@ impl TilePalette {
         self.entries[self.ui.edit_index].sprite_id = sprite_id;
     }
 
-    pub async fn process_delete_request(&mut self, world_ecs: &mut WorldEcs) {
-        if let Some(idx) = self.delete_requested.take() {
-            // Remove the definition from the world
-            let def_id = self.entries[idx].def_id;
-            world_ecs.tile_defs.remove(&def_id);
+    pub async fn delete_tile(&mut self, idx: usize, world_ecs: &mut WorldEcs) {
+        // Remove the definition from the world
+        let def_id = self.entries[idx].def_id;
+        world_ecs.tile_defs.remove(&def_id);
 
-            // Remove palette entry and sprite id
-            self.entries.remove(idx);
-            self.sprite_ids.remove(idx);
+        // Remove palette entry and sprite id
+        self.entries.remove(idx);
+        self.sprite_ids.remove(idx);
 
-            // Adjust selected index safely
-            self.selected_index = self.entries.len().saturating_sub(1);
-            
-            // Re‑compute rows
-            self.rows = (self.entries.len() + self.columns - 1) / self.columns;
-        }
+        // Adjust selected index safely
+        self.selected_index = self.entries.len().saturating_sub(1);
+        
+        // Re‑compute rows
+        self.rows = (self.entries.len() + self.columns - 1) / self.columns;
     }
 
     /// The current height of the palette.

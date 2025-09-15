@@ -112,7 +112,7 @@ impl Editor {
                             meta_slice,
                             &mut self.world.world_ecs,
                             &mut self.assets,
-                        )
+                        ).await
                 };
 
                 if done {
@@ -175,7 +175,7 @@ impl Editor {
                     }
                 }
 
-                if let Some(ref room) = self.current_room {
+                if let Some(ref mut room) = &mut self.current_room {
                     self.room_editor.draw(
                         &self.camera, 
                         room, 

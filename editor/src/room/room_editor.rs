@@ -49,7 +49,7 @@ impl RoomEditor {
     }
 
     /// Returns `true` if user wants to exit back to world view.  
-    pub fn update(
+    pub async fn update(
         &mut self, 
         camera: &mut Camera2D,
         room: &mut Room,
@@ -97,7 +97,7 @@ impl RoomEditor {
                     &other_bounds, 
                     world_ecs, 
                     asset_manager
-                );
+                ).await;
             }
             RoomEditorMode::Scene => {
                 if self.inspector.was_clicked(mouse_screen) {
@@ -176,12 +176,12 @@ impl RoomEditor {
     pub fn draw(
         &mut self, 
         camera: &Camera2D,
-        room: &Room,
+        room: &mut Room,
         room_metadata: &RoomMetadata,
         world_ecs: &mut WorldEcs, 
         asset_manager: &mut AssetManager
     ) {
-        let tilemap = &room.variants[0].tilemap;
+        let tilemap = &mut room.variants[0].tilemap;
         let exits = &room_metadata.exits;
 
         // Panel rect for inspector and tilemap editor
