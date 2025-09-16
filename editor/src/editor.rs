@@ -56,7 +56,7 @@ impl Editor {
             DEFAULT_ROOM_POSITION,
         );
 
-        let mut assets = AssetManager::new(&mut world.world_ecs).await;
+        let mut asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
         let mut palette = match editor_storage::load_palette(&world.id) {
             Ok(p) => p,
@@ -68,7 +68,7 @@ impl Editor {
         };
 
         // Re‑load all sprite textures that belong to the palette.
-        palette.rebuild_runtime(&mut assets).await;
+        palette.rebuild_runtime(&mut asset_manager).await;
 
         let mut editor = Self {
             world,
@@ -78,7 +78,7 @@ impl Editor {
             camera,
             current_room: None,
             current_room_id: None,
-            asset_manager: assets,
+            asset_manager,
         };
 
         // Give the palette to the tilemap editor
@@ -130,7 +130,7 @@ impl Editor {
                         .find(|m| m.id == room_id)) {
 
                         // 1️⃣  Serialize everything the play‑test binary needs
-                        let payload_path = room_playtest::write_playtest_payload(room, meta, &self.world.world_ecs);
+                        let payload_path = room_playtest::write_playtest_payload(room, meta, &self.world);
 
                         // 2️⃣  Spawn the play‑test binary as a child process.
                         //    The binary is the second binary defined in Cargo.toml:

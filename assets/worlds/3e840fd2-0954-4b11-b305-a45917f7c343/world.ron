@@ -1,0 +1,87 @@
+(
+    id: "3e840fd2-0954-4b11-b305-a45917f7c343",
+    name: "World\r",
+    world_ecs: (
+        components: [
+            /*[0]*/ (
+                type_name: "Sprite",
+                data: "(\n    data: {\n        (\"9b1c4256-ed7d-4e05-8277-259d0e8fa83a\"): (\n            sprite_id: (\"d7194718-5804-4b56-b8b8-8a17ca78351c\"),\n            path: \"/Users/charliesovn/Projects/Aseprite/Entity1.png\",\n        ),\n    },\n)",
+            ),
+            /*[1]*/ (
+                type_name: "Weapon",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[2]*/ (
+                type_name: "CurrentRoom",
+                data: "(\n    data: {\n        (\"1111bb67-a76c-4a00-878a-4f4ae45d95db\"): (\"d52a72c8-19c8-4078-a217-17f9cfcd53bb\"),\n        (\"9b1c4256-ed7d-4e05-8277-259d0e8fa83a\"): (\"d52a72c8-19c8-4078-a217-17f9cfcd53bb\"),\n    },\n)",
+            ),
+            /*[3]*/ (
+                type_name: "TileSprite",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[4]*/ (
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"9b1c4256-ed7d-4e05-8277-259d0e8fa83a\"): (\n            position: (144.70416, 65.220825),\n        ),\n        (\"1111bb67-a76c-4a00-878a-4f4ae45d95db\"): (\n            position: (55.02292, 82.54376),\n        ),\n    },\n)",
+            ),
+            /*[5]*/ (
+                type_name: "Player",
+                data: "(\n    data: {\n        (\"1111bb67-a76c-4a00-878a-4f4ae45d95db\"): (),\n    },\n)",
+            ),
+        ],
+        tile_defs: {},
+    ),
+    rooms_metadata: [
+        /*[0]*/ (
+            id: "d52a72c8-19c8-4078-a217-17f9cfcd53bb",
+            name: "untitled",
+            position: (
+                0.0,
+                0.0,
+            ),
+            size: (
+                10.0,
+                5.0,
+            ),
+            exits: [
+                /*[0]*/ (
+                    position: (
+                        10.0,
+                        4.0,
+                    ),
+                    direction: Right,
+                    target_room_id: None,
+                ),
+                /*[1]*/ (
+                    position: (
+                        0.0,
+                        -1.0,
+                    ),
+                    direction: Up,
+                    target_room_id: None,
+                ),
+                /*[2]*/ (
+                    position: (
+                        -1.0,
+                        4.0,
+                    ),
+                    direction: Left,
+                    target_room_id: None,
+                ),
+                /*[3]*/ (
+                    position: (
+                        6.0,
+                        5.0,
+                    ),
+                    direction: Down,
+                    target_room_id: None,
+                ),
+            ],
+            adjacent_rooms: [],
+        ),
+    ],
+    starting_room: Some("d52a72c8-19c8-4078-a217-17f9cfcd53bb"),
+    starting_position: Some((
+        1.0,
+        1.0,
+    )),
+)

@@ -1,23 +1,23 @@
 use engine_core::{
-    assets::asset_manager::AssetManager, constants::*, ecs::{
-        component::{CurrentRoom, Player, Position}, 
-        entity::Entity
-    }, storage::core_storage, world::{room::Room, world::World}
+    assets::asset_manager::AssetManager, ecs::world_ecs::WorldEcs, rendering::render_entities::draw_entities, storage::core_storage, world::{
+        room::{Room, RoomMetadata}, 
+        world::World
+    }
 };
-use crate::{modes::Mode};
+use crate::modes::Mode;
 use macroquad::prelude::*;
 use crate::camera::GameCamera;
 
 // #[derive(Debug, Clone)]
 pub struct GameState {
-    /// The whole world, including its persistent ECS.
+    /// The whole world, including its persistent ecs.
     world: World,
-    /// Cached handle to the player entity.
-    player_entity: Entity,
     /// Camera that follows the player.
     camera: GameCamera,
     /// Current room.
     current_room: Room,
+    /// Current room metadat
+    current_room_metadata: RoomMetadata,
     /// Current mode.
     mode: Mode,
     /// Asset Manager.
@@ -40,14 +40,14 @@ impl GameState {
         let current_room = core_storage::load_room(&world.id, start_room_id)
             .expect("Failed to load the starting room");
 
-        let starting_position = world.starting_position.unwrap();
+        let current_room_metadata = world
+            .rooms_metadata
+            .iter()
+            .find(|m| m.id == start_room_id)
+            .expect("Missing metadata for the starting room")
+            .clone();
 
-        let player_entity = world.world_ecs
-            .create_entity()
-            .with(Position { position: starting_position })
-            .with(CurrentRoom(start_room_id))
-            .with(Player)
-            .finish();
+        let starting_position = world.starting_position.unwrap();
 
         let camera = GameCamera {
             position: starting_position,
@@ -58,35 +58,43 @@ impl GameState {
 
         Self {
             world,
-            player_entity,
             camera,
             current_room,
+            current_room_metadata,
+            mode: Mode::Explore,
+            asset_manager,
+        }
+    }
+
+    pub async fn for_room(
+        current_room: Room,
+        current_room_metadata: RoomMetadata,
+        mut world: World,
+    ) -> Self {
+        let asset_manager = AssetManager::new(&mut world.world_ecs).await;
+
+        // TODO: GIVE ROOM A CAMERA AND USE THAT
+        let starting_position = current_room_metadata.position;
+
+        let camera = GameCamera {
+            position: starting_position,
+            camera: Camera2D::default(),
+        };
+
+        Self {
+            world,
+            camera,
+            current_room,
+            current_room_metadata,
             mode: Mode::Explore,
             asset_manager,
         }
     }
 
     pub fn update(&mut self) {
-        let player_position = self
-            .world
-            .world_ecs
-            .get_store::<Position>()
-            .get(self.player_entity)
-            .unwrap()
-            .position;
-
-        self.camera.position = player_position;
-
         if is_key_pressed(KeyCode::C) {
             self.toggle_mode();
         }
-    }
-
-    fn toggle_mode(&mut self) {
-        self.mode = match self.mode {
-            Mode::Explore => Mode::Combat,
-            Mode::Combat => Mode::Explore,
-        };
     }
 
     pub fn draw(&mut self) {
@@ -95,17 +103,22 @@ impl GameState {
         
         self.current_room.variants[0].tilemap.draw(
             &self.camera.camera,
-            &Vec::new(),
+            &self.current_room_metadata.exits,
             &self.world.world_ecs,
             &mut self.asset_manager,
         );
 
-        draw_rectangle(
-            self.camera.position.x,
-            self.camera.position.y,
-            PLAYER_WIDTH,
-            PLAYER_HEIGHT,
-            BLUE,
+        draw_entities(
+            &self.world.world_ecs, 
+            &self.current_room_metadata, 
+            &mut self.asset_manager
         );
+    }
+
+    fn toggle_mode(&mut self) {
+        self.mode = match self.mode {
+            Mode::Explore => Mode::Combat,
+            Mode::Combat => Mode::Explore,
+        };
     }
 }

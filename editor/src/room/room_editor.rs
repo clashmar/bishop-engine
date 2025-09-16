@@ -8,11 +8,12 @@ use crate::{
     gui::gui_constants::*,
 };
 use engine_core::{
-    ui::widgets::*,
-    assets::{asset_manager::AssetManager, sprite::Sprite}, 
-    constants::*, 
-    ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, 
-    tiles::{tile::TileSprite, tilemap::TileMap}, 
+    assets::asset_manager::AssetManager, 
+    ecs::{component::{CurrentRoom, Position}, 
+    entity::Entity, 
+    world_ecs::WorldEcs}, 
+    rendering::render_entities::*, 
+    ui::widgets::*, 
     world::room::{Room, RoomMetadata}
 };
 use macroquad::prelude::*;
@@ -211,8 +212,15 @@ impl RoomEditor {
             }
             RoomEditorMode::Scene => {
                 self.inspector.set_rect(inspector_rect);
+
                 tilemap.draw(camera, exits, world_ecs, asset_manager);
-                self.draw_entities(world_ecs, room_metadata, tilemap, asset_manager);
+
+                draw_entities(world_ecs, room_metadata, asset_manager);
+
+                if let Some(sel) = self.selected_entity {
+                    highlight_selected_entity(world_ecs, room_metadata, sel);
+                }
+                
                 set_default_camera();
                 
                 // If an entity is selected, forward it to the inspector.
@@ -253,87 +261,10 @@ impl RoomEditor {
         self.draw_coordinates(camera, room_metadata);
     }
 
-    fn draw_entities(
-        &self,
-        world_ecs: &WorldEcs,
-        room_metadata: &RoomMetadata,
-        _tilemap: &TileMap,
-        asset_manager: &mut AssetManager,
-    ) {
-        // Cache the stores – no extra hashmap look‑ups inside the loop
-        let pos_store   = world_ecs.get_store::<Position>();
-        let tile_store  = world_ecs.get_store::<TileSprite>();
-        let room_store  = world_ecs.get_store::<CurrentRoom>();
-        let sprite_store= world_ecs.get_store::<Sprite>();
-
-        for (entity, pos) in pos_store.data.iter() {
-            // Skip tiles
-            if tile_store.get(*entity).is_some() {
-                continue;
-            }
-
-            // Draw only if the entity belongs to the current room
-            if let Some(cur) = room_store.get(*entity) {
-                if cur.0 != room_metadata.id {
-                    continue;
-                }
-            } else {
-                continue;
-            }
-
-            // Position relative to the room origin
-            let room_pos = pos.position - room_metadata.position;
-
-            // Sprite handling – one branch instead of three
-            if let Some(sprite) = sprite_store.get(*entity) {
-                if asset_manager.contains(sprite.sprite_id) {
-                    let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
-                    draw_texture_ex(
-                        tex,
-                        room_pos.x - TILE_SIZE / 2.0,
-                        room_pos.y - TILE_SIZE / 2.0,
-                        WHITE,
-                        DrawTextureParams {
-                            dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
-                            ..Default::default()
-                        },
-                    );
-                    continue; // sprite drawn, go to next entity
-                }
-            }
-            // Fallback placeholder (no sprite or missing texture)
-            self.draw_entity_placeholder(room_pos);
-        }
-
-        // Highlight the selected entity
-        if let Some(sel) = self.selected_entity {
-            if let Some(pos) = pos_store.get(sel) {
-                draw_rectangle_lines(
-                    pos.position.x - room_metadata.position.x - 11.0,
-                    pos.position.y - room_metadata.position.y - 11.0,
-                    22.0,
-                    22.0,
-                    2.0,
-                    YELLOW,
-                );
-            }
-        }
-    }
-
     pub fn reset(&mut self) {
         self.mode = RoomEditorMode::Scene;
         self.selected_entity = None;
         self.initialized = false;
         self.request_play = false;
-    }
-
-    pub fn draw_entity_placeholder(&self, pos: Vec2) {
-        draw_rectangle(
-            pos.x - 10.0,
-            pos.y - 10.0,
-            20.0,
-            20.0,
-            MAGENTA,
-        );
     }
 }

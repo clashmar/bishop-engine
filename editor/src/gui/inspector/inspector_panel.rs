@@ -1,4 +1,5 @@
 // editor/src/gui/inspector/inspector_panel.rs
+use engine_core::ecs::component::Player;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::{
@@ -11,6 +12,7 @@ use engine_core::{
         world_ecs::WorldEcs,
     },
 };
+use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::transform_module::TransformModule;
 
 /// The panel that lives on the right‑hand side of the room editor window
@@ -33,6 +35,11 @@ impl InspectorPanel {
     /// Create a fresh panel with the default set of modules
     pub fn new() -> Self {
         let mut modules: Vec<Box<dyn InspectorModule>> = Vec::new();
+
+        // Wrap each concrete module in a CollapsibleModule
+        modules.push(Box::new(
+            PlayerModule::default(),
+        ));
 
         // Wrap each concrete module in a CollapsibleModule
         modules.push(Box::new(
@@ -95,28 +102,30 @@ impl InspectorPanel {
             let total_w = btn_w_remove + btn_w_add + SPACING;
             let x_start = screen_width() - INSET - total_w;
 
-            // Build rectangles
-            let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
-
+            // Add Component button
             let add_rect = self.register_rect(Rect::new(
                 x_start + btn_w_remove + SPACING,
                 INSET,
                 btn_w_add,
                 BTN_HEIGHT,
             ));
-
-            // Remove button
-            if gui_button(remove_rect, remove_label) {
-                world_ecs.remove_entity(entity);
-                self.target = None;
-                self.add_mode = false;
-                return false;
-            }
-
-            // Add Component button
+            
             if gui_button(add_rect, add_label) {
                 if self.can_show_any_component(world_ecs) {
                     self.add_mode = !self.add_mode;
+                }
+            }
+
+            // Remove button
+            // Don't show remove for player entity
+            if !world_ecs.get_store::<Player>().contains(entity) {
+                let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
+
+                if gui_button(remove_rect, remove_label) {
+                    world_ecs.remove_entity(entity);
+                    self.target = None;
+                    self.add_mode = false;
+                    return false;
                 }
             }
 

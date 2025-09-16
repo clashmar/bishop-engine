@@ -2,7 +2,11 @@
 use macroquad::prelude::*;
 use uuid::Uuid;
 use engine_core::{
-    constants::WORLD_SAVE_FOLDER, ecs::world_ecs::WorldEcs, world::{
+    constants::WORLD_SAVE_FOLDER, 
+    ecs::{component::{CurrentRoom, Player, Position}, 
+    world_ecs::WorldEcs
+}, 
+    world::{
         room::{Room, RoomMetadata},
         world::World,
     }
@@ -24,15 +28,23 @@ pub fn create_new_world(name: String) -> World {
     let first_room_metadata = RoomMetadata::default();
     let room_id = first_room_metadata.id;
     let first_room = Room::default();
+    let starting_position = vec2(1.0, 1.0);
 
-    let world = World {
+    let mut world = World {
         id,
         name: name.clone(),
         world_ecs: ecs,
         rooms_metadata: vec![first_room_metadata],
         starting_room: Some(room_id),
-        starting_position: Some(vec2(1.0, 1.0)),
+        starting_position: Some(starting_position),
     };
+
+    let _player = world.world_ecs
+        .create_entity()
+        .with(Player)
+        .with(Position { position: starting_position })
+        .with(CurrentRoom(room_id))
+        .finish();
 
     // Save the world.
     if let Err(e) = editor_storage::save_world(&world) {
