@@ -10,7 +10,7 @@ use crate::{constants::*};
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct RoomMetadata {
+pub struct Room {
     pub id: Uuid, 
     pub name: String,
     #[serde_as(as = "FromInto<[f32; 2]>")]
@@ -19,27 +19,29 @@ pub struct RoomMetadata {
     pub size: Vec2,
     pub exits: Vec<Exit>,
     pub adjacent_rooms: Vec<Uuid>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Room {
     pub variants: Vec<RoomVariant>,
 }
 
-impl Default for RoomMetadata {
+impl Default for Room {
     fn default() -> Self {
-        RoomMetadata {
+        let first_variant = RoomVariant {
+            id: "default".to_string(),
+            tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
+        };
+
+        Room {
         id: Uuid::new_v4(),
         name: "untitled".to_string(),
         position: DEFAULT_ROOM_POSITION,
         size: DEFAULT_ROOM_SIZE,
         exits: vec![],
         adjacent_rooms: vec![],
+        variants: vec![first_variant],
         }
     }
 }
 
-impl RoomMetadata {
+impl Room {
     pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
         let path = PathBuf::from(WORLD_SAVE_FOLDER)
             .join(world_name)
@@ -49,7 +51,7 @@ impl RoomMetadata {
         ron::de::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
-    pub fn link_exits(&mut self, other_rooms: &[&RoomMetadata]) {
+    pub fn link_exits(&mut self, other_rooms: &[&Room]) {
         let epsilon = 0.01; // tolerance for floating-point comparisons
 
         for exit in self.exits.iter_mut() {
@@ -102,20 +104,7 @@ impl RoomMetadata {
     }
 }
 
-
-
-impl Default for Room {
-    fn default() -> Self {
-        let first_variant = RoomVariant {
-            id: "default".to_string(),
-            tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
-        };
-
-        Self { variants: vec![first_variant] }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoomVariant {
     pub id: String,
     pub tilemap: TileMap,      
@@ -139,7 +128,7 @@ pub enum ExitDirection {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Copy)]
 pub struct Exit {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     // Local grid coordinate

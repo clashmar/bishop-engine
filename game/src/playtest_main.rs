@@ -6,7 +6,7 @@ mod modes;
 use std::{env, fs};
 use engine_core::
     world::{
-        room::{Room, RoomMetadata}, 
+        room::Room, 
         world::World
     };
 use macroquad::prelude::*;
@@ -17,7 +17,6 @@ use crate::game::GameState;
 #[derive(serde::Deserialize)]
 struct PlaytestPayload {
     room: Room,
-    room_metadata: RoomMetadata,
     world: World,
 }
 
@@ -37,11 +36,10 @@ async fn main() {
 
     let PlaytestPayload {
         room,
-        room_metadata,
         world,
     } = from_str(&payload_str).expect("Failed to deserialize play‑test payload.");
 
-    let mut game = GameState::for_room(room, room_metadata, world).await;
+    let mut game = GameState::for_room(room, world).await;
 
     loop {
         game.update();

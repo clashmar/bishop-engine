@@ -1,9 +1,6 @@
-use engine_core::{
-    tiles::tilemap::TileMap, 
-    world::{
-        room::RoomMetadata, 
-        world::World
-    }
+use engine_core::world::{
+    room::Room, 
+    world::World
 };
 use std::{future::Future, pin::Pin};
 use macroquad::prelude::*;
@@ -18,9 +15,8 @@ pub trait DynamicTilemapUiElement {
     fn draw(&self, camera: &Camera2D);
     fn is_mouse_over(&self, mouse_pos: Vec2, camera: &Camera2D) -> bool;
     fn on_click(
-        &mut self, 
-        map: &mut TileMap, 
-        room_metadata: &mut RoomMetadata,
+        &mut self,
+        room: &mut Room,
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)]

@@ -1,6 +1,9 @@
 // editor/src/camera_controller.rs
 use macroquad::prelude::*;
-use engine_core::{constants::*, tiles::tilemap::TileMap};
+use engine_core::{
+    constants::*, 
+    world::room::Room
+};
 
 pub const ZOOM_SPEED_FACTOR: f32 = 0.5;
 pub const MIN_ZOOM: f32 = 0.0005;
@@ -82,8 +85,8 @@ impl CameraController {
     }
 
     /// Reset a `Camera2D` so that the whole room fits the screen.
-    pub fn reset_room_camera(camera: &mut Camera2D, tilemap: &TileMap) {
-        let map_size = vec2(tilemap.width as f32, tilemap.height as f32);
+    pub fn reset_room_camera(camera: &mut Camera2D, room: &Room) {
+        let map_size = vec2(room.variants[0].tilemap.width as f32, room.variants[0].tilemap.height as f32);
         *camera = Self::camera_for_room(map_size, Vec2::ZERO);
     }
 }

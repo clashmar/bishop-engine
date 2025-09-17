@@ -2,10 +2,7 @@
 use uuid::Uuid;
 use crate::{
     constants::WORLD_SAVE_FOLDER,
-    world::{
-        room::Room,
-        world::World,
-    },
+    world::world::World,
 };
 use std::{
     collections::HashMap,
@@ -45,14 +42,4 @@ pub fn most_recent_world_id() -> Option<Uuid> {
         }
     }
     best.map(|(id, _)| id)
-}
-
-/// Load a single room from a world.
-pub fn load_room(world_id: &Uuid, room_id: Uuid) -> io::Result<Room> {
-    let path = Path::new(WORLD_SAVE_FOLDER)
-        .join(world_id.to_string())
-        .join("rooms")
-        .join(format!("{}.ron", room_id));
-    let data = fs::read_to_string(path)?;
-    ron::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }

@@ -18,7 +18,7 @@ use engine_core::{
         tilemap::TileMap,
     },
     world::{
-        room::{Exit, ExitDirection, RoomMetadata},
+        room::{Exit, ExitDirection, Room},
         world::GridPos,
     },
 };
@@ -53,8 +53,7 @@ impl TileMapEditor  {
     pub async fn update(
         &mut self, 
         camera: &mut Camera2D,
-        map: &mut TileMap, 
-        room_metadata: &mut RoomMetadata,
+        room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
@@ -68,15 +67,16 @@ impl TileMapEditor  {
         self.panel.update(world_ecs, asset_manager).await;
 
         self.dynamic_ui.clear();
-        ResizeButton::build_all(map, &mut self.dynamic_ui);
+
+        ResizeButton::build_all(&room.variants[0].tilemap, &mut self.dynamic_ui);
         
         let mouse_pos = mouse_position().into();
-        self.consume_ui_click(camera, mouse_pos, map, room_metadata, other_bounds);
+        self.consume_ui_click(camera, mouse_pos, room, other_bounds);
 
         if !self.ui_was_clicked {
             match self.mode {
-                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, map, world_ecs),
-                TilemapEditorMode::Exits => self.handle_exit_placement(camera, map, &mut room_metadata.exits),
+                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, &mut room.variants[0].tilemap, world_ecs),
+                TilemapEditorMode::Exits => self.handle_exit_placement(camera, &room.variants[0].tilemap, &mut room.exits),
             }
         }
 
@@ -95,9 +95,8 @@ impl TileMapEditor  {
     fn consume_ui_click(
         &mut self, 
         camera: &mut Camera2D,
-        mouse_pos: Vec2, 
-        map: &mut TileMap,
-        room_metadata: &mut RoomMetadata,
+        mouse_pos: Vec2,
+        room: &mut Room,
         other_bounds: &[(Vec2, Vec2)]
     ) {
         if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
@@ -109,7 +108,7 @@ impl TileMapEditor  {
 
             for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, camera) {
-                    element.on_click(map, room_metadata, mouse_pos, camera, other_bounds);
+                    element.on_click(room, mouse_pos, camera, other_bounds);
                     self.ui_was_clicked = true;
                     break;
                 }

@@ -8,13 +8,13 @@ use crate::{
     ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs
 }, 
     tiles::tile::TileSprite, 
-    world::room::RoomMetadata
+    world::room::Room
 };
 use macroquad::prelude::*;
 
 pub fn draw_entities(
     world_ecs: &WorldEcs,
-    room_metadata: &RoomMetadata,
+    room: &Room,
     asset_manager: &mut AssetManager,
 ) {
     // Cache the stores – no extra hashmap look‑ups inside the loop
@@ -31,7 +31,7 @@ pub fn draw_entities(
 
         // Draw only if the entity belongs to the current room
         if let Some(cur) = room_store.get(*entity) {
-            if cur.0 != room_metadata.id {
+            if cur.0 != room.id {
                 continue;
             }
         } else {
@@ -39,7 +39,7 @@ pub fn draw_entities(
         }
 
         // Position relative to the room origin
-        let room_pos = pos.position - room_metadata.position;
+        let room_pos = pos.position - room.position;
 
         // Sprite handling – one branch instead of three
         if let Some(sprite) = sprite_store.get(*entity) {
@@ -65,13 +65,13 @@ pub fn draw_entities(
 
 pub fn highlight_selected_entity(
     world_ecs: &WorldEcs,
-    room_metadata: &RoomMetadata,
+    room: &Room,
     entity: Entity,
 ) {
     if let Some(pos) = world_ecs.get_store::<Position>().get(entity) {
         draw_rectangle_lines(
-            pos.position.x - room_metadata.position.x - 11.0,
-            pos.position.y - room_metadata.position.y - 11.0,
+            pos.position.x - room.position.x - 11.0,
+            pos.position.y - room.position.y - 11.0,
             22.0,
             22.0,
             2.0,

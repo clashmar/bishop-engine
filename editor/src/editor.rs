@@ -34,8 +34,7 @@ pub struct Editor {
     pub mode: EditorMode,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
-    pub camera: Camera2D, 
-    pub current_room: Option<Room>,
+    pub camera: Camera2D,
     pub current_room_id: Option<Uuid>,
     pub asset_manager: AssetManager,
 }
@@ -76,7 +75,6 @@ impl Editor {
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
             camera,
-            current_room: None,
             current_room_id: None,
             asset_manager,
         };
@@ -93,55 +91,48 @@ impl Editor {
             EditorMode::World => {
                 // Update returns the id of the room being edited
                 if let Some(room_id) = self.world_editor.update(&mut self.camera, &mut self.world).await {
-                    match editor_storage::load_room(&self.world.id, room_id) {
-                        Ok(room) => {
-                            self.current_room = Some(room);
-                            self.current_room_id = Some(room_id);
-                            self.mode = EditorMode::Room(room_id);
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to load room {room_id}: {e}");
-                        }
-                    }
+                    self.current_room_id = Some(room_id);
+                    self.mode = EditorMode::Room(room_id);
                 }
             }
             EditorMode::Room(room_id) => {
-                let done = {
-                    let meta_slice = &mut self.world.rooms_metadata[..];
-                    let room = self.current_room.as_mut().expect("room must be loaded");
+                let other_bounds: Vec<(Vec2, Vec2)> = self.world.rooms
+                    .iter()
+                    .filter(|r| r.id != room_id)
+                    .map(|r| (r.position, r.size))
+                    .collect();
+                
+                let room = self.world.rooms
+                    .iter_mut()
+                    .find(|r| r.id == room_id)
+                    .expect("Could not find room in world.");
 
+                let done = {
                     // Returns true if escaped
                     self.room_editor.update(
-                            &mut self.camera, 
-                            room, 
-                            room_id, 
-                            meta_slice,
-                            &mut self.world.world_ecs,
-                            &mut self.asset_manager,
-                        ).await
+                        &mut self.camera, 
+                        room,
+                        &other_bounds,
+                        &mut self.world.world_ecs,
+                        &mut self.asset_manager,
+                    ).await
                 };
 
-                // -------------------------------------------------------------
-                // 3️⃣  Launch play‑test if the button was pressed
-                // -------------------------------------------------------------
+                // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {
-                    // The room is already loaded in `self.current_room`
-                    if let (Some(room), Some(meta)) = (&self.current_room, self.world.rooms_metadata.iter()
-                        .find(|m| m.id == room_id)) {
+                    if let Some(room_id) = &self.current_room_id {
+                        let room = self.get_room_from_id(room_id);
 
-                        // 1️⃣  Serialize everything the play‑test binary needs
-                        let payload_path = room_playtest::write_playtest_payload(room, meta, &self.world);
+                        // Serialize everything the play‑test binary needs
+                        let payload_path = room_playtest::write_playtest_payload(room, &self.world);
 
-                        // 2️⃣  Spawn the play‑test binary as a child process.
-                        //    The binary is the second binary defined in Cargo.toml:
-                        //    `game-playtest`.
+                        // Spawn the play‑test binary as a child process
                         #[cfg(target_os = "windows")]
                         let exe_name = "game-playtest.exe";
                         #[cfg(not(target_os = "windows"))]
                         let exe_name = "game-playtest";
 
-                        // Resolve the path relative to the workspace root.
-                        // `env!("CARGO_MANIFEST_DIR")` points to `editor/`.
+                        // Resolve the path relative to the workspace root
                         let mut exe_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
                         exe_path.pop(); // go up to workspace root
                         exe_path.push("target");
@@ -163,33 +154,21 @@ impl Editor {
                 }
 
                 if done {
-                    // Take the edited room out of the editor
-                    if let Some(ref edited_room) = self.current_room {
-                        if let Err(e) = editor_storage::save_room(
-                            &self.world.id,
-                            room_id,
-                            edited_room,
-                        ) {
-                            eprintln!("Could not save room {room_id}: {e}");
-                        }
-                        editor_storage::save_world(&self.world)
-                            .expect("Could not save world.");
+                    // Save everything
+                    editor_storage::save_world(&self.world)
+                        .expect("Could not save world.");
 
-                        if let Some(_) = self.current_room_id {
-                            let palette = &mut self.room_editor.tilemap_editor.panel.palette;
-                            editor_storage::save_palette(palette, &self.world.id)
-                                .expect("Could not save tile palette");
-                        }
-                    }
+                    let palette = &mut self.room_editor.tilemap_editor.panel.palette;
+                    editor_storage::save_palette(palette, &self.world.id)
+                        .expect("Could not save tile palette");
 
-                    // Find the metadata for the room we just left for center_on_room.
-                    if let Some(meta) = self.world.rooms_metadata.iter()
+                    // Find the room we just left for center_on_room
+                    if let Some(room) = self.world.rooms.iter()
                         .find(|m| m.id == room_id) {
-                        self.world_editor.center_on_room(&mut self.camera, meta);
+                        self.world_editor.center_on_room(&mut self.camera, room);
                     }
 
-                    // Clean up the temporary cache.
-                    self.current_room = None;
+                    // Clean up the temporary cache
                     self.current_room_id = None;
                     self.room_editor.reset();
                     self.mode = EditorMode::World;
@@ -209,29 +188,53 @@ impl Editor {
                 self.world_editor.draw(&self.camera, &self.world);
             }
             EditorMode::Room(room_id) => {
-                let meta = self.world.rooms_metadata
-                    .iter()
-                    .find(|m| m.id == room_id)
-                    .expect("metadata must exist");
-
-                // The room should already be loaded but lazy loads if not
-                if self.current_room.is_none() {
-                    match editor_storage::load_room(&self.world.id, room_id) {
-                        Ok(room) => self.current_room = Some(room),
-                        Err(e) => eprintln!("Failed to load room {room_id}: {e}"),
-                    }
+                // The room id should already be set
+                if self.current_room_id.is_none() {
+                    self.current_room_id = Some(room_id);
                 }
 
-                if let Some(ref mut room) = &mut self.current_room {
-                    self.room_editor.draw(
-                        &self.camera, 
-                        room, 
-                        meta, 
-                        &mut self.world.world_ecs,
-                        &mut self.asset_manager,
-                    );
-                }
+                let room = self.world.rooms
+                    .iter_mut()
+                    .find(|r| r.id == room_id)
+                    .expect("Could not find room in world.");
+
+                self.room_editor.draw(
+                    &self.camera,
+                    room,
+                    &mut self.world.world_ecs,
+                    &mut self.asset_manager,
+                );
             }
         }
     }
+
+    fn get_room_from_id(&self, room_id: &Uuid) -> &Room {
+        self.world.rooms.iter().find(|m| m.id == *room_id).expect("Could not find room from id.")
+    }
 }
+
+/// Returns the absolute path of the compiled play‑test binary.
+fn playtest_binary_path() -> PathBuf {
+    // `CARGO_MANIFEST_DIR` of the *editor* crate → “…/editor”
+    // Go up one level to reach the workspace root.
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.pop(); // workspace root
+
+    // Choose debug / release automatically.
+    #[cfg(debug_assertions)]
+    let profile = "debug";
+    #[cfg(not(debug_assertions))]
+    let profile = "release";
+
+    // Binary name – add `.exe` on Windows.
+    #[cfg(target_os = "windows")]
+    let exe_name = "game-playtest.exe";
+    #[cfg(not(target_os = "windows"))]
+    let exe_name = "game-playtest";
+
+    path.push("target");
+    path.push(profile);
+    path.push(exe_name);
+    path
+}
+

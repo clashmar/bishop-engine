@@ -1,6 +1,10 @@
+// game/src/game.rs
 use engine_core::{
-    assets::asset_manager::AssetManager, ecs::world_ecs::WorldEcs, rendering::render_entities::draw_entities, storage::core_storage, world::{
-        room::{Room, RoomMetadata}, 
+    assets::asset_manager::AssetManager, 
+    rendering::render_entities::draw_entities, 
+    storage::core_storage,
+     world::{
+        room::Room, 
         world::World
     }
 };
@@ -14,10 +18,8 @@ pub struct GameState {
     world: World,
     /// Camera that follows the player.
     camera: GameCamera,
-    /// Current room.
+    /// Current room
     current_room: Room,
-    /// Current room metadat
-    current_room_metadata: RoomMetadata,
     /// Current mode.
     mode: Mode,
     /// Asset Manager.
@@ -34,17 +36,14 @@ impl GameState {
 
         let start_room_id = world
             .starting_room
-            .or_else(|| world.rooms_metadata.first().map(|m| m.id))
-            .expect("World has no starting room nor any room metadata");
+            .or_else(|| world.rooms.first().map(|m| m.id))
+            .expect("World has no starting room nor any rooms");
 
-        let current_room = core_storage::load_room(&world.id, start_room_id)
-            .expect("Failed to load the starting room");
-
-        let current_room_metadata = world
-            .rooms_metadata
+        let current_room = world
+            .rooms
             .iter()
             .find(|m| m.id == start_room_id)
-            .expect("Missing metadata for the starting room")
+            .expect("Missing id for the starting room")
             .clone();
 
         let starting_position = world.starting_position.unwrap();
@@ -60,21 +59,19 @@ impl GameState {
             world,
             camera,
             current_room,
-            current_room_metadata,
             mode: Mode::Explore,
             asset_manager,
         }
     }
 
     pub async fn for_room(
-        current_room: Room,
-        current_room_metadata: RoomMetadata,
+        room: Room,
         mut world: World,
     ) -> Self {
         let asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
         // TODO: GIVE ROOM A CAMERA AND USE THAT
-        let starting_position = current_room_metadata.position;
+        let starting_position = room.position;
 
         let camera = GameCamera {
             position: starting_position,
@@ -84,8 +81,7 @@ impl GameState {
         Self {
             world,
             camera,
-            current_room,
-            current_room_metadata,
+            current_room: room,
             mode: Mode::Explore,
             asset_manager,
         }
@@ -103,14 +99,14 @@ impl GameState {
         
         self.current_room.variants[0].tilemap.draw(
             &self.camera.camera,
-            &self.current_room_metadata.exits,
+            &self.current_room.exits,
             &self.world.world_ecs,
             &mut self.asset_manager,
         );
 
         draw_entities(
             &self.world.world_ecs, 
-            &self.current_room_metadata, 
+            &self.current_room, 
             &mut self.asset_manager
         );
     }

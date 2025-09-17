@@ -7,7 +7,7 @@ use engine_core::{
     world_ecs::WorldEcs
 }, 
     world::{
-        room::{Room, RoomMetadata},
+        room::Room,
         world::World,
     }
 };
@@ -25,16 +25,15 @@ type WorldIndex = HashMap<Uuid, String>;
 pub fn create_new_world(name: String) -> World {
     let id = Uuid::new_v4();
     let ecs = WorldEcs::default();
-    let first_room_metadata = RoomMetadata::default();
-    let room_id = first_room_metadata.id;
     let first_room = Room::default();
+    let room_id = first_room.id;
     let starting_position = vec2(1.0, 1.0);
 
     let mut world = World {
         id,
         name: name.clone(),
         world_ecs: ecs,
-        rooms_metadata: vec![first_room_metadata],
+        rooms: vec![first_room],
         starting_room: Some(room_id),
         starting_position: Some(starting_position),
     };
@@ -48,15 +47,6 @@ pub fn create_new_world(name: String) -> World {
 
     // Save the world.
     if let Err(e) = editor_storage::save_world(&world) {
-        eprintln!("Could not save the initial room: {e}");
-    }
-
-    // Save the room.
-    if let Err(e) = editor_storage::save_room(
-        &world.id,             
-        room_id,             
-        &first_room,        
-    ) {
         eprintln!("Could not save the initial room: {e}");
     }
 
@@ -80,7 +70,7 @@ pub fn create_new_world(name: String) -> World {
     world
 }
 
-/// Write the `World`, including room metadata, to WORLD_SAVE_FOLDER.
+/// Write the `World`, including room data, to WORLD_SAVE_FOLDER.
 pub fn save_world(world: &World) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
         .separate_tuple_members(true)
@@ -94,36 +84,6 @@ pub fn save_world(world: &World) -> io::Result<()> {
 
     fs::create_dir_all(&dir_path)?;
     fs::write(file_path, ron_string)
-}
-
-/// Save a single room. Called automatically when the user leaves the room editor.
-pub fn save_room(world_id: &Uuid, id: Uuid, room: &Room) -> io::Result<()> {
-    let base = Path::new(WORLD_SAVE_FOLDER).join(world_id.to_string());
-    let rooms_dir = base.join("rooms");
-    fs::create_dir_all(&rooms_dir)?; // create on first save if missing
-
-    let room_path = rooms_dir.join(format!("{}.ron", id));
-    let ron_string = ron::ser::to_string_pretty(room, ron::ser::PrettyConfig::default())
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-
-    fs::write(room_path, ron_string)
-}
-
-/// Load a single room by its UUID. Called when the user opens a room.
-pub fn load_room(world_id: &Uuid, room_id: Uuid) -> io::Result<Room> {
-    let base = Path::new(WORLD_SAVE_FOLDER).join(world_id.to_string());
-    let room_path = base.join("rooms").join(format!("{}.ron", room_id));
-    let data = fs::read_to_string(room_path)?;
-    ron::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-}
-
-/// Delete a single room by its UUID.
-pub fn delete_room_file(world_id: &Uuid, room_id: Uuid) -> io::Result<()> {
-    let path = Path::new(WORLD_SAVE_FOLDER)
-        .join(world_id.to_string())
-        .join("rooms")
-        .join(format!("{}.ron", room_id));
-    std::fs::remove_file(path)
 }
 
 pub fn load_index() -> io::Result<WorldIndex> {

@@ -4,7 +4,7 @@ use crate::tilemap::{
 };
 use engine_core::{
     assets::asset_manager::AssetManager, 
-    ecs::world_ecs::WorldEcs, tiles::tilemap::{self, TileMap}
+    ecs::world_ecs::WorldEcs, tiles::tilemap::TileMap
 };
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;

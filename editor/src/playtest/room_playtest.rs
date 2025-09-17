@@ -1,6 +1,6 @@
 // editor/src/playtest/room_playtest.rs
 use std::{env, fs, io::Write, path::PathBuf};
-use engine_core::world::room::{Room, RoomMetadata};
+use engine_core::world::room::Room;
 use engine_core::world::world::World;
 use ron::ser::to_string_pretty;
 use ron::ser::PrettyConfig;
@@ -9,18 +9,16 @@ use ron::ser::PrettyConfig;
 /// path to the temporary file.
 pub fn write_playtest_payload(
     room: &Room,
-    room_metadata: &RoomMetadata,
     world: &World,
 ) -> PathBuf {
 
     #[derive(serde::Serialize)]
     struct Payload<'a> {
         room: &'a Room,
-        room_metadata: &'a RoomMetadata,
         world: &'a World,
     }
 
-    let payload = Payload { room, room_metadata, world };
+    let payload = Payload { room, world };
     let ron = to_string_pretty(&payload, PrettyConfig::default())
         .expect("failed to serialise play‑test payload");
 

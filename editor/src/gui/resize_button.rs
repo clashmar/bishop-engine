@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use engine_core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::RoomMetadata};
+use engine_core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::Room};
 use crate::{gui::{text_button::TextButton, ui_element::DynamicTilemapUiElement}, world::coord};
 
 pub struct ResizeButton {
@@ -31,9 +31,8 @@ impl DynamicTilemapUiElement for ResizeButton {
     }
 
     fn on_click(
-        &mut self, 
-        map: &mut TileMap,
-        room_metadata: &mut RoomMetadata,
+        &mut self,
+        room: &mut Room,
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
@@ -43,8 +42,9 @@ impl DynamicTilemapUiElement for ResizeButton {
             return;
         }
 
-        let room_position = &mut room_metadata.position;
-        let room_size = &mut room_metadata.size;
+        let room_position = &mut room.position;
+        let room_size = &mut room.size;
+        let map = &mut room.variants[0].tilemap;
 
         // Compute proposed delta and new size
         let (mut delta_pos, mut proposed_size) = match self.action {
@@ -75,7 +75,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 map.tiles.insert(0, vec![Tile::default(); map.width]);
                 map.height += 1;
 
-                for exit in &mut room_metadata.exits {
+                for exit in &mut room.exits {
                     let exit_grid_y = room_size.y - exit.position.y; 
                     if (exit_grid_y - 0.0).abs() < f32::EPSILON {
                         // exit is on the top row
@@ -92,7 +92,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                     map.tiles.remove(0);
                     map.height -= 1;
 
-                    for exit in &mut room_metadata.exits {
+                    for exit in &mut room.exits {
                         let exit_grid_y = room_size.y - exit.position.y; // convert exit y to grid y
                         if (exit_grid_y - 0.0).abs() < f32::EPSILON {
                             // exit is on the top row, which is being removed
@@ -107,7 +107,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             ResizeAction::AddBottom => {
                 map.tiles.push(vec![Tile::default(); map.width]);
                 map.height += 1;
-                for exit in &mut room_metadata.exits {
+                for exit in &mut room.exits {
                     if (exit.position.y - room_size.y).abs() < f32::EPSILON {
                         // the exit sits on the bottom edge → shift it down
                         exit.position.y += 1.0;
@@ -119,7 +119,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 if map.height > 1 {
                     map.tiles.pop();
                     map.height -= 1;
-                    for exit in &mut room_metadata.exits {
+                    for exit in &mut room.exits {
                         if (exit.position.y - room_size.y).abs() < f32::EPSILON {
                             // the exit sits on the bottom edge → shift it up
                             exit.position.y -= 1.0;
@@ -146,7 +146,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 for row in &mut map.tiles { row.push(Tile::default()); }
                 map.width += 1;
 
-                for exit in &mut room_metadata.exits {
+                for exit in &mut room.exits {
                     // exit-space x increases to the right, so if it's on the right edge, shift it
                     if (exit.position.x - room_size.x).abs() < f32::EPSILON {
                         exit.position.x += 1.0;
@@ -160,7 +160,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                     for row in &mut map.tiles { row.pop(); }
                     map.width -= 1;
 
-                    for exit in &mut room_metadata.exits {
+                    for exit in &mut room.exits {
                         // if exit was on the rightmost column, move it left
                         if (exit.position.x - room_size.x).abs() < f32::EPSILON {
                             exit.position.x -= 1.0;
