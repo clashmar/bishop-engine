@@ -10,7 +10,7 @@ use engine_core::{
 };
 use crate::modes::Mode;
 use macroquad::prelude::*;
-use crate::camera::GameCamera;
+use engine_core::camera::game_camera::GameCamera;
 
 // #[derive(Debug, Clone)]
 pub struct GameState {

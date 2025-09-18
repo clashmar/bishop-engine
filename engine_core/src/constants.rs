@@ -13,6 +13,8 @@ pub const WORLD_SAVE_FOLDER: &str = "assets/worlds";
 pub const PREFAB_SAVE_FOLDER: &str = "assets/prefabs";
 
 pub const WORLD_EDITOR_ZOOM_FACTOR: f32 = 1.0;
-pub const WORLD_VIRTUAL_WIDTH: f32 = 800.0;
-pub const WORLD_VIRTUAL_HEIGHT: f32 = 600.0;
+pub const CAMERA_TILES_X: f32 = 12.0;     
+pub const CAMERA_TILES_Y: f32 = 8.0;
+pub const WORLD_VIRTUAL_WIDTH:  f32 = CAMERA_TILES_X * TILE_SIZE;   
+pub const WORLD_VIRTUAL_HEIGHT: f32 = CAMERA_TILES_Y * TILE_SIZE; 
 

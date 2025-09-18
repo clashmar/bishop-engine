@@ -1,7 +1,8 @@
 // editor/src/tilemap/tilemap_panel.rs
-use crate::tilemap::{
-    background_module::BackgroundModule, tile_palette::{TilePalette, TilePaletteUi, TilePaletteUiMode}
-};
+use crate::{gui::gui_constants::*, tilemap::{
+    background_module::BackgroundModule, 
+    tile_palette::{TilePalette, TilePaletteUi, TilePaletteUiMode}
+}};
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::world_ecs::WorldEcs, tiles::tilemap::TileMap
@@ -63,7 +64,6 @@ impl TilemapPanel {
         self.active_rects.clear();
 
         const PADDING: f32 = 20.0;
-        const SPACING: f32 = 10.0;   
 
         // Create button
         let create_label = "Create Tile";

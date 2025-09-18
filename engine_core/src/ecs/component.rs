@@ -71,6 +71,13 @@ ecs_component!(CurrentRoom);
 pub struct Player;
 ecs_component!(Player);
 
+/// Component for a room camera used by the game.
+#[serde_as]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+pub struct RoomCamera {
+    pub scalar_zoom: f32,
+}
+ecs_component!(RoomCamera);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);

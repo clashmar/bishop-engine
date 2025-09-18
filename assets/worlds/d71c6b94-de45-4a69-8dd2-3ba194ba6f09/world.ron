@@ -1,38 +1,42 @@
 (
-    id: "bc634d66-6674-4d94-93b5-a97a5f75f081",
+    id: "d71c6b94-de45-4a69-8dd2-3ba194ba6f09",
     name: "World\r",
     world_ecs: (
         components: [
             /*[0]*/ (
-                type_name: "Position",
-                data: "(\n    data: {\n        (\"ee67d839-5800-4df7-b70d-7ab6d1493823\"): (\n            position: (89.73958, 85.48543),\n        ),\n    },\n)",
-            ),
-            /*[1]*/ (
-                type_name: "CurrentRoom",
-                data: "(\n    data: {\n        (\"ee67d839-5800-4df7-b70d-7ab6d1493823\"): (\"a322c3e3-878a-4543-974a-2aee6994c5f7\"),\n    },\n)",
-            ),
-            /*[2]*/ (
                 type_name: "TileSprite",
                 data: "(\n    data: {},\n)",
             ),
-            /*[3]*/ (
+            /*[1]*/ (
+                type_name: "CurrentRoom",
+                data: "(\n    data: {\n        (\"e0f3a5d2-5e2d-47b9-acd4-9b62538b7ab2\"): (\"06b7aab3-2e3b-458c-b277-2ec0a5f26032\"),\n        (\"eece682e-bd0b-4ae5-8edd-58f3a947159f\"): (\"06b7aab3-2e3b-458c-b277-2ec0a5f26032\"),\n    },\n)",
+            ),
+            /*[2]*/ (
                 type_name: "Player",
-                data: "(\n    data: {\n        (\"ee67d839-5800-4df7-b70d-7ab6d1493823\"): (),\n    },\n)",
+                data: "(\n    data: {\n        (\"eece682e-bd0b-4ae5-8edd-58f3a947159f\"): (),\n    },\n)",
+            ),
+            /*[3]*/ (
+                type_name: "Sprite",
+                data: "(\n    data: {},\n)",
             ),
             /*[4]*/ (
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"e0f3a5d2-5e2d-47b9-acd4-9b62538b7ab2\"): (\n            position: (106.01314, 52.039864),\n        ),\n        (\"eece682e-bd0b-4ae5-8edd-58f3a947159f\"): (\n            position: (1.0, 1.0),\n        ),\n    },\n)",
+            ),
+            /*[5]*/ (
                 type_name: "Weapon",
                 data: "(\n    data: {},\n)",
             ),
-            /*[5]*/ (
-                type_name: "Sprite",
-                data: "(\n    data: {},\n)",
+            /*[6]*/ (
+                type_name: "RoomCamera",
+                data: "(\n    data: {\n        (\"e0f3a5d2-5e2d-47b9-acd4-9b62538b7ab2\"): (\n            scalar_zoom: 0.009058171,\n        ),\n    },\n)",
             ),
         ],
         tile_defs: {},
     ),
     rooms: [
         /*[0]*/ (
-            id: "a322c3e3-878a-4543-974a-2aee6994c5f7",
+            id: "06b7aab3-2e3b-458c-b277-2ec0a5f26032",
             name: "untitled",
             position: (
                 0.0,
@@ -223,7 +227,7 @@
             ],
         ),
     ],
-    starting_room: Some("a322c3e3-878a-4543-974a-2aee6994c5f7"),
+    starting_room: Some("06b7aab3-2e3b-458c-b277-2ec0a5f26032"),
     starting_position: Some((
         1.0,
         1.0,

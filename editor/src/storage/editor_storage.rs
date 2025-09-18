@@ -24,15 +24,15 @@ type WorldIndex = HashMap<Uuid, String>;
 /// Create a fresh world with a single default room.
 pub fn create_new_world(name: String) -> World {
     let id = Uuid::new_v4();
-    let ecs = WorldEcs::default();
-    let first_room = Room::default();
+    let mut world_ecs = WorldEcs::default();
+    let first_room = Room::default(&mut world_ecs);
     let room_id = first_room.id;
     let starting_position = vec2(1.0, 1.0);
 
     let mut world = World {
         id,
         name: name.clone(),
-        world_ecs: ecs,
+        world_ecs,
         rooms: vec![first_room],
         starting_room: Some(room_id),
         starting_position: Some(starting_position),

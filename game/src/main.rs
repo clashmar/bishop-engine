@@ -1,4 +1,3 @@
-mod camera;
 mod game;
 mod modes;
 

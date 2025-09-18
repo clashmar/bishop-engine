@@ -1,5 +1,4 @@
 // game/src/playtest_main.rs
-mod camera;
 mod game;
 mod modes;
 

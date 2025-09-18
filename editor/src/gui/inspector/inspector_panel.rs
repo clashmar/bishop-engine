@@ -1,5 +1,5 @@
 // editor/src/gui/inspector/inspector_panel.rs
-use engine_core::ecs::component::Player;
+use engine_core::ecs::component::{Player, RoomCamera};
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::{
@@ -12,6 +12,7 @@ use engine_core::{
         world_ecs::WorldEcs,
     },
 };
+use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::transform_module::TransformModule;
 
@@ -79,12 +80,8 @@ impl InspectorPanel {
         world_ecs: &mut WorldEcs,
     ) -> bool {
         self.active_rects.clear();
-
-        const INSET: f32 = 10.0;      
-        const BTN_HEIGHT: f32 = 30.0;
+   
         const BTN_MARGIN: f32 = 10.0;
-        const SPACING: f32 = 10.0;    
-        const PADDING: f32 = 20.0;
 
         // When an entity is selected we show “Remove” and “Add Component”
         if let Some(entity) = self.target {
@@ -117,8 +114,10 @@ impl InspectorPanel {
             }
 
             // Remove button
-            // Don't show remove for player entity
-            if !world_ecs.get_store::<Player>().contains(entity) {
+            // Don't show remove for player entity or camera
+            if !(world_ecs.get_store::<Player>().contains(entity) 
+                || world_ecs.get_store::<RoomCamera>().contains(entity)
+            ) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
                 if gui_button(remove_rect, remove_label) {

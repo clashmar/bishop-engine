@@ -9,3 +9,4 @@ pub mod assets;
 pub mod ui;
 pub mod storage;
 pub mod rendering;
+pub mod camera;

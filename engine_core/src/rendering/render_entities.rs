@@ -5,7 +5,9 @@ use crate::{
         sprite::Sprite
     }, 
     constants::*, 
-    ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs
+    ecs::{component::*, 
+    entity::Entity, 
+    world_ecs::WorldEcs
 }, 
     tiles::tile::TileSprite, 
     world::room::Room
@@ -22,16 +24,17 @@ pub fn draw_entities(
     let tile_store = world_ecs.get_store::<TileSprite>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
     let sprite_store = world_ecs.get_store::<Sprite>();
+    let camera_store = world_ecs.get_store::<RoomCamera>();
 
     for (entity, pos) in pos_store.data.iter() {
-        // Skip tiles
-        if tile_store.get(*entity).is_some() {
+        // Skip tiles and camera
+        if tile_store.get(*entity).is_some() || camera_store.get(*entity).is_some() {
             continue;
         }
 
         // Draw only if the entity belongs to the current room
-        if let Some(cur) = room_store.get(*entity) {
-            if cur.0 != room.id {
+        if let Some(current_room) = room_store.get(*entity) {
+            if current_room.0 != room.id {
                 continue;
             }
         } else {
@@ -41,7 +44,9 @@ pub fn draw_entities(
         // Position relative to the room origin
         let room_pos = pos.position - room.position;
 
-        // Sprite handling – one branch instead of three
+        
+
+        // Sprite handling
         if let Some(sprite) = sprite_store.get(*entity) {
             if asset_manager.contains(sprite.sprite_id) {
                 let tex = asset_manager.get_texture_from_id(sprite.sprite_id);

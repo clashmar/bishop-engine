@@ -1,5 +1,11 @@
 // engine_core/src/world/room.rs
-use crate::tiles::tilemap::TileMap;
+use crate::{
+    ecs::{
+        component::{CurrentRoom, Position, RoomCamera}, 
+        world_ecs::WorldEcs
+    }, 
+    tiles::tilemap::TileMap
+};
 use std::{io, path::PathBuf};
 use uuid::Uuid;
 use serde_with::FromInto;
@@ -22,14 +28,14 @@ pub struct Room {
     pub variants: Vec<RoomVariant>,
 }
 
-impl Default for Room {
-    fn default() -> Self {
+impl Room {
+    pub fn default(world_ecs: &mut WorldEcs) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
         };
 
-        Room {
+        let room = Room {
         id: Uuid::new_v4(),
         name: "untitled".to_string(),
         position: DEFAULT_ROOM_POSITION,
@@ -37,11 +43,13 @@ impl Default for Room {
         exits: vec![],
         adjacent_rooms: vec![],
         variants: vec![first_variant],
-        }
-    }
-}
+        };
 
-impl Room {
+        let _camera = room.create_room_camera(world_ecs);
+
+        room
+    }
+
     pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
         let path = PathBuf::from(WORLD_SAVE_FOLDER)
             .join(world_name)
@@ -101,6 +109,13 @@ impl Room {
         self.exits.iter().map(|exit| {
             (self.position / TILE_SIZE + exit.position, exit.direction)
         }).collect()
+    }
+
+    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs) {
+        let _camera = world_ecs.create_entity()
+            .with(Position { position: self.position })
+            .with(RoomCamera { scalar_zoom: 0.01 })
+            .with(CurrentRoom(self.id));
     }
 }
 

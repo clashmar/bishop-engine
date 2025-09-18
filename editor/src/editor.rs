@@ -213,28 +213,3 @@ impl Editor {
     }
 }
 
-/// Returns the absolute path of the compiled play‑test binary.
-fn playtest_binary_path() -> PathBuf {
-    // `CARGO_MANIFEST_DIR` of the *editor* crate → “…/editor”
-    // Go up one level to reach the workspace root.
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // workspace root
-
-    // Choose debug / release automatically.
-    #[cfg(debug_assertions)]
-    let profile = "debug";
-    #[cfg(not(debug_assertions))]
-    let profile = "release";
-
-    // Binary name – add `.exe` on Windows.
-    #[cfg(target_os = "windows")]
-    let exe_name = "game-playtest.exe";
-    #[cfg(not(target_os = "windows"))]
-    let exe_name = "game-playtest";
-
-    path.push("target");
-    path.push(profile);
-    path.push(exe_name);
-    path
-}
-

@@ -1,11 +1,23 @@
-use engine_core::input;
-use engine_core::constants::*;
+// engine_core/src/camera/game_camera.rs
+use crate::input;
+use crate::constants::*;
 use macroquad::prelude::*;
 
 #[derive(Debug)]
 pub struct GameCamera {
     pub position: Vec2,
     pub camera: Camera2D,
+}
+
+pub fn zoom_from_scalar(scalar: f32) -> Vec2 {
+    // Fixed virtual aspect
+    let aspect = WORLD_VIRTUAL_WIDTH / WORLD_VIRTUAL_HEIGHT;
+
+    if aspect >= 1.0 {
+        vec2(scalar / aspect, scalar)
+    } else {
+        vec2(scalar, scalar * aspect)
+    }
 }
 
 impl GameCamera {
@@ -28,3 +40,4 @@ impl GameCamera {
         self.position += input * speed;
     }
 }
+

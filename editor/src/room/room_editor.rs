@@ -1,22 +1,26 @@
 // editor/src/room/room_editor.rs
 use crate::{
-    camera_controller::CameraController, 
+    camera_controller::{CameraController, MAX_ZOOM}, 
     canvas::grid, 
-    gui::inspector::inspector_panel::InspectorPanel, 
+    gui::{gui_constants::*, inspector::inspector_panel::InspectorPanel}, 
     tilemap::tilemap_editor::TileMapEditor, 
     world::coord,
-    gui::gui_constants::*,
 };
 use engine_core::{
     assets::asset_manager::AssetManager, 
-    ecs::{component::{CurrentRoom, Position}, 
+    camera::game_camera::{GameCamera, zoom_from_scalar}, 
+    constants::*, 
+    ecs::{
+    component::{CurrentRoom, Position, RoomCamera}, 
     entity::Entity, 
-    world_ecs::WorldEcs}, 
+    world_ecs::WorldEcs
+    }, 
     rendering::render_entities::*, 
     ui::widgets::*, 
-    world::room::Room,
+    world::room::Room
 };
 use macroquad::prelude::*;
+use uuid::Uuid;
 
 pub enum RoomEditorMode {
     Tilemap,
@@ -34,6 +38,7 @@ pub struct RoomEditor {
     initialized: bool, 
     create_entity_requested: bool,
     pub request_play: bool,
+    view_preview: bool,
 }
 
 impl RoomEditor {
@@ -49,6 +54,7 @@ impl RoomEditor {
             initialized: false,
             create_entity_requested: false,
             request_play: false,
+            view_preview: false,
         }
     }
 
@@ -135,6 +141,10 @@ impl RoomEditor {
                     self.inspector.set_target(Some(entity));
                     self.create_entity_requested = false;
                 }
+
+                if is_key_pressed(KeyCode::V) {
+                    self.view_preview = !self.view_preview;
+                }
             }
         }
 
@@ -188,36 +198,50 @@ impl RoomEditor {
                 );
             }
             RoomEditorMode::Scene => {
+                let room_camera = &self.get_room_camera(world_ecs, room.id)
+                    .expect("This room should have a camera.");
+
+                let render_cam = if self.view_preview {
+                    &room_camera.camera
+                } else {
+                    camera
+                };
+
                 self.inspector.set_rect(inspector_rect);
 
-                tilemap.draw(camera, exits, world_ecs, asset_manager);
+                tilemap.draw(render_cam, exits, world_ecs, asset_manager);
 
                 draw_entities(world_ecs, room, asset_manager);
 
-                if let Some(sel) = self.selected_entity {
-                    highlight_selected_entity(world_ecs, room, sel);
-                }
-                
-                set_default_camera();
-                
-                // If an entity is selected, forward it to the inspector.
-                if let Some(entity) = self.selected_entity {
-                    self.inspector.set_target(Some(entity));
-                } else {
-                    self.inspector.set_target(None); // clears the panel
-                }
-                
-                self.create_entity_requested = self.inspector.draw(asset_manager, world_ecs);
+                if !self.view_preview {
+                    draw_camera_placeholder(room_camera.position);
 
-                if self.inspector.target.is_none() {
-                    self.selected_entity = None;
+                    if let Some(selected_entity) = self.selected_entity {
+                        highlight_selected_entity(world_ecs, room, selected_entity);
+                        self.draw_camera_viewport(camera, world_ecs, selected_entity);
+                    }
+
+                    set_default_camera();
+                
+                    // If an entity is selected, forward it to the inspector.
+                    if let Some(entity) = self.selected_entity {
+                        self.inspector.set_target(Some(entity));
+                    } else {
+                        self.inspector.set_target(None); // clears the panel
+                    }
+                    
+                    self.create_entity_requested = self.inspector.draw(asset_manager, world_ecs);
+
+                    if self.inspector.target.is_none() {
+                        self.selected_entity = None;
+                    }
+
+                    if self.show_grid { 
+                        set_camera(camera);
+                        grid::draw_grid(camera);
+                    }
                 }
             }
-        }
-
-        if self.show_grid {
-            set_camera(camera);
-            grid::draw_grid(camera);
         }
 
         set_default_camera();
@@ -238,10 +262,118 @@ impl RoomEditor {
         self.draw_coordinates(camera, room);
     }
 
-    pub fn reset(&mut self) {
-        self.mode = RoomEditorMode::Scene;
-        self.selected_entity = None;
-        self.initialized = false;
-        self.request_play = false;
+    /// Returns a `Camera2D` for the room camera, if one exists.
+    fn get_room_camera(&self, world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera> {
+        let pos_store = world_ecs.get_store::<Position>();
+        let cam_store = world_ecs.get_store::<RoomCamera>();
+        let room_store = world_ecs.get_store::<CurrentRoom>();
+
+        for (entity, room_cam) in cam_store.data.iter() {
+            if let Some(current_room) = room_store.get(*entity) {
+                if current_room.0 != room_id { continue; }
+
+                let position = pos_store.data
+                    .get(entity)
+                    .expect("Camera should always have position.")
+                    .position;
+
+                let zoom_vec = zoom_from_scalar(room_cam.scalar_zoom);
+
+                let camera = Camera2D {
+                    target: position,
+                    zoom:   zoom_vec,
+                    ..Default::default()
+                };
+
+                return Some(GameCamera { position, camera, });
+            }
+        }
+        None
     }
+
+    /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.
+    fn draw_camera_viewport(
+        &self,
+        editor_cam: &Camera2D,
+        world_ecs: &WorldEcs,
+        selected: Entity,
+    ) {
+        let pos = match world_ecs.get_store::<Position>().get(selected) {
+            Some(p) => p.position,
+            None => return,
+        };
+
+        let room_cam = match world_ecs.get_store::<RoomCamera>().get(selected) {
+            Some(c) => c,
+            None => return,
+        };
+
+        let room_zoom = zoom_from_scalar(room_cam.scalar_zoom);
+
+        let factor_x = editor_cam.zoom.x / room_zoom.x;
+        let factor_y = editor_cam.zoom.y / room_zoom.y;
+
+        let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
+        let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
+        let editor_w = (tr.x - bl.x).abs();
+        let editor_h = (tr.y - bl.y).abs();
+
+        let viewport_w = editor_w * factor_x;
+        let viewport_h = editor_h * factor_y;
+
+        let half = vec2(viewport_w, viewport_h) * 0.5;
+        let top_left = pos - half;
+
+        let editor_scalar = CameraController::scalar_zoom(editor_cam);
+        const BASE_THICKNESS: f32 = 3.0;
+        let thickness = BASE_THICKNESS * (MAX_ZOOM / editor_scalar).max(1.0);
+
+        draw_rectangle_lines(
+            top_left.x,
+            top_left.y,
+            viewport_w,
+            viewport_h,
+            thickness,
+            YELLOW,
+        );
+    }
+
+pub fn reset(&mut self) {
+    self.mode = RoomEditorMode::Scene;
+    self.selected_entity = None;
+    self.initialized = false;
+    self.request_play = false;
+}
+}
+
+fn draw_camera_placeholder(pos: Vec2) {
+    let half = TILE_SIZE / 2.0;
+    let body = Rect::new(pos.x - half, pos.y - half, TILE_SIZE, TILE_SIZE);
+
+    let thickness = (TILE_SIZE * 0.2).max(1.0);
+
+    let green = Color::new(0.0, 0.89, 0.19, 0.5);
+    let blue = Color::new(0.0, 0.47, 0.95, 0.5);
+    let red = Color::new(0.9, 0.16, 0.22, 0.5);
+
+    draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness, green);
+    
+    let finder_w = TILE_SIZE * 0.3;
+    let finder_h = TILE_SIZE * 0.6;
+    let finder = Rect::new(
+        body.x + thickness,              
+        body.y + (body.h - finder_h) / 2.0,
+        finder_w,
+        finder_h,
+    );
+
+    draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h, thickness * 0.75, blue);
+
+    let lens_radius = TILE_SIZE * 0.1;
+    let lens_center = vec2(
+        body.x + body.w - lens_radius * 2.0 - thickness,
+        body.y + body.h / 2.0,
+    );
+
+    draw_circle_lines(lens_center.x, lens_center.y, lens_radius, thickness * 0.75, red);
 }
