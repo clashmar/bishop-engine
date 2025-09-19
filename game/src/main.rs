@@ -1,10 +1,7 @@
-mod game;
-mod modes;
-
-use crate::game::GameState;
+use game_lib::game::GameState;
 use macroquad::prelude::*;
 
-#[macroquad::main("Tilemap Demo")]
+#[macroquad::main("Demo")]
 async fn main() {
     let mut game = GameState::new().await;
 

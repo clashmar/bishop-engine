@@ -44,8 +44,6 @@ pub fn draw_entities(
         // Position relative to the room origin
         let room_pos = pos.position - room.position;
 
-        
-
         // Sprite handling
         if let Some(sprite) = sprite_store.get(*entity) {
             if asset_manager.contains(sprite.sprite_id) {

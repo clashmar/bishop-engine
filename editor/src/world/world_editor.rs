@@ -2,7 +2,7 @@
 use engine_core::{constants::TILE_SIZE, world::{room::{ExitDirection, Room}, world::World}};
 use macroquad::prelude::*;
 use uuid::Uuid;
-use crate::{camera_controller::{CameraController}, canvas::grid};
+use crate::{editor_camera_controller::{CameraController}, canvas::grid};
 use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use crate::world::coord;
 

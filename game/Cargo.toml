@@ -9,6 +9,10 @@ macroquad = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 ron = "0.9"
 
+[lib]
+name = "game_lib"
+path = "src/lib.rs"
+
 [[bin]]
 name = "game"
 path = "src/main.rs"

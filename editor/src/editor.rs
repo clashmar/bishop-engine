@@ -4,7 +4,7 @@ use async_std::path::PathBuf;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use crate::{
-    camera_controller::CameraController,
+    editor_camera_controller::CameraController,
     controls::controls::Controls,
     room::room_editor::RoomEditor,
     storage::editor_storage,

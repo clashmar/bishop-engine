@@ -1,6 +1,6 @@
 // editor/src/room/room_editor.rs
 use crate::{
-    camera_controller::{CameraController, MAX_ZOOM}, 
+    editor_camera_controller::{CameraController, MAX_ZOOM}, 
     canvas::grid, 
     gui::{gui_constants::*, inspector::inspector_panel::InspectorPanel}, 
     tilemap::tilemap_editor::TileMapEditor, 
@@ -8,7 +8,7 @@ use crate::{
 };
 use engine_core::{
     assets::asset_manager::AssetManager, 
-    camera::game_camera::{GameCamera, zoom_from_scalar}, 
+    camera::game_camera::zoom_from_scalar, 
     constants::*, 
     ecs::{
     component::{CurrentRoom, Position, RoomCamera}, 
@@ -20,7 +20,6 @@ use engine_core::{
     world::room::Room
 };
 use macroquad::prelude::*;
-use uuid::Uuid;
 
 pub enum RoomEditorMode {
     Tilemap,
@@ -74,7 +73,7 @@ impl RoomEditor {
         }
 
         if !self.initialized {
-            CameraController::reset_room_camera(camera, room);
+            CameraController::reset_editor_camera(camera, room);
             self.initialized = true;
         }
 
@@ -160,7 +159,7 @@ impl RoomEditor {
         }
 
         if is_key_pressed(KeyCode::R) {
-            CameraController::reset_room_camera(camera, room);
+            CameraController::reset_editor_camera(camera, room);
         }
 
         false
@@ -198,7 +197,7 @@ impl RoomEditor {
                 );
             }
             RoomEditorMode::Scene => {
-                let room_camera = &self.get_room_camera(world_ecs, room.id)
+                let room_camera = Room::get_room_camera(world_ecs, room.id)
                     .expect("This room should have a camera.");
 
                 let render_cam = if self.view_preview {
@@ -260,35 +259,6 @@ impl RoomEditor {
         }
         
         self.draw_coordinates(camera, room);
-    }
-
-    /// Returns a `Camera2D` for the room camera, if one exists.
-    fn get_room_camera(&self, world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera> {
-        let pos_store = world_ecs.get_store::<Position>();
-        let cam_store = world_ecs.get_store::<RoomCamera>();
-        let room_store = world_ecs.get_store::<CurrentRoom>();
-
-        for (entity, room_cam) in cam_store.data.iter() {
-            if let Some(current_room) = room_store.get(*entity) {
-                if current_room.0 != room_id { continue; }
-
-                let position = pos_store.data
-                    .get(entity)
-                    .expect("Camera should always have position.")
-                    .position;
-
-                let zoom_vec = zoom_from_scalar(room_cam.scalar_zoom);
-
-                let camera = Camera2D {
-                    target: position,
-                    zoom:   zoom_vec,
-                    ..Default::default()
-                };
-
-                return Some(GameCamera { position, camera, });
-            }
-        }
-        None
     }
 
     /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.

@@ -234,7 +234,7 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
     // Draw background and current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
-    let placeholder = "<type number>";
+    let placeholder = "<#>";
     let display = if txt.is_empty() { placeholder } else { &txt };
     draw_text_ex(
         display,
@@ -339,84 +339,92 @@ fn byte_offset(s: &str, char_idx: usize) -> usize {
 
 /// Horizontal slider that returns the new value and a `bool` indicating
 /// whether the user moved the handle this frame.
-///
-/// * `rect` – the full widget rectangle (track + handle)  
-/// * `min` / `max` – bounds for the value  
-/// * `value` – current value (will be drawn)  
-///
-/// The handle is a small square that can be dragged with the mouse.
 pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     thread_local! {
-        static STATE: RefCell<HashMap<(i32,i32,i32,i32), bool>> =
+        // (rect key) → (is_dragging, drag_offset)
+        static STATE: RefCell<HashMap<(i32, i32, i32, i32), (bool, f32)>> =
             RefCell::new(HashMap::new());
     }
 
-    // Load “is the handle being dragged?” flag
+    // Load persisted state
     let mut dragging = false;
+    let mut drag_offset = 0.0_f32; // distance mouse → handle left edge
     STATE.with(|s| {
         let map = s.borrow();
-        dragging = *map.get(&(rect.x as i32, rect.y as i32,
-                             rect.w as i32, rect.h as i32)).unwrap_or(&false);
+        if let Some(&(d, off)) = map.get(&(
+            rect.x as i32,
+            rect.y as i32,
+            rect.w as i32,
+            rect.h as i32,
+        )) {
+            dragging = d;
+            drag_offset = off;
+        }
     });
 
     // Geometry
     let track_h = rect.h * 0.2;
     let track_y = rect.y + (rect.h - track_h) * 0.5;
-    let handle_sz = rect.h;                     // square handle
+    let handle_sz = rect.h; // square handle
     let range = max - min;
     let norm = ((value - min) / range).clamp(0.0, 1.0);
     let handle_x = rect.x + norm * (rect.w - handle_sz);
 
-    // Draw background & track
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0.,0.,0.,0.5));
-    draw_rectangle(rect.x, track_y, rect.w, track_h, Color::new(0.2,0.2,0.2,0.8));
+    // Draw background & handle
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
+    draw_rectangle(rect.x, track_y, rect.w, track_h, Color::new(0.2, 0.2, 0.2, 0.8));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
 
-
-    // Draw handle
-    let handle_col = if dragging { Color::new(0.6,0.6,0.9,1.0) }
-                     else { Color::new(0.4,0.4,0.8,1.0) };
+    let handle_col = if dragging {
+        Color::new(0.6, 0.6, 0.9, 1.0)
+    } else {
+        Color::new(0.4, 0.4, 0.8, 1.0)
+    };
     draw_rectangle(handle_x, rect.y, handle_sz, rect.h, handle_col);
     draw_rectangle_lines(handle_x, rect.y, handle_sz, rect.h, 2., WHITE);
 
-    // -----------------------------------------------------------------
-    // 4️⃣  Input handling
-    // -----------------------------------------------------------------
+    // Input handling
     let mouse = mouse_position();
     let mouse_over_handle = Rect::new(handle_x, rect.y, handle_sz, rect.h)
-                                 .contains(vec2(mouse.0, mouse.1));
+        .contains(vec2(mouse.0, mouse.1));
     let mouse_over_track = rect.contains(vec2(mouse.0, mouse.1));
 
-    // Start dragging if we click on the handle
+    // Start dragging
     if is_mouse_button_pressed(MouseButton::Left) && mouse_over_handle {
         dragging = true;
+        drag_offset = mouse.0 - handle_x;
     }
+
     // Release drag on mouse up
     if is_mouse_button_released(MouseButton::Left) {
         dragging = false;
+        drag_offset = 0.0;
     }
 
-    // While dragging, move the handle to the mouse X (clamped)
+    // Compute new value
     let mut new_value = value;
     let mut changed = false;
+
     if dragging {
-        let rel = ((mouse.0 - rect.x) / (rect.w - handle_sz)).clamp(0.0, 1.0);
+        // Apply the saved offset so the handle follows the cursor naturally
+        let handle_center = mouse.0 - drag_offset;
+        let rel = ((handle_center - rect.x) / (rect.w - handle_sz)).clamp(0.0, 1.0);
         new_value = min + rel * range;
         changed = (new_value - value).abs() > f32::EPSILON;
     } else if mouse_over_track && is_mouse_button_pressed(MouseButton::Left) {
-        // Click on the track jumps the handle there (nice UX)
+        // Click‑on‑track behaviour (unchanged)
         let rel = ((mouse.0 - rect.x) / (rect.w - handle_sz)).clamp(0.0, 1.0);
         new_value = min + rel * range;
         changed = true;
     }
 
-    // -----------------------------------------------------------------
-    // 5️⃣  Persist state
-    // -----------------------------------------------------------------
+    // Persist state
     STATE.with(|s| {
         let mut map = s.borrow_mut();
-        map.insert((rect.x as i32, rect.y as i32,
-                    rect.w as i32, rect.h as i32), dragging);
+        map.insert(
+            (rect.x as i32, rect.y as i32, rect.w as i32, rect.h as i32),
+            (dragging, drag_offset),
+        );
     });
 
     (new_value, changed)

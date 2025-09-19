@@ -1,16 +1,13 @@
 // game/src/playtest_main.rs
-mod game;
-mod modes;
-
 use std::{env, fs};
 use engine_core::
     world::{
         room::Room, 
         world::World
     };
+use game_lib::game::GameState;
 use macroquad::prelude::*;
 use ron::de::from_str;
-use crate::game::GameState;
 
 /// The complete payload the editor writes for the play‑test binary.
 #[derive(serde::Deserialize)]

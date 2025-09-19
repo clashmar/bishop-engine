@@ -46,12 +46,8 @@ impl GameState {
             .expect("Missing id for the starting room")
             .clone();
 
-        let starting_position = world.starting_position.unwrap();
-
-        let camera = GameCamera {
-            position: starting_position,
-            camera: Camera2D::default(),
-        };
+        let camera = Room::get_room_camera(&world.world_ecs, current_room.id)
+            .expect("Tested room was missing a camera.");
 
         let asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
@@ -70,13 +66,8 @@ impl GameState {
     ) -> Self {
         let asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
-        // TODO: GIVE ROOM A CAMERA AND USE THAT
-        let starting_position = room.position;
-
-        let camera = GameCamera {
-            position: starting_position,
-            camera: Camera2D::default(),
-        };
+        let camera = Room::get_room_camera(&world.world_ecs, room.id)
+            .expect("Tested room was missing a camera.");
 
         Self {
             world,
@@ -94,8 +85,7 @@ impl GameState {
     }
 
     pub fn draw(&mut self) {
-        clear_background(BLACK);
-        self.camera.update_camera();
+        clear_background(BLUE);
         
         self.current_room.variants[0].tilemap.draw(
             &self.camera.camera,

@@ -1,4 +1,4 @@
-// editor/src/camera_controller.rs
+// editor/src/editor_camera_controller.rs
 use macroquad::prelude::*;
 use engine_core::{
     constants::*, 
@@ -85,7 +85,7 @@ impl CameraController {
     }
 
     /// Reset a `Camera2D` so that the whole room fits the screen.
-    pub fn reset_room_camera(camera: &mut Camera2D, room: &Room) {
+    pub fn reset_editor_camera(camera: &mut Camera2D, room: &Room) {
         let map_size = vec2(room.variants[0].tilemap.width as f32, room.variants[0].tilemap.height as f32);
         *camera = Self::camera_for_room(map_size, Vec2::ZERO);
     }
