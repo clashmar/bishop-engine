@@ -5,7 +5,7 @@ use engine_core::{
     world::room::Room
 };
 
-pub const ZOOM_SPEED_FACTOR: f32 = 0.5;
+pub const ZOOM_SPEED_FACTOR: f32 = 0.05;
 pub const MIN_ZOOM: f32 = 0.0005;
 pub const MAX_ZOOM: f32 = 0.01;
 

@@ -4,20 +4,32 @@
     world_ecs: (
         components: [
             /*[0]*/ (
-                type_name: "RoomCamera",
-                data: "(\n    data: {\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\n            position: (118.39815, 55.292324),\n        ),\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (\n            position: (64.86508, 34.546295),\n        ),\n    },\n)",
             ),
             /*[1]*/ (
+                type_name: "RoomCamera",
+                data: "(\n    data: {\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\n            scalar_zoom: 0.012,\n        ),\n    },\n)",
+            ),
+            /*[2]*/ (
                 type_name: "Player",
                 data: "(\n    data: {\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (),\n    },\n)",
             ),
-            /*[2]*/ (
-                type_name: "Position",
-                data: "(\n    data: {\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (\n            position: (1.0, 1.0),\n        ),\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\n            position: (0.0, 0.0),\n        ),\n    },\n)",
-            ),
             /*[3]*/ (
+                type_name: "TileSprite",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[4]*/ (
+                type_name: "Sprite",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[5]*/ (
+                type_name: "Weapon",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[6]*/ (
                 type_name: "CurrentRoom",
-                data: "(\n    data: {\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\"94a5ba0c-dcb6-4620-82b0-94b3780c9c5c\"),\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (\"94a5ba0c-dcb6-4620-82b0-94b3780c9c5c\"),\n    },\n)",
+                data: "(\n    data: {\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (\"94a5ba0c-dcb6-4620-82b0-94b3780c9c5c\"),\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\"94a5ba0c-dcb6-4620-82b0-94b3780c9c5c\"),\n    },\n)",
             ),
         ],
         tile_defs: {},

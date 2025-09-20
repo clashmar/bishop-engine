@@ -1,10 +1,10 @@
 // game/src/playtest_main.rs
 use std::{env, fs};
-use engine_core::
+use engine_core::{constants::*, 
     world::{
         room::Room, 
         world::World
-    };
+    }};
 use game_lib::game::GameState;
 use macroquad::prelude::*;
 use ron::de::from_str;
@@ -16,7 +16,18 @@ struct PlaytestPayload {
     world: World,
 }
 
-#[macroquad::main("Play‑test")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Playtest".to_owned(),
+        window_height: WORLD_VIRTUAL_HEIGHT as i32,
+        window_width: WORLD_VIRTUAL_WIDTH as i32,
+        fullscreen: true,
+        window_resizable: false,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     // Load the temporary file written by the editor
     let args: Vec<String> = env::args().collect();

@@ -1,5 +1,6 @@
 // editor/src/main.rs
 use crate::editor::Editor;
+use engine_core::constants::{WORLD_VIRTUAL_HEIGHT, WORLD_VIRTUAL_WIDTH};
 use macroquad::prelude::*;
 
 mod controls;
@@ -13,7 +14,18 @@ mod editor_camera_controller;
 mod canvas;
 mod playtest;
 
-#[macroquad::main("World Editor")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Bishop Engine".to_owned(),
+        window_height: WORLD_VIRTUAL_HEIGHT as i32,
+        window_width: WORLD_VIRTUAL_WIDTH as i32,
+        fullscreen: true,
+        window_resizable: false,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() -> std::io::Result<()> {
     let mut editor = Editor::new().await?;
 

@@ -66,7 +66,7 @@ ecs_component!(Position);
 pub struct CurrentRoom(pub Uuid);
 ecs_component!(CurrentRoom);
 
-/// Marker component – tells the system “this entity is the player”.
+/// Marker component for the player entity.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Player;
 ecs_component!(Player);
