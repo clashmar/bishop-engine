@@ -4,7 +4,7 @@ use async_std::path::PathBuf;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use crate::{
-    editor_camera_controller::CameraController,
+    editor_camera_controller::EditorCameraController,
     controls::controls::Controls,
     room::room_editor::RoomEditor,
     storage::editor_storage,
@@ -50,7 +50,7 @@ impl Editor {
             editor_storage::create_new_world("untitled".to_string())
         };
 
-        let camera = CameraController::camera_for_room(
+        let camera = EditorCameraController::camera_for_room(
             DEFAULT_ROOM_SIZE,
             DEFAULT_ROOM_POSITION,
         );
@@ -86,7 +86,7 @@ impl Editor {
     }
 
     pub async fn update(&mut self) {
-        CameraController::update(&mut self.camera);
+        EditorCameraController::update(&mut self.camera);
         match self.mode {
             EditorMode::World => {
                 // Update returns the id of the room being edited

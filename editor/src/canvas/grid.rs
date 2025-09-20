@@ -1,12 +1,12 @@
 // editor/src/canvas/grid.rs
 use engine_core::{constants::TILE_SIZE};
 use macroquad::prelude::*;
-use crate::{editor_camera_controller::{self, CameraController}, world::world_editor::LINE_THICKNESS_MULTIPLIER};
+use crate::{editor_camera_controller::{self, EditorCameraController}, world::world_editor::LINE_THICKNESS_MULTIPLIER};
 
 const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
 
 pub fn draw_grid(camera: &Camera2D) {
-    let scalar = CameraController::scalar_zoom(camera);
+    let scalar = EditorCameraController::scalar_zoom(camera);
     if scalar < editor_camera_controller::MIN_ZOOM * 2.0 {
         return;
     }

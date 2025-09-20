@@ -33,6 +33,11 @@ impl AssetManager {
     pub async fn load(&mut self, rel_path: impl AsRef<Path>) -> SpriteId {
         let key = rel_path.as_ref().to_string_lossy().to_string();
 
+        if key.trim().is_empty() {
+            // Guard against path being empty
+            return SpriteId(Uuid::nil());
+        }
+
         // Already loaded, reuse the same id
         if let Some(&id) = self.path_to_id.get(&key) {
             return id;

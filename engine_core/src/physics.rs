@@ -1,10 +1,10 @@
 use crate::{constants::*, player::PlayerOld, tiles::tilemap::TileMap};
 
 pub fn update_physics(entity: &mut PlayerOld, map: &TileMap) {
-        apply_gravity(entity);
-        resolve_horizontal_movement(entity, map);
-        resolve_vertical_movement(entity, map);
-        clamp_position(entity, map);
+        // apply_gravity(entity);
+        // resolve_horizontal_movement(entity, map);
+        // resolve_vertical_movement(entity, map);
+        // clamp_position(entity, map);
     }
 
 fn apply_gravity(entity: &mut PlayerOld) { 

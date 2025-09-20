@@ -57,6 +57,10 @@ where
 #[macro_export]
 macro_rules! ecs_component {
     ($ty:ty) => {
+        $crate::ecs_component!($ty, []);
+    };
+
+    ($ty:ty, [$($req:ty),* $(,)?]) => {
         impl $crate::ecs::component::Component for $ty {
             fn store_mut(
                 world: &mut $crate::ecs::world_ecs::WorldEcs,
@@ -73,6 +77,18 @@ macro_rules! ecs_component {
         impl $ty {
             pub const TYPE_NAME: &'static str = stringify!($ty);
 
+            // A factory that inserts the component itself and everything it requires
+            fn __factory(world: &mut $crate::ecs::world_ecs::WorldEcs, entity: $crate::ecs::entity::Entity) {
+                // Insert the component itself (default value)
+                world.get_store_mut::<$ty>().insert(entity, <$ty>::default());
+
+                // Insert every required component with its default value
+                $(
+                    world.get_store_mut::<$req>()
+                         .insert(entity, <$req>::default());
+                )*
+            }
+
             fn to_ron(store: &dyn std::any::Any) -> String {
                 let concrete = store
                     .downcast_ref::<$crate::ecs::component::ComponentStore<$ty>>()
@@ -80,16 +96,14 @@ macro_rules! ecs_component {
                 ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
                     .expect("failed to serialize ComponentStore")
             }
-
             fn from_ron(text: String) -> Box<dyn std::any::Any + Send> {
                 let concrete: $crate::ecs::component::ComponentStore<$ty> =
-                    ron::de::from_str(&text)
-                        .expect("failed to deserialize ComponentStore");
-                    Box::new(concrete)
+                    ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
+                Box::new(concrete)
             }
         }
 
-        // Register in the global inventory
+        // Register the component
         inventory::submit! {
             $crate::ecs::component_registry::ComponentReg {
                 type_name: <$ty>::TYPE_NAME,
@@ -98,7 +112,7 @@ macro_rules! ecs_component {
                 >(),
                 to_ron: <$ty>::to_ron,
                 from_ron: <$ty>::from_ron,
-                factory: $crate::ecs::component_registry::generic_factory::<$ty>,
+                factory: <$ty>::__factory,
                 has: $crate::ecs::component_registry::has_component::<$ty>,
                 remove: $crate::ecs::component_registry::erase_from_store::<$ty>,
             }

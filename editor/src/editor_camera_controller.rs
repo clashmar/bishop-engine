@@ -9,9 +9,9 @@ pub const ZOOM_SPEED_FACTOR: f32 = 0.05;
 pub const MIN_ZOOM: f32 = 0.0005;
 pub const MAX_ZOOM: f32 = 0.01;
 
-pub struct CameraController;
+pub struct EditorCameraController;
 
-impl CameraController {
+impl EditorCameraController {
     /// Call this once per frame from any editor that owns a `Camera2D`.
     pub fn update(camera: &mut Camera2D) {
         // Pan (middle‑mouse drag)

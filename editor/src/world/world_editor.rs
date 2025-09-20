@@ -2,7 +2,7 @@
 use engine_core::{constants::TILE_SIZE, world::{room::{ExitDirection, Room}, world::World}};
 use macroquad::prelude::*;
 use uuid::Uuid;
-use crate::{editor_camera_controller::{CameraController}, canvas::grid};
+use crate::{editor_camera_controller::{EditorCameraController}, canvas::grid};
 use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use crate::world::coord;
 
@@ -377,7 +377,7 @@ impl WorldEditor {
     }
 
     pub fn center_on_room(&mut self, camera: &mut Camera2D, room: &Room) {
-        *camera = CameraController::camera_for_room(room.size, room.position);
+        *camera = EditorCameraController::camera_for_room(room.size, room.position);
     }
 }
 

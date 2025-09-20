@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
-use crate::{ecs::entity::Entity, ecs_component, inspector_module}; 
+use crate::{assets::sprite::Sprite, ecs::entity::Entity, ecs_component, inspector_module}; 
 
-/// Marker trait - a component only needs to give access to its store.
+/// Marker trait for components.
 pub trait Component: Send + Sync {
     fn store_mut(world: &mut crate::ecs::world_ecs::WorldEcs)
         -> &mut ComponentStore<Self>
@@ -69,7 +69,7 @@ ecs_component!(CurrentRoom);
 /// Marker component for the player entity.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Player;
-ecs_component!(Player);
+ecs_component!(Player, [Sprite, Collider, Velocity]);
 
 /// Component for a room camera used by the game.
 #[serde_as]
@@ -79,6 +79,23 @@ pub struct RoomCamera {
 }
 ecs_component!(RoomCamera);
 
+#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+pub struct Velocity {
+    pub x: f32,
+    pub y: f32,
+}
+ecs_component!(Velocity);
+inspector_module!(Velocity);
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+pub struct Collider {
+    pub width: f32,
+    pub height: f32,
+}
+ecs_component!(Collider);
+inspector_module!(Collider);
+
+// Tile components
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);
 
@@ -95,14 +112,3 @@ pub struct Damage {
 }
 
 ecs_component!(Damage);
-
-#[derive(Serialize, Deserialize, Default, Reflect)]
-pub struct Weapon {
-    pub name: String,
-    pub damage: f32,
-    pub range: f32,
-    pub cooldown: f32,
-}
-
-ecs_component!(Weapon);
-inspector_module!(Weapon);   

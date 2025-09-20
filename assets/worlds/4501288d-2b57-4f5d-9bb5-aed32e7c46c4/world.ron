@@ -1,42 +1,46 @@
 (
-    id: "4f286fd9-eb1a-4b92-9352-2fc68c095e7c",
+    id: "4501288d-2b57-4f5d-9bb5-aed32e7c46c4",
     name: "World\r",
     world_ecs: (
         components: [
             /*[0]*/ (
-                type_name: "Position",
-                data: "(\n    data: {\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\n            position: (118.39815, 55.292324),\n        ),\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (\n            position: (64.86508, 34.546295),\n        ),\n    },\n)",
-            ),
-            /*[1]*/ (
-                type_name: "RoomCamera",
-                data: "(\n    data: {\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\n            scalar_zoom: 0.012,\n        ),\n    },\n)",
-            ),
-            /*[2]*/ (
-                type_name: "Player",
-                data: "(\n    data: {\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (),\n    },\n)",
-            ),
-            /*[3]*/ (
                 type_name: "TileSprite",
                 data: "(\n    data: {},\n)",
             ),
+            /*[1]*/ (
+                type_name: "Player",
+                data: "(\n    data: {\n        (\"164c6687-212c-47a4-8fc6-f0407a8efaef\"): (),\n    },\n)",
+            ),
+            /*[2]*/ (
+                type_name: "Collider",
+                data: "(\n    data: {\n        (\"164c6687-212c-47a4-8fc6-f0407a8efaef\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
+            ),
+            /*[3]*/ (
+                type_name: "RoomCamera",
+                data: "(\n    data: {\n        (\"0537aede-cf88-4f97-9fea-4159e5f1f541\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
+            ),
             /*[4]*/ (
-                type_name: "Sprite",
-                data: "(\n    data: {},\n)",
+                type_name: "Velocity",
+                data: "(\n    data: {\n        (\"164c6687-212c-47a4-8fc6-f0407a8efaef\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
             ),
             /*[5]*/ (
-                type_name: "Weapon",
-                data: "(\n    data: {},\n)",
+                type_name: "CurrentRoom",
+                data: "(\n    data: {\n        (\"0537aede-cf88-4f97-9fea-4159e5f1f541\"): (\"a65ed9f9-55b4-40c4-8b41-e6b6b3043087\"),\n        (\"164c6687-212c-47a4-8fc6-f0407a8efaef\"): (\"a65ed9f9-55b4-40c4-8b41-e6b6b3043087\"),\n    },\n)",
             ),
             /*[6]*/ (
-                type_name: "CurrentRoom",
-                data: "(\n    data: {\n        (\"fbf4b040-bd0a-41e0-b2bc-7fac2b23ed94\"): (\"94a5ba0c-dcb6-4620-82b0-94b3780c9c5c\"),\n        (\"e55e4f13-6e0b-4852-924c-9d302391370f\"): (\"94a5ba0c-dcb6-4620-82b0-94b3780c9c5c\"),\n    },\n)",
+                type_name: "Sprite",
+                data: "(\n    data: {\n        (\"164c6687-212c-47a4-8fc6-f0407a8efaef\"): (\n            sprite_id: (\"f233d3e6-1a76-471b-a620-d03fceb78035\"),\n            path: \"/Users/charliesovn/Projects/Aseprite/Entity1.png\",\n        ),\n    },\n)",
+            ),
+            /*[7]*/ (
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"164c6687-212c-47a4-8fc6-f0407a8efaef\"): (\n            position: (71.89757, 50.51563),\n        ),\n        (\"0537aede-cf88-4f97-9fea-4159e5f1f541\"): (\n            position: (0.0, 0.0),\n        ),\n    },\n)",
             ),
         ],
         tile_defs: {},
     ),
     rooms: [
         /*[0]*/ (
-            id: "94a5ba0c-dcb6-4620-82b0-94b3780c9c5c",
+            id: "a65ed9f9-55b4-40c4-8b41-e6b6b3043087",
             name: "untitled",
             position: (
                 0.0,
@@ -227,7 +231,7 @@
             ],
         ),
     ],
-    starting_room: Some("94a5ba0c-dcb6-4620-82b0-94b3780c9c5c"),
+    starting_room: Some("a65ed9f9-55b4-40c4-8b41-e6b6b3043087"),
     starting_position: Some((
         1.0,
         1.0,

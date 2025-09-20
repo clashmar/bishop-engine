@@ -5,10 +5,11 @@ use crate::{
         sprite::Sprite
     }, 
     constants::*, 
-    ecs::{component::*, 
-    entity::Entity, 
-    world_ecs::WorldEcs
-}, 
+    ecs::{
+        component::*, 
+        entity::Entity, 
+        world_ecs::WorldEcs
+    }, 
     tiles::tile::TileSprite, 
     world::room::Room
 };
