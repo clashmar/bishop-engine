@@ -218,7 +218,7 @@ impl RoomEditor {
                     draw_camera_placeholder(room_camera.position);
 
                     if let Some(selected_entity) = self.selected_entity {
-                        highlight_selected_entity(world_ecs, room, selected_entity);
+                        highlight_selected_entity(world_ecs, room, selected_entity, asset_manager);
                         self.draw_camera_viewport(camera, world_ecs, selected_entity);
                     }
 

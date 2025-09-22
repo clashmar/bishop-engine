@@ -68,6 +68,10 @@ impl InspectorModule for SpriteModule {
             }
         }
     }
+
+    fn height(&self) -> f32 {
+        40.0
+    }
 }
 
 inventory::submit! {

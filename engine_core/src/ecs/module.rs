@@ -88,8 +88,8 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
     fn draw(
         &mut self,
         rect: Rect,
-        assets: &mut AssetManager,
-        ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
+        world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
         // Background for the header
@@ -121,7 +121,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_H,
             );
             if gui_button(btn_rect, "x") {
-                self.inner.remove(ecs, entity);
+                self.inner.remove(world_ecs, entity);
                 return; // Don't draw the rest of the module
             }
         }
@@ -135,8 +135,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 rect.w - 8.0,
                 rect.h - Self::HEADER_HEIGHT - 8.0,
             );
-            self.inner
-                .draw(body_rect, assets, ecs, entity);
+            self.inner.draw(body_rect, asset_manager, world_ecs, entity);
         }
     }
 

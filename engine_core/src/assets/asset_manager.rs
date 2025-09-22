@@ -101,4 +101,10 @@ impl AssetManager {
             }
         }
     }
+
+    /// Return the pixel width and height of the texture that belongs to `id`
+    /// or None if the texture has not been loaded/set.
+    pub fn texture_size(&self, id: SpriteId) -> Option<(f32, f32)> {
+        self.textures.get(&id).map(|tex| (tex.width(), tex.height()))
+    }
 }

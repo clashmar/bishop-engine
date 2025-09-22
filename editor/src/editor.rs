@@ -14,14 +14,10 @@ use crate::{
 };
 use engine_core::{
     assets::
-        asset_manager::AssetManager
-    , 
-    constants::*, 
-    world::{
+        asset_manager::AssetManager, constants::*, physics::collider_system, storage::core_storage, world::{
         room::Room,
         world::World,
-    },
-    storage::core_storage,
+    }
 };
 
 pub enum EditorMode {
@@ -117,6 +113,11 @@ impl Editor {
                         &mut self.asset_manager,
                     ).await
                 };
+
+                collider_system::update_colliders_from_sprites(
+                    &mut self.world.world_ecs,
+                    &mut self.asset_manager,
+                );
 
                 // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {

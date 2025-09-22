@@ -5,7 +5,12 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
-use crate::{assets::sprite::Sprite, ecs::entity::Entity, ecs_component, inspector_module}; 
+use crate::{
+    assets::sprite::Sprite, 
+    ecs::entity::Entity, 
+    ecs_component, 
+    inspector_module
+}; 
 
 /// Marker trait for components.
 pub trait Component: Send + Sync {
@@ -85,15 +90,33 @@ pub struct Velocity {
     pub y: f32,
 }
 ecs_component!(Velocity);
-inspector_module!(Velocity);
 
-#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+#[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
 pub struct Collider {
     pub width: f32,
     pub height: f32,
 }
 ecs_component!(Collider);
 inspector_module!(Collider);
+
+impl Default for Collider {
+    fn default() -> Self {
+        Self {
+            width:  0.0,
+            height: 0.0,
+        }
+    }
+}
+
+/// Marker for participation in the physics system.
+#[derive(Default, Clone, Copy, Serialize, Deserialize)]
+pub struct PhysicsBody;     
+ecs_component!(PhysicsBody);
+
+/// Marker for entities that move by code.
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct Kinematic {}
+ecs_component!(Kinematic);
 
 // Tile components
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]

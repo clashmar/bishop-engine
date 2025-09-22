@@ -31,6 +31,7 @@ impl GameCamera {
         // self.camera.zoom = vec2(1.2 / screen_width(), 1.2 / screen_height());
 
         // set_camera(&self.camera);
+
     }
 
     pub fn move_camera(&mut self) {

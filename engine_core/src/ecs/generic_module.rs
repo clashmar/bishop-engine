@@ -12,6 +12,10 @@ use crate::{
 use macroquad::prelude::*;
 use std::{borrow::Cow, marker::PhantomData};
 
+const TOP_PADDING: f32 = 10.0;
+const FIELD_HEIGHT: f32 = 30.0;
+const SPACING: f32 = 5.0;
+
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
     _phantom: PhantomData<T>,
@@ -27,7 +31,7 @@ impl<T> Default for GenericModule<T> {
 
 impl<T> InspectorModule for GenericModule<T>
 where
-    T: Reflect + Component + 'static,
+    T: Reflect + Component + Default + 'static,
 {
     fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
         // Use the new `get_store` helper
@@ -48,10 +52,8 @@ where
             .expect("Component must exist for selected entity");
 
         // Layout constants
-        let mut y = rect.y + 10.0;
+        let mut y = rect.y + TOP_PADDING;
         let label_w = 80.0;
-        let field_h = 30.0;
-        let spacing = 5.0;
 
         // Iterate over the fields supplied by the `Reflect` impl
         for field in component.fields() {
@@ -61,7 +63,7 @@ where
             draw_text(&label, rect.x, y + 22.0, 18.0, WHITE);
 
             // Widget rectangle
-            let widget_rect = Rect::new(rect.x + label_w, y, rect.w - label_w - 10.0, field_h);
+            let widget_rect = Rect::new(rect.x + label_w, y, rect.w - label_w - 10.0, FIELD_HEIGHT);
 
             // Dispatch based on the enum variant
             match field.value {
@@ -88,13 +90,18 @@ where
                 }
             }
 
-            y += field_h + spacing;
+            y += FIELD_HEIGHT + SPACING;
         }
     }
 
+    /// Compute the height from the number of reflected fields
     fn height(&self) -> f32 {
-        // Rough estimate for now
-        150.0
+        // Create a temporary default instance of `T` only to query its fields
+        let mut temp = T::default();
+        let field_count = temp.fields().len() as f32;
+
+        // Total height = top padding + (field height + spacing) * count
+        TOP_PADDING + field_count * (FIELD_HEIGHT + SPACING)
     }
 
     fn removable(&self) -> bool { true }

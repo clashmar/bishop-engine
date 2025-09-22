@@ -221,7 +221,7 @@ impl InspectorPanel {
         const DEFAULT_MENU_W: f32 = 200.0;
         const MIN_INSET: f32 = 10.0;
 
-        // Determine needed width (widest entry + padding)
+        // Determine width (widest entry + padding)
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
             let txt = measure_text(reg.type_name, None, 20, 1.0);
