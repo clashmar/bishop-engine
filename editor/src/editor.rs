@@ -82,7 +82,10 @@ impl Editor {
     }
 
     pub async fn update(&mut self) {
-        EditorCameraController::update(&mut self.camera);
+        if!self.room_editor.view_preview {
+            EditorCameraController::update(&mut self.camera);
+        }
+        
         match self.mode {
             EditorMode::World => {
                 // Update returns the id of the room being edited

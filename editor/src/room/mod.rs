@@ -1,2 +1,2 @@
 pub mod room_editor;
-mod room_actions;
+mod room_editor_actions;

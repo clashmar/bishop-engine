@@ -6,14 +6,14 @@ use crate::{
         gui_constants::*, 
         inspector::inspector_panel::InspectorPanel
     }, 
-    room::room_actions::*, 
+    room::room_editor_actions::*, 
     tilemap::tilemap_editor::TileMapEditor, 
     world::coord
 };
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::{
-    component::{CurrentRoom, Position}, 
+    component::{CurrentRoom, Position, RoomCamera}, 
     entity::Entity, 
     world_ecs::WorldEcs
     }, 
@@ -39,7 +39,7 @@ pub struct RoomEditor {
     initialized: bool, 
     create_entity_requested: bool,
     pub request_play: bool,
-    view_preview: bool,
+    pub view_preview: bool,
 }
 
 impl RoomEditor {
@@ -101,14 +101,19 @@ impl RoomEditor {
 
                 if !ui_was_clicked && is_mouse_button_pressed(MouseButton::Left) && !self.dragging {
                     self.selected_entity = None;
-                    for (entity, position) in world_ecs.get_store::<Position>().data.iter() {
-                        let room_position = position.position - room.position;
-                        let screen = coord::world_to_screen(camera, room_position);
-                        let hit = Rect::new(screen.x - 10.0, screen.y - 10.0, 20.0, 20.0);
-                        if hit.contains(mouse_screen) {
+                    for (entity, pos) in world_ecs.get_store::<Position>().data.iter() {
+                        let hitbox = entity_hitbox(
+                            *entity,
+                            pos.position,
+                            camera,
+                            world_ecs,
+                            asset_manager,
+                        );
+
+                        if hitbox.contains(mouse_screen) {
                             self.selected_entity = Some(*entity);
                             let mouse_world = coord::mouse_world_pos(camera);
-                            self.drag_offset = room_position - mouse_world;
+                            self.drag_offset = pos.position - mouse_world;
                             self.dragging = true;
                             break;
                         }
@@ -120,7 +125,7 @@ impl RoomEditor {
                     if let Some(entity) = self.selected_entity {
                         if let Some(position) = world_ecs.get_store_mut::<Position>().get_mut(entity) {
                             let mouse_world = coord::mouse_world_pos(camera);
-                            position.position = mouse_world + room.position + self.drag_offset;
+                            position.position = mouse_world + self.drag_offset;
                         }
                     }
                     if is_mouse_button_released(MouseButton::Left) {
@@ -196,6 +201,7 @@ impl RoomEditor {
                     exits, 
                     world_ecs,
                     asset_manager,
+                    room.position,
                 );
             }
             RoomEditorMode::Scene => {
@@ -210,7 +216,7 @@ impl RoomEditor {
 
                 self.inspector.set_rect(inspector_rect);
 
-                tilemap.draw(render_cam, exits, world_ecs, asset_manager);
+                tilemap.draw(render_cam, exits, world_ecs, asset_manager, room.position);
 
                 draw_entities(world_ecs, room, asset_manager);
 
@@ -218,7 +224,15 @@ impl RoomEditor {
                     draw_camera_placeholder(room_camera.position);
 
                     if let Some(selected_entity) = self.selected_entity {
-                        highlight_selected_entity(world_ecs, room, selected_entity, asset_manager);
+                        let is_camera = world_ecs
+                            .get_store::<RoomCamera>()
+                            .get(selected_entity)
+                            .is_some();
+
+                        if !is_camera {
+                            highlight_selected_entity(world_ecs, selected_entity, asset_manager, YELLOW);
+                        }
+                        draw_collider(world_ecs, selected_entity);
                         self.draw_camera_viewport(camera, world_ecs, selected_entity);
                     }
 
@@ -268,5 +282,6 @@ impl RoomEditor {
         self.selected_entity = None;
         self.initialized = false;
         self.request_play = false;
+        self.view_preview = false
     }
 }

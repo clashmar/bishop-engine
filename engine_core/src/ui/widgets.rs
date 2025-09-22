@@ -209,7 +209,7 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
             rect.w.round() as i32,
             rect.h.round() as i32,
         );
-        // If we already have a state entry, use it.
+        // If we already have a state entry, use it
         if let Some((saved_txt, saved_cur, saved_foc)) = map.get(&key) {
             txt = saved_txt.clone();
             cursor = *saved_cur;
@@ -221,13 +221,13 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
     });
 
     // If the widget is not focused, force‑sync the displayed
-    // text with the latest current value.
+    // text with the latest current value
     if !focused {
         // Only replace when the numeric value actually differs. This
-        // avoids flickering the cursor position when the user is typing.
+        // avoids flickering the cursor position when the user is typing
         if (txt.parse::<f32>().unwrap_or(0.0) - current).abs() > EPSILON {
             txt = current.to_string();
-            cursor = txt.len(); // put cursor at the end of the new text
+            cursor = txt.len(); // Put cursor at the end of the new text
         }
     }
 

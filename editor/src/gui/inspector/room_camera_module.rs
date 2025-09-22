@@ -30,13 +30,14 @@ impl RoomCameraModule {
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
 
-        // Current scalar
-        let scalar = cam.scalar_zoom; 
-        let rounded_scalar = round_3dp(scalar);
-
         // To keep zoom values nice to work with
         const DISPLAY_FACTOR: f32 = 1000.0;
-        let spacing = 5.0;
+        const DECIMAL_PLACES: u32 = 5;
+        const SPACING: f32 = 5.0;
+
+        // Current scalar
+        let scalar = cam.scalar_zoom; 
+        let rounded_scalar = round_to_dp(scalar, DECIMAL_PLACES);
 
         // Zoom label
         let zoom_label = "Zoom: ";
@@ -44,32 +45,35 @@ impl RoomCameraModule {
         let label_width = measure_text(zoom_label, None, font_size_zoom as u16, 1.0).width;
         draw_text(zoom_label, rect.x + 2.0, rect.y + 5.0, font_size_zoom, WHITE);
 
-        let num_text = "0000"; // So width will never bigger than a four digit number
+        let num_text = "000000"; // So width will never bigger than a five digit number
         let num_width = measure_text(&num_text, None, font_size_zoom as u16, 1.0).width;
 
         // Numeric field 
         let num_rect = Rect::new(
             rect.x + label_width,
             rect.y - font_size_zoom,
-            num_width + spacing,
+            num_width + SPACING,
             rect.h,
         );
 
         // Slider
         let slider_rect = Rect::new(
-            rect.x + label_width + num_width + 2.0 * spacing,
+            rect.x + label_width + num_width + 2.0 * SPACING,
             rect.y - font_size_zoom,
-            rect.w - (label_width + num_width + 3.0 * spacing),
+            rect.w - (label_width + num_width + 3.0 * SPACING),
             rect.h,
         );
 
-        let typed = gui_input_number(num_rect, rounded_scalar * DISPLAY_FACTOR);
+        let typed = gui_input_number(
+            num_rect, 
+            round_to_dp(rounded_scalar * DISPLAY_FACTOR, DECIMAL_PLACES)
+        );
 
         let mut new_scalar = scalar; 
 
         if (typed - rounded_scalar).abs() > f32::EPSILON {
             // User typed a new number
-            new_scalar = typed / DISPLAY_FACTOR;
+            new_scalar = round_to_dp(typed / DISPLAY_FACTOR, DECIMAL_PLACES);
         }
 
         // Slider
@@ -128,13 +132,16 @@ inventory::submit! {
     }
 }
 
-/// Round a `f32` to 3 decimal places.
+/// Return `v` rounded to *exactly* `dp` decimal places and stripped of the
+/// floating‑point noise that would otherwise appear as …99999 or …00001.
 #[inline]
-fn round_3dp(v: f32) -> f32 {
-    let mut new_scalar = (v * 1000.0).round() / 1000.0;
+fn round_to_dp(v: f32, dp: u32) -> f32 {
+    let factor = 10_f32.powi(dp as i32);
 
-    if (new_scalar - new_scalar.round()).abs() < 1e-6 {
-        new_scalar = new_scalar.round();
+    let mut r = (v * factor).round() / factor;
+
+    if (r - r.round()).abs() < 1e-6 {
+        r = r.round();
     }
-    new_scalar
+    r
 }

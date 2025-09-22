@@ -68,15 +68,26 @@ impl TileMapEditor  {
 
         self.dynamic_ui.clear();
 
-        ResizeButton::build_all(&room.variants[0].tilemap, &mut self.dynamic_ui);
+        ResizeButton::build_all(&room.variants[0].tilemap, &mut self.dynamic_ui, room.position);
         
         let mouse_pos = mouse_position().into();
         self.consume_ui_click(camera, mouse_pos, room, other_bounds);
 
         if !self.ui_was_clicked {
             match self.mode {
-                TilemapEditorMode::Tiles => self.handle_tile_placement(camera, mouse_pos, &mut room.variants[0].tilemap, world_ecs),
-                TilemapEditorMode::Exits => self.handle_exit_placement(camera, &room.variants[0].tilemap, &mut room.exits),
+                TilemapEditorMode::Tiles => self.handle_tile_placement(
+                    camera, 
+                    mouse_pos, 
+                    &mut room.variants[0].tilemap, 
+                    world_ecs, 
+                    room.position
+                ),
+                TilemapEditorMode::Exits => self.handle_exit_placement(
+                    camera, 
+                    &room.variants[0].tilemap, 
+                    &mut room.exits,
+                    room.position
+                ),
             }
         }
 
@@ -127,9 +138,10 @@ impl TileMapEditor  {
         mouse_pos: Vec2, 
         map: &mut TileMap,
         world_ecs: &mut WorldEcs,
+        room_position: Vec2,
     ) {
         let mouse_over_ui = self.is_mouse_over_ui(camera, mouse_pos);
-        let hover = self.get_hovered_tile(camera, map);
+        let hover = self.get_hovered_tile(camera, map, room_position);
         if mouse_over_ui || hover.is_none() { return; }
 
         let (x, y) = hover.unwrap().as_usize().unwrap();
@@ -185,8 +197,14 @@ impl TileMapEditor  {
         }
     }
 
-    fn handle_exit_placement(&mut self, camera: &Camera2D, map: &TileMap, exits: &mut Vec<Exit>) {
-        if let Some(tile_pos) = self.get_hovered_edge(camera, map) {
+    fn handle_exit_placement(
+        &mut self, 
+        camera: &Camera2D, 
+        map: &TileMap, 
+        exits: &mut Vec<Exit>, 
+        room_position: Vec2,
+    ) {
+        if let Some(tile_pos) = self.get_hovered_edge(camera, map, room_position) {
             let exit_direction = self.exit_direction_from_position(tile_pos, map);
             let exit_vec = vec2(tile_pos.x() as f32, tile_pos.y() as f32);
 
@@ -211,18 +229,19 @@ impl TileMapEditor  {
         exits: &Vec<Exit>,
         world_ecs: &WorldEcs,
         asset_manager: &mut AssetManager,
+        room_position: Vec2,
     ) {
         clear_background(BLACK);
         set_camera(camera);
-        map.draw(camera, exits, world_ecs, asset_manager);
-        self.draw_hover_highlight(camera, map);
+        map.draw(camera, exits, world_ecs, asset_manager, room_position);
+        self.draw_hover_highlight(camera, map, room_position);
         self.draw_ui(camera, asset_manager, world_ecs, map);
     }
 
-    fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap) {
+    fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) {
         let tile_pos = match self.mode {
-            TilemapEditorMode::Tiles => self.get_hovered_tile(camera, map),
-            TilemapEditorMode::Exits => self.get_hovered_edge(camera, map),
+            TilemapEditorMode::Tiles => self.get_hovered_tile(camera, map, room_position),
+            TilemapEditorMode::Exits => self.get_hovered_edge(camera, map, room_position),
         };
 
         if let Some(tile_pos) = tile_pos {
@@ -232,8 +251,8 @@ impl TileMapEditor  {
             let max_line_width = 5.0;
             let line_width = (base_width / zoom_scale).clamp(min_line_width, max_line_width);
 
-            let x = tile_pos.x() as f32 * TILE_SIZE;
-            let y = tile_pos.y() as f32 * TILE_SIZE;
+            let x = tile_pos.x() as f32 * TILE_SIZE + room_position.x;
+            let y = tile_pos.y() as f32 * TILE_SIZE + room_position.y;
 
             match self.mode {
                 TilemapEditorMode::Tiles => {
@@ -241,7 +260,7 @@ impl TileMapEditor  {
                 }
                 TilemapEditorMode::Exits => {
                     let exit_direction = self.exit_direction_from_position(tile_pos, map);
-                    map.draw_exit(vec2(tile_pos.x() as f32, tile_pos.y() as f32), exit_direction);
+                    map.draw_exit(vec2(x, y), exit_direction);
                 }
             }
         }
@@ -266,10 +285,11 @@ impl TileMapEditor  {
         self.panel.draw(asset_manager, world_ecs, map);
     }
 
-    fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap) -> Option<GridPos> {
+    fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) -> Option<GridPos> {
         let mouse_pos: Vec2 = mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
-        let pos = GridPos::from_world(world_pos);
+        let local_pos = world_pos - room_position;
+        let pos = GridPos::from_world(local_pos);
 
         if pos.is_in_bounds(map.width, map.height) {
             Some(pos)
@@ -278,10 +298,11 @@ impl TileMapEditor  {
         }
     }
 
-    fn get_hovered_edge(&self, camera: &Camera2D, map: &TileMap) -> Option<GridPos> {
+    fn get_hovered_edge(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) -> Option<GridPos> {
         let mouse_pos: Vec2 = mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
-        let edge_pos = GridPos::from_world_edge(world_pos, map);
+        let local_pos = world_pos - room_position;
+        let edge_pos = GridPos::from_world_edge(local_pos, map);
 
         let x_outside = edge_pos.x() < 0 || edge_pos.x() >= map.width as i32;
         let y_outside = edge_pos.y() < 0 || edge_pos.y() >= map.height as i32;

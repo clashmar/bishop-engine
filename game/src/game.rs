@@ -92,6 +92,7 @@ impl GameState {
             &self.current_room.exits,
             &self.world.world_ecs,
             &mut self.asset_manager,
+            self.current_room.position,
         );
 
         draw_entities(

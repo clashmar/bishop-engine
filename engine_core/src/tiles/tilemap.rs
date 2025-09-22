@@ -36,14 +36,15 @@ impl TileMap {
         exits: &Vec<Exit>,
         world_ecs: &WorldEcs,
         asset_manager: &mut AssetManager,
+        room_position: Vec2,
     ) {
         clear_background(BLACK);
         set_camera(camera);
 
-        // background rectangle (unchanged)
+        // Background
         draw_rectangle(
-            0.0,
-            0.0,
+            room_position.x,
+            room_position.y,
             self.width as f32 * TILE_SIZE,
             self.height as f32 * TILE_SIZE,
             self.background,
@@ -56,14 +57,14 @@ impl TileMap {
                     continue;
                 }
 
-                // Sprite component (visual)
+                // Tiles
                 if let Some(tile_sprite) = world_ecs.get::<TileSprite>(tile_inst.entity) {
                     let tex = asset_manager.get_texture_from_id(tile_sprite.sprite_id);
-                    let dest = vec2(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
+                    let tile_pos = vec2(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE) + room_position;
                     draw_texture_ex(
                             tex,
-                            dest.x,
-                            dest.y,
+                            tile_pos.x,
+                            tile_pos.y,
                             WHITE,
                             DrawTextureParams {
                                 dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
@@ -73,27 +74,30 @@ impl TileMap {
                 }
             }
         }
-        self.draw_exits(exits);
+        self.draw_exits(exits, room_position);
     }
 
-    fn draw_exits(&self, exits: &Vec<Exit>) {
+    fn draw_exits(&self, exits: &Vec<Exit>, room_position: Vec2) {
         for exit in exits {
-            self.draw_exit(exit.position, exit.direction);
+            let position = exit.position * TILE_SIZE + room_position;
+            self.draw_exit(position, exit.direction);
         }
     }
 
     /// Draw a yellow exit overlay/arrow at the given position
-    pub fn draw_exit(&self, pos: Vec2, direction: ExitDirection) {
-        let tile_size = TILE_SIZE;
-
-        // Position in world coordinates, including outside tiles
-        let x = pos.x * tile_size;
-        let y = pos.y * tile_size;
+    pub fn draw_exit(
+        &self, 
+        position: Vec2, 
+        direction: ExitDirection,
+    ) {
+        // Position in world coordinates, including outer tiles
+        let x = position.x;
+        let y = position.y;
 
         // Draw semi-transparent rectangle
-        draw_rectangle(x, y, tile_size, tile_size, LIGHTGRAY);
+        draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, LIGHTGRAY);
 
-        let arrow_center = vec2(x + tile_size / 2.0, y + tile_size / 2.0);
+        let arrow_center = vec2(x + TILE_SIZE / 2.0, y + TILE_SIZE / 2.0);
         let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
 
         let offsets = match direction {
@@ -104,9 +108,9 @@ impl TileMap {
         };
 
         draw_triangle(
-            arrow_center + offsets[0] * tile_size / 4.0,
-            arrow_center + offsets[1] * tile_size / 4.0,
-            arrow_center + offsets[2] * tile_size / 4.0,
+            arrow_center + offsets[0] * TILE_SIZE / 4.0,
+            arrow_center + offsets[1] * TILE_SIZE / 4.0,
+            arrow_center + offsets[2] * TILE_SIZE / 4.0,
             arrow_color
         );
     }

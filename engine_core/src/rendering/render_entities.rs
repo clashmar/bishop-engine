@@ -7,7 +7,7 @@ use crate::{
     constants::*, 
     ecs::{
         component::*, 
-        entity::{self, Entity}, 
+        entity::Entity, 
         world_ecs::WorldEcs
     }, 
     tiles::tile::TileSprite, 
@@ -42,17 +42,14 @@ pub fn draw_entities(
             continue;
         }
 
-        // Position relative to the room origin
-        let room_pos = pos.position - room.position;
-
         // Sprite handling
         if let Some(sprite) = sprite_store.get(*entity) {
             if asset_manager.contains(sprite.sprite_id) {
                 let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
                 draw_texture_ex(
                     tex,
-                    room_pos.x - TILE_SIZE / 2.0,
-                    room_pos.y - TILE_SIZE / 2.0,
+                    pos.position.x,
+                    pos.position.y,
                     WHITE,
                     DrawTextureParams {
                         ..Default::default()
@@ -62,66 +59,46 @@ pub fn draw_entities(
             }
         }
         // Fallback placeholder (no sprite or missing texture)
-        draw_entity_placeholder(room_pos);
+        draw_entity_placeholder(pos.position);
     }
 }
 
 pub fn highlight_selected_entity(
     world_ecs: &WorldEcs,
-    room: &Room,
     entity: Entity,
     asset_manager: &mut AssetManager,
+    color: Color
 ) {
     let pos = match world_ecs.get_store::<Position>().get(entity) {
         Some(p) => p,
         None => return,
     };
 
-    let (width, height, colour) = resolve_highlight_outline(
-        world_ecs,
-        asset_manager,
-        entity,
-    );
+    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
 
-    let room_pos = pos.position - room.position;
-    let x = room_pos.x - TILE_SIZE / 2.0;
-    let y = room_pos.y - TILE_SIZE / 2.0;
-
-    draw_rectangle_lines(x, y, width, height, 2.0, colour);
+    draw_rectangle_lines(pos.position.x, pos.position.y, width, height, 2.0, color);
 }
 
-fn resolve_highlight_outline(
+pub fn sprite_dimensions(
     world_ecs: &WorldEcs,
     asset_manager: &AssetManager,
     entity: Entity,
-) -> (f32, f32, Color) {
-    let mut width  = TILE_SIZE;
-    let mut height = TILE_SIZE;
-
-    // Try collider
-    if let Some(col) = world_ecs.get_store::<Collider>().get(entity) {
-        if col.width > 0.0 && col.height > 0.0 {
-            return (col.width, col.height, PINK);
-        }
-    }
-
-    // Try sprite
+) -> (f32, f32) {
     if let Some(sprite) = world_ecs.get_store::<Sprite>().get(entity) {
-        if let Some((w, h)) = asset_manager.texture_size(sprite.sprite_id) {
-            width  = w;
-            height = h;
+        if let Some((width, height)) = asset_manager.texture_size(sprite.sprite_id) {
+            return (width, height);
         }
     }
-
-    (width, height, YELLOW)
+    // Fallback
+    (TILE_SIZE, TILE_SIZE)
 }
 
 pub fn draw_entity_placeholder(pos: Vec2) {
     draw_rectangle(
-        pos.x - 10.0,
-        pos.y - 10.0,
-        20.0,
-        20.0,
+        pos.x,
+        pos.y,
+        TILE_SIZE,
+        TILE_SIZE,
         GREEN,
     );
 }

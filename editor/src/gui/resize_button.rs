@@ -1,3 +1,4 @@
+// editor/src/gui/resize_button.rs
 use macroquad::prelude::*;
 use engine_core::{constants::TILE_SIZE, tiles::{tile::Tile, tilemap::TileMap}, world::room::Room};
 use crate::{gui::{text_button::TextButton, ui_element::DynamicTilemapUiElement}, world::coord};
@@ -175,78 +176,84 @@ impl DynamicTilemapUiElement for ResizeButton {
 }
 
 impl ResizeButton {
-    pub fn build_all(map: &TileMap, ui_elements: &mut Vec<Box<dyn DynamicTilemapUiElement>>) {
-        let margin = TILE_SIZE / 4.0;
-        let btn_size = vec2(30.0, 30.0);
+    pub fn build_all(
+        map: &TileMap, 
+        ui_elements: &mut Vec<Box<dyn DynamicTilemapUiElement>>,
+        room_position: Vec2,
+    ) {
+        const MARGIN: f32 = TILE_SIZE / 8.0;
+        const BTN_SIZE: Vec2 = vec2(15.0, 15.0);
+        const OUTER_GAP: f32 = 50.0;
+        const INNER_GAP: f32 = 30.0;
 
         let map_pixel_width = map.width as f32 * TILE_SIZE;
         let map_pixel_height = map.height as f32 * TILE_SIZE;
 
-        let mut add_btn = |action: ResizeAction, world_pos: Vec2, label: &str, color: Color| {
+        let mut add_btn = |action: ResizeAction, local_position: Vec2, label: &str, color: Color| {
             let rect = Rect::new(
-                world_pos.x - btn_size.x / 2.0,
-                world_pos.y - btn_size.y / 2.0,
-                btn_size.x,
-                btn_size.y,
+                (local_position.x + room_position.x) - BTN_SIZE.x / 2.0,
+                (local_position.y + room_position.y) - BTN_SIZE.y / 2.0,
+                BTN_SIZE.x,
+                BTN_SIZE.y,
             );
             let btn = TextButton {
                 rect,
                 label: label.to_string(),
                 background_color: color,
                 text_color: BLACK,
-                font_size: 50.0,
+                font_size: 25.0,
             };
             ui_elements.push(Box::new(ResizeButton { action, button: btn }));
         };
 
         add_btn(
             ResizeAction::AddTop,
-            vec2(map_pixel_width / 2.0, -margin - 60.0),
+            vec2(map_pixel_width / 2.0, -MARGIN - OUTER_GAP),
             "+",
             GREEN,
         );
         add_btn(
             ResizeAction::RemoveTop,
-            vec2(map_pixel_width / 2.0, -margin - 20.0),
+            vec2(map_pixel_width / 2.0, -MARGIN - INNER_GAP),
             "-",
             RED,
         );
 
         add_btn(
             ResizeAction::RemoveBottom,
-            vec2(map_pixel_width / 2.0, map_pixel_height + margin + 20.0),
+            vec2(map_pixel_width / 2.0, map_pixel_height + MARGIN + INNER_GAP),
             "-",
             RED,
         );
         add_btn(
             ResizeAction::AddBottom,
-            vec2(map_pixel_width / 2.0, map_pixel_height + margin + 60.0),
+            vec2(map_pixel_width / 2.0, map_pixel_height + MARGIN + OUTER_GAP),
             "+",
             GREEN,
         );
 
         add_btn(
             ResizeAction::AddLeft,
-            vec2(-margin - 60.0, map_pixel_height / 2.0),
+            vec2(-MARGIN - OUTER_GAP, map_pixel_height / 2.0),
             "+",
             GREEN,
         );
         add_btn(
             ResizeAction::RemoveLeft,
-            vec2(-margin - 20.0, map_pixel_height / 2.0),
+            vec2(-MARGIN - INNER_GAP, map_pixel_height / 2.0),
             "-",
             RED,
         );
 
         add_btn(
             ResizeAction::AddRight,
-            vec2(map_pixel_width + margin + 60.0, map_pixel_height / 2.0),
+            vec2(map_pixel_width + MARGIN + OUTER_GAP, map_pixel_height / 2.0),
             "+",
             GREEN,
         );
         add_btn(
             ResizeAction::RemoveRight,
-            vec2(map_pixel_width + margin + 20.0, map_pixel_height / 2.0),
+            vec2(map_pixel_width + MARGIN + INNER_GAP, map_pixel_height / 2.0),
             "-",
             RED,
         );
