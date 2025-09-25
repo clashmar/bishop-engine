@@ -1,14 +1,23 @@
 // game/src/game.rs
 use engine_core::{
     assets::asset_manager::AssetManager, 
+    ecs::component::{
+        CurrentRoom, 
+        Position, 
+        Velocity
+    }, 
     rendering::render_entities::draw_entities, 
     storage::core_storage,
-     world::{
+    world::{
         room::Room, 
         world::World
     }
 };
-use crate::modes::Mode;
+use crate::{
+    input::player_input::update_player_input, 
+    modes::Mode, 
+    physics::physics_system::update_physics
+};
 use macroquad::prelude::*;
 use engine_core::camera::game_camera::GameCamera;
 
@@ -81,6 +90,38 @@ impl GameState {
     pub fn update(&mut self) {
         if is_key_pressed(KeyCode::C) {
             self.toggle_mode();
+        }
+
+        let player = self.world.world_ecs.get_player_entity();
+
+        let player_vel = self.world.world_ecs
+            .get_store_mut::<Velocity>()
+            .get_mut(player)
+            .expect("Player must have a Velocity component");
+
+        update_player_input(player_vel);
+
+        // If an entity exits the current room
+        if let Some((exiting_entity, target_id, new_pos)) = update_physics(&mut self.world.world_ecs, &self.current_room) {
+            let new_room = self.world
+                .rooms
+                .iter()
+                .find(|r| r.id == target_id)
+                .expect("Target room not found");
+
+            // Only update the new current room if the player exits
+            if exiting_entity == player {
+                self.current_room = new_room.clone();
+
+                self.camera = Room::get_room_camera(&self.world.world_ecs, new_room.id)
+                    .expect("New room missing a camera");
+            }
+
+            let cur_room_mut = self.world.world_ecs.get_mut::<CurrentRoom>(exiting_entity).unwrap();
+            cur_room_mut.0 = new_room.id;
+
+            let pos_mut = self.world.world_ecs.get_mut::<Position>(exiting_entity).unwrap();
+            pos_mut.position = new_pos;
         }
     }
 

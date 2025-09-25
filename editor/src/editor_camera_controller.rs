@@ -15,9 +15,9 @@ impl EditorCameraController {
     /// Call this once per frame from any editor that owns a `Camera2D`.
     pub fn update(camera: &mut Camera2D) {
         // Pan (middle‑mouse drag)
-        if is_mouse_button_down(MouseButton::Middle) {
+        if is_mouse_button_down(MouseButton::Middle) || is_key_down(KeyCode::LeftShift) {
             let delta = mouse_delta_position();
-            camera.target -= delta / camera.zoom;
+            camera.target -= delta * 2.0 / camera.zoom;
         }
 
         // Zoom (mouse wheel)

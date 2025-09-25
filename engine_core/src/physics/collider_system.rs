@@ -10,7 +10,7 @@ pub fn update_colliders_from_sprites(world_ecs: &mut WorldEcs, assets: &mut Asse
 
     {
         // Immutable access to the two stores.
-        let sprite_store   = world_ecs.get_store::<Sprite>();
+        let sprite_store = world_ecs.get_store::<Sprite>();
         let collider_store = world_ecs.get_store::<Collider>();
 
         // Walk through every sprite

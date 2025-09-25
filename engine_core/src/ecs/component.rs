@@ -74,7 +74,12 @@ ecs_component!(CurrentRoom);
 /// Marker component for the player entity.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Player;
-ecs_component!(Player, [Sprite, Collider, Velocity]);
+ecs_component!(Player, [
+    Sprite, 
+    Collider, 
+    Velocity,
+    PhysicsBody
+    ]);
 
 /// Component for a room camera used by the game.
 #[serde_as]

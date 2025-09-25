@@ -69,7 +69,7 @@ impl Room {
             // Local to world position
             let exit_world_pos = ( self.position / TILE_SIZE ) + exit.position;
 
-            'other_rooms: for (idx, other_room) in other_rooms.iter().enumerate() {
+            'other_rooms: for (_, other_room) in other_rooms.iter().enumerate() {
                 for other_exit in &other_room.exits {
                     // World position of the other room's exit
                     let other_world_pos = (other_room.position / TILE_SIZE) + other_exit.position;
@@ -98,7 +98,7 @@ impl Room {
                     };
 
                     if linked {
-                        exit.target_room_id = Some(idx);
+                        exit.target_room_id = Some(other_room.id);
                         break 'other_rooms;
                     }
                 }
@@ -147,6 +147,14 @@ impl Room {
         }
         None
     }
+
+    /// Returns the axis‑aligned rectangle that a room occupies in world space.
+    #[inline]
+    pub fn room_bounds(&self) -> (Vec2, Vec2) {
+        let min = self.position;
+        let max = self.position + self.size * TILE_SIZE;
+        (min, max)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -179,5 +187,5 @@ pub struct Exit {
     // Local grid coordinate
     pub position: Vec2,                 
     pub direction: ExitDirection,      
-    pub target_room_id: Option<usize>, 
+    pub target_room_id: Option<Uuid>, 
 }

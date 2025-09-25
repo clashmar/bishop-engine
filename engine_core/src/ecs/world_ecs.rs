@@ -122,6 +122,17 @@ impl WorldEcs {
         // Store it in the typed store – the same place the engine uses directly.
         self.get_store_mut::<T>().insert(entity, component);
     }
+
+    /// Returns the player Entity.
+    pub fn get_player_entity(&self) -> Entity {
+        // There should only ever be one player
+        let player = self.get_store::<Player>().data
+            .keys()
+            .next()
+            .expect("There should always be a player entity.");
+
+        *player
+    }
 }
 
 impl Serialize for WorldEcs {

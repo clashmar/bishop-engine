@@ -1,3 +1,4 @@
+// engine_core/src/input.rs
 use macroquad::prelude::*;
 
 pub fn get_omni_input() -> Vec2 {

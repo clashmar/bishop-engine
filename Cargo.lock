@@ -639,6 +639,7 @@ dependencies = [
  "macroquad",
  "ron",
  "serde",
+ "uuid",
 ]
 
 [[package]]
