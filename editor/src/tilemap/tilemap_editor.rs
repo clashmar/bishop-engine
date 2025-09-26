@@ -147,7 +147,7 @@ impl TileMapEditor  {
         let (x, y) = hover.unwrap().as_usize().unwrap();
 
         // Remove
-        if is_mouse_button_down(MouseButton::Right) {
+        if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
             let old = map.tiles[y][x];
             if old.entity != Entity::null() {
                 world_ecs.remove_entity(old.entity);

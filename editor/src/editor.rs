@@ -13,10 +13,10 @@ use crate::{
     playtest::room_playtest,
 };
 use engine_core::{
-    assets::
+    animation::animation_system::update_animation_sytem, assets::
         asset_manager::AssetManager, constants::*, physics::collider_system, storage::core_storage, world::{
-        room::Room,
-        world::World,
+            room::Room,
+            world::World,
     }
 };
 
@@ -82,7 +82,7 @@ impl Editor {
     }
 
     pub async fn update(&mut self) {
-        if!self.room_editor.view_preview {
+        if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui() {
             EditorCameraController::update(&mut self.camera);
         }
         
@@ -95,6 +95,10 @@ impl Editor {
                 }
             }
             EditorMode::Room(room_id) => {
+                // TODO: ONLY UPDATE ENTITIES IN THE ROOM
+                let delta_time = get_frame_time();
+                update_animation_sytem(&mut self.world.world_ecs, delta_time);
+
                 let other_bounds: Vec<(Vec2, Vec2)> = self.world.rooms
                     .iter()
                     .filter(|r| r.id != room_id)

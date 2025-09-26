@@ -1,17 +1,13 @@
 // engine_core/src/rendering/render_entities.rs
 use crate::{
-    assets::{
+    animation::animation_system::CurrentFrame, assets::{
         asset_manager::AssetManager, 
         sprite::Sprite
-    }, 
-    constants::*, 
-    ecs::{
+    }, constants::*, ecs::{
         component::*, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    tiles::tile::TileSprite, 
-    world::room::Room
+    }, tiles::tile::TileSprite, world::room::Room
 };
 use macroquad::prelude::*;
 
@@ -26,6 +22,7 @@ pub fn draw_entities(
     let room_store = world_ecs.get_store::<CurrentRoom>();
     let sprite_store = world_ecs.get_store::<Sprite>();
     let camera_store = world_ecs.get_store::<RoomCamera>();
+    let frame_store = world_ecs.get_store::<CurrentFrame>();
 
     for (entity, pos) in pos_store.data.iter() {
         // Skip tiles and camera
@@ -42,8 +39,29 @@ pub fn draw_entities(
             continue;
         }
 
-        // Sprite handling
-        if let Some(sprite) = sprite_store.get(*entity) {
+        // Animate/Draw sprite
+        if let Some(cf) = frame_store.get(*entity) && asset_manager.contains(cf.sprite_id) {
+            // Source rect = column/row * frame size
+            let src = Rect::new(
+                cf.col as f32 * cf.frame_size.x,
+                cf.row as f32 * cf.frame_size.y,
+                cf.frame_size.x,
+                cf.frame_size.y,
+            );
+            let tex = asset_manager.get_texture_from_id(cf.sprite_id);
+            draw_texture_ex(
+                tex,
+                pos.position.x + cf.offset.x,
+                pos.position.y + cf.offset.y,
+                WHITE,
+                DrawTextureParams {
+                    source: Some(src),
+                    ..Default::default()
+                },
+            );
+            continue; // Frame drawn, go to next entity
+        } else if let Some(sprite) = sprite_store.get(*entity) {
+            // No animation
             if asset_manager.contains(sprite.sprite_id) {
                 let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
                 draw_texture_ex(
@@ -58,6 +76,7 @@ pub fn draw_entities(
                 continue; // sprite drawn, go to next entity
             }
         }
+
         // Fallback placeholder (no sprite or missing texture)
         draw_entity_placeholder(pos.position);
     }

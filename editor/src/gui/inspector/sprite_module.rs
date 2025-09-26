@@ -31,10 +31,10 @@ impl InspectorModule for SpriteModule {
         &mut self,
         rect: Rect,
         assets: &mut AssetManager,
-        _world_ecs: &mut WorldEcs,
+        world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
-        let sprite = _world_ecs
+        let sprite = world_ecs
             .get_mut::<Sprite>(entity)
             .expect("Sprite must exist");
 

@@ -16,6 +16,8 @@ use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::transform_module::TransformModule;
 
+const SCROLL_SPEED: f32 = 5.0; 
+
 /// The panel that lives on the right‑hand side of the room editor window
 pub struct InspectorPanel {
     /// Geometry of the panel
@@ -30,6 +32,8 @@ pub struct InspectorPanel {
     pending_add: Option<String>,
     /// Rectangles that were drawn this frame and are therefore active.
     active_rects: Vec<Rect>,
+    // Current vertical offset of the scroll‑view.
+    scroll_offset: f32,
 }
 
 impl InspectorPanel {
@@ -59,6 +63,7 @@ impl InspectorPanel {
             add_mode: false,
             pending_add: None,
             active_rects: Vec::new(),
+            scroll_offset: 0.0,
         }
     }
 
@@ -70,6 +75,7 @@ impl InspectorPanel {
     /// Tell the inspector which entity is currently selected
     pub fn set_target(&mut self, entity: Option<Entity>) {
         self.target = entity;
+        self.scroll_offset = 0.0;
     }
 
     /// Render the panel and any visible sub‑modules
@@ -158,15 +164,48 @@ impl InspectorPanel {
                 // Outline 
                 draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
 
-                // Layout the modules vertically
-                let mut y = inner.y + 10.0;
+
+                let total_content_h = self.total_content_height(&world_ecs, entity);
+
+                if inner.contains(mouse_position().into()) {
+                    let (_, dy) = mouse_wheel();
+                    if dy != 0.0 {
+                        let max_offset = (total_content_h - inner.h).max(0.0);
+                        self.scroll_offset = (self.scroll_offset - dy * SCROLL_SPEED)
+                            .clamp(0.0, max_offset);
+                    }
+                }
+
+                // Render modules inside the scroll‑view
+                let mut y = inner.y + INSET - self.scroll_offset;
                 for module in &mut self.modules {
                     if module.visible(world_ecs, entity) {
-                        let h = module.height(); // dynamic height
-                        let sub_rect = Rect::new(inner.x + 10.0, y, inner.w - 20.0, h);
-                        module.draw(sub_rect, asset_manager, world_ecs, entity);
-                        y += h + 10.0;
+                        let h = module.height();
+                        
+                        // Only draw when the module intersects the visible area
+                        if y + h > inner.y && y < inner.y + inner.h {
+                            let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
+                            module.draw(sub_rect, asset_manager, world_ecs, entity);
+                        }
+
+                        y += h + SPACING;
                     }
+                }
+
+                // Scroll bar
+                if total_content_h > inner.h {
+                    // Height of the thumb proportional to the visible fraction
+                    let thumb_h = inner.h * inner.h / total_content_h;
+                    // Position of the thumb inside the panel
+                    let thumb_y = inner.y + (self.scroll_offset / total_content_h) * inner.h;
+                    // Draw a simple grey bar on the right edge of the panel
+                    draw_rectangle(
+                        inner.x + inner.w - 6.0,
+                        thumb_y,
+                        4.0,
+                        thumb_h,
+                        Color::new(0.7, 0.7, 0.7, 0.8),
+                    );
                 }
             }
         } else {
@@ -299,14 +338,32 @@ impl InspectorPanel {
         rect
     }
 
-    fn is_mouse_over(&self, mouse_screen: Vec2) -> bool {
+    pub fn is_mouse_over(&self) -> bool {
+        let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || (self.rect.contains(mouse_screen) && self.target.is_some())
     }
 
     /// Checks whether the inspector was clicked during this frame.
-    pub fn was_clicked(&self, mouse_screen: Vec2) -> bool {
-        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over(mouse_screen)
+    pub fn was_clicked(&self) -> bool {
+        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over()
+    }
+
+    fn total_content_height(&self, world_ecs: &WorldEcs, entity: Entity) -> f32 {
+        let mut total_content_h = 0.0;
+        for module in &self.modules {
+            if module.visible(world_ecs, entity) {
+                total_content_h += module.height() + SPACING;
+            }
+        }
+        // Remove the trailing spacing that we added after the last module
+        if total_content_h > 0.0 {
+            total_content_h -= SPACING;
+        }
+
+        total_content_h += INSET * 2.0; // Top and bottom inset
+         
+        total_content_h
     }
 }
 
@@ -318,3 +375,4 @@ fn entity_has_component(
 ) -> bool {
     (reg.has)(world_ecs, entity)
 }
+

@@ -95,7 +95,7 @@ impl RoomEditor {
                 ).await;
             }
             RoomEditorMode::Scene => {
-                if self.inspector.was_clicked(mouse_screen) {
+                if self.inspector.was_clicked() {
                     ui_was_clicked = true;
                 }
 
@@ -275,6 +275,10 @@ impl RoomEditor {
         }
         
         self.draw_coordinates(camera, room);
+    }
+
+    pub fn is_mouse_over_ui(&self) -> bool {
+        self.inspector.is_mouse_over()
     }
 
     pub fn reset(&mut self) {
