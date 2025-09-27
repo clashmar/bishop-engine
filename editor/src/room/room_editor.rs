@@ -203,6 +203,11 @@ impl RoomEditor {
                     asset_manager,
                     room.position,
                 );
+
+                if self.show_grid { 
+                    set_camera(camera);
+                    grid::draw_grid(camera);
+                }
             }
             RoomEditorMode::Scene => {
                 let room_camera = Room::get_room_camera(world_ecs, room.id)
@@ -221,6 +226,11 @@ impl RoomEditor {
                 draw_entities(world_ecs, room, asset_manager);
 
                 if !self.view_preview {
+                    if self.show_grid { 
+                        set_camera(camera);
+                        grid::draw_grid(camera);
+                    }
+
                     draw_camera_placeholder(room_camera.position);
 
                     if let Some(selected_entity) = self.selected_entity {
@@ -249,11 +259,6 @@ impl RoomEditor {
 
                     if self.inspector.target.is_none() {
                         self.selected_entity = None;
-                    }
-
-                    if self.show_grid { 
-                        set_camera(camera);
-                        grid::draw_grid(camera);
                     }
                 }
             }

@@ -6,7 +6,7 @@ use crate::{editor_camera_controller::{EditorCameraController}, canvas::grid};
 use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use crate::world::coord;
 
-pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.02;
+pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.01;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
 const HIGHLIGHT_ERROR_COLOR: Color = Color::new(1.0, 0.0, 0.0, 0.5);
 const ROOM_LINE_INSET: f32 = 0.5;

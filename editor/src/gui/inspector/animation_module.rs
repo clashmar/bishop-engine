@@ -50,20 +50,6 @@ impl InspectorModule for AnimationModule {
         let mut y = rect.y + SPACING;
         let full_w = rect.w - 2.0 * PADDING;
 
-        // Clip selector 
-        // TODO: CREATE DROPDOWN WIDGET
-        let clip_btn = Rect::new(rect.x + PADDING, y, full_w, BTN_HEIGHT);
-        if gui_button(clip_btn,
-            format!("{:?}", animation.current).as_str()) {
-            // Cycle through keys
-            let keys: Vec<_> = animation.clips.keys().cloned().collect();
-            if let Some(idx) = keys.iter().position(|k| *k == animation.current) {
-                let next = keys[(idx + 1) % keys.len()].clone();
-                animation.set_clip(next);
-            }
-        }
-        y += MARGIN + PADDING;
-        
         // Add clip button
         const ADD_LABEL: &str = "Add Clip";
         let txt = measure_text(ADD_LABEL, None, 20, 1.0);
@@ -92,6 +78,20 @@ impl InspectorModule for AnimationModule {
             animation.current = new_id;
         }
 
+        y += MARGIN + PADDING;
+
+        // Clip selector 
+        // TODO: CREATE DROPDOWN WIDGET
+        let clip_btn = Rect::new(rect.x + PADDING, y, full_w, BTN_HEIGHT);
+        if gui_button(clip_btn,
+            format!("{:?}", animation.current).as_str()) {
+            // Cycle through keys
+            let keys: Vec<_> = animation.clips.keys().cloned().collect();
+            if let Some(idx) = keys.iter().position(|k| *k == animation.current) {
+                let next = keys[(idx + 1) % keys.len()].clone();
+                animation.set_clip(next);
+            }
+        }
         y += MARGIN + PADDING;
 
         // Edit the currently selected clip

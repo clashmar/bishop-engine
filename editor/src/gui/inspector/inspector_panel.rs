@@ -67,15 +67,17 @@ impl InspectorPanel {
         }
     }
 
-    /// Called by the editor each frame to place the panel
+    /// Called by the editor each frame to place the panel.
     pub fn set_rect(&mut self, rect: Rect) {
         self.rect = rect;
     }
 
-    /// Tell the inspector which entity is currently selected
+    /// Tell the inspector which entity is currently selected.
     pub fn set_target(&mut self, entity: Option<Entity>) {
-        self.target = entity;
-        self.scroll_offset = 0.0;
+        if self.target != entity {
+            self.target = entity;
+            self.scroll_offset = 0.0; 
+        }
     }
 
     /// Render the panel and any visible sub‑modules
@@ -112,27 +114,6 @@ impl InspectorPanel {
                 btn_w_add,
                 BTN_HEIGHT,
             ));
-            
-            if gui_button(add_rect, add_label) {
-                if self.can_show_any_component(world_ecs) {
-                    self.add_mode = !self.add_mode;
-                }
-            }
-
-            // Remove button
-            // Don't show remove for player entity or camera
-            if !(world_ecs.get_store::<Player>().contains(entity) 
-                || world_ecs.get_store::<RoomCamera>().contains(entity)
-            ) {
-                let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
-
-                if gui_button(remove_rect, remove_label) {
-                    world_ecs.remove_entity(entity);
-                    self.target = None;
-                    self.add_mode = false;
-                    return false;
-                }
-            }
 
             // Draw the drop‑down menu when in add mode
             if self.add_mode {
@@ -161,9 +142,7 @@ impl InspectorPanel {
                     Color::new(0., 0., 0., 0.6),
                 );
 
-                // Outline 
-                draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
-
+                
 
                 let total_content_h = self.total_content_height(&world_ecs, entity);
 
@@ -206,6 +185,34 @@ impl InspectorPanel {
                         thumb_h,
                         Color::new(0.7, 0.7, 0.7, 0.8),
                     );
+                }
+
+                // Cover modules overflowing the top/bottom
+                self.draw_overflow_covers(inner);
+
+                // Outline 
+                draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
+
+                // Draw buttons ad the top after the covers
+                if gui_button(add_rect, add_label) {
+                    if self.can_show_any_component(world_ecs) {
+                        self.add_mode = !self.add_mode;
+                    }
+                }
+
+                // Remove button
+                // Don't show remove for player entity or camera
+                if !(world_ecs.get_store::<Player>().contains(entity) 
+                    || world_ecs.get_store::<RoomCamera>().contains(entity)
+                ) {
+                    let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
+
+                    if gui_button(remove_rect, remove_label) {
+                        world_ecs.remove_entity(entity);
+                        self.target = None;
+                        self.add_mode = false;
+                        return false;
+                    }
                 }
             }
         } else {
@@ -251,11 +258,13 @@ impl InspectorPanel {
                 eprintln!("Module `{}` has no ComponentReg entry", type_name);
             }
         }
+        
         // Close the menu if nothing to show
         if shown.is_empty() {
             self.add_mode = false;
             return;
         }
+
         const ENTRY_H: f32 = 30.0;
         const DEFAULT_MENU_W: f32 = 200.0;
         const MIN_INSET: f32 = 10.0;
@@ -323,6 +332,12 @@ impl InspectorPanel {
         };
         for entry in MODULES.iter() {
             let type_name = entry.title;
+
+            // Room cameras must be created separately
+            if type_name == RoomCamera::TYPE_NAME {
+                continue;
+            }
+
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
                 if !entity_has_component(world_ecs, entity, reg) {
                     return true;
@@ -364,6 +379,54 @@ impl InspectorPanel {
         total_content_h += INSET * 2.0; // Top and bottom inset
          
         total_content_h
+    }
+
+    /// Draw the four solid‑grey mask rectangles which hide anything 
+    /// that scrolls outside the visible inspector area.
+    fn draw_overflow_covers(&self, inner: Rect) {
+        const COVER_COLOUR: Color = GRAY;
+
+        // Top cover
+        draw_rectangle(
+            self.rect.x,
+            self.rect.y,
+            self.rect.w,
+            inner.y - self.rect.y,
+            COVER_COLOUR,
+        );
+        
+
+        // Bottom cover
+        let inner_bottom = inner.y + inner.h;
+        let panel_bottom = self.rect.y + self.rect.h;
+
+        draw_rectangle(
+            self.rect.x,
+            inner_bottom,
+            self.rect.w,
+            panel_bottom - inner_bottom,
+            COVER_COLOUR,
+        );
+        
+        // Left strip
+        draw_rectangle(
+            self.rect.x - INSET,
+            self.rect.y,
+            INSET,
+            self.rect.h,
+            COVER_COLOUR,
+        );
+        
+        // Right strip
+        let inner_right = inner.x + inner.w;
+        let panel_right = self.rect.x + self.rect.w;
+        draw_rectangle(
+            inner_right,
+            self.rect.y,
+            panel_right - inner_right,
+            self.rect.h,
+            COVER_COLOUR,
+        );
     }
 }
 

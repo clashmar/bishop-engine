@@ -7,15 +7,15 @@ const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
 
 pub fn draw_grid(camera: &Camera2D) {
     let scalar = EditorCameraController::scalar_zoom(camera);
-    if scalar < editor_camera_controller::MIN_ZOOM * 2.0 {
+    if scalar < editor_camera_controller::MIN_ZOOM * 4.0 {
         return;
     }
 
-    let line_thickness = (LINE_THICKNESS_MULTIPLIER / 2.0) / camera.zoom.x.abs();
+    let line_thickness = (LINE_THICKNESS_MULTIPLIER / 2.0) / scalar;
 
     let cam_pos = camera.target;
-    let screen_w = screen_width() / camera.zoom.x;
-    let screen_h = screen_height() / camera.zoom.y;
+    let screen_w = screen_width() / scalar;
+    let screen_h = screen_height() / scalar;
 
     // start_x / start_y are the first grid lines that are left / top of the view.
     let start_x = ((cam_pos.x - screen_w / 2.0) / TILE_SIZE).floor() * TILE_SIZE;
