@@ -1,9 +1,12 @@
 use engine_core::{
-    animation::animation_clip::{
-        Animation, 
-        Clip, 
-        ClipId, 
-        ClipState
+    animation::{
+            animation_clip::{
+            Animation, 
+            Clip, 
+            ClipId, 
+            ClipState
+        }, 
+        animation_system::CurrentFrame
     }, 
     assets::{
         asset_manager::AssetManager, 
@@ -40,6 +43,7 @@ impl InspectorModule for AnimationModule {
 
     fn remove(&mut self, world_ecs: &mut WorldEcs, entity: Entity) {
         world_ecs.get_store_mut::<Animation>().remove(entity);
+        world_ecs.get_store_mut::<CurrentFrame>().remove(entity);
     }
 
     fn draw(

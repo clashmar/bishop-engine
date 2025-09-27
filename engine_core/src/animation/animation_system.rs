@@ -1,13 +1,15 @@
+use std::collections::HashSet;
+
 // engine_core/src/animation/animation_system.rs
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use crate::{
     animation::animation_clip::{
         Animation, 
         ClipId
     }, assets::sprite::SpriteId, ecs::{
-        entity::Entity, 
-        world_ecs::WorldEcs
+        component::CurrentRoom, entity::Entity, world_ecs::WorldEcs
     }, ecs_component
 };
 
@@ -29,12 +31,23 @@ pub struct CurrentFrame {
 
 ecs_component!(CurrentFrame);
 
-pub fn update_animation_sytem(world_ecs: &mut WorldEcs, delta_time: f32) {
+pub fn update_animation_sytem(
+    world_ecs: &mut WorldEcs, 
+    delta_time: f32,
+    room_id: Uuid,
+) {
+    // Gather the ids of all entities that are in the current room
+    let entities = entities_in_room(world_ecs, room_id);
+
     let anim_store = world_ecs.get_store_mut::<Animation>();
 
     let mut frames: Vec<(Entity, CurrentFrame)> = vec![];
 
     for (entity, animation) in anim_store.data.iter_mut() {
+        if !entities.contains(entity) {
+            continue;
+        }
+
         // Bail out early if there is no active clip.
         let Some(current_id) = &animation.current else { continue };
         let Some(clip) = animation.clips.get(current_id) else { continue };
@@ -76,4 +89,19 @@ pub fn update_animation_sytem(world_ecs: &mut WorldEcs, delta_time: f32) {
     for (entity, frame) in frames {
         world_ecs.add_component_to_entity(entity, frame)
     }
+}
+
+fn entities_in_room(world_ecs: &mut WorldEcs, room_id: Uuid) -> HashSet<Entity> {
+    let room_store = world_ecs.get_store::<CurrentRoom>();
+    room_store
+        .data
+        .iter()
+        .filter_map(|(entity, cur_room)| {
+            if cur_room.0 == room_id {
+                Some(*entity)
+            } else {
+                None
+            }
+        })
+        .collect()
 }

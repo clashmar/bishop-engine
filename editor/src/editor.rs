@@ -13,7 +13,7 @@ use crate::{
     playtest::room_playtest,
 };
 use engine_core::{
-    animation::animation_system::update_animation_sytem, assets::
+    assets::
         asset_manager::AssetManager, 
         constants::*, 
         physics::collider_system, 
@@ -99,10 +99,6 @@ impl Editor {
                 }
             }
             EditorMode::Room(room_id) => {
-                // TODO: ONLY UPDATE ENTITIES IN THE ROOM
-                let delta_time = get_frame_time();
-                update_animation_sytem(&mut self.world.world_ecs, delta_time);
-
                 let other_bounds: Vec<(Vec2, Vec2)> = self.world.rooms
                     .iter()
                     .filter(|r| r.id != room_id)

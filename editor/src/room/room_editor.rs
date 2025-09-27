@@ -11,6 +11,7 @@ use crate::{
     world::coord
 };
 use engine_core::{
+    animation::animation_system::update_animation_sytem,
     assets::asset_manager::AssetManager, 
     ecs::{
     component::{CurrentRoom, Position, RoomCamera}, 
@@ -83,6 +84,9 @@ impl RoomEditor {
         let mouse_screen: Vec2 = mouse_position().into();
 
         let mut ui_was_clicked = false;
+
+        let delta_time = get_frame_time();
+        update_animation_sytem(world_ecs, delta_time, room.id);
 
         match self.mode {
             RoomEditorMode::Tilemap => {
