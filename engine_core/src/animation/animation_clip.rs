@@ -23,6 +23,8 @@ pub enum ClipId {
 pub struct Clip {
     /// Texture that holds the sheet.
     pub sprite_id: SpriteId,
+    /// Path that was used to load the texture.
+    pub path: String,
     /// Width and height of a single cell.
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub frame_size: Vec2,
@@ -58,7 +60,7 @@ pub struct Animation {
     /// All clips the entity can play.
     pub clips: HashMap<ClipId, Clip>,
     /// Which clip is currently active.
-    pub current: ClipId,
+    pub current: Option<ClipId>,
     /// Per‑clip runtime data.
     #[serde(skip)]
     pub states: HashMap<ClipId, ClipState>,
@@ -67,22 +69,32 @@ pub struct Animation {
 ecs_component!(Animation);
 
 impl Animation {
-    /// Call after deserialization.
+    /// Call after deserialization or after a clip has been added/removed.
     pub fn init_runtime(&mut self) {
         self.states.clear();
         for id in self.clips.keys() {
             self.states.insert(id.clone(), ClipState::default());
+        }
+
+        // If there is at least one clip but `current` is None, pick the first
+        if self.current.is_none() && !self.clips.is_empty() {
+            self.current = Some(self.clips.keys().next().unwrap().clone());
         }
     }
 
     /// Switch to another clip safely.
     pub fn set_clip(&mut self, id: ClipId) {
         if self.clips.contains_key(&id) {
-            self.current = id;
-            // Reset its timer so the new clip starts from frame 0.
-            if let Some(state) = self.states.get_mut(&self.current) {
+            self.current = Some(id.clone());
+            // Reset its timer so the new clip starts from frame 0.
+            if let Some(state) = self.states.get_mut(&id) {
                 *state = ClipState::default();
             }
         }
+    }
+
+    /// Clear the active clip.
+    pub fn clear_clip(&mut self) {
+        self.current = None;
     }
 }

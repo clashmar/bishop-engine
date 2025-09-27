@@ -3,4 +3,6 @@ pub const PADDING: f32 = 20.0;
 pub const SPACING: f32 = 10.0;   
 pub const INSET: f32 = 10.0;
 pub const BTN_HEIGHT: f32 = 30.0;
+pub const INPUT_HEIGHT: f32 = 30.0;
 pub const MARGIN: f32 = 30.0;
+pub const CHECKBOX_SIZE: f32 = 20.0;

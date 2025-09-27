@@ -35,12 +35,10 @@ pub fn update_animation_sytem(world_ecs: &mut WorldEcs, delta_time: f32) {
     let mut frames: Vec<(Entity, CurrentFrame)> = vec![];
 
     for (entity, animation) in anim_store.data.iter_mut() {
-        let clip = match animation.clips.get(&animation.current) {
-            Some(c) => c,
-            None => continue,
-        };
-
-        let clip_state = animation.states.get_mut(&animation.current).unwrap();
+        // Bail out early if there is no active clip.
+        let Some(current_id) = &animation.current else { continue };
+        let Some(clip) = animation.clips.get(current_id) else { continue };
+        let clip_state = animation.states.get_mut(current_id).unwrap();
 
         // Advance the timer
         clip_state.timer += delta_time;
@@ -64,7 +62,7 @@ pub fn update_animation_sytem(world_ecs: &mut WorldEcs, delta_time: f32) {
         }
 
         let frame = CurrentFrame {
-            clip_id: animation.current.clone(),
+            clip_id: animation.current.clone().unwrap(),
             col: clip_state.col,
             row: clip_state.row,
             offset: clip.offset,

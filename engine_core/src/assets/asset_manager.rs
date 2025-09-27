@@ -4,9 +4,7 @@ use macroquad::prelude::*;
 use uuid::Uuid;
 use std::collections::HashMap;
 use crate::{
-    assets::sprite::{Sprite, SpriteId}, 
-    ecs::world_ecs::WorldEcs, 
-    tiles::tile::TileSprite
+    animation::animation_clip::Animation, assets::sprite::{Sprite, SpriteId}, ecs::world_ecs::WorldEcs, tiles::tile::TileSprite
 };
 
 pub struct AssetManager {
@@ -93,12 +91,25 @@ impl AssetManager {
                 sprite.sprite_id = id;
             }
         }
+
         // Load all tile‑sprites
         for (_entity, tile_sprite) in world_ecs.get_store_mut::<TileSprite>().data.iter_mut() {
             if !self.contains(tile_sprite.sprite_id) {
                 let id = self.load(&tile_sprite.path).await;
                 tile_sprite.sprite_id = id;
             }
+        }
+
+        // Load and initialize all animations
+        for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
+            for clip in animation.clips.values_mut() {
+                if !self.contains(clip.sprite_id) && !clip.path.is_empty() {
+                    // Load the texture and keep the returned id
+                    let id = self.load(&clip.path).await;
+                    clip.sprite_id = id;
+                }
+            }
+            animation.init_runtime();
         }
     }
 

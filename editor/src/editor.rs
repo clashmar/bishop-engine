@@ -14,7 +14,11 @@ use crate::{
 };
 use engine_core::{
     animation::animation_system::update_animation_sytem, assets::
-        asset_manager::AssetManager, constants::*, physics::collider_system, storage::core_storage, world::{
+        asset_manager::AssetManager, 
+        constants::*, 
+        physics::collider_system, 
+        storage::core_storage, 
+        world::{
             room::Room,
             world::World,
     }

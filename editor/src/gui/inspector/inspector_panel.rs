@@ -14,6 +14,7 @@ use engine_core::{
 };
 use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
+use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::inspector::transform_module::TransformModule;
 
 const SCROLL_SPEED: f32 = 5.0; 
@@ -142,8 +143,6 @@ impl InspectorPanel {
                     Color::new(0., 0., 0., 0.6),
                 );
 
-                
-
                 let total_content_h = self.total_content_height(&world_ecs, entity);
 
                 if inner.contains(mouse_position().into()) {
@@ -192,27 +191,26 @@ impl InspectorPanel {
 
                 // Outline 
                 draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
-
-                // Draw buttons ad the top after the covers
-                if gui_button(add_rect, add_label) {
-                    if self.can_show_any_component(world_ecs) {
-                        self.add_mode = !self.add_mode;
-                    }
+            }
+            // Draw buttons ad the top after the covers
+            if gui_button(add_rect, add_label) {
+                if self.can_show_any_component(world_ecs) {
+                    self.add_mode = !self.add_mode;
                 }
+            }
 
-                // Remove button
-                // Don't show remove for player entity or camera
-                if !(world_ecs.get_store::<Player>().contains(entity) 
-                    || world_ecs.get_store::<RoomCamera>().contains(entity)
-                ) {
-                    let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
+            // Remove button
+            // Don't show remove for player entity or camera
+            if !(world_ecs.get_store::<Player>().contains(entity) 
+                || world_ecs.get_store::<RoomCamera>().contains(entity)
+            ) {
+                let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                    if gui_button(remove_rect, remove_label) {
-                        world_ecs.remove_entity(entity);
-                        self.target = None;
-                        self.add_mode = false;
-                        return false;
-                    }
+                if gui_button(remove_rect, remove_label) {
+                    world_ecs.remove_entity(entity);
+                    self.target = None;
+                    self.add_mode = false;
+                    return false;
                 }
             }
         } else {
@@ -250,6 +248,10 @@ impl InspectorPanel {
 
         for entry in MODULES.iter() {
             let type_name = entry.title;
+            // Room cameras must be created separately
+            if type_name == ROOM_CAMERA_MODULE_TITLE {
+                continue;
+            }
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
                 if !entity_has_component(world_ecs, entity, reg) {
                     shown.push(reg);
@@ -332,12 +334,6 @@ impl InspectorPanel {
         };
         for entry in MODULES.iter() {
             let type_name = entry.title;
-
-            // Room cameras must be created separately
-            if type_name == RoomCamera::TYPE_NAME {
-                continue;
-            }
-
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
                 if !entity_has_component(world_ecs, entity, reg) {
                     return true;

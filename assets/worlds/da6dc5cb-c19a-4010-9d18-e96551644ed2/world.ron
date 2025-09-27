@@ -1,58 +1,58 @@
 (
-    id: "f9e4174b-1c10-4431-a44d-26e927ff79c0",
+    id: "da6dc5cb-c19a-4010-9d18-e96551644ed2",
     name: "World\r",
     world_ecs: (
         components: [
             /*[0]*/ (
-                type_name: "Velocity",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
+                type_name: "PhysicsBody",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (),\n    },\n)",
             ),
             /*[1]*/ (
-                type_name: "PhysicsBody",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (),\n    },\n)",
+                type_name: "Sprite",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (\n            sprite_id: (\"00000000-0000-0000-0000-000000000000\"),\n            path: \"\",\n        ),\n    },\n)",
             ),
             /*[2]*/ (
-                type_name: "CurrentFrame",
-                data: "(\n    data: {},\n)",
+                type_name: "Velocity",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
             ),
             /*[3]*/ (
-                type_name: "Collider",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
+                type_name: "Animation",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (\n            clips: {\n                Custom(\"Clip 1\"): (\n                    sprite_id: (\"a57ac5a7-932c-4316-828d-8ccb684a077f\"),\n                    path: \"/Users/charliesovn/Projects/Aseprite/Idle.png\",\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            current: Some(Custom(\"Clip 1\")),\n        ),\n        (\"d14dbf4f-1422-4622-8148-95344884e384\"): (\n            clips: {\n                Custom(\"Clip 1\"): (\n                    sprite_id: (\"a57ac5a7-932c-4316-828d-8ccb684a077f\"),\n                    path: \"/Users/charliesovn/Projects/Aseprite/Idle.png\",\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            current: Some(Custom(\"Clip 1\")),\n        ),\n    },\n)",
             ),
             /*[4]*/ (
-                type_name: "Position",
-                data: "(\n    data: {\n        (\"6c1fd37a-a5d8-4857-ac3a-c25392be4739\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (\n            position: (1.0, 1.0),\n        ),\n    },\n)",
+                type_name: "CurrentFrame",
+                data: "(\n    data: {\n        (\"d14dbf4f-1422-4622-8148-95344884e384\"): (),\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (),\n    },\n)",
             ),
             /*[5]*/ (
-                type_name: "Sprite",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (\n            sprite_id: (\"00000000-0000-0000-0000-000000000000\"),\n            path: \"\",\n        ),\n    },\n)",
-            ),
-            /*[6]*/ (
-                type_name: "Animation",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (\n            clips: {},\n            current: Idle,\n        ),\n    },\n)",
-            ),
-            /*[7]*/ (
-                type_name: "CurrentRoom",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (\"f4728268-6bf7-440a-b4c2-2f178a88da87\"),\n        (\"6c1fd37a-a5d8-4857-ac3a-c25392be4739\"): (\"f4728268-6bf7-440a-b4c2-2f178a88da87\"),\n    },\n)",
-            ),
-            /*[8]*/ (
-                type_name: "RoomCamera",
-                data: "(\n    data: {\n        (\"6c1fd37a-a5d8-4857-ac3a-c25392be4739\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
-            ),
-            /*[9]*/ (
                 type_name: "TileSprite",
                 data: "(\n    data: {},\n)",
             ),
-            /*[10]*/ (
+            /*[6]*/ (
+                type_name: "CurrentRoom",
+                data: "(\n    data: {\n        (\"d14dbf4f-1422-4622-8148-95344884e384\"): (\"da0be570-901f-4142-9752-909d777d9566\"),\n        (\"5dbae299-ed48-4080-b739-440797cebc99\"): (\"da0be570-901f-4142-9752-909d777d9566\"),\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (\"da0be570-901f-4142-9752-909d777d9566\"),\n    },\n)",
+            ),
+            /*[7]*/ (
                 type_name: "Player",
-                data: "(\n    data: {\n        (\"d64e1d4a-a4f8-4ceb-afbb-eb4d97126a03\"): (),\n    },\n)",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (),\n    },\n)",
+            ),
+            /*[8]*/ (
+                type_name: "RoomCamera",
+                data: "(\n    data: {\n        (\"5dbae299-ed48-4080-b739-440797cebc99\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
+            ),
+            /*[9]*/ (
+                type_name: "Collider",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (\n            width: 6.0,\n            height: 16.0,\n        ),\n        (\"d14dbf4f-1422-4622-8148-95344884e384\"): (\n            width: 6.0,\n            height: 16.0,\n        ),\n    },\n)",
+            ),
+            /*[10]*/ (
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"1dcf89ce-6022-43a9-b96d-b8b4ec543f13\"): (\n            position: (14.918049, 10.536743),\n        ),\n        (\"5dbae299-ed48-4080-b739-440797cebc99\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"d14dbf4f-1422-4622-8148-95344884e384\"): (\n            position: (38.62203, 36.021927),\n        ),\n    },\n)",
             ),
         ],
         tile_defs: {},
     ),
     rooms: [
         /*[0]*/ (
-            id: "f4728268-6bf7-440a-b4c2-2f178a88da87",
+            id: "da0be570-901f-4142-9752-909d777d9566",
             name: "untitled",
             position: (
                 0.0,
@@ -243,7 +243,7 @@
             ],
         ),
     ],
-    starting_room: Some("f4728268-6bf7-440a-b4c2-2f178a88da87"),
+    starting_room: Some("da0be570-901f-4142-9752-909d777d9566"),
     starting_position: Some((
         1.0,
         1.0,

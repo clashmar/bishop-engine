@@ -103,13 +103,19 @@ pub fn sprite_dimensions(
     asset_manager: &AssetManager,
     entity: Entity,
 ) -> (f32, f32) {
-    if let Some(sprite) = world_ecs.get_store::<Sprite>().get(entity) {
-        if let Some((width, height)) = asset_manager.texture_size(sprite.sprite_id) {
-            return (width, height);
-        }
-    }
-    // Fallback
-    (TILE_SIZE, TILE_SIZE)
+    let from_anim = world_ecs
+        .get_store::<CurrentFrame>()
+        .get(entity)
+        .map(|cf| (cf.frame_size.x, cf.frame_size.y));
+
+    let from_sprite = || {
+        world_ecs
+            .get_store::<Sprite>()
+            .get(entity)
+            .and_then(|spr| asset_manager.texture_size(spr.sprite_id))
+    };
+
+    from_anim.or_else(from_sprite).unwrap_or((TILE_SIZE, TILE_SIZE))
 }
 
 pub fn draw_entity_placeholder(pos: Vec2) {

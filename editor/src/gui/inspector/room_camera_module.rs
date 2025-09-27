@@ -13,6 +13,8 @@ use engine_core::{
     }
 };
 
+pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
+
 #[derive(Default)]
 pub struct RoomCameraModule {}
 
@@ -120,13 +122,13 @@ impl InspectorModule for RoomCameraModule {
 
 inventory::submit! {
     ModuleFactoryEntry {
-        title: <engine_core::ecs::component::RoomCamera>::TYPE_NAME,
+        title: ROOM_CAMERA_MODULE_TITLE,
         factory: || {
             Box::new(
                 CollapsibleModule::new(
                     crate::gui::inspector::room_camera_module::RoomCameraModule::default()
                 )
-                .with_title("Camera")
+                .with_title(ROOM_CAMERA_MODULE_TITLE)
             )
         },
     }
