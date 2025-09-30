@@ -151,7 +151,7 @@ impl Serialize for WorldEcs {
                 None => {
                     // Fallback
                     eprintln!(
-                        "⚠️  Skipping unknown component store (TypeId = {:?}) – \
+                        "Skipping unknown component store (TypeId = {:?}) – \
                          it will not be saved. Add `ecs_component!` for the type to keep it.",
                         type_id
                     );

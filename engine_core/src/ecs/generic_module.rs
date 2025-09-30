@@ -69,7 +69,7 @@ where
             match field.value {
                 FieldValue::Text(txt) => {
                     // `txt` is `&mut String`.
-                    let new = gui_input_text(widget_rect, txt.as_str());
+                    let (new, _) = gui_input_text_default(widget_rect, txt.as_str());
                     if new != *txt {
                         *txt = new;
                     }

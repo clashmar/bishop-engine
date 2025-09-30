@@ -1,13 +1,17 @@
 // engine_core/src/animation/animation_clip.rs
+use strum_macros::{EnumIter, EnumString};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use std::collections::HashMap;
 use serde_with::{FromInto, serde_as};
+use std::fmt;
 
-use crate::{assets::sprite::SpriteId, ecs_component};
+use crate::{assets::sprite::SpriteId, constants::TILE_SIZE, ecs_component};
 
 /// Logical name of a clip.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(EnumIter, EnumString, Debug, Default, 
+    Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ClipId {
     #[default]
     Idle,
@@ -15,11 +19,32 @@ pub enum ClipId {
     Run,
     Attack,
     Custom(String),
+    New,
+}
+
+impl ClipId {
+    /// Returns the text that should be shown in dropdowns, lists, etc.
+    pub fn ui_label(&self) -> String {
+        match self {
+            // Empty
+            ClipId::New => "New".to_string(),
+            // Any non‑empty custom name
+            ClipId::Custom(name) => name.clone(),
+            // Built‑in variants
+            _ => format!("{self:?}"),
+        }
+    }
+}
+
+impl fmt::Display for ClipId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.ui_label())
+    }
 }
 
 /// One animation clip inside a sprite sheet.
 #[serde_as]
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Clip {
     /// Texture that holds the sheet.
     pub sprite_id: SpriteId,
@@ -39,6 +64,21 @@ pub struct Clip {
     /// Optional offset for drawing.
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub offset: Vec2,
+}
+
+impl Default for Clip {
+    fn default() -> Clip {
+        Clip {
+            sprite_id: SpriteId(Uuid::nil()),
+            path: String::new(),
+            frame_size: vec2(TILE_SIZE, TILE_SIZE),
+            cols: 5,
+            rows: 1,
+            fps: 4.0,
+            looping: true,
+            offset: Vec2::ZERO,
+        }
+    }
 }
 
 /// Runtime state for a single clip.
@@ -83,7 +123,7 @@ impl Animation {
     }
 
     /// Switch to another clip safely.
-    pub fn set_clip(&mut self, id: ClipId) {
+    pub fn set_clip(&mut self, id: &ClipId) {
         if self.clips.contains_key(&id) {
             self.current = Some(id.clone());
             // Reset its timer so the new clip starts from frame 0.

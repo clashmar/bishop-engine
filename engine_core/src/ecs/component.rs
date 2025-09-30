@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
 use crate::{
-    assets::sprite::Sprite, 
     ecs::entity::Entity, 
     ecs_component, 
     inspector_module
@@ -75,7 +74,6 @@ ecs_component!(CurrentRoom);
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Player;
 ecs_component!(Player, [
-    Sprite, 
     Collider, 
     Velocity,
     PhysicsBody
@@ -140,3 +138,12 @@ pub struct Damage {
 }
 
 ecs_component!(Damage);
+
+
+#[derive(Clone, Serialize, Deserialize, Default, Reflect)]
+pub struct Name {
+    pub name: String,
+}
+
+ecs_component!(Name);
+inspector_module!(Name);

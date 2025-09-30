@@ -216,7 +216,7 @@ impl TilePalette {
 
         // Name
         let name_rect = Rect::new(panel.x + 10., panel.y + 20., panel.w - 20., 30.);
-        self.ui.name = gui_input_text(name_rect, &self.ui.name);
+        (self.ui.name, _) = gui_input_text_default(name_rect, &self.ui.name);
 
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);

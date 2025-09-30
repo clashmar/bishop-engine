@@ -2,22 +2,98 @@
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
+use std::fmt::Display;
+use std::time::Instant;
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// Opaque, never‑changing identifier for a logical UI widget.
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct WidgetId(pub usize);
+
+impl WidgetId {
+    /// Returns a fresh id. Call this when the widget is created.
+    pub fn fresh() -> Self {
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+        WidgetId(COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+}
+
+const PADDING: f32 = 20.0;
+const HOLD_INITIAL_DELAY: f64 = 0.50;
+const HOLD_REPEAT_RATE: f64   = 0.05;
+
+thread_local! {
+    static INPUT_TEXT_STATE: RefCell<HashMap<(i32,i32,i32,i32), (String, usize, bool, f64, bool)>> =
+        RefCell::new(HashMap::new());
+}
+
+thread_local! {
+    static INPUT_FOCUSED: RefCell<bool> = RefCell::new(false);
+}
+
+/// Global flag that tells the rest of the editor whether a character
+/// was consumed by a text field this frame.
+pub fn input_is_focused() -> bool {
+    INPUT_FOCUSED.with(|f| {
+        let mut flag = f.borrow_mut();
+        let was = *flag;
+        *flag = false;
+        was
+    })
+}
+
+thread_local! {
+    static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
+}
+
+/// Global flag that tells the rest of the editor whether a dropdown
+/// is currently open.
+pub fn dropdown_is_open() -> bool {
+    DROPDOWN_OPEN.with(|f| *f.borrow())
+}
 
 /// Editable text field. Returns the current contents.
 /// The widget keeps focus until the user clicks outside the rectangle
-/// (or presses <kbd>Esc</kbd>) and shows a blinking cursor while active.
-pub fn gui_input_text(rect: Rect, current: &str) -> String {
-    thread_local! {
-        static STATE: RefCell<HashMap<(i32, i32, i32, i32), (String, usize, bool)>> =
-            RefCell::new(HashMap::new());
-    }
+/// or presses Esc and shows a blinking cursor while active.
+pub fn gui_input_text_default(rect: Rect, current: &str) -> (String, bool) {
+    gui_input_text(rect, current, false, None)
+}
+
+/// Editable text field that starts focused. Returns the current contents.
+/// The widget keeps focus until the user clicks outside the rectangle
+/// or presses Esc and shows a blinking cursor while active.
+pub fn gui_input_text_focused(rect: Rect, current: &str) -> (String, bool) {
+    gui_input_text(rect, current, true, None)
+}
+
+/// Same as `gui_input_text_default` but clamps the tex to `max_len`.
+pub fn gui_input_text_clamped(rect: Rect, current: &str, max_len: usize) -> (String, bool) {
+    gui_input_text(rect, current, false, Some(max_len))
+}
+
+/// Same as `gui_input_text_focused` but clamps the tex to `max_len`.
+pub fn gui_input_text_clamped_focused(rect: Rect, current: &str, max_len: usize) -> (String, bool) {
+    gui_input_text(rect, current, true, Some(max_len))
+}
+
+fn gui_input_text(
+    rect: Rect, 
+    current: &str, 
+    start_focused: bool,
+    max_len: Option<usize>,
+) -> (String, bool) {
+    // Make sure any outstanding inputs are consumed
+    let mut just_gained_focus = false;
 
     // Load / initialise widget state
     let mut text = current.to_string();
-    let mut cursor_char = 0usize;   // cursor expressed in *characters*
+    let mut cursor_char = 0usize;
     let mut focused = false;
+    let mut last_backspace = 0.0_f64;
+    let mut repeat_started = false;
 
-    STATE.with(|s| {
+    INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
         let key = (
             rect.x.round() as i32,
@@ -25,19 +101,23 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
             rect.w.round() as i32,
             rect.h.round() as i32,
         );
-        if let Some((saved, saved_cur, saved_foc)) = map.get(&key) {
+        if let Some((saved, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&key) {
             text = saved.clone();
-            cursor_char = *saved_cur;
-            focused = *saved_foc;
+            cursor_char = if start_focused { text.chars().count() } else { *saved_cur };
+            focused = if start_focused { true } else { *saved_foc };
+            just_gained_focus = start_focused && !*saved_foc;
+            last_backspace = *saved_time;
+            repeat_started = *saved_repeat;
         } else {
-            map.insert(key, (text.clone(), cursor_char, focused));
+            focused = start_focused;
+            just_gained_focus = start_focused;
+            map.insert(key, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
         }
     });
 
     // Draw background & current text
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 1.0));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
-
     let placeholder = "<type here>";
     let display = if text.is_empty() { placeholder } else { &text };
     draw_text_ex(
@@ -55,54 +135,91 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
     let mouse = mouse_position();
     let mouse_over = rect.contains(vec2(mouse.0, mouse.1));
     if is_mouse_button_pressed(MouseButton::Left) {
+        // Clicking inside gains focus, clicking elsewhere loses focus
+        if !focused && mouse_over {
+            just_gained_focus = true;
+        }
         focused = mouse_over;
+    }
+
+    if just_gained_focus {
+        // Discard everything that was typed while the widget was not active
+        while let Some(_) = get_char_pressed() {}
+    }
+
+    // Don't update the field if a dropdown is open
+    if dropdown_is_open() {
+        return (text, false)
     }
 
     // Keyboard input (only when focused)
     if focused {
-        // Backspace 
+        // Tell the rest of the editor the field is focused
+        INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
+        let now = get_time();
+
+        // Backspace
         if is_key_pressed(KeyCode::Backspace) && cursor_char > 0 {
             let start = byte_offset(&text, cursor_char - 1);
             let end   = byte_offset(&text, cursor_char);
             text.drain(start..end);
             cursor_char -= 1;
+            last_backspace = now;
+            repeat_started = false;
+        } else if is_key_down(KeyCode::Backspace) && cursor_char > 0 {
+            let elapsed = now - last_backspace;
+            if (!repeat_started && elapsed >= HOLD_INITIAL_DELAY)
+                || (repeat_started && elapsed >= HOLD_REPEAT_RATE)
+            {
+                let start = byte_offset(&text, cursor_char - 1);
+                let end   = byte_offset(&text, cursor_char);
+                text.drain(start..end);
+                cursor_char -= 1;
+                last_backspace = now;
+                repeat_started = true;
+            }
         }
-
-        // Delete 
+        
+        // Delete
         if is_key_pressed(KeyCode::Delete) && cursor_char < text.chars().count() {
             let start = byte_offset(&text, cursor_char);
             let end   = byte_offset(&text, cursor_char + 1);
             text.drain(start..end);
         }
 
-        // Arrow keys (move cursor)
+        // Arrow keys
         if is_key_pressed(KeyCode::Left) && cursor_char > 0 {
             cursor_char -= 1;
         }
+
         if is_key_pressed(KeyCode::Right) && cursor_char < text.chars().count() {
             cursor_char += 1;
         }
 
         // Typed characters
         while let Some(chr) = get_char_pressed() {
-            // Accept only printable ASCII characters
             if chr.is_ascii_graphic() {
-                let pos = byte_offset(&text, cursor_char);
-                text.insert(pos, chr);
-                cursor_char += 1;
+                // Enforce the length limit
+                let cur_len = text.chars().count();
+                if max_len.map_or(true, |limit| cur_len < limit) {
+                    let pos = byte_offset(&text, cursor_char);
+                    text.insert(pos, chr);
+                    cursor_char += 1;
+                }
             }
         }
 
-        // Escape
+        // Escape 
         if is_key_pressed(KeyCode::Escape) {
             focused = false;
         }
+    } else {
+        INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
     }
 
     // Blinking cursor
     let now = get_time();
     if focused && ((now * 2.0) as i32 % 2 == 0) {
-        // Convert the *character* cursor to a byte offset for slicing
         let byte_pos = byte_offset(&text, cursor_char);
         let prefix = &text[..byte_pos];
         let cursor_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
@@ -117,7 +234,22 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
     }
 
     // Persist state
-    STATE.with(|s| {
+    INPUT_TEXT_STATE.with(|s| {
+        let mut map = s.borrow_mut();
+        let key = (rect.x.round() as i32, rect.y.round() as i32,
+                rect.w.round() as i32, rect.h.round() as i32);
+        map.insert(key, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
+    });
+
+    // Return the current text and whether the widget still has focus
+    (text, focused)
+}
+
+/// Remove any stored state for the given rectangle.
+pub fn gui_input_text_reset(rect: Rect) {
+    INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+
+    INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
         let key = (
             rect.x.round() as i32,
@@ -125,10 +257,19 @@ pub fn gui_input_text(rect: Rect, current: &str) -> String {
             rect.w.round() as i32,
             rect.h.round() as i32,
         );
-        map.insert(key, (text.clone(), cursor_char, focused));
+        map.remove(&key);
     });
+}
 
-    text
+/// Clears the focused flag of all text fields.
+pub fn clear_all_text_focus() {
+    INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+    INPUT_TEXT_STATE.with(|s| {
+        let mut map = s.borrow_mut();
+        for (_, entry) in map.iter_mut() {
+            entry.2 = false;
+        }
+    });
 }
 
 /// Simple toggle widget. Returns `true` when the value changed this frame.
@@ -155,6 +296,11 @@ pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
         );
     }
 
+    // Don't update the field if a dropdown is open
+    if dropdown_is_open() {
+        return *value
+    }
+
     let mouse = mouse_position();
     if is_mouse_button_pressed(MouseButton::Left) && rect.contains(vec2(mouse.0, mouse.1)) {
         *value = !*value;
@@ -168,7 +314,9 @@ pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
 pub fn gui_button(rect: Rect, label: &str) -> bool {
     let mouse = mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
-    let bg = if hovered {
+
+    // Don't highligh if a dropdown is open
+    let bg = if hovered && !dropdown_is_open() {
         Color::new(0.2, 0.2, 0.2, 0.8)
     } else {
         Color::new(0., 0., 0., 0.6)
@@ -182,7 +330,9 @@ pub fn gui_button(rect: Rect, label: &str) -> bool {
     let txt_y = rect.y + rect.h * 0.7;
     draw_text(label, txt_x, txt_y, 20., WHITE);
 
-    is_mouse_button_pressed(MouseButton::Left) && hovered
+    is_mouse_button_pressed(MouseButton::Left) && 
+    hovered && 
+    !dropdown_is_open()
 }
 
 /// Numeric field that accepts only digits, a single decimal point and an
@@ -247,6 +397,10 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
         },
     );
 
+    if dropdown_is_open() {
+        return current;
+    }
+
     // Focus handling
     let mouse = mouse_position();
     let mouse_over = rect.contains(vec2(mouse.0, mouse.1));
@@ -271,9 +425,11 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
         }
 
         while let Some(chr) = get_char_pressed() {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
             if chr.is_control() {
                 continue;
             }
+
             // Leading minus
             if chr == '-' && cursor == 0 && !txt.starts_with('-') {
                 txt.insert(cursor, chr);
@@ -341,7 +497,6 @@ fn byte_offset(s: &str, char_idx: usize) -> usize {
 /// whether the user moved the handle this frame.
 pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     thread_local! {
-        // (rect key) → (is_dragging, drag_offset)
         static STATE: RefCell<HashMap<(i32, i32, i32, i32), (bool, f32)>> =
             RefCell::new(HashMap::new());
     }
@@ -375,13 +530,17 @@ pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     draw_rectangle(rect.x, track_y, rect.w, track_h, Color::new(0.2, 0.2, 0.2, 0.8));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
 
-    let handle_col = if dragging {
+    let handle_col = if dragging && !dropdown_is_open() {
         Color::new(0.6, 0.6, 0.9, 1.0)
     } else {
         Color::new(0.4, 0.4, 0.8, 1.0)
     };
     draw_rectangle(handle_x, rect.y, handle_sz, rect.h, handle_col);
     draw_rectangle_lines(handle_x, rect.y, handle_sz, rect.h, 2., WHITE);
+
+    if dropdown_is_open() {
+        return (value, false)
+    }
 
     // Input handling
     let mouse = mouse_position();
@@ -412,7 +571,7 @@ pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
         new_value = min + rel * range;
         changed = (new_value - value).abs() > f32::EPSILON;
     } else if mouse_over_track && is_mouse_button_pressed(MouseButton::Left) {
-        // Click‑on‑track behaviour (unchanged)
+        // Click‑on‑track behaviour
         let rel = ((mouse.0 - rect.x) / (rect.w - handle_sz)).clamp(0.0, 1.0);
         new_value = min + rel * range;
         changed = true;
@@ -428,4 +587,230 @@ pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     });
 
     (new_value, changed)
+}
+
+/// A simple dropdown that shows `options` when the button is pressed.
+/// Returns `Some(selected)` when the user picks a different entry,
+/// otherwise `None`.
+pub fn gui_dropdown<T: Clone + PartialEq + Display>(
+    id: WidgetId,
+    rect: Rect,
+    label: &str,
+    options: &[T],
+    to_string: impl Fn(&T) -> String,
+) -> Option<T> {
+    // Button
+    let button_clicked = gui_button(rect, label);
+
+    // Load previous state
+    let mut state = dropdown_state::get(id);
+
+    // Decide whether the list should be open this frame
+    let list_is_open = button_clicked || state.open;
+    state.open = list_is_open; // Remember for next frame   
+
+    // Let the editor know a dropdown is open
+    let mut any_open = false;
+    DROPDOWN_OPEN.with(|f| {
+        let was = *f.borrow();
+        *f.borrow_mut() = was || list_is_open;
+        any_open = *f.borrow();
+    });     
+
+    // Compute the list rectangle
+    let list_rect = Rect::new(
+        rect.x,
+        rect.y + rect.h,
+        rect.w,
+        rect.h * options.len() as f32,
+    );
+
+    if list_is_open {
+        state.rect = list_rect;             
+    }
+
+    // Draw the list and handle selection
+    if list_is_open {
+        // Background
+        draw_rectangle(
+            list_rect.x,
+            list_rect.y,
+            list_rect.w,
+            list_rect.h,
+            Color::new(0., 0., 0., 1.0),
+        );
+
+        let mouse_pos = mouse_position().into();
+        for (i, opt) in options.iter().enumerate() {
+            let entry_rect = Rect::new(
+                list_rect.x,
+                list_rect.y + i as f32 * rect.h,
+                list_rect.w,
+                rect.h,
+            );
+
+            let hovered = entry_rect.contains(mouse_pos);
+            if hovered && is_mouse_button_pressed(MouseButton::Left) {
+                // Close the list and return the chosen value
+                state.open = false;
+                dropdown_state::set(id, state);
+                update_global_dropdown_flag();
+                return Some(opt.clone());
+            }
+
+            if hovered {
+                draw_rectangle(
+                    entry_rect.x,
+                    entry_rect.y,
+                    entry_rect.w,
+                    entry_rect.h,
+                    Color::new(0.2, 0.2, 0.2, 0.9),
+                );
+            }
+
+            draw_text(
+                &to_string(opt),
+                entry_rect.x + 5.,
+                entry_rect.y + entry_rect.h * 0.7,
+                20.,
+                WHITE,
+            );
+
+            // Draw the outline last
+            draw_rectangle_lines(
+                list_rect.x, 
+                list_rect.y, 
+                list_rect.w, 
+                list_rect.h, 
+                2., 
+                WHITE
+            );
+        }
+    }
+
+    // Clicking outside closes the dropdown
+    let mouse_pos = mouse_position().into();
+    if is_mouse_button_pressed(MouseButton::Left)
+        && !rect.contains(mouse_pos)
+        && !(state.open && state.rect.contains(mouse_pos))
+    {
+        state.open = false;
+    }
+
+    // Persist the state
+    dropdown_state::set(id, state);
+    update_global_dropdown_flag();
+    None
+}
+
+/// Helper module that stores the temporary dropdown state.
+mod dropdown_state {
+    use macroquad::prelude::*;
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
+    use crate::ui::widgets::WidgetId;
+
+    thread_local! {
+        pub static STATE: RefCell<HashMap<WidgetId, DropState>> =
+            RefCell::new(HashMap::new());
+    }
+
+    #[derive(Clone, Copy)]
+    pub struct DropState {
+        pub open: bool,
+        pub rect: Rect,
+    }
+
+    impl Default for DropState {
+        fn default() -> Self {
+            Self { open: false, rect: Rect::default() }
+        }
+    }
+
+    pub fn get(key: WidgetId) -> DropState {
+        STATE.with(|s| {
+            *s.borrow()
+                .get(&key)
+                .unwrap_or(&DropState::default())
+        })
+    }
+
+    pub fn set(key: WidgetId, value: DropState) {
+        STATE.with(|s| {
+            s.borrow_mut().insert(key, value);
+        });
+    }
+}
+
+// helper, called at the end of gui_dropdown
+fn update_global_dropdown_flag() {
+    dropdown_state::STATE.with(|s| {
+        let any = s.borrow().values().any(|st| st.open);
+        DROPDOWN_OPEN.with(|f| *f.borrow_mut() = any);
+    });
+}
+
+/// A simple toast that disappears after a short delay.
+pub struct WarningToast {
+    /// Text that will be shown.
+    pub msg: String,
+    /// When the toast was created.
+    start: Instant,
+    /// How long the toast stays visible (seconds).
+    pub duration: f32,
+    /// Whether the toast is currently visible.
+    pub active: bool,
+}
+
+impl WarningToast {
+    /// Create a new toast that lives for `duration` seconds.
+    pub fn new<S: Into<String>>(msg: S, duration: f32) -> Self {
+        Self {
+            msg: msg.into(),
+            start: Instant::now(),
+            duration,
+            active: true,
+        }
+    }
+
+    /// Call each frame. Draws the toast if it is still alive.
+    pub fn update(&mut self) {
+        if !self.active {
+            return;
+        }
+        // Hide after the elapsed time.
+        if self.start.elapsed().as_secs_f32() >= self.duration {
+            self.active = false;
+            return;
+        }
+        
+        let txt = measure_text(&self.msg, None, 18, 1.0);
+
+        // Top left
+        let bg_rect = Rect::new(
+            PADDING,                         
+            PADDING,                        
+            txt.width + PADDING * 2.0,       
+            txt.height + PADDING * 2.0,      
+        );
+
+        // Background
+        draw_rectangle(
+            bg_rect.x,
+            bg_rect.y,
+            bg_rect.w,
+            bg_rect.h,
+            Color::new(0.0, 0.0, 0.0, 0.7),
+        );
+
+        // Text
+        draw_text(
+            &self.msg,
+            bg_rect.x + PADDING,
+            bg_rect.y + txt.height + PADDING / 2.0,
+            18.0,
+            WHITE,
+        );
+    }
 }

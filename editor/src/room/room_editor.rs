@@ -69,7 +69,11 @@ impl RoomEditor {
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) -> bool {
-        if is_key_pressed(KeyCode::Escape) {
+        if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+            clear_all_text_focus();
+        }
+
+        if is_key_pressed(KeyCode::Escape) && !input_is_focused() {
             self.tilemap_editor.reset();
             self.reset();
             return true;
@@ -152,24 +156,24 @@ impl RoomEditor {
                     self.create_entity_requested = false;
                 }
 
-                if is_key_pressed(KeyCode::V) {
+                if is_key_pressed(KeyCode::V) && !input_is_focused() {
                     self.view_preview = !self.view_preview;
                 }
             }
         }
 
-        if is_key_pressed(KeyCode::Tab) {
+        if is_key_pressed(KeyCode::Tab) && !input_is_focused() {
             self.mode = match self.mode {
                 RoomEditorMode::Tilemap => RoomEditorMode::Scene,
                 RoomEditorMode::Scene => RoomEditorMode::Tilemap,
             };
         }
 
-        if is_key_pressed(KeyCode::G) {
+        if is_key_pressed(KeyCode::G) && !input_is_focused() {
             self.show_grid = !self.show_grid;
         }
 
-        if is_key_pressed(KeyCode::R) {
+        if is_key_pressed(KeyCode::R) && !input_is_focused() {
             EditorCameraController::reset_editor_camera(camera, room);
         }
 
