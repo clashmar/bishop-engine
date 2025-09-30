@@ -214,10 +214,6 @@ impl TilePalette {
         draw_rectangle(panel.x, panel.y, panel.w, panel.h, Color::new(0., 0., 0., 0.6));
         draw_rectangle_lines(panel.x, panel.y, panel.w, panel.h, 2., WHITE);
 
-        // Name
-        let name_rect = Rect::new(panel.x + 10., panel.y + 20., panel.w - 20., 30.);
-        (self.ui.name, _) = gui_input_text_default(name_rect, &self.ui.name);
-
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);
         if gui_button(sprite_rect, "Pick sprite") {
@@ -248,7 +244,6 @@ impl TilePalette {
         // Component check‑boxes
         let mut walk = self.ui.walkable;
         let mut solid = self.ui.solid;
-        let mut dmg = self.ui.damage;
 
         let cb_walk = Rect::new(panel.x + 10., panel.y + 110., 20., 20.);
         if gui_checkbox(cb_walk, &mut walk) {
@@ -261,10 +256,6 @@ impl TilePalette {
             self.ui.solid = solid;
         }
         draw_text("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., WHITE);
-
-        let dmg_rect = Rect::new(panel.x + 10., panel.y + 170., panel.w - 20., 30.);
-        dmg = gui_input_number(dmg_rect, dmg);
-        self.ui.damage = dmg.max(0.0);
 
         let btn_label = match self.ui.mode {
             TilePaletteUiMode::Create => { "Create" },

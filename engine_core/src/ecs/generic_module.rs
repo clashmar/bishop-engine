@@ -10,6 +10,7 @@ use crate::{
         world_ecs::WorldEcs
 }};
 use macroquad::prelude::*;
+use std::collections::HashMap;
 use std::{borrow::Cow, marker::PhantomData};
 
 const TOP_PADDING: f32 = 10.0;
@@ -19,12 +20,14 @@ const SPACING: f32 = 5.0;
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
     _phantom: PhantomData<T>,
+    field_ids: HashMap<String, WidgetId>,
 }
 
 impl<T> Default for GenericModule<T> {
     fn default() -> Self {
         Self { 
-            _phantom: PhantomData 
+            _phantom: PhantomData,
+            field_ids: HashMap::new(),
         }
     }
 }
@@ -57,6 +60,9 @@ where
 
         // Iterate over the fields supplied by the `Reflect` impl
         for field in component.fields() {
+            // Create the id for the widget
+            let id = *self.field_ids.entry(field.name.to_string())
+                .or_insert_with(WidgetId::default);
 
             // Draw the field label
             let label = capitalise(field.name);
@@ -69,14 +75,14 @@ where
             match field.value {
                 FieldValue::Text(txt) => {
                     // `txt` is `&mut String`.
-                    let (new, _) = gui_input_text_default(widget_rect, txt.as_str());
+                    let (new, _) = gui_input_text_default(id, widget_rect, txt.as_str());
                     if new != *txt {
                         *txt = new;
                     }
                 }
                 FieldValue::Float(num) => {
                     // `num` is `&mut f32`
-                    let new = gui_input_number(widget_rect, *num);
+                    let new = gui_input_number(id, widget_rect, *num);
                     if (new - *num).abs() > f32::EPSILON {
                         *num = new;
                     }

@@ -4,27 +4,26 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::time::Instant;
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Opaque, never‑changing identifier for a logical UI widget.
-#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct WidgetId(pub usize);
 
-impl WidgetId {
+impl Default for WidgetId {
     /// Returns a fresh id. Call this when the widget is created.
-    pub fn fresh() -> Self {
+    fn default() -> Self {
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
         WidgetId(COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 }
 
-const PADDING: f32 = 20.0;
+const WIDGET_PADDING: f32 = 20.0;
 const HOLD_INITIAL_DELAY: f64 = 0.50;
 const HOLD_REPEAT_RATE: f64   = 0.05;
 
 thread_local! {
-    static INPUT_TEXT_STATE: RefCell<HashMap<(i32,i32,i32,i32), (String, usize, bool, f64, bool)>> =
+    static INPUT_TEXT_STATE: RefCell<HashMap<WidgetId, (String, usize, bool, f64, bool)>> =
         RefCell::new(HashMap::new());
 }
 
@@ -56,28 +55,29 @@ pub fn dropdown_is_open() -> bool {
 /// Editable text field. Returns the current contents.
 /// The widget keeps focus until the user clicks outside the rectangle
 /// or presses Esc and shows a blinking cursor while active.
-pub fn gui_input_text_default(rect: Rect, current: &str) -> (String, bool) {
-    gui_input_text(rect, current, false, None)
+pub fn gui_input_text_default(id: WidgetId, rect: Rect, current: &str) -> (String, bool) {
+    gui_input_text(id, rect, current, false, None)
 }
 
 /// Editable text field that starts focused. Returns the current contents.
 /// The widget keeps focus until the user clicks outside the rectangle
 /// or presses Esc and shows a blinking cursor while active.
-pub fn gui_input_text_focused(rect: Rect, current: &str) -> (String, bool) {
-    gui_input_text(rect, current, true, None)
+pub fn gui_input_text_focused(id: WidgetId, rect: Rect, current: &str) -> (String, bool) {
+    gui_input_text(id, rect, current, true, None)
 }
 
 /// Same as `gui_input_text_default` but clamps the tex to `max_len`.
-pub fn gui_input_text_clamped(rect: Rect, current: &str, max_len: usize) -> (String, bool) {
-    gui_input_text(rect, current, false, Some(max_len))
+pub fn gui_input_text_clamped(id: WidgetId, rect: Rect, current: &str, max_len: usize) -> (String, bool) {
+    gui_input_text(id, rect, current, false, Some(max_len))
 }
 
 /// Same as `gui_input_text_focused` but clamps the tex to `max_len`.
-pub fn gui_input_text_clamped_focused(rect: Rect, current: &str, max_len: usize) -> (String, bool) {
-    gui_input_text(rect, current, true, Some(max_len))
+pub fn gui_input_text_clamped_focused(id: WidgetId, rect: Rect, current: &str, max_len: usize) -> (String, bool) {
+    gui_input_text(id, rect, current, true, Some(max_len))
 }
 
 fn gui_input_text(
+    id: WidgetId,
     rect: Rect, 
     current: &str, 
     start_focused: bool,
@@ -95,13 +95,8 @@ fn gui_input_text(
 
     INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
-        let key = (
-            rect.x.round() as i32,
-            rect.y.round() as i32,
-            rect.w.round() as i32,
-            rect.h.round() as i32,
-        );
-        if let Some((saved, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&key) {
+
+        if let Some((saved, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&id) {
             text = saved.clone();
             cursor_char = if start_focused { text.chars().count() } else { *saved_cur };
             focused = if start_focused { true } else { *saved_foc };
@@ -111,7 +106,7 @@ fn gui_input_text(
         } else {
             focused = start_focused;
             just_gained_focus = start_focused;
-            map.insert(key, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
+            map.insert(id, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
         }
     });
 
@@ -210,7 +205,7 @@ fn gui_input_text(
         }
 
         // Escape 
-        if is_key_pressed(KeyCode::Escape) {
+        if is_key_pressed(KeyCode::Escape) || is_key_down(KeyCode::Enter) {
             focused = false;
         }
     } else {
@@ -236,28 +231,20 @@ fn gui_input_text(
     // Persist state
     INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
-        let key = (rect.x.round() as i32, rect.y.round() as i32,
-                rect.w.round() as i32, rect.h.round() as i32);
-        map.insert(key, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
+        map.insert(id, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
     });
 
     // Return the current text and whether the widget still has focus
     (text, focused)
 }
 
-/// Remove any stored state for the given rectangle.
-pub fn gui_input_text_reset(rect: Rect) {
+/// Remove any stored state for the given id.
+pub fn gui_input_text_reset(id: WidgetId) {
     INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
 
     INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
-        let key = (
-            rect.x.round() as i32,
-            rect.y.round() as i32,
-            rect.w.round() as i32,
-            rect.h.round() as i32,
-        );
-        map.remove(&key);
+        map.remove(&id);
     });
 }
 
@@ -338,11 +325,15 @@ pub fn gui_button(rect: Rect, label: &str) -> bool {
 /// Numeric field that accepts only digits, a single decimal point and an
 /// optional leading minus sign. Returns the parsed `f32`; on parse error the
 /// original `current` value is returned.
-pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
+pub fn gui_input_number(
+    id: WidgetId,
+    rect: Rect,
+     current: f32
+    ) -> f32 {
     use std::f32::EPSILON;
 
     thread_local! {
-        static STATE: RefCell<HashMap<(i32, i32, i32, i32), (String, usize, bool)>> =
+        static STATE: RefCell<HashMap<WidgetId, (String, usize, bool)>> =
             RefCell::new(HashMap::new());
     }
 
@@ -353,20 +344,15 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
 
     STATE.with(|s| {
         let mut map = s.borrow_mut();
-        let key = (
-            rect.x.round() as i32,
-            rect.y.round() as i32,
-            rect.w.round() as i32,
-            rect.h.round() as i32,
-        );
+
         // If we already have a state entry, use it
-        if let Some((saved_txt, saved_cur, saved_foc)) = map.get(&key) {
+        if let Some((saved_txt, saved_cur, saved_foc)) = map.get(&id) {
             txt = saved_txt.clone();
             cursor = *saved_cur;
             focused = *saved_foc;
         } else {
             // First time we see this widget store the initial state.
-            map.insert(key, (txt.clone(), cursor, focused));
+            map.insert(id, (txt.clone(), cursor, focused));
         }
     });
 
@@ -449,7 +435,7 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
             }
         }
 
-        if is_key_pressed(KeyCode::Escape) {
+        if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter)  {
             focused = false;
         }
     }
@@ -472,13 +458,7 @@ pub fn gui_input_number(rect: Rect, current: f32) -> f32 {
     // Persist state
     STATE.with(|s| {
         let mut map = s.borrow_mut();
-        let key = (
-            rect.x.round() as i32,
-            rect.y.round() as i32,
-            rect.w.round() as i32,
-            rect.h.round() as i32,
-        );
-        map.insert(key, (txt.clone(), cursor, focused));
+        map.insert(id, (txt.clone(), cursor, focused));
     });
 
     txt.parse::<f32>().unwrap_or(current)
@@ -495,9 +475,9 @@ fn byte_offset(s: &str, char_idx: usize) -> usize {
 
 /// Horizontal slider that returns the new value and a `bool` indicating
 /// whether the user moved the handle this frame.
-pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
+pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     thread_local! {
-        static STATE: RefCell<HashMap<(i32, i32, i32, i32), (bool, f32)>> =
+        static STATE: RefCell<HashMap<WidgetId, (bool, f32)>> =
             RefCell::new(HashMap::new());
     }
 
@@ -506,12 +486,7 @@ pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     let mut drag_offset = 0.0_f32; // distance mouse → handle left edge
     STATE.with(|s| {
         let map = s.borrow();
-        if let Some(&(d, off)) = map.get(&(
-            rect.x as i32,
-            rect.y as i32,
-            rect.w as i32,
-            rect.h as i32,
-        )) {
+        if let Some(&(d, off)) = map.get(&id) {
             dragging = d;
             drag_offset = off;
         }
@@ -581,7 +556,7 @@ pub fn gui_slider(rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     STATE.with(|s| {
         let mut map = s.borrow_mut();
         map.insert(
-            (rect.x as i32, rect.y as i32, rect.w as i32, rect.h as i32),
+            id,
             (dragging, drag_offset),
         );
     });
@@ -789,10 +764,10 @@ impl WarningToast {
 
         // Top left
         let bg_rect = Rect::new(
-            PADDING,                         
-            PADDING,                        
-            txt.width + PADDING * 2.0,       
-            txt.height + PADDING * 2.0,      
+            WIDGET_PADDING,                         
+            WIDGET_PADDING,                        
+            txt.width + WIDGET_PADDING * 2.0,       
+            txt.height + WIDGET_PADDING * 2.0,      
         );
 
         // Background
@@ -807,8 +782,8 @@ impl WarningToast {
         // Text
         draw_text(
             &self.msg,
-            bg_rect.x + PADDING,
-            bg_rect.y + txt.height + PADDING / 2.0,
+            bg_rect.x + WIDGET_PADDING,
+            bg_rect.y + txt.height + WIDGET_PADDING / 2.0,
             18.0,
             WHITE,
         );

@@ -16,7 +16,10 @@ use engine_core::{
 pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 
 #[derive(Default)]
-pub struct RoomCameraModule {}
+pub struct RoomCameraModule {
+    pub zoom_id: WidgetId,
+    pub slider_id: WidgetId,
+}
 
 impl RoomCameraModule {
     /// Draw a **single** numeric field that edits the *scalar* zoom.
@@ -67,6 +70,7 @@ impl RoomCameraModule {
         );
 
         let typed = gui_input_number(
+            self.zoom_id,
             num_rect, 
             round_to_dp(rounded_scalar * DISPLAY_FACTOR, DECIMAL_PLACES)
         );
@@ -80,6 +84,7 @@ impl RoomCameraModule {
 
         // Slider
         let (slider_val, slider_changed) = gui_slider(
+            self.slider_id,
             slider_rect,
             0.001, // min
             0.05, // max       

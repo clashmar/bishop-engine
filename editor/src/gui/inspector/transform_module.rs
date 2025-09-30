@@ -12,7 +12,10 @@ use engine_core::{
 };
 
 #[derive(Default)]
-pub struct TransformModule {}
+pub struct TransformModule {
+    pub x_id: WidgetId,
+    pub y_id: WidgetId,
+}
 
 impl TransformModule {
     /// Draw the two numeric fields that edit the position
@@ -41,7 +44,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_x = gui_input_number(x_field, pos.position.x);
+        let new_x = gui_input_number(self.x_id, x_field, pos.position.x);
 
         // Y
         let y_label = Rect::new(
@@ -57,7 +60,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_y = gui_input_number(y_field, pos.position.y);
+        let new_y = gui_input_number(self.y_id, y_field, pos.position.y);
 
         // Write back only if something changed
         if (new_x - pos.position.x).abs() > f32::EPSILON
