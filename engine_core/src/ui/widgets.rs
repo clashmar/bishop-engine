@@ -574,6 +574,9 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     options: &[T],
     to_string: impl Fn(&T) -> String,
 ) -> Option<T> {
+    const MAX_VISIBLE_ROWS: usize = 8;
+    const SCROLL_SPEED: f32 = 5.0;
+
     // Button
     let button_clicked = gui_button(rect, label);
 
@@ -593,11 +596,12 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     });     
 
     // Compute the list rectangle
+    let visible_rows = MAX_VISIBLE_ROWS.min(options.len());
     let list_rect = Rect::new(
         rect.x,
         rect.y + rect.h,
         rect.w,
-        rect.h * options.len() as f32,
+        rect.h * visible_rows as f32,
     );
 
     if list_is_open {
@@ -606,6 +610,20 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
 
     // Draw the list and handle selection
     if list_is_open {
+        let total_height = rect.h * options.len() as f32;
+        let max_offset = (total_height - list_rect.h).max(0.0);
+
+        let mouse_pos = mouse_position().into();
+
+        if list_rect.contains(mouse_pos) {
+            let (_, wheel_y) = mouse_wheel();
+            if wheel_y != 0.0 {
+                let delta = wheel_y * SCROLL_SPEED;
+                state.scroll_offset = (state.scroll_offset - delta)
+                    .clamp(0.0, max_offset);
+            }
+        }
+
         // Background
         draw_rectangle(
             list_rect.x,
@@ -615,11 +633,25 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
             Color::new(0., 0., 0., 1.0),
         );
 
-        let mouse_pos = mouse_position().into();
+        
         for (i, opt) in options.iter().enumerate() {
+            // The Y position the entry would have without scrolling
+            let entry_y = list_rect.y + i as f32 * rect.h;
+
+            // Apply the scroll offset
+            let draw_y = entry_y - state.scroll_offset;
+
+            // TODO: We can still see entries that are row above and one row below the scrollable area
+            // Skip entries that are above or below the visible area
+            if draw_y + rect.h < list_rect.y + rect.h          
+                || draw_y > list_rect.y + list_rect.h - rect.h
+            {
+                continue;
+            }
+
             let entry_rect = Rect::new(
                 list_rect.x,
-                list_rect.y + i as f32 * rect.h,
+                draw_y,
                 list_rect.w,
                 rect.h,
             );
@@ -642,7 +674,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
                     Color::new(0.2, 0.2, 0.2, 0.9),
                 );
             }
-
+            
             draw_text(
                 &to_string(opt),
                 entry_rect.x + 5.,
@@ -650,6 +682,32 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
                 20.,
                 WHITE,
             );
+
+            // Scrollbar on the right hand side
+            let total_height = rect.h * options.len() as f32;
+            if total_height > list_rect.h {
+                // Proportion of visible area
+                let thumb_h = (list_rect.h / total_height) * list_rect.h;
+                // Position of the thumb
+                let thumb_y = list_rect.y + (state.scroll_offset / (total_height - list_rect.h)) * (list_rect.h - thumb_h);
+
+                // Background track
+                draw_rectangle(
+                    list_rect.x + list_rect.w - 6.,
+                    list_rect.y,
+                    6.,
+                    list_rect.h,
+                    Color::new(0.2, 0.2, 0.2, 0.5),
+                );
+                // Thumb
+                draw_rectangle(
+                    list_rect.x + list_rect.w - 6.,
+                    thumb_y,
+                    6.,
+                    thumb_h,
+                    Color::new(0.6, 0.6, 0.6, 0.9),
+                );
+            }
 
             // Draw the outline last
             draw_rectangle_lines(
@@ -695,11 +753,16 @@ mod dropdown_state {
     pub struct DropState {
         pub open: bool,
         pub rect: Rect,
+        pub scroll_offset: f32,
     }
 
     impl Default for DropState {
         fn default() -> Self {
-            Self { open: false, rect: Rect::default() }
+            Self { 
+                open: false, 
+                rect: Rect::default(),
+                scroll_offset: 0.,
+            }
         }
     }
 

@@ -16,7 +16,6 @@ pub const PREFAB_SAVE_FOLDER: &str = "assets/prefabs";
 /// Scale to the base resolution.
 pub const EDITOR_ZOOM_FACTOR: f32 = TILE_SIZE / BASE_TILE_SIZE;
 
-
 pub const CAMERA_TILES_X: f32 = 55.0;     
 pub const CAMERA_TILES_Y: f32 = 35.0;
 

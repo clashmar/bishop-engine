@@ -6,7 +6,7 @@ use crate::{
         gui_constants::*, 
         inspector::inspector_panel::InspectorPanel
     }, 
-    room::room_editor_actions::*, 
+    room::room_editor_rendering::*, 
     tilemap::tilemap_editor::TileMapEditor, 
     world::coord
 };
