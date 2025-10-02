@@ -1,16 +1,16 @@
-use std::collections::HashSet;
-
-// engine_core/src/animation/animation_system.rs
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::{
     animation::animation_clip::{
         Animation, 
-        ClipId
-    }, assets::sprite::SpriteId, ecs::{
-        component::CurrentRoom, entity::Entity, world_ecs::WorldEcs
-    }, ecs_component
+        ClipId, resolve_sprite_id
+    }, assets::{asset_manager::AssetManager, sprite::SpriteId}, 
+    ecs::{
+        entity::{Entity, entities_in_room}, 
+        world_ecs::WorldEcs
+    }, 
+    ecs_component
 };
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -31,8 +31,9 @@ pub struct CurrentFrame {
 
 ecs_component!(CurrentFrame);
 
-pub fn update_animation_sytem(
-    world_ecs: &mut WorldEcs, 
+pub async fn update_animation_sytem(
+    world_ecs: &mut WorldEcs,
+    asset_manager: &mut AssetManager,
     delta_time: f32,
     room_id: Uuid,
 ) {
@@ -49,7 +50,15 @@ pub fn update_animation_sytem(
         }
 
         // Bail out early if there is no active clip.
-        let Some(current_id) = &animation.current else { continue };
+        let Some(current_id) = &animation.current.clone() else { continue };
+
+        // Get the sprite id
+        let (sprite_id, resolved) = get_sprite_id(animation, current_id, asset_manager).await;
+
+        if resolved {
+            animation.update_cache_entry(current_id, sprite_id);
+        }
+
         let Some(clip) = animation.clips.get(current_id) else { continue };
         let clip_state = animation.states.get_mut(current_id).unwrap();
 
@@ -74,34 +83,47 @@ pub fn update_animation_sytem(
             }
         }
 
+
         let frame = CurrentFrame {
             clip_id: animation.current.clone().unwrap(),
             col: clip_state.col,
             row: clip_state.row,
             offset: clip.offset,
-            sprite_id: clip.sprite_id,
+            sprite_id: sprite_id,
             frame_size: clip.frame_size,
         };
 
+        
+
         frames.push((*entity, frame));
     }
+
+    
 
     for (entity, frame) in frames {
         world_ecs.add_component_to_entity(entity, frame)
     }
 }
 
-fn entities_in_room(world_ecs: &mut WorldEcs, room_id: Uuid) -> HashSet<Entity> {
-    let room_store = world_ecs.get_store::<CurrentRoom>();
-    room_store
-        .data
-        .iter()
-        .filter_map(|(entity, cur_room)| {
-            if cur_room.0 == room_id {
-                Some(*entity)
-            } else {
-                None
-            }
-        })
-        .collect()
+/// Return the SpriteId for for the current animation clip.
+async fn get_sprite_id(
+    animation: &Animation,
+    current_id: &ClipId,
+    asset_manager: &mut AssetManager,
+) -> (SpriteId, bool) {
+    // Try cache first
+    if let Some(&cached) = animation.sprite_cache.get(current_id) {
+        if cached.0 != Uuid::nil() {
+            return (cached, false);
+        }
+    }
+
+    // Not in cache try to resolve with asset manager
+    let resolved = resolve_sprite_id(
+        asset_manager, 
+        &animation.variant, 
+        current_id
+    ).await;
+
+    (resolved, true)
 }

@@ -90,7 +90,13 @@ impl RoomEditor {
         let mut ui_was_clicked = false;
 
         let delta_time = get_frame_time();
-        update_animation_sytem(world_ecs, delta_time, room.id);
+        
+        update_animation_sytem(
+            world_ecs,
+            asset_manager,
+            delta_time, 
+            room.id
+        ).await;
 
         match self.mode {
             RoomEditorMode::Tilemap => {

@@ -9,7 +9,7 @@ use crate::{
 
 pub struct AssetManager {
     textures: HashMap<SpriteId, Texture2D>,
-    path_to_id: HashMap<String, SpriteId>,
+    pub path_to_id: HashMap<String, SpriteId>,
     id_to_path: HashMap<SpriteId, String>,
 }
 
@@ -102,13 +102,7 @@ impl AssetManager {
 
         // Load and initialize all animations
         for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
-            for clip in animation.clips.values_mut() {
-                if !self.contains(clip.sprite_id) && !clip.path.is_empty() {
-                    // Load the texture and keep the returned id
-                    let id = self.load(&clip.path).await;
-                    clip.sprite_id = id;
-                }
-            }
+            animation.refresh_sprite_cache(self).await;
             animation.init_runtime();
         }
     }

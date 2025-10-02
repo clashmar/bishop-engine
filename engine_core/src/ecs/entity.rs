@@ -1,10 +1,10 @@
-use std::any::TypeId;
-
-use inventory::iter;
 // engine_core/src/ecs/entity.rs
+use std::any::TypeId;
+use std::collections::HashSet;
+use inventory::iter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::ecs::component::{Component, ComponentStore};
+use crate::ecs::component::{Component, ComponentStore, CurrentRoom};
 use crate::ecs::component_registry::ComponentReg;
 use crate::ecs::world_ecs::WorldEcs;  
 
@@ -52,5 +52,21 @@ impl<'a> EntityBuilder<'a> {
     pub fn finish(self) -> Entity {
         self.id
     }
+}
+
+
+pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: Uuid) -> HashSet<Entity> {
+    let room_store = world_ecs.get_store::<CurrentRoom>();
+    room_store
+        .data
+        .iter()
+        .filter_map(|(entity, cur_room)| {
+            if cur_room.0 == room_id {
+                Some(*entity)
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 

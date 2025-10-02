@@ -1,18 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
 use strum::IntoEnumIterator;
 use engine_core::{
     animation::{
             animation_clip::{
-            Animation, 
-            Clip, 
-            ClipId, 
-            ClipState
+            Animation, ClipDef, ClipId, ClipState, VariantFolder
         }, 
         animation_system::CurrentFrame
     }, 
-    assets::
-        asset_manager::AssetManager
-    , 
+    assets::asset_manager::AssetManager, 
     ecs::{
         entity::Entity, 
         module::{CollapsibleModule, InspectorModule}, 
@@ -26,7 +21,8 @@ use crate::gui::gui_constants::*;
 
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;
-const LABEL_Y_OFFSET: f32 = 5.0;
+const LABEL_Y_OFFSET: f32 = 20.0;
+const LABEL_FONT_SIZE: f32 = 18.0;
 const COLON_GAP: f32 = 0.0;
 const FIELD_GAP: f32 = 20.0;
 
@@ -66,6 +62,7 @@ impl InspectorModule for AnimationModule {
         world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
+        let mut variant_changed = false;
         let mut all_ids: Vec<ClipId> = vec![];
         fill_all_clip_ids(&world_ecs, &mut all_ids);
         
@@ -101,7 +98,7 @@ impl InspectorModule for AnimationModule {
                     None => ClipId::Custom(format!("New Clip {}", animation.clips.len() + 1)),
                 }
             };
-            animation.clips.insert(new_id.clone(), Clip::default());
+            animation.clips.insert(new_id.clone(), ClipDef::default());
             animation.states.insert(new_id.clone(), ClipState::default());
             animation.current = Some(new_id);
         }
@@ -120,22 +117,40 @@ impl InspectorModule for AnimationModule {
 
         // Edit the currently selected clip
         if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
-            // Sprite picker
-            let sprite_btn = Rect::new(rect.x + PADDING, y, full_w, MARGIN);
+            // Variant picker
+            let has_variant = !animation.variant.0.is_empty();
+
+            let sprite_btn = Rect::new(rect.x + PADDING, y, full_w / 2., MARGIN);
+
             if gui_button(sprite_btn,
-                if clip.sprite_id.0.is_nil() { "Pick Sprite" } else { "Change Sprite" }) {
+                if has_variant { "Edit Variant" } else { "Choose Variant" }) {
                 if let Some(path) = rfd::FileDialog::new()
-                    .add_filter("PNG images", &["png"])
-                    .pick_file()
+                    .pick_folder()
                 {
                     let path_str = path.to_string_lossy().into_owned();
-
-                    // Load (or reuse) the texture and store the new id
-                    let new_id = futures::executor::block_on(asset_manager.load(&path_str));
-                    clip.sprite_id = new_id;
-                    clip.path = path_str;
+                    animation.variant = VariantFolder(path_str);
+                    variant_changed = true;
                 }
             }
+
+            let full_path = Path::new(&animation.variant.0);
+
+            let variant_label = if has_variant {
+                full_path
+                    .file_name()
+                    .map(|n| Cow::Owned(format!("/{}", n.to_string_lossy().into_owned())))
+                    .unwrap_or_else(|| Cow::Borrowed("/..."))
+            } else {
+                Cow::Borrowed("/...")
+            };
+
+            draw_text(
+                &variant_label, 
+                rect.x + sprite_btn.w + SPACING + PADDING, 
+                y + LABEL_Y_OFFSET, 
+                20.0, 
+                WHITE
+            );
 
             y += MARGIN + PADDING;
 
@@ -167,6 +182,9 @@ impl InspectorModule for AnimationModule {
             if !toast.active {
                 self.warning = None;
             }
+        }
+        if variant_changed {
+            futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
         }
     }
 
@@ -285,14 +303,14 @@ pub fn draw_frame_size_fields(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut Clip
+    clip: &mut ClipDef
 ) {
     const LABELS: [&str; 2] = ["Frame X:", "Frame Y:"];
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
 
     // Render the two labels
-    draw_text(LABELS[0], lbl_x.x, lbl_x.y + 15.0, 18.0, WHITE);
-    draw_text(LABELS[1], lbl_y.x, lbl_y.y + 15.0, 18.0, WHITE);
+    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, WHITE);
 
     // Numeric inputs
     clip.frame_size.x = gui_input_number(module.frame_x_id, inp_x, clip.frame_size.x);
@@ -303,13 +321,13 @@ pub fn draw_spritesheet_dimension_fields(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut Clip
+    clip: &mut ClipDef
 ) {
     const LABELS: [&str; 2] = ["Cols:", "Rows:"];
     let (lbl_c, inp_c, lbl_r, inp_r) = layout_pair(y, rect, LABELS);
 
-    draw_text(LABELS[0], lbl_c.x, lbl_c.y + 15.0, 18.0, WHITE);
-    draw_text(LABELS[1], lbl_r.x, lbl_r.y + 15.0, 18.0, WHITE);
+    draw_text(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, WHITE);
 
     clip.cols = gui_input_number(module.cols_id, inp_c, clip.cols as f32) as usize;
     clip.rows = gui_input_number(module.rows_id, inp_r, clip.rows as f32) as usize;
@@ -319,7 +337,7 @@ pub fn draw_fps_and_loop(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut Clip
+    clip: &mut ClipDef
 ) {
     const LABELS: [&str; 2] = ["FPS:", "Loop:"];
     let (lbl_fps, inp_fps, lbl_loop, mut inp_loop) = layout_pair(y, rect, LABELS);
@@ -327,8 +345,8 @@ pub fn draw_fps_and_loop(
     inp_loop.h = CHECKBOX_SIZE;
     inp_loop.y += 5.;
 
-    draw_text(LABELS[0], lbl_fps.x, lbl_fps.y + 15.0, 18.0, WHITE);
-    draw_text(LABELS[1], lbl_loop.x, lbl_loop.y + 15.0, 18.0, WHITE);
+    draw_text(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, WHITE);
 
     clip.fps = gui_input_number(module.fps_id, inp_fps, clip.fps);
     gui_checkbox(inp_loop, &mut clip.looping);
@@ -338,20 +356,20 @@ pub fn draw_offset_fields(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut Clip
+    clip: &mut ClipDef
 ) {
     const LABELS: [&str; 2] = ["Offset X:", "Offset Y:"];
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
 
-    draw_text(LABELS[0], lbl_x.x, lbl_x.y + 15.0, 18.0, WHITE);
-    draw_text(LABELS[1], lbl_y.x, lbl_y.y + 15.0, 18.0, WHITE);
+    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, WHITE);
 
     clip.offset.x = gui_input_number(module.offset_x_id, inp_x, clip.offset.x);
     clip.offset.y = gui_input_number(module.offset_y_id, inp_y, clip.offset.y);
 }
 
 /// Returns every ClipId that has a concrete Clip stored in the map.
-fn existing_clip_ids(clips: &HashMap<ClipId, Clip>) -> Vec<ClipId> {
+fn existing_clip_ids(clips: &HashMap<ClipId, ClipDef>) -> Vec<ClipId> {
     clips.keys().cloned().collect()
 }
 
