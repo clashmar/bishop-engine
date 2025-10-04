@@ -60,8 +60,19 @@ pub struct ComponentEntry {
     pub value: Box<dyn Any>,
     /// Function that knows how to write the value back into the ECS.
     pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
+    /// Function that can clone the boxed value.
+    pub cloner: fn(&dyn Any) -> Box<dyn Any>,
 }
 
+impl Clone for ComponentEntry {
+    fn clone(&self) -> Self {
+        Self {
+            value: (self.cloner)(&*self.value),
+            inserter: self.inserter,
+            cloner: self.cloner,
+        }
+    }
+}
 
 #[serde_as]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
@@ -154,3 +165,4 @@ pub struct Name {
 
 ecs_component!(Name);
 inspector_module!(Name);
+

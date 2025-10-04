@@ -31,6 +31,8 @@ pub struct ComponentReg {
     pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
     /// Clones the concrete component for `entity` and returns it boxed as `dyn Any`.
     pub clone: fn(&WorldEcs, Entity) -> Box<dyn Any>,
+    /// Clone a boxed component.
+    pub clone_box: fn(&dyn Any) -> Box<dyn Any>,
 }
 
 /// Factory that works for any component that implements `Component + Default`.
@@ -119,6 +121,13 @@ macro_rules! ecs_component {
                     ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
                 Box::new(concrete)
             }
+
+            fn clone_box(src: &dyn std::any::Any) -> Box<dyn std::any::Any> {
+                let concrete = src
+                    .downcast_ref::<$ty>()
+                    .expect("Type mismatch in clone_box");
+                Box::new(concrete.clone()) as Box<dyn std::any::Any>
+            }
         }
 
         // Register the component
@@ -152,6 +161,7 @@ macro_rules! ecs_component {
                     };
                     Box::new(component) as Box<dyn std::any::Any>
                 },
+                clone_box: <$ty>::clone_box,
             }
         }
     };

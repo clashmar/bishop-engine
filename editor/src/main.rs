@@ -41,7 +41,7 @@ async fn main() -> std::io::Result<()> {
     set_editor(editor);
 
     loop {
-        with_editor_async(|ed| Box::pin(ed.update())).await;
+        with_editor_async(|editor| Box::pin(editor.update())).await;
     
         with_editor(|ed| {
             ed.draw();

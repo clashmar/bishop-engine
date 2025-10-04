@@ -12,7 +12,7 @@ use engine_core::{
         world_ecs::WorldEcs,
     },
 };
-use crate::commands::entity_commands::DeleteEntityCmd;
+use crate::commands::entity_commands::{DeleteEntityCmd, copy_entity};
 use crate::controls::controls::Controls;
 use crate::global::push_command;
 use crate::gui::gui_constants::*;
@@ -97,6 +97,10 @@ impl InspectorPanel {
 
         // When an entity is selected we show “Remove” and “Add Component”
         if let Some(entity) = self.target {
+            if Controls::copy() {
+                copy_entity(world_ecs, entity);
+            }
+
             // Labels
             let remove_label = "Remove";
             let add_label = "Add Component";

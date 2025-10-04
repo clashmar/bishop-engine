@@ -1,5 +1,14 @@
 // editor/src/global.rs
-use std::{cell::{Cell, RefCell}, future::Future, pin::Pin, rc::Rc};
+use std::{
+    cell::{
+        Cell, 
+        RefCell
+    }, 
+    future::Future, 
+    pin::Pin, 
+    rc::Rc
+};
+use engine_core::ecs::component::ComponentEntry;
 use crate::{
     commands::command_manager::{
         Command, 
@@ -14,6 +23,7 @@ pub struct Services {
     pub command_manager: RefCell<CommandManager>,
     pub pending_undo: Cell<bool>,
     pub pending_redo: Cell<bool>,
+    pub entity_clipboard: RefCell<Option<Vec<ComponentEntry>>>,
 }
 
 impl Services {
@@ -23,6 +33,7 @@ impl Services {
             command_manager: RefCell::new(CommandManager::new()),
             pending_undo: Cell::new(false),
             pending_redo: Cell::new(false),
+            entity_clipboard: RefCell::new(None), 
         })
     }
 }

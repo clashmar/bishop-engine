@@ -1,7 +1,10 @@
 // editor/src/room/room_editor.rs
 use crate::{
     canvas::grid, 
+    commands::entity_commands::PasteEntityCmd, 
+    controls::controls::Controls, 
     editor_camera_controller::*, 
+    global::push_command, 
     gui::{
         gui_constants::*, 
         inspector::inspector_panel::InspectorPanel
@@ -33,7 +36,7 @@ pub struct RoomEditor {
     pub mode: RoomEditorMode,
     pub tilemap_editor: TileMapEditor,
     pub inspector: InspectorPanel,
-    selected_entity: Option<Entity>,
+    pub selected_entity: Option<Entity>,
     show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
@@ -82,6 +85,10 @@ impl RoomEditor {
         if !self.initialized {
             EditorCameraController::reset_editor_camera(camera, room);
             self.initialized = true;
+        }
+        
+        if Controls::paste() {
+            push_command(Box::new(PasteEntityCmd::new()));
         }
 
         // Click‑selection
@@ -162,7 +169,7 @@ impl RoomEditor {
                     self.create_entity_requested = false;
                 }
 
-                if is_key_pressed(KeyCode::V) && !input_is_focused() {
+                if Controls::v() && !input_is_focused() {
                     self.view_preview = !self.view_preview;
                 }
             }
@@ -298,6 +305,11 @@ impl RoomEditor {
 
     pub fn is_mouse_over_ui(&self) -> bool {
         self.inspector.is_mouse_over()
+    }
+
+    pub fn set_selected_entity(&mut self, entity: Option<Entity>) {
+        self.selected_entity = entity;
+        self.inspector.set_target(entity);
     }
 
     pub fn reset(&mut self) {

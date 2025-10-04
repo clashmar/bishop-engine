@@ -19,15 +19,15 @@ macro_rules! impl_capture_entity {
 
             // Iterate over all component registrations
             for reg in inventory::iter::<ComponentReg> {
-                // Does this entity own the component?
+                // Does the entity own the component
                 if (reg.has)(world_ecs, entity) {
-                    // The registry now knows how to clone the concrete component
                     let any_val = (reg.clone)(world_ecs, entity);
-                    // The inserter function is also stored in the registry entry
                     let inserter = reg.inserter;
+                    let cloner = reg.clone_box;
                     bag.push(ComponentEntry {
                         value: any_val,
                         inserter,
+                        cloner,
                     });
                 }
             }

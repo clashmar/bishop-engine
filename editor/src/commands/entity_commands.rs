@@ -7,7 +7,7 @@ use engine_core::ecs::{
 };
 use crate::{
     commands::command_manager::Command, 
-    global::with_editor
+    global::*
 };
 
 pub struct DeleteEntityCmd {
@@ -22,6 +22,7 @@ impl Command for DeleteEntityCmd {
             let world_ecs = &mut editor.world.world_ecs;
             self.saved = Some(capture_entity(world_ecs, self.entity));
             world_ecs.remove_entity(self.entity); // delete
+            editor.room_editor.set_selected_entity(None);
         });
     }
 
@@ -30,10 +31,7 @@ impl Command for DeleteEntityCmd {
         if let Some(bag) = self.saved.take() {
             with_editor(|editor| {
                 let world_ecs = &mut editor.world.world_ecs;
-                // Create a fresh entity
-                let new_entity = world_ecs.create_entity().finish();
-                self.entity = new_entity;
-                restore_entity(world_ecs, new_entity, bag);
+                restore_entity(world_ecs, self.entity, bag);
             });
         }
     }
@@ -45,3 +43,59 @@ fn restore_entity(world_ecs: &mut WorldEcs, entity: Entity, bag: Vec<ComponentEn
     }
 }
 
+/// Copy a snapshot of the entity to the entity clipboard.
+pub fn copy_entity(world_ecs: &mut WorldEcs, entity: Entity) {
+    let snapshot = capture_entity(world_ecs, entity); 
+
+    SERVICES.with(|s| {
+        *s.entity_clipboard.borrow_mut() = Some(snapshot);
+    });
+}
+
+/// Creates a new entity from the entity clipboard.
+pub struct PasteEntityCmd {
+    /// The entity that was created by the most recent paste.
+    entity: Option<Entity>,
+}
+
+impl PasteEntityCmd {
+    pub fn new() -> Self {
+        Self { entity: None }
+    }
+}
+
+impl Command for PasteEntityCmd {
+    fn execute(&mut self) {
+        let clipboard = SERVICES.with(|s| {
+            s.entity_clipboard
+                .borrow()
+                .as_ref()
+                .cloned()
+        });
+
+        if let Some(snapshot) = clipboard {
+            with_editor(|editor| {
+                let world_ecs = &mut editor.world.world_ecs;
+                let new_entity = world_ecs.create_entity().finish();
+
+                for component_entry in snapshot {
+                    let entry = component_entry.clone(); // deep‑clone the boxed component
+                    (entry.inserter)(world_ecs, new_entity, entry.value);
+                }
+
+                self.entity = Some(new_entity);
+                editor.room_editor.set_selected_entity(Some(new_entity));
+            });
+        }
+    }
+
+    fn undo(&mut self) {
+        if let Some(entity) = self.entity.take() {
+            with_editor(|editor| {
+                let world_ecs = &mut editor.world.world_ecs;
+                world_ecs.remove_entity(entity); // delete
+                editor.room_editor.set_selected_entity(None);
+            });
+        }
+    }
+}
