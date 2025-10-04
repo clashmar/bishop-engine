@@ -21,12 +21,16 @@ pub struct ComponentReg {
     pub to_ron: fn(&dyn Any) -> String,
     /// Convert a `String` back into a boxed concrete store.
     pub from_ron: fn(String) -> Box<dyn Any + Send>,
-
+    /// Factory that creates the component (and its dependencies) for an entity.
     pub factory: fn(&mut WorldEcs, Entity),
     /// Returns true if the supplied entity already owns this component.
     pub has: fn(&WorldEcs, Entity) -> bool,
     // Removes the component for `entity` from the concrete store.
     pub remove: fn(&mut WorldEcs, Entity),
+    /// Function that knows how to write a boxed component back into the world.
+    pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
+    /// Clones the concrete component for `entity` and returns it boxed as `dyn Any`.
+    pub clone: fn(&WorldEcs, Entity) -> Box<dyn Any>,
 }
 
 /// Factory that works for any component that implements `Component + Default`.
@@ -53,6 +57,17 @@ where
     world_ecs.get_store_mut::<T>().remove(entity);
 }
 
+/// Inserts a concrete component that has been boxed as `dyn Any`.
+pub fn generic_inserter<T>(world_ecs: &mut WorldEcs, entity: Entity, boxed: Box<dyn Any>)
+where
+    T: Component + 'static,
+{
+    let concrete = *boxed
+        .downcast::<T>()
+        .expect("ComponentEntry contains wrong type");
+    world_ecs.get_store_mut::<T>().insert(entity, concrete);
+}
+
 /// Register a component type and wire it into the dynamic store map.
 #[macro_export]
 macro_rules! ecs_component {
@@ -74,7 +89,10 @@ macro_rules! ecs_component {
             }
         }
 
-        impl $ty {
+        impl $ty 
+        where
+            $ty: 'static + Clone,
+        {
             pub const TYPE_NAME: &'static str = stringify!($ty);
 
             // A factory that inserts the component itself and everything it requires
@@ -115,6 +133,25 @@ macro_rules! ecs_component {
                 factory: <$ty>::__factory,
                 has: $crate::ecs::component_registry::has_component::<$ty>,
                 remove: $crate::ecs::component_registry::erase_from_store::<$ty>,
+                inserter: $crate::ecs::component_registry::generic_inserter::<$ty>,
+                clone: |world: &$crate::ecs::world_ecs::WorldEcs, entity: $crate::ecs::entity::Entity| {
+                    let store_any = world
+                        .stores
+                        .get(&std::any::TypeId::of::<$crate::ecs::component::ComponentStore<$ty>>())
+                        .expect("store missing despite has() == true");
+
+                    let component = {
+                        let store = store_any
+                            .downcast_ref::<$crate::ecs::component::ComponentStore<$ty>>()
+                            .expect("type mismatch in store");
+
+                        store
+                            .get(entity)
+                            .expect("has() returned true but component missing")
+                            .clone()
+                    };
+                    Box::new(component) as Box<dyn std::any::Any>
+                },
             }
         }
     };

@@ -19,4 +19,8 @@ impl Controls {
         is_key_down(KeyCode::LeftControl) && 
         (is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift))
     }
+
+    pub fn delete() -> bool {
+        is_key_pressed(KeyCode::Backspace)
+    }
 }

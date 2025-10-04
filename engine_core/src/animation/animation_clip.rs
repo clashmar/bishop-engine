@@ -102,7 +102,7 @@ pub struct ClipState {
 }
 
 /// The animation component for an entity.
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Animation {
     /// Defineds the animations that belong to the entity.
     pub clips: HashMap<ClipId, ClipDef>,

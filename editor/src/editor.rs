@@ -188,6 +188,14 @@ impl Editor {
             editor_storage::save_world(&self.world)
                 .expect("Could not save world.");
         }
+
+        if Controls::undo() {
+            crate::global::request_undo();
+        }
+
+        if Controls::redo() {
+            crate::global::request_redo();
+        }
     }
 
     pub fn draw(&mut self) {

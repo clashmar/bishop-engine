@@ -1,62 +1,42 @@
 (
-    id: "01d1c740-3ded-48ef-af7d-2ae0d6a74435",
+    id: "e5191285-e00d-4c9c-9f7a-6ce45497a33f",
     name: "World\r",
     world_ecs: (
         components: [
             /*[0]*/ (
-                type_name: "PhysicsBody",
-                data: "(\n    data: {\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (),\n    },\n)",
+                type_name: "CurrentRoom",
+                data: "(\n    data: {\n        (\"b8b5c897-9365-40dc-be1c-3b4ee683f8ad\"): (\"50f25cf5-a318-48b2-9aa4-f7b65951210c\"),\n        (\"d8fb2f9c-9d1d-4aeb-94e8-b462dc44c2d6\"): (\"50f25cf5-a318-48b2-9aa4-f7b65951210c\"),\n    },\n)",
             ),
             /*[1]*/ (
-                type_name: "Position",
-                data: "(\n    data: {\n        (\"87da1af3-6d0f-42c4-8ced-20cf5a3a335b\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (\n            position: (28.331543, 15.496868),\n        ),\n    },\n)",
+                type_name: "Velocity",
+                data: "(\n    data: {\n        (\"b8b5c897-9365-40dc-be1c-3b4ee683f8ad\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
             ),
             /*[2]*/ (
-                type_name: "Player",
-                data: "(\n    data: {\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (),\n    },\n)",
+                type_name: "Position",
+                data: "(\n    data: {\n        (\"b8b5c897-9365-40dc-be1c-3b4ee683f8ad\"): (\n            position: (1.0, 1.0),\n        ),\n        (\"d8fb2f9c-9d1d-4aeb-94e8-b462dc44c2d6\"): (\n            position: (0.0, 0.0),\n        ),\n    },\n)",
             ),
             /*[3]*/ (
-                type_name: "Velocity",
-                data: "(\n    data: {\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
+                type_name: "RoomCamera",
+                data: "(\n    data: {\n        (\"d8fb2f9c-9d1d-4aeb-94e8-b462dc44c2d6\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
             ),
             /*[4]*/ (
-                type_name: "TileSprite",
-                data: "(\n    data: {},\n)",
+                type_name: "Player",
+                data: "(\n    data: {\n        (\"b8b5c897-9365-40dc-be1c-3b4ee683f8ad\"): (),\n    },\n)",
             ),
             /*[5]*/ (
-                type_name: "Name",
-                data: "(\n    data: {},\n)",
+                type_name: "PhysicsBody",
+                data: "(\n    data: {\n        (\"b8b5c897-9365-40dc-be1c-3b4ee683f8ad\"): (),\n    },\n)",
             ),
             /*[6]*/ (
-                type_name: "Sprite",
-                data: "(\n    data: {},\n)",
-            ),
-            /*[7]*/ (
-                type_name: "CurrentFrame",
-                data: "(\n    data: {\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (),\n    },\n)",
-            ),
-            /*[8]*/ (
-                type_name: "Animation",
-                data: "(\n    data: {\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n                Walk: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n    },\n)",
-            ),
-            /*[9]*/ (
-                type_name: "CurrentRoom",
-                data: "(\n    data: {\n        (\"87da1af3-6d0f-42c4-8ced-20cf5a3a335b\"): (\"467578e1-7fdf-4a78-a6be-fb914c3e7d81\"),\n        (\"3c752096-1466-4265-ac54-322c6969c6fb\"): (\"467578e1-7fdf-4a78-a6be-fb914c3e7d81\"),\n    },\n)",
-            ),
-            /*[10]*/ (
                 type_name: "Collider",
-                data: "(\n    data: {},\n)",
-            ),
-            /*[11]*/ (
-                type_name: "RoomCamera",
-                data: "(\n    data: {\n        (\"87da1af3-6d0f-42c4-8ced-20cf5a3a335b\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
+                data: "(\n    data: {\n        (\"b8b5c897-9365-40dc-be1c-3b4ee683f8ad\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
             ),
         ],
         tile_defs: {},
     ),
     rooms: [
         /*[0]*/ (
-            id: "467578e1-7fdf-4a78-a6be-fb914c3e7d81",
+            id: "50f25cf5-a318-48b2-9aa4-f7b65951210c",
             name: "untitled",
             position: (
                 0.0,
@@ -247,7 +227,7 @@
             ],
         ),
     ],
-    starting_room: Some("467578e1-7fdf-4a78-a6be-fb914c3e7d81"),
+    starting_room: Some("50f25cf5-a318-48b2-9aa4-f7b65951210c"),
     starting_position: Some((
         1.0,
         1.0,

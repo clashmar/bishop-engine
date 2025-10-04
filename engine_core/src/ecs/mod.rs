@@ -6,3 +6,4 @@ pub mod component_registry;
 pub mod module_factory;
 pub mod generic_module;
 pub mod module;
+pub mod capture;

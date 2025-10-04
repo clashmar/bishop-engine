@@ -1,14 +1,12 @@
 // engine_core/src/ecs/component.rs
 use reflect_derive::Reflect;
 use uuid::Uuid;
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
 use crate::{
-    ecs::entity::Entity, 
-    ecs_component, 
-    inspector_module
+    ecs::{entity::Entity, world_ecs::WorldEcs}, ecs_component, inspector_module
 }; 
 
 /// Marker trait for components.
@@ -55,6 +53,15 @@ impl<T> ComponentStore<T> {
         self.data.contains_key(&entity)
     }
 }
+
+/// Component bag that can remembers components for a entity and can restore them.
+pub struct ComponentEntry {
+    /// The concrete component value.
+    pub value: Box<dyn Any>,
+    /// Function that knows how to write the value back into the ECS.
+    pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
+}
+
 
 #[serde_as]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]

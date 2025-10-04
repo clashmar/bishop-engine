@@ -12,6 +12,9 @@ use engine_core::{
         world_ecs::WorldEcs,
     },
 };
+use crate::commands::entity_commands::DeleteEntityCmd;
+use crate::controls::controls::Controls;
+use crate::global::push_command;
 use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
@@ -206,8 +209,13 @@ impl InspectorPanel {
             ) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                if gui_button(remove_rect, remove_label) {
-                    world_ecs.remove_entity(entity);
+                if gui_button(remove_rect, remove_label) || Controls::delete() {
+                    let command = DeleteEntityCmd {
+                        entity,
+                        saved: None,
+                    };
+                    push_command(Box::new(command));
+
                     self.target = None;
                     self.add_mode = false;
                     return false;
