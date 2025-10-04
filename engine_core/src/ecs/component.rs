@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
 use crate::{
-    ecs::{entity::Entity, world_ecs::WorldEcs}, ecs_component, inspector_module
+    ecs::entity::Entity, ecs_component, inspector_module
 }; 
 
 /// Marker trait for components.
@@ -58,8 +58,6 @@ impl<T> ComponentStore<T> {
 pub struct ComponentEntry {
     /// The concrete component value.
     pub value: Box<dyn Any>,
-    /// Function that knows how to write the value back into the ECS.
-    pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
     /// Function that can clone the boxed value.
     pub cloner: fn(&dyn Any) -> Box<dyn Any>,
 }
@@ -68,7 +66,6 @@ impl Clone for ComponentEntry {
     fn clone(&self) -> Self {
         Self {
             value: (self.cloner)(&*self.value),
-            inserter: self.inserter,
             cloner: self.cloner,
         }
     }

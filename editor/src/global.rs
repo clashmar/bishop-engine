@@ -8,7 +8,6 @@ use std::{
     pin::Pin, 
     rc::Rc
 };
-use engine_core::ecs::component::ComponentEntry;
 use crate::{
     commands::command_manager::{
         Command, 
@@ -23,7 +22,7 @@ pub struct Services {
     pub command_manager: RefCell<CommandManager>,
     pub pending_undo: Cell<bool>,
     pub pending_redo: Cell<bool>,
-    pub entity_clipboard: RefCell<Option<Vec<ComponentEntry>>>,
+    pub entity_clipboard: RefCell<Option<Vec<(String, String)>>>,
 }
 
 impl Services {

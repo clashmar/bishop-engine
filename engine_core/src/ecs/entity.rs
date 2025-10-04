@@ -24,7 +24,7 @@ impl Entity {
 }
 
 pub struct EntityBuilder<'a> {
-    pub(crate) id:    Entity,
+    pub id: Entity,
     pub world_ecs: &'a mut WorldEcs,
 }
 

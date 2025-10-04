@@ -31,8 +31,10 @@ pub struct ComponentReg {
     pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
     /// Clones the concrete component for `entity` and returns it boxed as `dyn Any`.
     pub clone: fn(&WorldEcs, Entity) -> Box<dyn Any>,
-    /// Clone a boxed component.
-    pub clone_box: fn(&dyn Any) -> Box<dyn Any>,
+    /// Serialize a single component.
+    pub to_ron_component: fn(&dyn Any) -> String,
+    /// Deserialize a single component.
+    pub from_ron_component: fn(String) -> Box<dyn Any>,
 }
 
 /// Factory that works for any component that implements `Component + Default`.
@@ -116,17 +118,25 @@ macro_rules! ecs_component {
                 ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
                     .expect("failed to serialize ComponentStore")
             }
+
             fn from_ron(text: String) -> Box<dyn std::any::Any + Send> {
                 let concrete: $crate::ecs::component::ComponentStore<$ty> =
                     ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
                 Box::new(concrete)
             }
 
-            fn clone_box(src: &dyn std::any::Any) -> Box<dyn std::any::Any> {
-                let concrete = src
+            fn to_ron_component(value: &dyn std::any::Any) -> String {
+                let concrete = value
                     .downcast_ref::<$ty>()
-                    .expect("Type mismatch in clone_box");
-                Box::new(concrete.clone()) as Box<dyn std::any::Any>
+                    .expect("type mismatch in to_ron_component");
+                ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
+                    .expect("failed to serialize component")
+            }
+
+            fn from_ron_component(text: String) -> Box<dyn std::any::Any> {
+                let concrete: $ty = ron::de::from_str(&text)
+                    .expect("failed to deserialize component");
+                Box::new(concrete) as Box<dyn std::any::Any>
             }
         }
 
@@ -161,7 +171,8 @@ macro_rules! ecs_component {
                     };
                     Box::new(component) as Box<dyn std::any::Any>
                 },
-                clone_box: <$ty>::clone_box,
+                to_ron_component: <$ty>::to_ron_component,
+                from_ron_component: <$ty>::from_ron_component,
             }
         }
     };

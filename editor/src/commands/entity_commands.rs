@@ -1,7 +1,7 @@
 // editor/src/commands/entity_commands.rs
 use engine_core::ecs::{
     capture::capture_entity, 
-    component::ComponentEntry, 
+    component_registry::ComponentReg, 
     entity::Entity, 
     world_ecs::WorldEcs
 };
@@ -10,9 +10,10 @@ use crate::{
     global::*
 };
 
+#[derive(Debug)]
 pub struct DeleteEntityCmd {
     pub entity: Entity,
-    pub saved: Option<Vec<ComponentEntry>>,
+    pub saved: Option<Vec<(String, String)>>,
 }
 
 impl Command for DeleteEntityCmd {
@@ -37,22 +38,35 @@ impl Command for DeleteEntityCmd {
     }
 }
 
-fn restore_entity(world_ecs: &mut WorldEcs, entity: Entity, bag: Vec<ComponentEntry>) {
-    for entry in bag {
-        (entry.inserter)(world_ecs, entity, entry.value);
+fn restore_entity(
+    world_ecs: &mut WorldEcs,
+    entity: Entity,
+    bag: Vec<(String, String)>,
+) {
+    for (type_name, ron) in bag {
+        // Look up the registry entry for this component type.
+        let reg = inventory::iter::<ComponentReg>()
+            .find(|r| r.type_name == type_name)
+            .expect("Component not registered");
+
+        // Deserialize a fresh boxed component.
+        let boxed = (reg.from_ron_component)(ron);
+
+        // Insert it into the (already‑existing) entity.
+        (reg.inserter)(world_ecs, entity, boxed);
     }
 }
 
 /// Copy a snapshot of the entity to the entity clipboard.
 pub fn copy_entity(world_ecs: &mut WorldEcs, entity: Entity) {
-    let snapshot = capture_entity(world_ecs, entity); 
-
+    let snapshot = capture_entity(world_ecs, entity);
     SERVICES.with(|s| {
         *s.entity_clipboard.borrow_mut() = Some(snapshot);
     });
 }
 
 /// Creates a new entity from the entity clipboard.
+#[derive(Debug)]
 pub struct PasteEntityCmd {
     /// The entity that was created by the most recent paste.
     entity: Option<Entity>,
@@ -66,21 +80,23 @@ impl PasteEntityCmd {
 
 impl Command for PasteEntityCmd {
     fn execute(&mut self) {
-        let clipboard = SERVICES.with(|s| {
-            s.entity_clipboard
-                .borrow()
-                .as_ref()
-                .cloned()
-        });
-
-        if let Some(snapshot) = clipboard {
+        let clipboard = SERVICES.with(|s| s.entity_clipboard.borrow().clone());
+        if let Some(components) = clipboard {
             with_editor(|editor| {
-                let world_ecs = &mut editor.world.world_ecs;
-                let new_entity = world_ecs.create_entity().finish();
+                let world = &mut editor.world.world_ecs;
+                let new_entity = world.create_entity().finish();
 
-                for component_entry in snapshot {
-                    let entry = component_entry.clone(); // deep‑clone the boxed component
-                    (entry.inserter)(world_ecs, new_entity, entry.value);
+                for (type_name, ron) in components {
+                    // Find the registry entry for this component type
+                    let reg = inventory::iter::<ComponentReg>()
+                        .find(|r| r.type_name == type_name)
+                        .expect("Component not registered");
+
+                    // Deserialize a fresh boxed component
+                    let boxed = (reg.from_ron_component)(ron);
+
+                    // Insert it
+                    (reg.inserter)(world, new_entity, boxed);
                 }
 
                 self.entity = Some(new_entity);
