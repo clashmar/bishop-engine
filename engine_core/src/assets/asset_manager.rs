@@ -4,7 +4,10 @@ use macroquad::prelude::*;
 use uuid::Uuid;
 use std::collections::HashMap;
 use crate::{
-    animation::animation_clip::Animation, assets::sprite::{Sprite, SpriteId}, ecs::world_ecs::WorldEcs, tiles::tile::TileSprite
+    animation::animation_clip::Animation, 
+    assets::sprite::{Sprite, SpriteId}, 
+    ecs::world_ecs::WorldEcs, 
+    tiles::tile::TileSprite
 };
 
 pub struct AssetManager {

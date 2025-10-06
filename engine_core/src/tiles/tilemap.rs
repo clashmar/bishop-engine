@@ -2,7 +2,6 @@
 use serde_with::{serde_as, FromInto};
 use crate::assets::asset_manager::{AssetManager};
 use crate::constants::*;
-use crate::ecs::entity::Entity;
 use crate::ecs::world_ecs::WorldEcs;
 use crate::tiles::tile::{Tile, TileSprite};
 use crate::world::room::{Exit, ExitDirection};
@@ -53,12 +52,11 @@ impl TileMap {
         for y in 0..self.height {
             for x in 0..self.width {
                 let tile_inst = &self.tiles[y][x];
-                if tile_inst.entity == Entity::null() {
-                    continue;
-                }
+
+                let Some(entity) = tile_inst.entity else { continue };
 
                 // Tiles
-                if let Some(tile_sprite) = world_ecs.get::<TileSprite>(tile_inst.entity) {
+                if let Some(tile_sprite) = world_ecs.get::<TileSprite>(entity) {
                     let tex = asset_manager.get_texture_from_id(tile_sprite.sprite_id);
                     let tile_pos = vec2(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE) + room_position;
                     draw_texture_ex(

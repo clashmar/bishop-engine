@@ -112,10 +112,8 @@ pub fn sweep_move(
     for y in 0..tilemap.height {
         for x in 0..tilemap.width {
             let tile = &tilemap.tiles[y][x];
-            if tile.entity == engine_core::ecs::entity::Entity::null() {
-                continue;
-            }
-            if let Some(solid) = world_ecs.get::<Solid>(tile.entity) {
+            let Some(entity) = tile.entity else { continue };
+            if let Some(solid) = world_ecs.get::<Solid>(entity) {
                 if solid.0 {
                     // Tile world position = room_origin + (grid * TILE_SIZE)
                     let tile_pos = room_origin

@@ -10,7 +10,6 @@ use engine_core::{
     constants::*,
     ecs::{
         component::Position,
-        entity::Entity,
         world_ecs::{WorldEcs},
     },
     tiles::{
@@ -149,9 +148,11 @@ impl TileMapEditor  {
         // Remove
         if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
             let old = map.tiles[y][x];
-            if old.entity != Entity::null() {
-                world_ecs.remove_entity(old.entity);
+
+            if let Some(entity) = old.entity {
+                world_ecs.remove_entity(entity);
             }
+
             map.tiles[y][x] = Tile::default();
             return;
         }
@@ -193,7 +194,7 @@ impl TileMapEditor  {
 
             // Finish and store the entity id in the grid cell
             let entity = builder.finish();
-            map.tiles[y][x] = Tile { entity };
+            map.tiles[y][x] = Tile { entity: Some(entity) };
         }
     }
 

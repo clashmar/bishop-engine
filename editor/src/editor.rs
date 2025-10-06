@@ -1,6 +1,5 @@
 // editor/src/editor.rs
 use std::io;
-use async_std::path::PathBuf;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use crate::{
@@ -128,37 +127,29 @@ impl Editor {
 
                 // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {
+                    // Write the payload
                     if let Some(room_id) = &self.current_room_id {
                         let room = self.get_room_from_id(room_id);
-
-                        // Serialize everything the play‑test binary needs
                         let payload_path = room_playtest::write_playtest_payload(room, &self.world);
 
-                        // Spawn the play‑test binary as a child process
-                        #[cfg(target_os = "windows")]
-                        let exe_name = "game-playtest.exe";
-                        #[cfg(not(target_os = "windows"))]
-                        let exe_name = "game-playtest";
-
-                        // Resolve the path relative to the workspace root
-                        let mut exe_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-                        exe_path.pop(); // go up to workspace root
-                        exe_path.push("target");
-                        exe_path.push("debug");
-                        exe_path.push(exe_name);
-
-                        // Launch – we deliberately ignore the child’s stdout/stderr; the
-                        // editor continues running.
-                        if let Err(e) = std::process::Command::new(exe_path)
-                            .arg(&payload_path)
-                            .spawn()
-                        {
-                            eprintln!("Failed to launch play‑test: {e}");
+                        // Build the binary first
+                        match room_playtest::build_playtest_binary().await {
+                            Ok(exe_path) => {
+                                // Launch the binary
+                                if let Err(e) = std::process::Command::new(&exe_path)
+                                    .arg(&payload_path)
+                                    .spawn()
+                                {
+                                    eprintln!("Failed to launch play‑test: {e}");
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("{e}");
+                            }
                         }
                     }
-
-                    // Prevent a million games being spawned and ruining everything
-                    self.room_editor.request_play = false; 
+                    // Reset the request flag so we don’t spawn multiple processes (and really ruin everything)
+                    self.room_editor.request_play = false;              
                 }
 
                 if done {
