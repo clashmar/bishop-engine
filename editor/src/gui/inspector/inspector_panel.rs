@@ -199,7 +199,7 @@ impl InspectorPanel {
                 // Outline 
                 draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
             }
-            // Draw buttons ad the top after the covers
+            // Draw buttons at the top after the covers
             if gui_button(add_rect, add_label) {
                 if self.can_show_any_component(world_ecs) {
                     self.add_mode = !self.add_mode;
@@ -213,7 +213,7 @@ impl InspectorPanel {
             ) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                if gui_button(remove_rect, remove_label) || Controls::delete() {
+                if gui_button(remove_rect, remove_label) || Controls::delete() && !input_is_focused() {
                     let command = DeleteEntityCmd {
                         entity,
                         saved: None,

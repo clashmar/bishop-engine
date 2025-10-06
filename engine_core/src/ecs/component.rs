@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
 use crate::{
-    ecs::entity::Entity, ecs_component, inspector_module
+    assets::asset_manager::AssetManager, ecs::{entity::Entity, world_ecs::WorldEcs}, ecs_component, inspector_module
 }; 
 
 /// Marker trait for components.
@@ -71,8 +71,18 @@ impl Clone for ComponentEntry {
     }
 }
 
+/// Can be alled once a component has been added to an entity to initialize it.
+pub trait PostCreate {
+    fn post_create(
+        &mut self,
+        world: &mut WorldEcs,
+        entity: Entity,
+        asset_manager: &mut AssetManager,
+    );
+}
+
 #[serde_as]
-#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Position {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,

@@ -1,7 +1,7 @@
 // editor/src/room/room_editor.rs
 use crate::{
     canvas::grid, 
-    commands::entity_commands::PasteEntityCmd, 
+    commands::entity_commands::{MoveEntityCmd, PasteEntityCmd}, 
     controls::controls::Controls, 
     editor_camera_controller::*, 
     global::push_command, 
@@ -40,6 +40,7 @@ pub struct RoomEditor {
     show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
+    drag_start_position: Option<Vec2>,
     initialized: bool, 
     create_entity_requested: bool,
     pub request_play: bool,
@@ -56,6 +57,7 @@ impl RoomEditor {
             show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
+            drag_start_position: None,
             initialized: false,
             create_entity_requested: false,
             request_play: false,
@@ -136,6 +138,7 @@ impl RoomEditor {
                             let mouse_world = coord::mouse_world_pos(camera);
                             self.drag_offset = pos.position - mouse_world;
                             self.dragging = true;
+                            self.drag_start_position = Some(pos.position);
                             break;
                         }
                     }
@@ -150,6 +153,22 @@ impl RoomEditor {
                         }
                     }
                     if is_mouse_button_released(MouseButton::Left) {
+                        // Drag finished
+                        if let (Some(entity), Some(start_pos)) = (self.selected_entity, self.drag_start_position.take()) {
+                            // Read the final position
+                            if let Some(final_pos) = world_ecs
+                                .get_store::<Position>()
+                                .get(entity)
+                                .map(|p| p.position)
+                            {
+                                // Only push the command if the entity changed its location
+                                if (final_pos - start_pos).length_squared() > 0.0 {
+                                    push_command(Box::new(
+                                        MoveEntityCmd::new(entity, start_pos, final_pos),
+                                    ));
+                                }
+                            }
+                        }
                         self.dragging = false;
                     }
                 }

@@ -35,6 +35,8 @@ pub struct ComponentReg {
     pub to_ron_component: fn(&dyn Any) -> String,
     /// Deserialize a single component.
     pub from_ron_component: fn(String) -> Box<dyn Any>,
+    /// Called for optional run post‑create logic.  If `None` the engine will do nothing.
+    pub post_create: fn(&mut dyn Any),
 }
 
 /// Factory that works for any component that implements `Component + Default`.
@@ -75,11 +77,26 @@ where
 /// Register a component type and wire it into the dynamic store map.
 #[macro_export]
 macro_rules! ecs_component {
+    // No requirements, no custom post_create
     ($ty:ty) => {
-        $crate::ecs_component!($ty, []);
+        $crate::ecs_component!(@final $ty, [], default);
+    };
+    // Requirements, no custom post_create
+    ($ty:ty, [$($req:ty),* $(,)?]) => {
+        $crate::ecs_component!(@final $ty, [$($req),*], default);
+    };
+    // No requirements, custom post_create
+    ($ty:ty, post_create = $func:path) => {
+        $crate::ecs_component!(@final $ty, [], custom $func);
+    };
+    // Requirements and custom post_create
+    ($ty:ty, [$($req:ty),* $(,)?], post_create = $func:path) => {
+        $crate::ecs_component!(@final $ty, [$($req),*], custom $func);
     };
 
-    ($ty:ty, [$($req:ty),* $(,)?]) => {
+    // Internal entry point
+    (@final $ty:ty, [$($req:ty),*], default) => {
+        // Implement Component trait for the concrete type
         impl $crate::ecs::component::Component for $ty {
             fn store_mut(
                 world: &mut $crate::ecs::world_ecs::WorldEcs,
@@ -93,49 +110,151 @@ macro_rules! ecs_component {
             }
         }
 
-        impl $ty 
+        impl $ty
         where
             $ty: 'static + Clone,
         {
             pub const TYPE_NAME: &'static str = stringify!($ty);
 
-            // A factory that inserts the component itself and everything it requires
-            fn __factory(world: &mut $crate::ecs::world_ecs::WorldEcs, entity: $crate::ecs::entity::Entity) {
-                // Insert the component itself (default value)
-                world.get_store_mut::<$ty>().insert(entity, <$ty>::default());
-
-                // Insert every required component with its default value
+            fn __factory(
+                world: &mut $crate::ecs::world_ecs::WorldEcs,
+                entity: $crate::ecs::entity::Entity,
+            ) {
+                world.get_store_mut::<$ty>()
+                    .insert(entity, <$ty>::default());
                 $(
                     world.get_store_mut::<$req>()
-                         .insert(entity, <$req>::default());
+                        .insert(entity, <$req>::default());
                 )*
             }
 
-            fn to_ron(store: &dyn std::any::Any) -> String {
+            // (De)serialisation of the whole ComponentStore<$ty>
+            fn __to_ron(store: &dyn std::any::Any) -> String {
                 let concrete = store
                     .downcast_ref::<$crate::ecs::component::ComponentStore<$ty>>()
                     .expect("type mismatch in to_ron");
                 ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
                     .expect("failed to serialize ComponentStore")
             }
-
-            fn from_ron(text: String) -> Box<dyn std::any::Any + Send> {
+            fn __from_ron(text: String) -> Box<dyn std::any::Any + Send> {
                 let concrete: $crate::ecs::component::ComponentStore<$ty> =
                     ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
                 Box::new(concrete)
             }
 
-            fn to_ron_component(value: &dyn std::any::Any) -> String {
+            // (De)serialisation of a single component instance
+            fn __to_ron_component(value: &dyn std::any::Any) -> String {
                 let concrete = value
                     .downcast_ref::<$ty>()
                     .expect("type mismatch in to_ron_component");
                 ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
                     .expect("failed to serialize component")
             }
+            fn __from_ron_component(text: String) -> Box<dyn std::any::Any> {
+                let concrete: $ty =
+                    ron::de::from_str(&text).expect("failed to deserialize component");
+                Box::new(concrete) as Box<dyn std::any::Any>
+            }
+        }
 
-            fn from_ron_component(text: String) -> Box<dyn std::any::Any> {
-                let concrete: $ty = ron::de::from_str(&text)
-                    .expect("failed to deserialize component");
+        // Register the component (default path)
+        inventory::submit! {
+            $crate::ecs::component_registry::ComponentReg {
+                type_name: <$ty>::TYPE_NAME,
+                type_id: std::any::TypeId::of::<
+                    $crate::ecs::component::ComponentStore<$ty>
+                >(),
+                to_ron: <$ty>::__to_ron,
+                from_ron: <$ty>::__from_ron,
+                factory: <$ty>::__factory,
+                has: $crate::ecs::component_registry::has_component::<$ty>,
+                remove: $crate::ecs::component_registry::erase_from_store::<$ty>,
+                inserter: $crate::ecs::component_registry::generic_inserter::<$ty>,
+                clone: |world: &$crate::ecs::world_ecs::WorldEcs,
+                         entity: $crate::ecs::entity::Entity| {
+                    let store_any = world
+                        .stores
+                        .get(&std::any::TypeId::of::<
+                            $crate::ecs::component::ComponentStore<$ty>
+                        >())
+                        .expect("store missing despite has() == true");
+                    let component = {
+                        let store = store_any
+                            .downcast_ref::<
+                                $crate::ecs::component::ComponentStore<$ty>
+                            >()
+                            .expect("type mismatch in store");
+                        store
+                            .get(entity)
+                            .expect("has() returned true but component missing")
+                            .clone()
+                    };
+                    Box::new(component) as Box<dyn std::any::Any>
+                },
+                to_ron_component: <$ty>::__to_ron_component,
+                from_ron_component: <$ty>::__from_ron_component,
+                post_create: $crate::ecs::component_registry::post_create,
+            }
+        }
+    };
+
+    // Custom post-create branch
+    (@final $ty:ty, [$($req:ty),*], custom $func:path) => {
+        // Implement Component trait for the concrete type
+        impl $crate::ecs::component::Component for $ty {
+            fn store_mut(
+                world: &mut $crate::ecs::world_ecs::WorldEcs,
+            ) -> &mut $crate::ecs::component::ComponentStore<Self> {
+                world.get_or_create_store::<Self>()
+            }
+            fn store(
+                world: &$crate::ecs::world_ecs::WorldEcs,
+            ) -> &$crate::ecs::component::ComponentStore<Self> {
+                world.get_store::<Self>()
+            }
+        }
+
+        impl $ty
+        where
+            $ty: 'static + Clone,
+        {
+            pub const TYPE_NAME: &'static str = stringify!($ty);
+
+            fn __factory(
+                world: &mut $crate::ecs::world_ecs::WorldEcs,
+                entity: $crate::ecs::entity::Entity,
+            ) {
+                world.get_store_mut::<$ty>()
+                    .insert(entity, <$ty>::default());
+                $(
+                    world.get_store_mut::<$req>()
+                        .insert(entity, <$req>::default());
+                )*
+            }
+
+            fn __to_ron(store: &dyn std::any::Any) -> String {
+                let concrete = store
+                    .downcast_ref::<$crate::ecs::component::ComponentStore<$ty>>()
+                    .expect("type mismatch in to_ron");
+                ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
+                    .expect("failed to serialize ComponentStore")
+            }
+            fn __from_ron(text: String) -> Box<dyn std::any::Any + Send> {
+                let concrete: $crate::ecs::component::ComponentStore<$ty> =
+                    ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
+                Box::new(concrete)
+            }
+
+            fn __to_ron_component(value: &dyn std::any::Any) -> String {
+                let concrete = value
+                    .downcast_ref::<$ty>()
+                    .expect("type mismatch in to_ron_component");
+                ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
+                    .expect("failed to serialize component")
+            }
+            fn __from_ron_component(text: String) -> Box<dyn std::any::Any> {
+                let concrete: $ty =
+                    ron::de::from_str(&text).expect("failed to deserialize component");
                 Box::new(concrete) as Box<dyn std::any::Any>
             }
         }
@@ -147,23 +266,26 @@ macro_rules! ecs_component {
                 type_id: std::any::TypeId::of::<
                     $crate::ecs::component::ComponentStore<$ty>
                 >(),
-                to_ron: <$ty>::to_ron,
-                from_ron: <$ty>::from_ron,
+                to_ron: <$ty>::__to_ron,
+                from_ron: <$ty>::__from_ron,
                 factory: <$ty>::__factory,
                 has: $crate::ecs::component_registry::has_component::<$ty>,
                 remove: $crate::ecs::component_registry::erase_from_store::<$ty>,
                 inserter: $crate::ecs::component_registry::generic_inserter::<$ty>,
-                clone: |world: &$crate::ecs::world_ecs::WorldEcs, entity: $crate::ecs::entity::Entity| {
+                clone: |world: &$crate::ecs::world_ecs::WorldEcs,
+                         entity: $crate::ecs::entity::Entity| {
                     let store_any = world
                         .stores
-                        .get(&std::any::TypeId::of::<$crate::ecs::component::ComponentStore<$ty>>())
+                        .get(&std::any::TypeId::of::<
+                            $crate::ecs::component::ComponentStore<$ty>
+                        >())
                         .expect("store missing despite has() == true");
-
                     let component = {
                         let store = store_any
-                            .downcast_ref::<$crate::ecs::component::ComponentStore<$ty>>()
+                            .downcast_ref::<
+                                $crate::ecs::component::ComponentStore<$ty>
+                            >()
                             .expect("type mismatch in store");
-
                         store
                             .get(entity)
                             .expect("has() returned true but component missing")
@@ -171,12 +293,26 @@ macro_rules! ecs_component {
                     };
                     Box::new(component) as Box<dyn std::any::Any>
                 },
-                to_ron_component: <$ty>::to_ron_component,
-                from_ron_component: <$ty>::from_ron_component,
+                to_ron_component: <$ty>::__to_ron_component,
+                from_ron_component: <$ty>::__from_ron_component,
+                post_create: |any: &mut dyn std::any::Any| {
+                    // Down‑cast the erased component to the concrete type
+                    let comp = any
+                        .downcast_mut::<$ty>()
+                        .expect(concat!(
+                            "post_create: Type mismatch.",
+                            stringify!($ty)
+                        ));
+                    // Forward to the concreate function
+                    $func(comp);
+                },
             }
         }
     };
 }
+
+// Collect all registrations into a slice that lives for the whole program.
+inventory::collect!(ComponentReg);
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct StoredComponent {
@@ -184,5 +320,7 @@ pub struct StoredComponent {
     pub data: String,
 }
 
-// Collect all registrations into a slice that lives for the whole program.
-inventory::collect!(ComponentReg);
+/// Default implementation used when a component does not need any post‑create work.
+pub fn post_create(
+    _any: &mut dyn Any,
+) {}

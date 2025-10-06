@@ -54,7 +54,6 @@ impl<'a> EntityBuilder<'a> {
     }
 }
 
-
 pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: Uuid) -> HashSet<Entity> {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     room_store

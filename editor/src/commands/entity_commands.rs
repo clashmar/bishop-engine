@@ -1,10 +1,12 @@
 // editor/src/commands/entity_commands.rs
 use engine_core::ecs::{
     capture::capture_entity, 
+    component::Position, 
     component_registry::ComponentReg, 
     entity::Entity, 
     world_ecs::WorldEcs
 };
+use macroquad::prelude::*;
 use crate::{
     commands::command_manager::Command, 
     global::*
@@ -45,19 +47,22 @@ fn restore_entity(
 ) {
     for (type_name, ron) in bag {
         // Look up the registry entry for this component type.
-        let reg = inventory::iter::<ComponentReg>()
+        let component_reg = inventory::iter::<ComponentReg>()
             .find(|r| r.type_name == type_name)
             .expect("Component not registered");
 
         // Deserialize a fresh boxed component.
-        let boxed = (reg.from_ron_component)(ron);
+        let mut boxed = (component_reg.from_ron_component)(ron);
+
+        // Run any post create logic the component may have
+        (component_reg.post_create)(&mut *boxed);
 
         // Insert it into the (already‑existing) entity.
-        (reg.inserter)(world_ecs, entity, boxed);
+        (component_reg.inserter)(world_ecs, entity, boxed);
     }
 }
 
-/// Copy a snapshot of the entity to the entity clipboard.
+/// Copy a snapshot of the entity to the global entity clipboard.
 pub fn copy_entity(world_ecs: &mut WorldEcs, entity: Entity) {
     let snapshot = capture_entity(world_ecs, entity);
     SERVICES.with(|s| {
@@ -70,48 +75,125 @@ pub fn copy_entity(world_ecs: &mut WorldEcs, entity: Entity) {
 pub struct PasteEntityCmd {
     /// The entity that was created by the most recent paste.
     entity: Option<Entity>,
+    /// The component snapshot that was taken the first time the command ran.
+    snapshot: Option<Vec<(String, String)>>,
 }
 
 impl PasteEntityCmd {
     pub fn new() -> Self {
-        Self { entity: None }
+        Self { 
+            entity: None,
+            snapshot: None,
+         }
     }
 }
 
 impl Command for PasteEntityCmd {
     fn execute(&mut self) {
-        let clipboard = SERVICES.with(|s| s.entity_clipboard.borrow().clone());
-        if let Some(components) = clipboard {
-            with_editor(|editor| {
-                let world = &mut editor.world.world_ecs;
-                let new_entity = world.create_entity().finish();
+        // Grab the clipboard only once on first execution
+        if self.snapshot.is_none() {
+            self.snapshot = SERVICES.with(|s| s.entity_clipboard.borrow().clone());
+        }
 
-                for (type_name, ron) in components {
-                    // Find the registry entry for this component type
-                    let reg = inventory::iter::<ComponentReg>()
-                        .find(|r| r.type_name == type_name)
-                        .expect("Component not registered");
+        // Bail out if nothing is on the clipboard
+        let snapshot = match &self.snapshot {
+            Some(s) => s,
+            None => return,
+        };
 
-                    // Deserialize a fresh boxed component
-                    let boxed = (reg.from_ron_component)(ron);
-
-                    // Insert it
-                    (reg.inserter)(world, new_entity, boxed);
-                }
-
-                self.entity = Some(new_entity);
-                editor.room_editor.set_selected_entity(Some(new_entity));
+        // Ensure we have an Entity id
+        if self.entity.is_none() {
+            // Allocate a fresh UUID for the first execution
+            self.entity = with_editor(|ed| {
+                let world = &mut ed.world.world_ecs;
+                Some(world.create_entity().finish())
             });
         }
+
+        let entity = self.entity.expect("Entity must be set.");
+
+        // Populate the component stores for that UUID
+        with_editor(|editor| {
+            let world = &mut editor.world.world_ecs;
+            for (type_name, ron) in snapshot {
+                // Find the registry entry for this component type
+                let component_reg = inventory::iter::<ComponentReg>()
+                    .find(|r| r.type_name == type_name)
+                    .expect("Component not registered");
+
+                // Deserialize a fresh boxed component
+                let mut boxed = (component_reg.from_ron_component)(ron.clone());
+
+                // Run any post‑create logic the component may have
+                (component_reg.post_create)(&mut *boxed);
+
+                // Insert it into the world under the same UUID
+                (component_reg.inserter)(world, entity, boxed);
+            }
+
+            // Select the entity in the UI
+            editor.room_editor.set_selected_entity(Some(entity));
+        });
     }
 
     fn undo(&mut self) {
-        if let Some(entity) = self.entity.take() {
-            with_editor(|editor| {
-                let world_ecs = &mut editor.world.world_ecs;
-                world_ecs.remove_entity(entity); // delete
-                editor.room_editor.set_selected_entity(None);
+        // Remove the entity but keep the UUID for a later redo
+        if let Some(entity) = self.entity {
+            with_editor(|ed| {
+                let world = &mut ed.world.world_ecs;
+                world.remove_entity(entity);
+                ed.room_editor.set_selected_entity(None);
             });
         }
+    }
+}
+
+/// Undo-able move‑entity command.
+#[derive(Debug)]
+pub struct MoveEntityCmd {
+    entity: Entity,
+    from: Vec2,
+    to: Vec2,
+    executed: bool,
+}
+
+impl MoveEntityCmd {
+    pub fn new(entity: Entity, from: Vec2, to: Vec2) -> Self {
+        Self {
+            entity,
+            from,
+            to,
+            executed: false,
+        }
+    }
+
+    /// Helper that writes a concrete position into the world.
+    fn set_position(world_ecs: &mut WorldEcs, entity: Entity, position: Vec2) {
+        if let Some(pos) = world_ecs
+            .get_store_mut::<Position>()
+            .get_mut(entity)
+        {
+            pos.position = position;
+        }
+    }
+}
+
+impl Command for MoveEntityCmd {
+    fn execute(&mut self) {
+        // Called the first time
+        with_editor(|editor| {
+            let world_ecs = &mut editor.world.world_ecs;
+            Self::set_position(world_ecs, self.entity, self.to);
+        });
+        self.executed = true;
+    }
+
+    fn undo(&mut self) {
+        // Restore the old position
+        with_editor(|editor| {
+            let world_ecs = &mut editor.world.world_ecs;
+            Self::set_position(world_ecs, self.entity, self.from);
+        });
+        self.executed = false;
     }
 }

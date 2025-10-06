@@ -26,7 +26,6 @@ impl CommandManager {
 
     /// Push the command to the pending stack to be executed safely at the end of the frame.
     pub fn push(&mut self, command: Box<dyn Command>) {
-        println!("{:?}", command);
         self.redo_stack.clear();
         self.pending.push(command);
     }
@@ -34,7 +33,6 @@ impl CommandManager {
     /// Undo a command on the undo stack and push it onto the redo stack.
     pub fn undo(&mut self) {
         if let Some(mut command) = self.undo_stack.pop() {
-            println!("{:?}", command);
             command.undo();
             self.redo_stack.push(command);
         }
@@ -43,7 +41,6 @@ impl CommandManager {
     /// Redo a command on the redo stack and push it onto the undo stack.
     pub fn redo(&mut self) {
         if let Some(mut command) = self.redo_stack.pop() {
-            println!("{:?}", command);
             command.execute();
             self.undo_stack.push(command);
         }

@@ -17,14 +17,14 @@ macro_rules! impl_capture_entity {
             let mut bag = Vec::new();
 
             // Iterate over all component registrations
-            for reg in inventory::iter::<ComponentReg> {
+            for component_reg in inventory::iter::<ComponentReg> {
                 // Does the entity own the component
-                if (reg.has)(world_ecs, entity) {
+                if (component_reg.has)(world_ecs, entity) {
                     // Serialize the *component* (not the whole store) to a RON string.
                     // `reg.clone` gives us a boxed component value.
-                    let boxed = (reg.clone)(world_ecs, entity);
-                    let ron = (reg.to_ron_component)(&*boxed);
-                    bag.push((reg.type_name.to_string(), ron));
+                    let boxed = (component_reg.clone)(world_ecs, entity);
+                    let ron = (component_reg.to_ron_component)(&*boxed);
+                    bag.push((component_reg.type_name.to_string(), ron));
                 }
             }
             bag

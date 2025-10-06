@@ -7,10 +7,86 @@ use std::{collections::HashMap, path::Path};
 use serde_with::{FromInto, serde_as};
 use std::fmt;
 use crate::{
-    assets::{asset_manager::AssetManager, sprite::SpriteId}, 
-    constants::TILE_SIZE, 
-    ecs_component
+    assets::{
+        asset_manager::AssetManager, 
+        sprite::SpriteId}, 
+        constants::TILE_SIZE, 
+        ecs_component
 };
+
+/// The animation component for an entity.
+#[derive(Clone, Default, Serialize, Deserialize)]
+pub struct Animation {
+    /// Defineds the animations that belong to the entity.
+    pub clips: HashMap<ClipId, ClipDef>,
+    /// Which animation variant to show.
+    pub variant: VariantFolder,
+    /// Which clip is currently active.
+    #[serde(skip)]
+    pub current: Option<ClipId>,
+    /// Per‑clip runtime data.
+    #[serde(skip)]
+    pub states: HashMap<ClipId, ClipState>,
+    /// Cached SpriteId for each clip in the current variant.
+    #[serde(skip)]
+    pub sprite_cache: HashMap<ClipId, SpriteId>,
+}
+
+ecs_component!(Animation, post_create = post_create);
+
+impl Animation {
+    /// Call after deserialization or after a clip has been added/removed.
+    pub fn init_runtime(&mut self) {
+        self.states.clear();
+        for id in self.clips.keys() {
+            self.states.insert(id.clone(), ClipState::default());
+        }
+
+        // If there is at least one clip but `current` is None, pick the first
+        if self.current.is_none() && !self.clips.is_empty() {
+            self.current = Some(self.clips.keys().next().unwrap().clone());
+        }
+    }
+
+    /// Switch to another clip safely.
+    pub fn set_clip(&mut self, id: &ClipId) {
+        if self.clips.contains_key(&id) {
+            self.current = Some(id.clone());
+            // Reset its timer so the new clip starts from frame 0.
+            if let Some(state) = self.states.get_mut(&id) {
+                *state = ClipState::default();
+            }
+        }
+    }
+
+    /// Clear the active clip.
+    pub fn clear_clip(&mut self) {
+        self.current = None;
+    }
+
+    /// Populate `sprite_cache` for the current variant.
+    /// Called when the variant folder changes or a new clip is added.
+    pub async fn refresh_sprite_cache(&mut self, asset_manager: &mut AssetManager) {
+        self.sprite_cache.clear();
+
+        for (clip_id, _) in &self.clips {
+            let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
+            self.sprite_cache.insert(clip_id.clone(), sprite_id);
+        }
+    }
+
+    /// Creates cache for a clip with a new SpriteId.
+    pub fn update_cache_entry(
+        &mut self,
+        current_id: &ClipId,
+        sprite_id: SpriteId,
+    ) {
+        if sprite_id.0 != Uuid::nil() {
+            self.sprite_cache
+                .insert(current_id.clone(), sprite_id);
+        }
+    }
+}
 
 /// Logical name of a clip.
 #[derive(EnumIter, EnumString, Debug, Default, 
@@ -101,80 +177,6 @@ pub struct ClipState {
     pub finished: bool,
 }
 
-/// The animation component for an entity.
-#[derive(Clone, Default, Serialize, Deserialize)]
-pub struct Animation {
-    /// Defineds the animations that belong to the entity.
-    pub clips: HashMap<ClipId, ClipDef>,
-    /// Which animation variant to show.
-    pub variant: VariantFolder,
-    /// Which clip is currently active.
-    #[serde(skip)]
-    pub current: Option<ClipId>,
-    /// Per‑clip runtime data.
-    #[serde(skip)]
-    pub states: HashMap<ClipId, ClipState>,
-    /// Cached SpriteId for each clip in the current variant.
-    #[serde(skip)]
-    pub sprite_cache: HashMap<ClipId, SpriteId>,
-}
-
-ecs_component!(Animation);
-
-impl Animation {
-    /// Call after deserialization or after a clip has been added/removed.
-    pub fn init_runtime(&mut self) {
-        self.states.clear();
-        for id in self.clips.keys() {
-            self.states.insert(id.clone(), ClipState::default());
-        }
-
-        // If there is at least one clip but `current` is None, pick the first
-        if self.current.is_none() && !self.clips.is_empty() {
-            self.current = Some(self.clips.keys().next().unwrap().clone());
-        }
-    }
-
-    /// Switch to another clip safely.
-    pub fn set_clip(&mut self, id: &ClipId) {
-        if self.clips.contains_key(&id) {
-            self.current = Some(id.clone());
-            // Reset its timer so the new clip starts from frame 0.
-            if let Some(state) = self.states.get_mut(&id) {
-                *state = ClipState::default();
-            }
-        }
-    }
-
-    /// Clear the active clip.
-    pub fn clear_clip(&mut self) {
-        self.current = None;
-    }
-
-    /// Populate `sprite_cache` for the current variant.
-    /// Called when the variant folder changes or a new clip is added.
-    pub async fn refresh_sprite_cache(&mut self, asset_manager: &mut AssetManager) {
-        self.sprite_cache.clear();
-
-        for (clip_id, _) in &self.clips {
-            let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
-            self.sprite_cache.insert(clip_id.clone(), sprite_id);
-        }
-    }
-
-    /// Creates cache for a clip with a new SpriteId.
-    pub fn update_cache_entry(
-        &mut self,
-        current_id: &ClipId,
-        sprite_id: SpriteId,
-    ) {
-        if sprite_id.0 != Uuid::nil() {
-            self.sprite_cache
-                .insert(current_id.clone(), sprite_id);
-        }
-    }
-}
-
 /// Returns the `SpriteId` for the current variant clip.
 pub async fn resolve_sprite_id(
     asset_manager: &mut AssetManager,
@@ -206,4 +208,11 @@ pub async fn resolve_sprite_id(
 
     // Load the texture
     asset_manager.load(&path).await
+}
+
+/// Initializes the component when an entity is instantiated into the world.
+pub fn post_create(
+    anim: &mut Animation
+) {
+    anim.init_runtime();
 }
