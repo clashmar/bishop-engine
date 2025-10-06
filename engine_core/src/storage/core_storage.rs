@@ -1,8 +1,8 @@
 // engine_core/src/storage/core_storage.rs
 use uuid::Uuid;
 use crate::{
-    constants::WORLD_SAVE_FOLDER,
-    world::world::World,
+    constants::GAME_SAVE_ROOT, 
+    world::world::World
 };
 use std::{
     collections::HashMap,
@@ -15,7 +15,7 @@ pub type WorldIndex = HashMap<Uuid, String>;
 
 /// Load a whole `World` (including its `WorldEcs`) from disk.
 pub fn load_world_by_id(id: &Uuid) -> io::Result<World> {
-    let path = Path::new(WORLD_SAVE_FOLDER)
+    let path = Path::new(GAME_SAVE_ROOT)
         .join(id.to_string())
         .join("world.ron");
     let ron_string = fs::read_to_string(path)?;
@@ -24,7 +24,7 @@ pub fn load_world_by_id(id: &Uuid) -> io::Result<World> {
 
 /// Return the UUID of the most‑recently‑modified world folder.
 pub fn most_recent_world_id() -> Option<Uuid> {
-    let root = Path::new(WORLD_SAVE_FOLDER);
+    let root = Path::new(GAME_SAVE_ROOT);
     let mut best: Option<(Uuid, SystemTime)> = None;
     for entry in fs::read_dir(root).ok()? {
         let entry = entry.ok()?;

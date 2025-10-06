@@ -22,7 +22,7 @@ impl Command for DeleteEntityCmd {
     fn execute(&mut self) {
         // Capture components before deleting
         with_editor(|editor| {
-            let world_ecs = &mut editor.world.world_ecs;
+            let world_ecs = &mut editor.game.current_world_mut().world_ecs;
             self.saved = Some(capture_entity(world_ecs, self.entity));
             world_ecs.remove_entity(self.entity); // delete
             editor.room_editor.set_selected_entity(None);
@@ -33,7 +33,7 @@ impl Command for DeleteEntityCmd {
         // Recreate the entity and put its components back together
         if let Some(bag) = self.saved.take() {
             with_editor(|editor| {
-                let world_ecs = &mut editor.world.world_ecs;
+                let world_ecs = &mut editor.game.current_world_mut().world_ecs;
                 restore_entity(world_ecs, self.entity, bag);
             });
         }
@@ -104,8 +104,8 @@ impl Command for PasteEntityCmd {
         // Ensure we have an Entity id
         if self.entity.is_none() {
             // Allocate a fresh UUID for the first execution
-            self.entity = with_editor(|ed| {
-                let world = &mut ed.world.world_ecs;
+            self.entity = with_editor(|editor| {
+                let world = &mut editor.game.current_world_mut().world_ecs;
                 Some(world.create_entity().finish())
             });
         }
@@ -114,7 +114,7 @@ impl Command for PasteEntityCmd {
 
         // Populate the component stores for that UUID
         with_editor(|editor| {
-            let world = &mut editor.world.world_ecs;
+            let world = &mut editor.game.current_world_mut().world_ecs;
             for (type_name, ron) in snapshot {
                 // Find the registry entry for this component type
                 let component_reg = inventory::iter::<ComponentReg>()
@@ -139,10 +139,10 @@ impl Command for PasteEntityCmd {
     fn undo(&mut self) {
         // Remove the entity but keep the UUID for a later redo
         if let Some(entity) = self.entity {
-            with_editor(|ed| {
-                let world = &mut ed.world.world_ecs;
+            with_editor(|editor| {
+                let world = &mut editor.game.current_world_mut().world_ecs;
                 world.remove_entity(entity);
-                ed.room_editor.set_selected_entity(None);
+                editor.room_editor.set_selected_entity(None);
             });
         }
     }
@@ -182,7 +182,7 @@ impl Command for MoveEntityCmd {
     fn execute(&mut self) {
         // Called the first time
         with_editor(|editor| {
-            let world_ecs = &mut editor.world.world_ecs;
+            let world_ecs = &mut editor.game.current_world_mut().world_ecs;
             Self::set_position(world_ecs, self.entity, self.to);
         });
         self.executed = true;
@@ -191,7 +191,7 @@ impl Command for MoveEntityCmd {
     fn undo(&mut self) {
         // Restore the old position
         with_editor(|editor| {
-            let world_ecs = &mut editor.world.world_ecs;
+            let world_ecs = &mut editor.game.current_world_mut().world_ecs;
             Self::set_position(world_ecs, self.entity, self.from);
         });
         self.executed = false;

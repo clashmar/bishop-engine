@@ -70,7 +70,7 @@ impl TileMapEditor  {
         ResizeButton::build_all(&room.variants[0].tilemap, &mut self.dynamic_ui, room.position);
         
         let mouse_pos = mouse_position().into();
-        self.consume_ui_click(camera, mouse_pos, room, other_bounds);
+        self.consume_ui_click(camera, mouse_pos, room, other_bounds, world_ecs);
 
         if !self.ui_was_clicked {
             match self.mode {
@@ -107,7 +107,8 @@ impl TileMapEditor  {
         camera: &mut Camera2D,
         mouse_pos: Vec2,
         room: &mut Room,
-        other_bounds: &[(Vec2, Vec2)]
+        other_bounds: &[(Vec2, Vec2)],
+        world_ecs: &mut WorldEcs,
     ) {
         if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
 
@@ -118,7 +119,7 @@ impl TileMapEditor  {
 
             for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, camera) {
-                    element.on_click(room, mouse_pos, camera, other_bounds);
+                    element.on_click(room, mouse_pos, camera, other_bounds, world_ecs);
                     self.ui_was_clicked = true;
                     break;
                 }
@@ -147,13 +148,11 @@ impl TileMapEditor  {
 
         // Remove
         if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
-            let old = map.tiles[y][x];
-
-            if let Some(entity) = old.entity {
-                world_ecs.remove_entity(entity);
+            if let Some(old_tile) = map.tiles.remove(&(x, y)) {
+                if let Some(entity) = old_tile.entity {
+                    world_ecs.remove_entity(entity);
+                }
             }
-
-            map.tiles[y][x] = Tile::default();
             return;
         }
 
@@ -192,9 +191,9 @@ impl TileMapEditor  {
             // Apply the behaviour definition (walkable, solid, damage, …)
             builder = def.apply(builder);
 
-            // Finish and store the entity id in the grid cell
+            // Finish and store the entity id in the hashmap
             let entity = builder.finish();
-            map.tiles[y][x] = Tile { entity: Some(entity) };
+            map.tiles.insert((x, y), Tile { entity: Some(entity) });
         }
     }
 

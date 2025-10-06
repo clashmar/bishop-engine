@@ -1,5 +1,5 @@
 // game/src/physics/collision.rs
-use macroquad::prelude::Vec2;
+use macroquad::prelude::*;
 use engine_core::{
     ecs::{
         component::{Collider, Position, Solid},
@@ -109,21 +109,13 @@ pub fn sweep_move(
 
     // Tiles
     // Only tiles that carry a Solid component are obstacles
-    for y in 0..tilemap.height {
-        for x in 0..tilemap.width {
-            let tile = &tilemap.tiles[y][x];
-            let Some(entity) = tile.entity else { continue };
-            if let Some(solid) = world_ecs.get::<Solid>(entity) {
-                if solid.0 {
-                    // Tile world position = room_origin + (grid * TILE_SIZE)
-                    let tile_pos = room_origin
-                        + Vec2::new(x as f32 * TILE_SIZE, y as f32 * TILE_SIZE);
-                    let tile_aabb = (
-                        tile_pos,
-                        tile_pos + Vec2::new(TILE_SIZE, TILE_SIZE),
-                    );
-                    obstacles.push(tile_aabb);
-                }
+    for ((x, y), tile) in tilemap.tiles.iter() {
+        let Some(entity) = tile.entity else { continue };
+        if let Some(solid) = world_ecs.get::<Solid>(entity) {
+            if solid.0 {
+                let tile_pos = room_origin + vec2(*x as f32 * TILE_SIZE, *y as f32 * TILE_SIZE);
+                let tile_aabb = (tile_pos, tile_pos + vec2(TILE_SIZE, TILE_SIZE));
+                obstacles.push(tile_aabb);
             }
         }
     }

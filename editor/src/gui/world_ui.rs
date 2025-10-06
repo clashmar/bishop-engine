@@ -33,13 +33,13 @@ impl WorldUiElement for WorldNameUi {
                 if new_name.is_empty() || new_name == world.name { return; }
 
                 // Update the index
-                let mut idx = editor_storage::load_index().expect("load index");
-                idx.insert(world.id, new_name.clone());
-                editor_storage::save_index(&idx).expect("save index");
+                // let mut idx = editor_storage::load_world_index().expect("load index");
+                // idx.insert(world.id, new_name.clone());
+                // editor_storage::save_world_index(&idx).expect("save index");
 
-                // Update the in‑memory struct and persist the single file
-                world.name = new_name;
-                editor_storage::save_world(world).expect("save world");
+                // // Update the in‑memory struct and persist the single file
+                // world.name = new_name;
+                // editor_storage::save_world(world).expect("save world");
             }
         })
     }

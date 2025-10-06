@@ -6,7 +6,13 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
 use crate::{
-    assets::asset_manager::AssetManager, ecs::{entity::Entity, world_ecs::WorldEcs}, ecs_component, inspector_module
+    assets::asset_manager::AssetManager, 
+    ecs::{
+        entity::Entity, 
+        world_ecs::WorldEcs
+    },
+    ecs_component, 
+    inspector_module
 }; 
 
 /// Marker trait for components.

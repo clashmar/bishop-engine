@@ -15,12 +15,9 @@ use engine_core::{
     assets::
         asset_manager::AssetManager, 
         constants::*, 
+        game::game::Game, 
         physics::collider_system, 
-        storage::core_storage, 
-        world::{
-            room::Room,
-            world::World,
-    }
+        world::room::Room
 };
 
 pub enum EditorMode {
@@ -29,7 +26,7 @@ pub enum EditorMode {
 }
 
 pub struct Editor {
-    pub world: World,
+    pub game: Game,
     pub mode: EditorMode,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
@@ -40,13 +37,13 @@ pub struct Editor {
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
-        let mut world = if let Some(latest_id) = editor_storage::most_recent_world_id() {
-            core_storage::load_world_by_id(&latest_id).expect("Could not load world")
+        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
+            editor_storage::load_game_by_name(&name)?
         } else if let Some(name) = editor_storage::prompt_user_input().await {
-            editor_storage::create_new_world(name)
+            editor_storage::create_new_game(name)
         } else {
             // User pressed Escape
-            editor_storage::create_new_world("untitled".to_string())
+            editor_storage::create_new_game("untitled".to_string())
         };
 
         let camera = EditorCameraController::camera_for_room(
@@ -54,9 +51,11 @@ impl Editor {
             DEFAULT_ROOM_POSITION,
         );
 
+        let world = game.current_world_mut();
+
         let mut asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
-        let mut palette = match editor_storage::load_palette(&world.id) {
+        let mut palette = match editor_storage::load_palette(&game.name) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Failed to load palette: {e}");
@@ -69,7 +68,7 @@ impl Editor {
         palette.rebuild_runtime(&mut asset_manager).await;
 
         let mut editor = Self {
-            world,
+            game,
             mode: EditorMode::World,
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
@@ -92,19 +91,21 @@ impl Editor {
         match self.mode {
             EditorMode::World => {
                 // Update returns the id of the room being edited
-                if let Some(room_id) = self.world_editor.update(&mut self.camera, &mut self.world).await {
+                if let Some(room_id) = self.world_editor.update(&mut self.camera, &mut self.game.current_world_mut()).await {
                     self.current_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
                 }
             }
             EditorMode::Room(room_id) => {
-                let other_bounds: Vec<(Vec2, Vec2)> = self.world.rooms
+                let world = self.game.current_world_mut();
+
+                let other_bounds: Vec<(Vec2, Vec2)> = world.rooms
                     .iter()
                     .filter(|r| r.id != room_id)
                     .map(|r| (r.position, r.size))
                     .collect();
                 
-                let room = self.world.rooms
+                let room = world.rooms
                     .iter_mut()
                     .find(|r| r.id == room_id)
                     .expect("Could not find room in world.");
@@ -115,22 +116,24 @@ impl Editor {
                         &mut self.camera, 
                         room,
                         &other_bounds,
-                        &mut self.world.world_ecs,
+                        &mut world.world_ecs,
                         &mut self.asset_manager,
                     ).await
                 };
 
                 collider_system::update_colliders_from_sprites(
-                    &mut self.world.world_ecs,
+                    &mut self.game.current_world_mut().world_ecs,
                     &mut self.asset_manager,
                 );
 
                 // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {
+                    let world = self.game.current_world();
+
                     // Write the payload
                     if let Some(room_id) = &self.current_room_id {
                         let room = self.get_room_from_id(room_id);
-                        let payload_path = room_playtest::write_playtest_payload(room, &self.world);
+                        let payload_path = room_playtest::write_playtest_payload(room, &world);
 
                         // Build the binary first
                         match room_playtest::build_playtest_binary().await {
@@ -154,15 +157,15 @@ impl Editor {
 
                 if done {
                     // Save everything
-                    editor_storage::save_world(&self.world)
-                        .expect("Could not save world.");
+                    editor_storage::save_game(&self.game)
+                        .expect("Could not save game.");
 
                     let palette = &mut self.room_editor.tilemap_editor.panel.palette;
-                    editor_storage::save_palette(palette, &self.world.id)
+                    editor_storage::save_palette(palette, &self.game.name)
                         .expect("Could not save tile palette");
 
                     // Find the room we just left for center_on_room
-                    if let Some(room) = self.world.rooms.iter()
+                    if let Some(room) = self.game.current_world_mut().rooms.iter()
                         .find(|m| m.id == room_id) {
                         self.world_editor.center_on_room(&mut self.camera, room);
                     }
@@ -176,8 +179,8 @@ impl Editor {
         }
 
         if Controls::save() {
-            editor_storage::save_world(&self.world)
-                .expect("Could not save world.");
+            editor_storage::save_game(&self.game)
+                .expect("Could not save game.");
         }
 
         if Controls::undo() {
@@ -192,7 +195,7 @@ impl Editor {
     pub fn draw(&mut self) {
         match self.mode {
             EditorMode::World => {
-                self.world_editor.draw(&self.camera, &self.world);
+                self.world_editor.draw(&self.camera, &self.game.current_world_mut());
             }
             EditorMode::Room(room_id) => {
                 // The room id should already be set
@@ -200,7 +203,9 @@ impl Editor {
                     self.current_room_id = Some(room_id);
                 }
 
-                let room = self.world.rooms
+                let world = self.game.current_world_mut();
+
+                let room = world.rooms
                     .iter_mut()
                     .find(|r| r.id == room_id)
                     .expect("Could not find room in world.");
@@ -208,7 +213,7 @@ impl Editor {
                 self.room_editor.draw(
                     &self.camera,
                     room,
-                    &mut self.world.world_ecs,
+                    &mut world.world_ecs,
                     &mut self.asset_manager,
                 );
             }
@@ -216,7 +221,11 @@ impl Editor {
     }
 
     fn get_room_from_id(&self, room_id: &Uuid) -> &Room {
-        self.world.rooms.iter().find(|m| m.id == *room_id).expect("Could not find room from id.")
+        self.game
+            .current_world().rooms
+            .iter()
+            .find(|m| m.id == *room_id)
+            .expect("Could not find room from id.")
     }
 }
 

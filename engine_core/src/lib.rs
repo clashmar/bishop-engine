@@ -10,3 +10,4 @@ pub mod storage;
 pub mod rendering;
 pub mod camera;
 pub mod animation;
+pub mod game;

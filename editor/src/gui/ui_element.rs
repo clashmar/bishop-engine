@@ -1,7 +1,7 @@
-use engine_core::world::{
+use engine_core::{ecs::world_ecs::WorldEcs, world::{
     room::Room, 
     world::World
-};
+}};
 use std::{future::Future, pin::Pin};
 use macroquad::prelude::*;
 
@@ -19,7 +19,8 @@ pub trait DynamicTilemapUiElement {
         room: &mut Room,
         mouse_pos: Vec2, 
         camera: &Camera2D,
-        other_bounds: &[(Vec2, Vec2)]
+        other_bounds: &[(Vec2, Vec2)],
+        world_ecs: &mut WorldEcs,
     );
 }
 

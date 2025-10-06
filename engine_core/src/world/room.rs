@@ -52,7 +52,7 @@ impl Room {
     }
 
     pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
-        let path = PathBuf::from(WORLD_SAVE_FOLDER)
+        let path = PathBuf::from(GAME_SAVE_ROOT)
             .join(world_name)
             .join("rooms")
             .join(format!("{}.ron", self.id));

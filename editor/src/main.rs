@@ -1,7 +1,8 @@
 // editor/src/main.rs
 use crate::{
     editor::Editor, 
-    global::*
+    global::*, 
+    storage::path_utils::absolute_save_root
 };
 use engine_core::constants::*;
 use macroquad::prelude::*;
@@ -35,6 +36,10 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() -> std::io::Result<()> {
+    // Create folder structure if it doesn't exist
+    let games_path = absolute_save_root();
+    std::fs::create_dir_all(&games_path)?;
+    
     let editor = Editor::new().await?;
 
     // This allows the command manager global access
