@@ -11,7 +11,12 @@ async fn main() {
             fragment: FRAGMENT_SHADER 
         },
         MaterialParams { 
-            uniforms: vec![UniformDesc::new("Darkness", UniformType::Float1)], 
+            uniforms: vec![
+                UniformDesc::new("Darkness", UniformType::Float1),
+                UniformDesc::new("LightPos", UniformType::Float2),
+                UniformDesc::new("screenWidth", UniformType::Float1),
+                UniformDesc::new("screenHeight", UniformType::Float1),
+            ],
             textures: vec!["tex".to_string()],
             ..Default::default() 
         }
@@ -32,7 +37,13 @@ async fn main() {
         set_default_camera();
 
         material.set_texture("tex", render_target.texture.clone());
+
+        let (mx, my) = mouse_position();
+
         material.set_uniform("Darkness", 0.8f32);
+        material.set_uniform("LightPos", vec2(mx, my));
+        material.set_uniform("screenWidth", screen_width());
+        material.set_uniform("screenHeight", screen_height());
 
         gl_use_material(&material);
         draw_rectangle(0., 0., screen_width(), screen_height(), WHITE);
@@ -59,13 +70,25 @@ void main() {
 const FRAGMENT_SHADER: &str = r#"#version 100
 precision mediump float;
 varying vec2 uv;
-
-uniform float Darkness;
-uniform sampler2D tex;
+uniform float Darkness;          
+uniform sampler2D tex;          
+uniform vec2 LightPos;          
+uniform float screenWidth;          
+uniform float screenHeight;          
 
 void main() {
     vec4 base = texture2D(tex, uv);
-    vec3 darkened = base.rgb * (1.0 - Darkness);
+
+    vec2 fragPos = uv * vec2(screenWidth, screenHeight);
+
+    float dist = distance(fragPos, LightPos);
+
+    float radius = 150.0;
+    float softness = 80.0;
+    float light = 1.0 - smoothstep(radius, radius + softness, dist);
+
+    vec3 darkened = base.rgb * (1.0 - Darkness * (1.0 - light));
+
     gl_FragColor = vec4(darkened, base.a);
 }
 "#;
