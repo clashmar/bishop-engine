@@ -8,52 +8,72 @@
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
+                        type_name: "Solid",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[1]*/ (
+                        type_name: "Walkable",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[2]*/ (
                         type_name: "Velocity",
                         data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
                     ),
-                    /*[2]*/ (
-                        type_name: "Animation",
-                        data: "(\n    data: {},\n)",
-                    ),
                     /*[3]*/ (
-                        type_name: "Position",
-                        data: "(\n    data: {\n        (\"a6dfd2b9-090b-43d5-9aa6-98df3de33421\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\n            position: (45.926216, 33.7474),\n        ),\n    },\n)",
-                    ),
-                    /*[4]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (),\n    },\n)",
-                    ),
-                    /*[5]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (\"a6dfd2b9-090b-43d5-9aa6-98df3de33421\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
-                    ),
-                    /*[6]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\"754cb33a-ebf6-402f-baad-ef2f0bdd1cb0\"),\n        (\"a6dfd2b9-090b-43d5-9aa6-98df3de33421\"): (\"754cb33a-ebf6-402f-baad-ef2f0bdd1cb0\"),\n    },\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "CurrentFrame",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[8]*/ (
-                        type_name: "Player",
-                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (),\n    },\n)",
-                    ),
-                    /*[9]*/ (
-                        type_name: "Sprite",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[10]*/ (
                         type_name: "Name",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[11]*/ (
+                    /*[4]*/ (
+                        type_name: "Kinematic",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[5]*/ (
+                        type_name: "Player",
+                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (),\n    },\n)",
+                    ),
+                    /*[6]*/ (
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\"754cb33a-ebf6-402f-baad-ef2f0bdd1cb0\"),\n        (\"38a097f7-681e-46a0-8002-9e61ba2637b5\"): (\"754cb33a-ebf6-402f-baad-ef2f0bdd1cb0\"),\n        (\"a6dfd2b9-090b-43d5-9aa6-98df3de33421\"): (\"754cb33a-ebf6-402f-baad-ef2f0bdd1cb0\"),\n    },\n)",
+                    ),
+                    /*[7]*/ (
+                        type_name: "Position",
+                        data: "(\n    data: {\n        (\"38a097f7-681e-46a0-8002-9e61ba2637b5\"): (\n            position: (37.53258, 24.210617),\n        ),\n        (\"a6dfd2b9-090b-43d5-9aa6-98df3de33421\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\n            position: (24.385887, 49.66943),\n        ),\n    },\n)",
+                    ),
+                    /*[8]*/ (
                         type_name: "TileSprite",
                         data: "(\n    data: {},\n)",
+                    ),
+                    /*[9]*/ (
+                        type_name: "Collider",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[10]*/ (
+                        type_name: "CurrentFrame",
+                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (),\n    },\n)",
+                    ),
+                    /*[11]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (),\n    },\n)",
+                    ),
+                    /*[12]*/ (
+                        type_name: "Sprite",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[13]*/ (
+                        type_name: "Light",
+                        data: "(\n    data: {\n        (\"38a097f7-681e-46a0-8002-9e61ba2637b5\"): (\n            position: (25.0, 25.0),\n            radius: 2.0,\n            colour: (105.0, 105.0, 105.0),\n            intensity: 200.0,\n        ),\n    },\n)",
+                    ),
+                    /*[14]*/ (
+                        type_name: "Animation",
+                        data: "(\n    data: {\n        (\"990c0ef7-8435-454b-a945-bd1a8567d20b\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/games/Game/assets/animation/player/female\"),\n        ),\n    },\n)",
+                    ),
+                    /*[15]*/ (
+                        type_name: "Damage",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[16]*/ (
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (\"a6dfd2b9-090b-43d5-9aa6-98df3de33421\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
                     ),
                 ],
                 tile_defs: {},
@@ -79,8 +99,8 @@
                                 width: 10,
                                 height: 5,
                                 background: (
-                                    0.78,
-                                    0.78,
+                                    0.0,
+                                    0.003921569,
                                     0.78,
                                     1.0,
                                 ),

@@ -12,14 +12,12 @@ use engine_core::{
     }
 };
 use std::{
-    collections::HashMap, fs, io, time::SystemTime
+    fs, io, time::SystemTime
 };
 use crate::{
     storage::{editor_storage, path_utils::*}, 
     tilemap::tile_palette::TilePalette
 };
-
-type WorldIndex = HashMap<Uuid, String>;
 
 /// Create a brand‑new game with a single empty world.
 pub fn create_new_game(name: String) -> Game {
@@ -105,24 +103,6 @@ pub fn most_recent_game_name() -> Option<String> {
         }
     }
     best.map(|(name, _)| name)
-}
-
-/// Save the world index.
-pub fn save_world_index(game_name: &str, idx: &WorldIndex) -> io::Result<()> {
-    let path = game_folder(game_name).join("index.ron");
-    let s = ron::ser::to_string_pretty(idx, ron::ser::PrettyConfig::default())
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-    fs::write(path, s)
-}
-
-/// Load the world index from the game folder.
-pub fn load_world_index(game_name: &str) -> io::Result<WorldIndex> {
-    let path = game_folder(game_name).join("index.ron");
-    if !path.exists() {
-        return Ok(HashMap::new());
-    }
-    let s = fs::read_to_string(path)?;
-    ron::from_str(&s).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 
 /// Save the palette for the game.

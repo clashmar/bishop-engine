@@ -14,16 +14,14 @@ use crate::{
     world::coord
 };
 use engine_core::{
-    animation::animation_system::update_animation_sytem,
+    animation::animation_system::update_animation_sytem, 
     assets::asset_manager::AssetManager, 
     ecs::{
-    component::{CurrentRoom, Position, RoomCamera}, 
-    entity::Entity, 
-    world_ecs::WorldEcs
-    }, 
-    rendering::render_entities::*, 
-    ui::widgets::*, 
-    world::room::Room
+        component::{CurrentRoom, Position, RoomCamera}, 
+        entity::Entity, 
+        world_ecs::WorldEcs
+    },
+    rendering::render_entities::*, ui::widgets::*, world::room::Room
 };
 use macroquad::prelude::*;
 
@@ -270,7 +268,7 @@ impl RoomEditor {
                         set_camera(camera);
                         grid::draw_grid(camera);
                     }
-
+                    
                     draw_camera_placeholder(room_camera.position);
 
                     if let Some(selected_entity) = self.selected_entity {

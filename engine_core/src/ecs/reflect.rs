@@ -1,10 +1,13 @@
 // engine_core/src/ecs/reflect.rs
+use macroquad::math::{Vec2, Vec3};
 
 /// One mutable field value.
 pub enum FieldValue<'a> {
     Text(&'a mut String),
     Float(&'a mut f32),
     Bool(&'a mut bool),
+    Vec2(&'a mut Vec2),
+    Vec3(&'a mut Vec3),
 }
 
 /// Metadata that the inspector consumes.
@@ -39,5 +42,16 @@ impl ReflectField for f32 {
 impl ReflectField for bool {
     fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
         FieldInfo { name, value: FieldValue::Bool(field) }
+    }
+}
+
+impl ReflectField for Vec2 {
+    fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
+        FieldInfo { name, value: FieldValue::Vec2(field) }
+    }
+}
+impl ReflectField for Vec3 {
+    fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
+        FieldInfo { name, value: FieldValue::Vec3(field) }
     }
 }

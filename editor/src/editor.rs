@@ -13,11 +13,7 @@ use crate::{
 };
 use engine_core::{
     assets::
-        asset_manager::AssetManager, 
-        constants::*, 
-        game::game::Game, 
-        physics::collider_system, 
-        world::room::Room
+        asset_manager::AssetManager, constants::*, ecs::{component::{CurrentRoom, Position}, world_ecs::WorldEcs}, game::game::Game, lighting::{light::{Light, LightUniform}, lighting_pass::LightingPass}, physics::collider_system, world::room::Room
 };
 
 pub enum EditorMode {
@@ -33,6 +29,7 @@ pub struct Editor {
     pub camera: Camera2D,
     pub current_room_id: Option<Uuid>,
     pub asset_manager: AssetManager,
+    pub lighting_pass: LightingPass,
 }
 
 impl Editor {
@@ -67,6 +64,11 @@ impl Editor {
         // Re‑load all sprite textures that belong to the palette.
         palette.rebuild_runtime(&mut asset_manager).await;
 
+        let lighting_pass = LightingPass::new(
+            screen_width() as u32,
+            screen_height() as u32,
+        ).await;
+
         let mut editor = Self {
             game,
             mode: EditorMode::World,
@@ -75,6 +77,7 @@ impl Editor {
             camera,
             current_room_id: None,
             asset_manager,
+            lighting_pass,
         };
 
         // Give the palette to the tilemap editor
@@ -210,11 +213,18 @@ impl Editor {
                     .find(|r| r.id == room_id)
                     .expect("Could not find room in world.");
 
+                self.lighting_pass.begin_scene(&self.camera);
+
                 self.room_editor.draw(
                     &self.camera,
                     room,
                     &mut world.world_ecs,
                     &mut self.asset_manager,
+                );
+
+                self.lighting_pass.end_scene(
+                    &collect_light_uniforms(&world.world_ecs, room.id), 
+                    &self.camera
                 );
             }
         }
@@ -229,3 +239,25 @@ impl Editor {
     }
 }
 
+fn collect_light_uniforms(
+    ecs: &WorldEcs,
+    room_id: Uuid,
+) -> Vec<LightUniform> {
+    let mut out = Vec::new();
+    // Assume you have a Position store that gives the world position
+    let pos_store = ecs.get_store::<Position>();
+    let light_store = ecs.get_store::<Light>();
+    for (entity, light) in light_store.data.iter() {
+        // optional: filter by room using CurrentRoom component
+        if let Some(cr) = ecs.get_store::<CurrentRoom>().get(*entity) {
+            if cr.0 != room_id { continue; }
+        }
+        if let Some(pos) = pos_store.get(*entity) {
+            let mut lu = LightUniform::from(*light);
+            lu.pos_radius[0] = pos.position.x;
+            lu.pos_radius[1] = pos.position.y;
+            out.push(lu);
+        }
+    }
+    out
+}

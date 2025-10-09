@@ -61,7 +61,10 @@ where
         // Iterate over the fields supplied by the `Reflect` impl
         for field in component.fields() {
             // Create the id for the widget
-            let id = *self.field_ids.entry(field.name.to_string())
+            let base_key = field.name.to_string();
+            let base_id = *self
+                .field_ids
+                .entry(base_key.clone())
                 .or_insert_with(WidgetId::default);
 
             // Draw the field label
@@ -75,14 +78,14 @@ where
             match field.value {
                 FieldValue::Text(txt) => {
                     // `txt` is `&mut String`.
-                    let (new, _) = gui_input_text_default(id, widget_rect, txt.as_str());
+                    let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());
                     if new != *txt {
                         *txt = new;
                     }
                 }
                 FieldValue::Float(num) => {
                     // `num` is `&mut f32`
-                    let new = gui_input_number(id, widget_rect, *num);
+                    let new = gui_input_number(base_id, widget_rect, *num);
                     if (new - *num).abs() > f32::EPSILON {
                         *num = new;
                     }
@@ -92,6 +95,82 @@ where
                     let mut v = *b;
                     if gui_checkbox(widget_rect, &mut v) {
                         *b = v;
+                    }
+                }
+                FieldValue::Vec2(v) => {
+                    let id_x = *self
+                        .field_ids
+                        .entry(format!("{}.x", field.name))
+                        .or_insert_with(WidgetId::default);
+
+                    let id_y = *self
+                        .field_ids
+                        .entry(format!("{}.y", field.name))
+                        .or_insert_with(WidgetId::default);
+
+                    let half = widget_rect.w / 2.0;
+
+                    // X
+                    let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
+                    let new_x = gui_input_number(id_x, rect_x, v.x);
+                    if (new_x - v.x).abs() > f32::EPSILON {
+                        v.x = new_x;
+                    }
+                    // Y
+                    let rect_y = Rect::new(
+                        widget_rect.x + half + 2.0,
+                        widget_rect.y,
+                        half - 2.0,
+                        widget_rect.h,
+                    );
+                    let new_y = gui_input_number(id_y, rect_y, v.y);
+                    if (new_y - v.y).abs() > f32::EPSILON {
+                        v.y = new_y;
+                    }
+                }
+                FieldValue::Vec3(v) => {
+                    let id_x = *self
+                        .field_ids
+                        .entry(format!("{}.x", field.name))
+                        .or_insert_with(WidgetId::default);
+                    let id_y = *self
+                        .field_ids
+                        .entry(format!("{}.y", field.name))
+                        .or_insert_with(WidgetId::default);
+                    let id_z = *self
+                        .field_ids
+                        .entry(format!("{}.z", field.name))
+                        .or_insert_with(WidgetId::default);
+
+                    let third = widget_rect.w / 3.0 - SPACING / 3.0;
+
+                    // X
+                    let rect_x = Rect::new(widget_rect.x, widget_rect.y, third, widget_rect.h);
+                    let new_x = gui_input_number(id_x, rect_x, v.x);
+                    if (new_x - v.x).abs() > f32::EPSILON {
+                        v.x = new_x;
+                    }
+                    // Y
+                    let rect_y = Rect::new(
+                        widget_rect.x + third + 2.0,
+                        widget_rect.y,
+                        third,
+                        widget_rect.h,
+                    );
+                    let new_y = gui_input_number(id_y, rect_y, v.y);
+                    if (new_y - v.y).abs() > f32::EPSILON {
+                        v.y = new_y;
+                    }
+                    // Z
+                    let rect_z = Rect::new(
+                        widget_rect.x + 2.0 * third + 4.0,
+                        widget_rect.y,
+                        third,
+                        widget_rect.h,
+                    );
+                    let new_z = gui_input_number(id_z, rect_z, v.z);
+                    if (new_z - v.z).abs() > f32::EPSILON {
+                        v.z = new_z;
                     }
                 }
             }

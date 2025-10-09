@@ -1,7 +1,9 @@
 [workspace]
+resolver = "3"
 members = [
     "engine_core",
     "game",
     "editor",
-    "reflect_derive",
+    "reflect_derive", 
+    "light_test",
     ]
