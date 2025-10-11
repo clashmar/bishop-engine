@@ -13,6 +13,11 @@ async fn main() {
         MaterialParams { 
             uniforms: vec![
                 UniformDesc::new("Darkness", UniformType::Float1),
+                UniformDesc::new("Brightness", UniformType::Float1),
+                UniformDesc::new("Color", UniformType::Float3),
+                UniformDesc::new("ColorIntensity", UniformType::Float1),
+                UniformDesc::new("Radius", UniformType::Float1),
+                UniformDesc::new("Spread", UniformType::Float1),
                 UniformDesc::new("LightPos", UniformType::Float2),
                 UniformDesc::new("screenWidth", UniformType::Float1),
                 UniformDesc::new("screenHeight", UniformType::Float1),
@@ -40,7 +45,12 @@ async fn main() {
 
         let (mx, my) = mouse_position();
 
-        material.set_uniform("Darkness", 0.8f32);
+        material.set_uniform("Darkness", 0.0f32);
+        material.set_uniform("ColorIntensity", 0.0f32);
+        material.set_uniform("Brightness", 0.3f32);
+        material.set_uniform("Color", vec3(1.0, 0.85, 0.6));
+        material.set_uniform("Radius", 10.0f32);        
+        material.set_uniform("Spread", 150.0f32); 
         material.set_uniform("LightPos", vec2(mx, my));
         material.set_uniform("screenWidth", screen_width());
         material.set_uniform("screenHeight", screen_height());
@@ -53,7 +63,8 @@ async fn main() {
     }
 }
 
-const VERTEX_SHADER: &str = r#"#version 100
+const VERTEX_SHADER: &str = r#"
+#version 100
 attribute vec3 position;
 attribute vec2 texcoord;
 varying vec2 uv;
@@ -67,28 +78,41 @@ void main() {
 }
 "#;
 
-const FRAGMENT_SHADER: &str = r#"#version 100
+const FRAGMENT_SHADER: &str = r#"
+#version 100
 precision mediump float;
+
 varying vec2 uv;
-uniform float Darkness;          
-uniform sampler2D tex;          
-uniform vec2 LightPos;          
-uniform float screenWidth;          
-uniform float screenHeight;          
+uniform sampler2D tex;
+
+uniform float Darkness;
+uniform float Brightness;
+uniform vec3  Color;
+uniform float ColorIntensity;
+uniform float Radius;
+uniform float Spread;
+uniform vec2  LightPos;
+uniform float screenWidth;
+uniform float screenHeight;
 
 void main() {
     vec4 base = texture2D(tex, uv);
+    vec3 scene = base.rgb;
 
     vec2 fragPos = uv * vec2(screenWidth, screenHeight);
-
     float dist = distance(fragPos, LightPos);
+    float mask = 1.0 - smoothstep(Radius,
+                                    Radius + Spread,
+                                    dist);
 
-    float radius = 150.0;
-    float softness = 80.0;
-    float light = 1.0 - smoothstep(radius, radius + softness, dist);
+    vec3 tinted = mix(scene, Color, ColorIntensity);
 
-    vec3 darkened = base.rgb * (1.0 - Darkness * (1.0 - light));
+    vec3 result = mix(scene, tinted, mask);
 
-    gl_FragColor = vec4(darkened, base.a);
+    result += Brightness * Color * mask;
+
+    result *= (1.0 - Darkness);
+
+    gl_FragColor = vec4(clamp(result, 0.0, 1.0), base.a);
 }
 "#;
