@@ -1,5 +1,19 @@
 use macroquad::prelude::*;
 
+
+#[derive(Clone, Copy, Default)]
+struct Light {
+    pos: Vec2,
+    color: Vec3,
+    intensity: f32,
+    radius: f32,
+    spread: f32,
+    alpha: f32,
+    brightness: f32,
+}
+
+const MAX_LIGHTS: usize = 10;
+
 #[macroquad::main("Lighting Example")]
 async fn main() {
     let scene_rt = render_target(screen_width() as u32, screen_height() as u32);
@@ -34,16 +48,17 @@ async fn main() {
         },
         MaterialParams {
             uniforms: vec![
-                UniformDesc::new("Brightness", UniformType::Float1),
-                UniformDesc::new("Color", UniformType::Float3),
-                UniformDesc::new("ColorIntensity", UniformType::Float1),
-                UniformDesc::new("Radius", UniformType::Float1),
-                UniformDesc::new("Spread", UniformType::Float1),
-                UniformDesc::new("LightPos", UniformType::Float2),
-                UniformDesc::new("screenWidth", UniformType::Float1),
-                UniformDesc::new("screenHeight", UniformType::Float1),
+                UniformDesc::new("LightCount", UniformType::Int1),
+                UniformDesc::new("LightPos", UniformType::Float2).array(MAX_LIGHTS),
+                UniformDesc::new("LightColor", UniformType::Float3).array(MAX_LIGHTS),
+                UniformDesc::new("LightIntensity", UniformType::Float1).array(MAX_LIGHTS),
+                UniformDesc::new("LightRadius", UniformType::Float1).array(MAX_LIGHTS),
+                UniformDesc::new("LightSpread", UniformType::Float1).array(MAX_LIGHTS),
+                UniformDesc::new("LightAlpha", UniformType::Float1).array(MAX_LIGHTS),
+                UniformDesc::new("LightBrightness", UniformType::Float1).array(MAX_LIGHTS),
+                UniformDesc::new("ScreenWidth", UniformType::Float1),
+                UniformDesc::new("ScreenHeight", UniformType::Float1),
                 UniformDesc::new("Darkness", UniformType::Float1),
-                UniformDesc::new("SpotAlpha", UniformType::Float1),
             ],
             textures: vec!["tex".to_string()],
             ..Default::default() 
@@ -91,6 +106,15 @@ async fn main() {
         },
     ).unwrap();
 
+    // Allocate once before the main loop
+    let mut light_pos = vec![vec2(0.0,0.0); MAX_LIGHTS];
+    let mut light_color = vec![vec3(0.0,0.0,0.0); MAX_LIGHTS];
+    let mut light_intensity = vec![0.0; MAX_LIGHTS];
+    let mut light_radius = vec![0.0; MAX_LIGHTS];
+    let mut light_spread = vec![0.0; MAX_LIGHTS];
+    let mut light_alpha= vec![0.0; MAX_LIGHTS];
+    let mut light_brightness = vec![0.0; MAX_LIGHTS];
+
     loop {
         let (mx, my) = mouse_position();
 
@@ -128,13 +152,8 @@ async fn main() {
         set_default_camera();
 
         // Constants
-        let darkness = 0.8f32;
-        let brightness = 0.9f32;
-        let spot_alpha = 0.6f32;
-        let light_color_intensity = 0.0f32;
-        let light_color = vec3(1.0, 0.85, 0.6);
-        let radius = 20.0f32;
-        let spread = 150.0f32;
+        let darkness = 0.1f32;
+        // let light_color = vec3(1.0, 0.85, 0.6);
         let glow = 1.0f32;
         
         {
@@ -167,17 +186,57 @@ async fn main() {
         
         {
             // Spotlight pass
+            let mut lights: Vec<Light> = Vec::new();
+
+            // Mouse‑controlled spotlight
+            lights.push(Light {
+                pos: vec2(mx, my),
+                color:      vec3(1.0, 0.85, 0.6),
+                intensity:  0.0,
+                radius: 20.0,
+                spread: 150.0,
+                alpha: 0.6,
+                brightness: 0.9,
+            });
+
+            // Fixed second light
+            lights.push(Light {
+                pos:        vec2(400.0, 300.0),
+                color:      vec3(0.6, 0.8, 1.0),
+                intensity:  0.3,
+                radius:     30.0,
+                spread:     120.0,
+                alpha:      0.5,
+                brightness: 0.7,
+            });
+
+            let light_count = lights.len(); 
+
+            for i in 0..light_count {
+                let l = &lights[i];
+                light_pos[i] = l.pos;
+                light_color[i] = l.color;
+                light_intensity[i] = l.intensity;
+                light_radius[i] = l.radius;
+                light_spread[i] = l.spread;
+                light_alpha[i] = l.alpha;
+                light_brightness[i] = l.brightness;
+            }
+
             spot_material.set_texture("tex", scene_rt.texture.clone());
-            spot_material.set_uniform("ColorIntensity", light_color_intensity);
-            spot_material.set_uniform("Brightness", brightness);
-            spot_material.set_uniform("Color", light_color);
-            spot_material.set_uniform("Radius", radius);        
-            spot_material.set_uniform("Spread", spread); 
-            spot_material.set_uniform("LightPos", vec2(mx, my));
-            spot_material.set_uniform("screenWidth", screen_width());
-            spot_material.set_uniform("screenHeight", screen_height());
+            spot_material.set_uniform("LightCount", light_count as i32);
+
+            spot_material.set_uniform_array("LightPos", &light_pos);
+            spot_material.set_uniform_array("LightColor", &light_color);
+            spot_material.set_uniform_array("LightIntensity", &light_intensity);
+            spot_material.set_uniform_array("LightRadius", &light_radius);
+            spot_material.set_uniform_array("LightSpread", &light_spread);
+            spot_material.set_uniform_array("LightAlpha", &light_alpha);
+            spot_material.set_uniform_array("LightBrightness", &light_brightness);
+
+            spot_material.set_uniform("ScreenWidth", screen_width());
+            spot_material.set_uniform("ScreenHeight", screen_height());
             spot_material.set_uniform("Darkness", darkness);
-            spot_material.set_uniform("SpotAlpha", spot_alpha);
 
             let cam = Camera2D {
                 target: vec2(screen_width() * 0.5, screen_height() * 0.5),
@@ -208,7 +267,7 @@ async fn main() {
             glow_material.set_texture("tex_mask", cat_tex.clone());
             glow_material.set_uniform("ColorIntensity", 0.4f32);
             glow_material.set_uniform("Brightness", 0.4f32);
-            glow_material.set_uniform("Color", light_color);
+            glow_material.set_uniform("Color", vec3(1.0, 0.85, 0.6));
             glow_material.set_uniform("LightPos", vec2(mx, my));
             glow_material.set_uniform("screenWidth", screen_width());
             glow_material.set_uniform("screenHeight", screen_height());
@@ -306,32 +365,54 @@ precision mediump float;
 
 varying vec2 uv;
 uniform sampler2D tex;
-uniform float Brightness;
-uniform vec3 Color;
-uniform float ColorIntensity;
-uniform float Radius;
-uniform float Spread;
-uniform vec2 LightPos;
-uniform float screenWidth;
-uniform float screenHeight;
+
+#define MAX_LIGHTS 10
+
+uniform int LightCount; 
+
+uniform vec2 LightPos[MAX_LIGHTS];
+uniform vec3 LightColor[MAX_LIGHTS];
+uniform float LightIntensity[MAX_LIGHTS];
+uniform float LightRadius[MAX_LIGHTS];
+uniform float LightSpread[MAX_LIGHTS];
+uniform float LightAlpha[MAX_LIGHTS];
+uniform float LightBrightness[MAX_LIGHTS];
+
+uniform float ScreenWidth;
+uniform float ScreenHeight;
 uniform float Darkness;
-uniform float SpotAlpha; 
 
 void main() {
     vec4  base  = texture2D(tex, uv);
     vec3  scene = base.rgb;
+    vec2  fragPos = uv * vec2(ScreenWidth, ScreenHeight);
 
-    vec2 fragPos = uv * vec2(screenWidth, screenHeight);
-    float dist   = distance(fragPos, LightPos);
-    float mask   = 1.0 - smoothstep(Radius, Radius + Spread, dist);
-    mask = mask * SpotAlpha;
+    vec3  result = vec3(0.0);
+    float totalMask = 0.0;
 
-    vec3 tinted = mix(scene, Color, ColorIntensity);
-    vec3 lit    = mix(scene, tinted, mask);
-    lit += Brightness * Color * mask;
+    for (int i = 0; i < LightCount; ++i) {
+        if (i >= MAX_LIGHTS) break;
 
-    vec3 contribution = (lit - scene * (1.0 - Darkness)) * mask;
-    gl_FragColor = vec4(contribution, mask);
+        float dist = distance(fragPos, LightPos[i]);
+        float mask = 1.0 - smoothstep(LightRadius[i],
+                                      LightRadius[i] + LightSpread[i],
+                                      dist);
+        mask *= LightAlpha[i];                     // SpotAlpha
+
+        // colour tint
+        vec3 tinted = mix(scene, LightColor[i], LightIntensity[i]);
+        // final lit colour for this light
+        vec3 lit = mix(scene, tinted, mask);
+        lit += LightBrightness[i] * LightColor[i] * mask;
+
+        // contribution (same formula you already used)
+        vec3 contrib = (lit - scene * (1.0 - Darkness)) * mask;
+
+        result += contrib;
+        totalMask += mask;
+    }
+
+    gl_FragColor = vec4(clamp(result, 0.0, 1.0), totalMask);
 }
 "#;
 
