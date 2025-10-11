@@ -93,7 +93,6 @@ pub struct Position {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
 }
-
 ecs_component!(Position);
 
 /// Component that stores the room identifier an entity belongs to.
@@ -155,19 +154,16 @@ ecs_component!(Kinematic);
 // Tile components
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);
-
 ecs_component!(Walkable);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Solid(pub bool);
-
 ecs_component!(Solid);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 pub struct Damage {
     pub amount: f32,
 }
-
 ecs_component!(Damage);
 
 
@@ -175,7 +171,6 @@ ecs_component!(Damage);
 pub struct Name {
     pub name: String,
 }
-
 ecs_component!(Name);
 inspector_module!(Name);
 
