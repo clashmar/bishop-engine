@@ -1,6 +1,5 @@
 use macroquad::prelude::*;
 
-
 #[derive(Clone, Copy, Default)]
 struct Light {
     pos: Vec2,
@@ -17,10 +16,11 @@ const MAX_LIGHTS: usize = 10;
 #[macroquad::main("Lighting Example")]
 async fn main() {
     let scene_rt = render_target(screen_width() as u32, screen_height() as u32);
+    let light_mask_rt = render_target(screen_width() as u32, screen_height() as u32);
     let ambient_rt = render_target(screen_width() as u32, screen_height() as u32);
     let spot_rt = render_target(screen_width() as u32, screen_height() as u32);
     let glow_rt = render_target(screen_width() as u32, screen_height() as u32);
-    for rt in [&scene_rt, &ambient_rt, &spot_rt, &glow_rt] {
+    for rt in [&scene_rt, &light_mask_rt, &ambient_rt, &spot_rt, &glow_rt] {
         rt.texture.set_filter(FilterMode::Nearest);
     }
 
@@ -60,7 +60,7 @@ async fn main() {
                 UniformDesc::new("ScreenHeight", UniformType::Float1),
                 UniformDesc::new("Darkness", UniformType::Float1),
             ],
-            textures: vec!["tex".to_string()],
+            textures: vec!["tex".to_string(), "light_mask".to_string()],
             ..Default::default() 
         },
     ).unwrap();
@@ -112,11 +112,27 @@ async fn main() {
     let mut light_intensity = vec![0.0; MAX_LIGHTS];
     let mut light_radius = vec![0.0; MAX_LIGHTS];
     let mut light_spread = vec![0.0; MAX_LIGHTS];
-    let mut light_alpha= vec![0.0; MAX_LIGHTS];
+    let mut light_alpha = vec![0.0; MAX_LIGHTS];
     let mut light_brightness = vec![0.0; MAX_LIGHTS];
 
     loop {
         let (mx, my) = mouse_position();
+
+        let rect = Rect { x: 50.0, y: 400.0, w: 300.0, h: 150.0 };
+
+        // Draw each blocking texture in black to the mask
+        set_camera(&Camera2D {
+            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
+            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            render_target: Some(light_mask_rt.clone()),
+            ..Default::default()
+        });
+        // White background
+        clear_background(WHITE);
+        // e.g
+        draw_rectangle(rect.x, rect.y, rect.w, rect.h, BLACK);
+        gl_use_default_material();
+        set_default_camera();
 
         // Draw scene
         let pixel_cam = Camera2D {
@@ -131,6 +147,7 @@ async fn main() {
         draw_line(100.0, 200.0,  50.0, 300.0, 5.0, BLUE);
         draw_rectangle(300.0, 150.0, 120.0, 80.0, GREEN);
         draw_circle(500.0, 250.0, 60.0, YELLOW);
+        draw_rectangle(rect.x, rect.y, rect.w, rect.h, BLACK);
 
         let cat_w = 0.2 * screen_width();
         let cat_h = 0.2 * screen_height(); 
@@ -191,22 +208,22 @@ async fn main() {
             // Mouse‑controlled spotlight
             lights.push(Light {
                 pos: vec2(mx, my),
-                color:      vec3(1.0, 0.85, 0.6),
-                intensity:  0.0,
+                color: vec3(1.0, 0.85, 0.6),
+                intensity: 0.2,
                 radius: 20.0,
                 spread: 150.0,
-                alpha: 0.6,
+                alpha: 0.8,
                 brightness: 0.9,
             });
 
             // Fixed second light
             lights.push(Light {
-                pos:        vec2(400.0, 300.0),
-                color:      vec3(0.6, 0.8, 1.0),
-                intensity:  0.3,
-                radius:     30.0,
-                spread:     120.0,
-                alpha:      0.5,
+                pos: vec2(400.0, 300.0),
+                color: vec3(0.6, 0.8, 1.0),
+                intensity: 0.3,
+                radius: 30.0,
+                spread: 120.0,
+                alpha: 0.9,
                 brightness: 0.7,
             });
 
@@ -224,6 +241,7 @@ async fn main() {
             }
 
             spot_material.set_texture("tex", scene_rt.texture.clone());
+            spot_material.set_texture("light_mask", light_mask_rt.texture.clone());
             spot_material.set_uniform("LightCount", light_count as i32);
 
             spot_material.set_uniform_array("LightPos", &light_pos);
@@ -365,11 +383,11 @@ precision mediump float;
 
 varying vec2 uv;
 uniform sampler2D tex;
+uniform sampler2D light_mask;
 
 #define MAX_LIGHTS 10
 
 uniform int LightCount; 
-
 uniform vec2 LightPos[MAX_LIGHTS];
 uniform vec3 LightColor[MAX_LIGHTS];
 uniform float LightIntensity[MAX_LIGHTS];
@@ -385,8 +403,14 @@ uniform float Darkness;
 void main() {
     vec4  base  = texture2D(tex, uv);
     vec3  scene = base.rgb;
-    vec2  fragPos = uv * vec2(ScreenWidth, ScreenHeight);
 
+    float maskVal = texture2D(light_mask, uv).r;
+    if (maskVal < 0.01) {
+        gl_FragColor = vec4(scene, 0.0);
+        return;
+    }
+
+    vec2  fragPos = uv * vec2(ScreenWidth, ScreenHeight);
     vec3  result = vec3(0.0);
     float totalMask = 0.0;
 
