@@ -34,14 +34,12 @@ impl TileMap {
 
     pub fn draw(
         &self,
-        camera: &Camera2D,
         exits: &Vec<Exit>,
         world_ecs: &WorldEcs,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
     ) {
         clear_background(BLACK);
-        set_camera(camera);
 
         // Background
         draw_rectangle(

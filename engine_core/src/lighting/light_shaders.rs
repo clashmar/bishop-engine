@@ -57,8 +57,8 @@ uniform float ScreenHeight;
 uniform float Darkness;
 
 void main() {
-    vec4  base  = texture2D(tex, uv);
-    vec3  scene = base.rgb;
+    vec4 base = texture2D(tex, uv);
+    vec3 scene = base.rgb;
 
     float maskVal = texture2D(light_mask, uv).r;
     if (maskVal < 0.01) {
@@ -66,8 +66,8 @@ void main() {
         return;
     }
 
-    vec2  fragPos = uv * vec2(ScreenWidth, ScreenHeight);
-    vec3  result = vec3(0.0);
+    vec2 fragPos = uv * vec2(ScreenWidth, ScreenHeight);
+    vec3 result = vec3(0.0);
     float totalMask = 0.0;
 
     for (int i = 0; i < LightCount; ++i) {
@@ -77,7 +77,7 @@ void main() {
         float mask = 1.0 - smoothstep(LightRadius[i],
                                       LightRadius[i] + LightSpread[i],
                                       dist);
-        mask *= LightAlpha[i];                     // SpotAlpha
+        mask *= LightAlpha[i];
 
         // colour tint
         vec3 tinted = mix(scene, LightColor[i], LightIntensity[i]);

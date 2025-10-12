@@ -6,7 +6,7 @@ use engine_core::{
         Position, 
         Velocity
     }, 
-    rendering::render_room::render_entities, 
+    rendering::render_room::render_room, 
     storage::core_storage,
     world::{
         room::Room, 
@@ -136,7 +136,7 @@ impl GameState {
             self.current_room.position,
         );
 
-        render_entities(
+        render_room(
             &self.world.world_ecs, 
             &self.current_room, 
             &mut self.asset_manager

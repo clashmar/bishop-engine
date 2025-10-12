@@ -233,7 +233,7 @@ impl TileMapEditor  {
     ) {
         clear_background(BLACK);
         set_camera(camera);
-        map.draw(camera, exits, world_ecs, asset_manager, room_position);
+        map.draw(exits, world_ecs, asset_manager, room_position);
         self.draw_hover_highlight(camera, map, room_position);
         self.draw_ui(camera, asset_manager, world_ecs, map);
     }

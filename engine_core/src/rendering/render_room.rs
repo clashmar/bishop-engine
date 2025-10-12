@@ -19,7 +19,8 @@ use crate::{
 use std::collections::BTreeMap;
 use macroquad::prelude::*;
 
-pub fn render_entities(
+/// Draws everything needed for the given room.
+pub fn render_room(
     world_ecs: &WorldEcs,
     room: &Room,
     asset_manager: &mut AssetManager,
@@ -36,18 +37,32 @@ pub fn render_entities(
     // Contains the cameras needed for each pass
     let cams = lighting.render_cams(render_cam);
 
-    // Draw each blocking texture in black to a white mask
+    // Draw each blocking texture in black onto a white background
+    // To be implemented
     set_camera(&cams.mask_cam);
     clear_background(WHITE);
     gl_use_default_material();
+    
+    let darkness = 0.5f32; // TODO expose to editor
+
+    // Flag for the tilemap
+    let mut first_pass = true;
+    let tilemap = &room.current_variant().tilemap; 
 
     for (_z, (entities, lights)) in layer_map {
         // Reset before using them
         lighting.clear_light_buffers();
 
-        // Draw geometry to the scene render target
+        // Camera that the tilemap/entities draw into
         set_camera(&cams.scene_cam);
 
+        // Draw the tilemap as the first layer
+        if first_pass {
+            tilemap.draw(&room.exits, world_ecs, asset_manager, room.position);
+            first_pass = false;
+        }
+
+        // Draw all entities
         for (entity, pos) in entities {
             draw_entity(
             world_ecs,
@@ -58,92 +73,22 @@ pub fn render_entities(
             *pos,
             );
         }
-        
-        let darkness = 0.0f32; // TODO expose to editor
 
         // Ambient pass
-        lighting.ambient_mat.set_texture("tex", lighting.scene_rt.texture.clone());
-        lighting.ambient_mat.set_uniform("Darkness", darkness);
-
-        set_camera(&cams.ambient_cam);
-
-        gl_use_material(&lighting.ambient_mat);
-        draw_texture_ex(
-            &lighting.scene_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams {
-                ..Default::default()
-            },
-        );
-        gl_use_default_material();
+        lighting.run_ambient_pass(&cams.ambient_cam, darkness);
         
         // Spotlight pass
         if !lights.is_empty() {
-            let light_count = lights.len(); 
-
-            for i in 0..light_count {
-                let (entity_pos, l) = &lights[i];
-                let world_pos = entity_pos.position + l.pos;
-
-                lighting.pos[i] = render_cam.world_to_screen(world_pos);
-                lighting.radius[i] = world_distance_to_screen(render_cam, l.radius);
-                lighting.spread[i] = world_distance_to_screen(render_cam, l.radius);
-                lighting.color[i] = l.color;
-                lighting.intensity[i] = l.intensity;
-                lighting.alpha[i] = l.alpha;
-                lighting.brightness[i] = l.brightness;
-            }
-
-            lighting.spot_mat.set_texture("tex", lighting.scene_rt.texture.clone());
-            lighting.spot_mat.set_texture("light_mask", lighting.mask_rt.texture.clone());
-            lighting.spot_mat.set_uniform("LightCount", light_count as i32);
-            lighting.spot_mat.set_uniform_array("LightPos", &lighting.pos);
-            lighting.spot_mat.set_uniform_array("LightColor", &lighting.color);
-            lighting.spot_mat.set_uniform_array("LightIntensity", &lighting.intensity);
-            lighting.spot_mat.set_uniform_array("LightRadius", &lighting.radius);
-            lighting.spot_mat.set_uniform_array("LightSpread", &lighting.spread);
-            lighting.spot_mat.set_uniform_array("LightAlpha", &lighting.alpha);
-            lighting.spot_mat.set_uniform_array("LightBrightness", &lighting.brightness);
-            lighting.spot_mat.set_uniform("ScreenWidth", screen_width());
-            lighting.spot_mat.set_uniform("ScreenHeight", screen_height());
-            lighting.spot_mat.set_uniform("Darkness", darkness);
-
-            set_camera(&cams.spot_cam);
-
-            gl_use_material(&lighting.spot_mat);
-            draw_texture_ex(
-                &lighting.spot_rt.texture,
-                0.0,
-                0.0,
-                WHITE,
-                DrawTextureParams {
-                    ..Default::default()
-                },
+            lighting.run_spotlight_pass(
+                &cams.spot_cam, 
+                render_cam, 
+                lights, 
+                darkness
             );
-            gl_use_default_material();
         }
 
         // Composite
-        lighting.composite_mat.set_texture("ambient_tex", lighting.ambient_rt.texture.clone());
-        lighting.composite_mat.set_texture("spot_tex", lighting.spot_rt.texture.clone());
-        lighting.composite_mat.set_texture("glow_tex", lighting.glow_rt.texture.clone());
-
-        // Draw everything
-        set_default_camera();
-        gl_use_material(&lighting.composite_mat);
-        draw_texture_ex(
-            &lighting.scene_rt.texture, // any of the three works for size
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams {
-                ..Default::default()
-            },
-        );
-        gl_use_default_material();
-        set_camera(render_cam);
+        lighting.run_composite_pass();
     }
 }
 

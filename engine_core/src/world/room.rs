@@ -155,6 +155,11 @@ impl Room {
         let max = self.position + self.size * TILE_SIZE;
         (min, max)
     }
+
+    // Returns a reference to the current variant of the room.
+    pub fn current_variant(&self) -> &RoomVariant {
+        &self.variants[0]
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -264,9 +264,10 @@ impl RoomEditor {
 
                 self.inspector.set_rect(inspector_rect);
 
-                tilemap.draw(render_cam, exits, world_ecs, asset_manager, room.position);
+                // tilemap.draw(render_cam, exits, world_ecs, asset_manager, room.position);
 
-                render_entities(
+                // Draws everything in the room. Same implementation as the game.
+                render_room(
                     world_ecs, 
                     room, 
                     asset_manager,
