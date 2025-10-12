@@ -160,7 +160,7 @@ pub struct AnimationDef {
     pub clips: HashMap<ClipId, ClipDef>,
 }
 
-/// A variant is a folder that contains the spritesheets for a entity variant.
+/// A variant is a folder that contains the spritesheets for an entity variant.
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct VariantFolder(pub String);
 

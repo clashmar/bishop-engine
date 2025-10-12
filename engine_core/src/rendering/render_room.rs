@@ -9,9 +9,9 @@ use crate::{
         component::*, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, lighting::{
-        light::Light, 
-        light_system::LightSystem
+    }, 
+    lighting::{
+        glow::Glow, light::{self, Light}, light_system::LightSystem
     }, 
     tiles::tile::TileSprite, 
     world::room::Room
@@ -34,28 +34,31 @@ pub fn render_room(
     // Organize entities by layer
     let layer_map = collect_layer_map(world_ecs, room);
 
-    lighting.clear_composite_cam();
+    LightSystem::clear_cam(&lighting.composite_rt);
 
     // Draw each blocking texture in black onto a white background
     // To be implemented but it needs to happen BEFORE the loop
     lighting.init_mask_cam();
-    gl_use_default_material();
     
-    let darkness = 0.9f32; // TODO expose to editor
+    let darkness = 0.8f32; // TODO expose to editor
 
     // Flag for the tilemap
     let mut first_pass = true;
     let tilemap = &room.current_variant().tilemap; 
 
-    for (_z, (entities, lights)) in layer_map {
+    for (_z, (entities, glows)) in layer_map {
         // Reset before using them
         lighting.clear_light_buffers();
 
         // Reset the cameras (except the composite cam)
-        let cams = lighting.render_cams(render_cam);
-
-        // Camera that the tilemap/entities draw into
-        set_camera(&cams.scene_cam);
+        // Scene cam needs to draw to the current render cam
+        let scene_cam = Camera2D {
+            target: render_cam.target,
+            zoom: render_cam.zoom,
+            render_target: Some(lighting.scene_rt.clone()),
+            ..Default::default()
+        };
+        set_camera(&scene_cam);
 
         // Draw the tilemap as the first layer
         if first_pass {
@@ -75,22 +78,26 @@ pub fn render_room(
             );
         }
 
-        // Ambient pass
-        lighting.run_ambient_pass(&cams.ambient_cam, darkness);
-        
-        // Spotlight pass
-        if !lights.is_empty() {
-            lighting.run_spotlight_pass(
-                &cams.spot_cam, 
-                render_cam, 
-                lights, 
-                darkness
-            );
-        }
-
-        // Composite pass
-        lighting.run_composite_pass(&cams.composite_cam);
+        // Glow pass
+        lighting.run_glow_pass(render_cam, glows, darkness, asset_manager);
     }
+
+    // Ambient pass
+    lighting.run_ambient_pass(darkness);
+        
+    let lights = collect_lights(world_ecs, room);
+    
+    // Spotlight pass
+    if !lights.is_empty() {
+        lighting.run_spotlight_pass(
+            render_cam, 
+            lights, 
+            darkness
+        );
+    }
+
+    // Composite pass
+    lighting.run_composite_pass();
 
     // Draw everything to the screen
     set_default_camera();
@@ -208,15 +215,15 @@ pub fn draw_entity_placeholder(pos: Vec2) {
 fn collect_layer_map<'a>(
     world_ecs: &'a WorldEcs,
     room: &Room,
-) -> BTreeMap<i32, (Vec<(Entity, &'a Position)>, Vec<(Position, &'a Light)>)> {
-    let mut map: BTreeMap<i32, (Vec<(Entity, &Position)>, Vec<(Position, &Light)>)> = BTreeMap::new();
+) -> BTreeMap<i32, (Vec<(Entity, &'a Position)>, Vec<(Vec2, &'a Glow)>)> {
+    let mut map: BTreeMap<i32, (Vec<(Entity, &Position)>, Vec<(Vec2, &Glow)>)> = BTreeMap::new();
 
     let pos_store = world_ecs.get_store::<Position>();
     let tile_store = world_ecs.get_store::<TileSprite>();
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
     let layer_store = world_ecs.get_store::<Layer>();
-    let light_store = world_ecs.get_store::<Light>();
+    let glow_store = world_ecs.get_store::<Glow>();
 
     for (entity, pos) in &pos_store.data {
         // Skip tiles & camera
@@ -241,13 +248,40 @@ fn collect_layer_map<'a>(
         let entry = map.entry(z).or_default();
         entry.0.push((*entity, pos));
 
-        // If the entity also has a Light component
-        if let Some(l) = light_store.get(*entity) {
-            entry.1.push((*pos, l));
+        // If the entity also has a Glow component
+        if let Some(l) = glow_store.get(*entity) {
+            entry.1.push((pos.position, l));
         }
     }
 
     map
+}
+
+fn collect_lights(
+    world_ecs: &WorldEcs,
+    room: &Room, 
+) -> Vec<(Vec2, Light)> {
+    let mut lights: Vec<(Vec2, Light)> = Vec::new();
+
+    let light_store = world_ecs.get_store::<Light>();
+    let pos_store = world_ecs.get_store::<Position>();
+    let room_store = world_ecs.get_store::<CurrentRoom>();
+
+    for (entity, light) in &light_store.data {
+        // Filter by current room
+        if let Some(cr) = room_store.get(*entity) {
+            if cr.0 != room.id { 
+                continue; 
+            }
+        } else { 
+            continue; 
+        }
+
+        if let Some(pos) = pos_store.get(*entity) {
+            lights.push((pos.position, *light));
+        }
+    }
+    lights
 }
 
 pub fn world_distance_to_screen(cam: &Camera2D, distance: f32) -> f32 {

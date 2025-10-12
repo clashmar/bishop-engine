@@ -81,7 +81,7 @@ impl Clone for ComponentEntry {
 pub trait PostCreate {
     fn post_create(
         &mut self,
-        world: &mut WorldEcs,
+        world_ecs: &mut WorldEcs,
         entity: Entity,
         asset_manager: &mut AssetManager,
     );
