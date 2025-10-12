@@ -6,41 +6,34 @@ use serde_with::{serde_as, FromInto};
 use crate::{ecs_component, inspector_module};
 
 #[serde_as]
-#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+#[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
 pub struct Light {
-    /// World position (same coordinate system as `Position`).
+    /// Relative to the entity the light is attached to.
     #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub position: Vec2,
-    /// Radius in world units.
-    pub radius: f32,
-    /// Light colour.
+    pub pos: Vec2,
     #[serde_as(as = "FromInto<[f32; 3]>")]
-    pub colour: Vec3,
-    /// Intensity multiplier.
+    pub color: Vec3,
+    /// Intensity of the color tint.
     pub intensity: f32,
+    pub radius: f32,
+    pub spread: f32,
+    pub alpha: f32,
+    pub brightness: f32,
 }
 
 ecs_component!(Light);
 inspector_module!(Light);
 
-#[repr(C)]
-#[derive(Clone, Copy, Default)]
-pub struct LightUniform {
-    // world position (x, y) + radius in the same vec3
-    pub pos_radius: [f32; 3],
-    // colour (r, g, b) – intensity folded into colour
-    pub colour: [f32; 3],
-}
-
-impl From<Light> for LightUniform {
-    fn from(l: Light) -> Self {
-        LightUniform {
-            pos_radius: [l.position.x, l.position.y, l.radius],
-            colour: [
-                l.colour.x * l.intensity,
-                l.colour.y * l.intensity,
-                l.colour.z * l.intensity,
-            ],
+impl Default for Light {
+    fn default() -> Self {
+        Light { 
+            pos: vec2(0., 0.), 
+            color: vec3(1., 1., 1.), 
+            intensity: 0.5, 
+            radius: 50.,
+            spread: 100., 
+            alpha: 0.5, 
+            brightness: 1.,
         }
     }
 }

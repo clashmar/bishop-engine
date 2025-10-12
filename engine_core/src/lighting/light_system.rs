@@ -1,60 +1,187 @@
 // engine_core/src/lighting/light_system.rs
-use crate::{
-    ecs::world_ecs::WorldEcs, 
-    lighting::{light::Light, lighting_stage::{Stage, Uniforms}}
-};
-use macroquad::{miniquad::PassAction, prelude::*};
+use macroquad::prelude::*;
+use crate::lighting::light_shaders::*;
 
-pub const MAX_LIGHTS: usize = 8;
+/// Max lights per layer.
+pub const MAX_LIGHTS: usize = 10;
 
-pub fn render_lighting(
-    world_ecs: &WorldEcs,
-    camera: &Camera2D,
-    scene_tex: &Texture2D,
-    target_pass: miniquad::RenderPass,
-    lighting_stage: &mut Stage,
-) {
-    let mut position_px = [(0.0_f32, 0.0_f32); MAX_LIGHTS];
-    let mut radius_px = [(0.0_f32); MAX_LIGHTS];
-    let mut intensity = [(0.0_f32); MAX_LIGHTS];
-    let mut colour = [(0.0_f32, 0.0_f32, 0.0_f32, 0.0_f32); MAX_LIGHTS];
-    let mut count = 0usize;
+/// Helper struct that bundles the four cameras we need for a single layer
+pub struct RenderCams {
+    pub scene_cam: Camera2D,
+    pub ambient_cam: Camera2D,
+    pub spot_cam: Camera2D,
+    pub glow_cam: Camera2D,
+    pub mask_cam: Camera2D,
+}
 
-    for (_, light) in world_ecs.get_store::<Light>().data.iter() {
-        if count >= MAX_LIGHTS {
-            break;
+pub struct LightSystem {
+    // Render targets
+    pub scene_rt: RenderTarget,
+    pub ambient_rt: RenderTarget,
+    pub spot_rt: RenderTarget,
+    pub glow_rt: RenderTarget,
+    pub mask_rt: RenderTarget,
+    /// Materials
+    pub ambient_mat: Material,
+    pub spot_mat: Material,
+    pub glow_mat: Material,
+    pub composite_mat: Material,
+    /// Cached light data
+    pub pos: Vec<Vec2>,
+    pub color: Vec<Vec3>,
+    pub intensity: Vec<f32>,
+    pub radius: Vec<f32>,
+    pub spread: Vec<f32>,
+    pub alpha: Vec<f32>,
+    pub brightness: Vec<f32>,
+}
+
+impl LightSystem {
+    pub fn new() -> Self {
+        // Render‑targets are created with the screen size.
+        let width = screen_width() as u32;
+        let height = screen_height() as u32;
+
+        let make_render_target = || {
+            let rt = render_target(width, height);
+            rt.texture.set_filter(FilterMode::Nearest);
+            rt
+        };
+
+        // Load the four shaders once (they are the same for every layer)
+        let ambient_material = load_material(
+            ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: AMB_FRAGMENT_SHADER },
+            MaterialParams {
+                uniforms: vec![UniformDesc::new("Darkness", UniformType::Float1)],
+                textures: vec!["tex".to_string()],
+                ..Default::default()
+            },
+        ).unwrap();
+
+        let spot_material = load_material(
+            ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: SPOT_FRAGMENT_SHADER },
+            MaterialParams {
+                uniforms: vec![
+                    UniformDesc::new("LightCount", UniformType::Int1),
+                    UniformDesc::new("LightPos", UniformType::Float2).array(MAX_LIGHTS),
+                    UniformDesc::new("LightColor", UniformType::Float3).array(MAX_LIGHTS),
+                    UniformDesc::new("LightIntensity", UniformType::Float1).array(MAX_LIGHTS),
+                    UniformDesc::new("LightRadius", UniformType::Float1).array(MAX_LIGHTS),
+                    UniformDesc::new("LightSpread", UniformType::Float1).array(MAX_LIGHTS),
+                    UniformDesc::new("LightAlpha", UniformType::Float1).array(MAX_LIGHTS),
+                    UniformDesc::new("LightBrightness", UniformType::Float1).array(MAX_LIGHTS),
+                    UniformDesc::new("ScreenWidth", UniformType::Float1),
+                    UniformDesc::new("ScreenHeight", UniformType::Float1),
+                    UniformDesc::new("Darkness", UniformType::Float1),
+                ],
+                textures: vec!["tex".to_string(), "light_mask".to_string()],
+                ..Default::default()
+            },
+        ).unwrap();
+
+        let glow_material = load_material(
+            ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: GLOW_FRAGMENT_SHADER },
+            MaterialParams {
+                uniforms: vec![
+                    UniformDesc::new("Brightness", UniformType::Float1),
+                    UniformDesc::new("Color", UniformType::Float3),
+                    UniformDesc::new("ColorIntensity", UniformType::Float1),
+                    UniformDesc::new("LightPos", UniformType::Float2),
+                    UniformDesc::new("Glow", UniformType::Float1),
+                    UniformDesc::new("maskWidth", UniformType::Float1),
+                    UniformDesc::new("maskHeight", UniformType::Float1),
+                    UniformDesc::new("maskPos", UniformType::Float2),
+                    UniformDesc::new("maskSize", UniformType::Float2),
+                    UniformDesc::new("screenWidth", UniformType::Float1),
+                    UniformDesc::new("screenHeight", UniformType::Float1),
+                    UniformDesc::new("Darkness", UniformType::Float1),
+                ],
+                textures: vec!["scene_tex".to_string(), "tex_mask".to_string()],
+                ..Default::default()
+            },
+        ).unwrap();
+
+        let composite_material = load_material(
+            ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: COMPOSITE_FRAGMENT_SHADER },
+            MaterialParams {
+                textures: vec![
+                    "ambient_tex".to_string(),
+                    "spot_tex".to_string(),
+                    "glow_tex".to_string(),
+                ],
+                ..Default::default()
+            },
+        ).unwrap();
+
+        Self {
+            scene_rt: make_render_target(),
+            ambient_rt: make_render_target(),
+            spot_rt: make_render_target(),
+            glow_rt: make_render_target(),
+            mask_rt: make_render_target(),
+            ambient_mat: ambient_material,
+            spot_mat: spot_material,
+            glow_mat: glow_material,
+            composite_mat: composite_material,
+            pos: vec![vec2(0.0, 0.0); MAX_LIGHTS],
+            color: vec![vec3(0.0, 0.0, 0.0); MAX_LIGHTS],
+            intensity: vec![0.0; MAX_LIGHTS],
+            radius: vec![0.0; MAX_LIGHTS],
+            spread: vec![0.0; MAX_LIGHTS],
+            alpha: vec![0.0; MAX_LIGHTS],
+            brightness: vec![0.0; MAX_LIGHTS],
         }
-
-        let screen = camera.world_to_screen(light.position);
-        position_px[count] = (screen.x, screen.y);
-
-        let screen_radius = light.radius / camera.zoom.x;
-        radius_px[count] = screen_radius;
-
-        intensity[count] = light.intensity;
-        colour[count] = (light.colour.x, light.colour.y, light.colour.z, 1.0);
-        count += 1;
     }
 
-    let gl = unsafe { get_internal_gl() };
-    let uniforms = Uniforms {
-        light_count: count as i32,
-        light_position: position_px,
-        light_radius: radius_px,
-        light_intensity: intensity,
-        light_colour: colour,
-        scene_size: (scene_tex.width(), scene_tex.height()),
-    };
-    
-    gl.quad_context.apply_uniforms(miniquad::UniformsSource::table(&uniforms));
+    pub fn render_cams(&self, render_cam: &Camera2D) -> RenderCams {
+        // Scene cam has different requirements
+        let scene_cam = Camera2D {
+            target: render_cam.target,
+            zoom: render_cam.zoom,
+            render_target: Some(self.scene_rt.clone()),
+            ..Default::default()
+        };
+        set_camera(&scene_cam);
+        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
 
-    // Bind the scene texture
-    lighting_stage.bindings.images = vec![scene_tex.raw_miniquad_id()];
+        // Helper to create the other cameras and clear textures
+        let clear_rt = |rt: &RenderTarget| {
+            let cam = Camera2D {
+                target: vec2(screen_width() * 0.5, screen_height() * 0.5),
+                zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+                render_target: Some(rt.clone()),
+                ..Default::default()
+            };
+            set_camera(&cam);
+            clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
+            cam
+        };
+        
+        let amb_cam = clear_rt(&self.ambient_rt);
+        let spot_cam = clear_rt(&self.spot_rt);
+        let glow_cam = clear_rt(&self.glow_rt);
+        let mask_cam = clear_rt(&self.mask_rt);
 
-    // Draw fullscreen quad
-    gl.quad_context.apply_pipeline(&lighting_stage.pipeline);
-    gl.quad_context.begin_pass(Some(target_pass), PassAction::Nothing);
-    gl.quad_context.apply_bindings(&lighting_stage.bindings);
-    gl.quad_context.draw(0, 6, 1);
-    gl.quad_context.end_render_pass();
+        // Build the four cameras that will be used for drawing.
+        RenderCams {
+            scene_cam: scene_cam,
+            ambient_cam: amb_cam,
+            spot_cam: spot_cam,
+            glow_cam: glow_cam,
+            mask_cam: mask_cam,
+        }
+    }
+
+    /// Reset the per‑frame light buffers.
+    pub fn clear_light_buffers(&mut self) {
+        for i in 0..MAX_LIGHTS {
+            self.pos[i] = vec2(0.0, 0.0);
+            self.color[i] = vec3(0.0, 0.0, 0.0);
+            self.intensity[i] = 0.0;
+            self.radius[i] = 0.0;
+            self.spread[i] = 0.0;
+            self.alpha[i] = 0.0;
+            self.brightness[i] = 0.0;
+        }
+    }
 }

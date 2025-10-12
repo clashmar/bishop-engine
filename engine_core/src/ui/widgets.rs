@@ -395,6 +395,8 @@ where
     }
 
     if focused {
+        INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
+
         if is_key_pressed(KeyCode::Backspace) && cursor > 0 {
             txt.remove(cursor - 1);
             cursor -= 1;
@@ -441,9 +443,6 @@ where
         if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter) {
             focused = false;
         }
-    } else {
-        // Tell the editor that no widget has focus 
-        INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
     }
 
     let now = get_time();

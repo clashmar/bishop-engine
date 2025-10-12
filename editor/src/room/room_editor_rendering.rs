@@ -8,7 +8,7 @@ use engine_core::{
         entity::Entity, 
         world_ecs::WorldEcs
     }, 
-    rendering::render_entities::sprite_dimensions, 
+    rendering::render_room::sprite_dimensions, 
     world::room::Room
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};

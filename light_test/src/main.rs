@@ -119,7 +119,9 @@ async fn main() {
 
         let rect = Rect { x: 50.0, y: 400.0, w: 300.0, h: 150.0 };
 
-        // Draw each blocking texture in black to the mask
+        // Draw each blocking texture in black to the mask. 
+        // We will create a marker component for entities that are not affected by light
+        // and build the mask before all rendering starts.
         set_camera(&Camera2D {
             target: vec2(screen_width() * 0.5, screen_height() * 0.5),
             zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
@@ -133,7 +135,7 @@ async fn main() {
         gl_use_default_material();
         set_default_camera();
 
-        // Draw scene
+        // Draw scene. In the editor/game this is done by draw entites (but we might also need a tilemap pass)
         let pixel_cam = Camera2D {
             target: vec2(screen_width() * 0.5, screen_height() * 0.5),
             zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),

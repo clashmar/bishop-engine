@@ -20,8 +20,11 @@ use engine_core::{
         component::{CurrentRoom, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    },
-    rendering::render_entities::*, ui::widgets::*, world::room::Room
+    }, 
+    lighting::light_system::LightSystem, 
+    rendering::render_room::*, 
+    ui::widgets::*, 
+    world::room::Room
 };
 use macroquad::prelude::*;
 
@@ -35,6 +38,7 @@ pub struct RoomEditor {
     pub tilemap_editor: TileMapEditor,
     pub inspector: InspectorPanel,
     pub selected_entity: Option<Entity>,
+    pub light_system: LightSystem,
     show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
@@ -52,6 +56,7 @@ impl RoomEditor {
             tilemap_editor: TileMapEditor::new(),
             inspector: InspectorPanel::new(),
             selected_entity: None,
+            light_system: LightSystem::new(),
             show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
@@ -261,7 +266,13 @@ impl RoomEditor {
 
                 tilemap.draw(render_cam, exits, world_ecs, asset_manager, room.position);
 
-                draw_entities(world_ecs, room, asset_manager);
+                render_entities(
+                    world_ecs, 
+                    room, 
+                    asset_manager,
+                    &mut self.light_system,
+                    render_cam,
+                );
 
                 if !self.view_preview {
                     if self.show_grid { 

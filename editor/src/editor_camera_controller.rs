@@ -40,7 +40,7 @@ impl EditorCameraController {
 
     // Retrieve the *scalar* zoom that represents the true world‑unit
     // size, regardless of the current aspect ratio.
-    fn current_scalar(camera: &Camera2D) -> f32 {
+    pub fn current_scalar(camera: &Camera2D) -> f32 {
         let aspect = screen_width() / screen_height();
         if aspect > 1.0 {
             // Y holds the scalar
