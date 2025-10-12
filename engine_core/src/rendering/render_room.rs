@@ -34,16 +34,14 @@ pub fn render_room(
     // Organize entities by layer
     let layer_map = collect_layer_map(world_ecs, room);
 
-    // Contains the cameras needed for each pass
-    let cams = lighting.render_cams(render_cam);
+    lighting.clear_composite_cam();
 
     // Draw each blocking texture in black onto a white background
-    // To be implemented
-    set_camera(&cams.mask_cam);
-    clear_background(WHITE);
+    // To be implemented but it needs to happen BEFORE the loop
+    lighting.init_mask_cam();
     gl_use_default_material();
     
-    let darkness = 0.5f32; // TODO expose to editor
+    let darkness = 0.9f32; // TODO expose to editor
 
     // Flag for the tilemap
     let mut first_pass = true;
@@ -52,6 +50,9 @@ pub fn render_room(
     for (_z, (entities, lights)) in layer_map {
         // Reset before using them
         lighting.clear_light_buffers();
+
+        // Reset the cameras (except the composite cam)
+        let cams = lighting.render_cams(render_cam);
 
         // Camera that the tilemap/entities draw into
         set_camera(&cams.scene_cam);
@@ -87,9 +88,19 @@ pub fn render_room(
             );
         }
 
-        // Composite
-        lighting.run_composite_pass();
+        // Composite pass
+        lighting.run_composite_pass(&cams.composite_cam);
     }
+
+    // Draw everything to the screen
+    set_default_camera();
+    draw_texture_ex(
+        &lighting.composite_rt.texture,
+        0.0,
+        0.0,
+        WHITE,
+        DrawTextureParams::default(),
+    );
 }
 
 fn draw_entity(

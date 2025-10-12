@@ -276,8 +276,9 @@ impl RoomEditor {
                 );
 
                 if !self.view_preview {
+                    set_camera(camera);
+
                     if self.show_grid { 
-                        set_camera(camera);
                         grid::draw_grid(camera);
                     }
                     

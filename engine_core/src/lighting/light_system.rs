@@ -10,9 +10,7 @@ pub struct RenderCams {
     pub scene_cam: Camera2D,
     pub ambient_cam: Camera2D,
     pub spot_cam: Camera2D,
-    pub glow_cam: Camera2D,
-    pub mask_cam: Camera2D,
-    pub depth_cam: Camera2D,
+    pub composite_cam: Camera2D,
 }
 
 pub struct LightSystem {
@@ -20,13 +18,11 @@ pub struct LightSystem {
     pub scene_rt: RenderTarget,
     pub ambient_rt: RenderTarget,
     pub spot_rt: RenderTarget,
-    pub glow_rt: RenderTarget,
     pub mask_rt: RenderTarget,
-    pub depth_mask_rt: RenderTarget,
+    pub composite_rt: RenderTarget,
     /// Materials
     pub ambient_mat: Material,
     pub spot_mat: Material,
-    pub glow_mat: Material,
     pub composite_mat: Material,
     /// Cached light data
     pub pos: Vec<Vec2>,
@@ -81,28 +77,6 @@ impl LightSystem {
             },
         ).unwrap();
 
-        let glow_material = load_material(
-            ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: GLOW_FRAGMENT_SHADER },
-            MaterialParams {
-                uniforms: vec![
-                    UniformDesc::new("Brightness", UniformType::Float1),
-                    UniformDesc::new("Color", UniformType::Float3),
-                    UniformDesc::new("ColorIntensity", UniformType::Float1),
-                    UniformDesc::new("LightPos", UniformType::Float2),
-                    UniformDesc::new("Glow", UniformType::Float1),
-                    UniformDesc::new("maskWidth", UniformType::Float1),
-                    UniformDesc::new("maskHeight", UniformType::Float1),
-                    UniformDesc::new("maskPos", UniformType::Float2),
-                    UniformDesc::new("maskSize", UniformType::Float2),
-                    UniformDesc::new("screenWidth", UniformType::Float1),
-                    UniformDesc::new("screenHeight", UniformType::Float1),
-                    UniformDesc::new("Darkness", UniformType::Float1),
-                ],
-                textures: vec!["scene_tex".to_string(), "tex_mask".to_string()],
-                ..Default::default()
-            },
-        ).unwrap();
-
         let composite_material = load_material(
             ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: COMPOSITE_FRAGMENT_SHADER },
             MaterialParams {
@@ -110,6 +84,7 @@ impl LightSystem {
                     "ambient_tex".to_string(),
                     "spot_tex".to_string(),
                     "glow_tex".to_string(),
+                    "composite_tex".to_string(),
                 ],
                 ..Default::default()
             },
@@ -119,12 +94,10 @@ impl LightSystem {
             scene_rt: make_render_target(),
             ambient_rt: make_render_target(),
             spot_rt: make_render_target(),
-            glow_rt: make_render_target(),
             mask_rt: make_render_target(),
-            depth_mask_rt: make_render_target(),
+            composite_rt: make_render_target(),
             ambient_mat: ambient_material,
             spot_mat: spot_material,
-            glow_mat: glow_material,
             composite_mat: composite_material,
             pos: vec![vec2(0.0, 0.0); MAX_LIGHTS],
             color: vec![vec3(0.0, 0.0, 0.0); MAX_LIGHTS],
@@ -136,8 +109,9 @@ impl LightSystem {
         }
     }
 
+    /// Returns the cameras that each shader stage needs to draw into.
     pub fn render_cams(&self, render_cam: &Camera2D) -> RenderCams {
-        // Scene cam has different requirements
+        // Scene cam needs to draw to the current render cam
         let scene_cam = Camera2D {
             target: render_cam.target,
             zoom: render_cam.zoom,
@@ -147,14 +121,13 @@ impl LightSystem {
         set_camera(&scene_cam);
         clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
 
-        // Depth cam should not be cleared each layer
-        let depth_cam = Camera2D {
+        // Composite cam should not be cleared each layer
+        let composite_cam = Camera2D {
             target: vec2(screen_width() * 0.5, screen_height() * 0.5),
             zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
-            render_target: Some(self.depth_mask_rt.clone()),
+            render_target: Some(self.composite_rt.clone()),
             ..Default::default()
         };
-        set_camera(&scene_cam);
 
         // Helper to create the other cameras and clear textures
         let clear_rt = |rt: &RenderTarget| {
@@ -171,18 +144,37 @@ impl LightSystem {
         
         let ambient_cam = clear_rt(&self.ambient_rt);
         let spot_cam = clear_rt(&self.spot_rt);
-        let glow_cam = clear_rt(&self.glow_rt);
-        let mask_cam = clear_rt(&self.mask_rt);
 
-        // Build the four cameras that will be used for drawing.
         RenderCams {
             scene_cam,
             ambient_cam,
             spot_cam,
-            glow_cam,
-            mask_cam,
-            depth_cam,
+            composite_cam,
         }
+    }
+
+    /// Sets the mask render target background to white.
+    pub fn init_mask_cam(&self) {
+        let mask_cam = Camera2D {
+            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
+            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            render_target: Some(self.mask_rt.clone()),
+            ..Default::default()
+        };
+        set_camera(&mask_cam);
+        clear_background(WHITE);
+    }
+
+    /// Clears the composite render target at the start of each draw.
+    pub fn clear_composite_cam(&self) {
+        let composite_cam = Camera2D {
+            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
+            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            render_target: Some(self.composite_rt.clone()),
+            ..Default::default()
+        };
+        set_camera(&composite_cam);
+        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
     }
 
     /// Reset the per‑frame light buffers.
@@ -198,11 +190,11 @@ impl LightSystem {
         }
     }
     
-    pub fn run_ambient_pass(&mut self, camera: &Camera2D, darkness: f32) {
+    pub fn run_ambient_pass(&mut self, cam: &Camera2D, darkness: f32) {
         self.ambient_mat.set_texture("tex", self.scene_rt.texture.clone());
         self.ambient_mat.set_uniform("Darkness", darkness);
 
-        set_camera(camera);
+        set_camera(cam);
 
         gl_use_material(&self.ambient_mat);
         draw_texture_ex(
@@ -271,16 +263,16 @@ impl LightSystem {
         }
     }
 
-    pub fn run_composite_pass(&mut self) {
+    pub fn run_composite_pass(&mut self, cam: &Camera2D) {
         self.composite_mat.set_texture("ambient_tex", self.ambient_rt.texture.clone());
         self.composite_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
-        self.composite_mat.set_texture("glow_tex", self.glow_rt.texture.clone());
+        self.composite_mat.set_texture("composite_tex", self.composite_rt.texture.clone());
 
         // Draw everything
-        set_default_camera();
+        set_camera(cam);
         gl_use_material(&self.composite_mat);
         draw_texture_ex(
-            &self.scene_rt.texture, // any of the three works for size
+            &self.composite_rt.texture,
             0.0,
             0.0,
             WHITE,

@@ -51,7 +51,6 @@ uniform float LightRadius[MAX_LIGHTS];
 uniform float LightSpread[MAX_LIGHTS];
 uniform float LightAlpha[MAX_LIGHTS];
 uniform float LightBrightness[MAX_LIGHTS];
-
 uniform float ScreenWidth;
 uniform float ScreenHeight;
 uniform float Darkness;
@@ -96,79 +95,6 @@ void main() {
 }
 "#;
 
-pub const GLOW_FRAGMENT_SHADER: &str = r#"
-#version 100
-precision mediump float;
-
-varying vec2 uv;
-
-uniform sampler2D scene_tex;
-uniform sampler2D tex_mask;
-
-uniform float Brightness;
-uniform vec3 Color;
-uniform float ColorIntensity;
-uniform vec2 LightPos;
-uniform float Glow;
-uniform float maskWidth;
-uniform float maskHeight;
-uniform vec2 maskPos;
-uniform vec2 maskSize;
-uniform float screenWidth;
-uniform float screenHeight;
-uniform float Darkness; 
-
-float sampleMask(vec2 uvMask)
-{
-    if (uvMask.x < 0.0 || uvMask.x > 1.0 ||
-        uvMask.y < 0.0 || uvMask.y > 1.0) {
-        return 0.0;
-    }
-    return texture2D(tex_mask, uvMask).a;
-}
-
-void main() {
-    vec4 base = texture2D(scene_tex, uv);
-    vec3 scene = base.rgb;
-    float finalMask = 1.0;
-
-    vec2 fragScreen = uv * vec2(screenWidth, screenHeight);
-
-    vec2 rel = (fragScreen - (maskPos - maskSize * 0.5)) / maskSize;
-
-    float c00 = sampleMask(rel);
-
-    vec2 pixelSize = vec2(1.0 / maskWidth, 1.0 / maskHeight);
-
-    float sum = 0.0;
-
-    sum += sampleMask(rel + pixelSize * vec2(-Glow, -Glow));
-    sum += sampleMask(rel + pixelSize * vec2( 0.0,  -Glow));
-    sum += sampleMask(rel + pixelSize * vec2( Glow, -Glow));
-    sum += sampleMask(rel + pixelSize * vec2( Glow,  0.0));
-    sum += c00; // center
-    sum += sampleMask(rel + pixelSize * vec2( Glow,  Glow));
-    sum += sampleMask(rel + pixelSize * vec2( 0.0,  Glow));
-    sum += sampleMask(rel + pixelSize * vec2(-Glow,  Glow));
-    sum += sampleMask(rel + pixelSize * vec2(-Glow,  0.0));
-    float avg = sum / 9.0;
-
-    float s = clamp(Glow, 0.0, 1.0);
-    float blurred = mix(c00, avg, s);
-
-    finalMask = max(c00, blurred);
-
-    // Apply lighting
-    vec3 tinted = mix(scene, Color, ColorIntensity);
-    vec3 lit = mix(scene, tinted, finalMask);
-    lit += Brightness * Color * finalMask;
-
-    vec3 contribution = (lit - scene * (1.0 - Darkness)) * finalMask;
-
-    gl_FragColor = vec4(contribution, finalMask);
-}
-"#;
-
 pub const COMPOSITE_FRAGMENT_SHADER: &str = r#"
 #version 100
 precision mediump float;
@@ -178,12 +104,19 @@ varying vec2 uv;
 uniform sampler2D ambient_tex;
 uniform sampler2D spot_tex;
 uniform sampler2D glow_tex;
+uniform sampler2D composite_tex;
 
 void main() {
+    vec4 existing = texture2D(composite_tex, uv);
     vec4 ambient = texture2D(ambient_tex, uv);
     vec4 spot = texture2D(spot_tex, uv);
-    vec4 glow = texture2D(glow_tex, uv);
 
-    gl_FragColor = clamp(ambient + spot + glow, 0.0, 1.0);
+    // Combine ambient and spotlight pass for this layer
+    vec4 current = mix(ambient, ambient + spot, spot.a);
+
+    // Blend current layer over existing composite
+    vec4 outCol = mix(existing, current, current.a);
+
+    gl_FragColor = vec4(clamp(outCol.rgb, 0.0, 1.0), 1.0);
 }
 "#;
