@@ -9,6 +9,7 @@ use crate::{
         world_ecs::WorldEcs
     }, tiles::tile::TileSprite, world::room::Room
 };
+use std::collections::BTreeMap;
 use macroquad::prelude::*;
 
 pub fn draw_entities(
@@ -16,70 +17,72 @@ pub fn draw_entities(
     room: &Room,
     asset_manager: &mut AssetManager,
 ) {
-    // Cache the stores – no extra hashmap look‑ups inside the loop
-    let pos_store = world_ecs.get_store::<Position>();
-    let tile_store = world_ecs.get_store::<TileSprite>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+    let layers = collect_layer_map(world_ecs, room);
+
+    // Cache the stores
     let sprite_store = world_ecs.get_store::<Sprite>();
-    let camera_store = world_ecs.get_store::<RoomCamera>();
     let frame_store = world_ecs.get_store::<CurrentFrame>();
 
-    for (entity, pos) in pos_store.data.iter() {
-        // Skip tiles and camera
-        if tile_store.get(*entity).is_some() || camera_store.get(*entity).is_some() {
-            continue;
+    for (_z, entities) in layers {
+        for (entity, pos) in entities {
+            draw_entity(
+            asset_manager,
+            frame_store,
+            sprite_store,
+            entity,
+            *pos,
+            )
         }
+    }
+}
 
-        // Draw only if the entity belongs to the current room
-        if let Some(current_room) = room_store.get(*entity) {
-            if current_room.0 != room.id {
-                continue;
-            }
-        } else {
-            continue;
-        }
-
-        // Animate/Draw sprite
-        if let Some(cf) = frame_store.get(*entity) && asset_manager.contains(cf.sprite_id) {
-            // Source rect = column/row * frame size
-            let src = Rect::new(
-                cf.col as f32 * cf.frame_size.x,
-                cf.row as f32 * cf.frame_size.y,
-                cf.frame_size.x,
-                cf.frame_size.y,
-            );
-            let tex = asset_manager.get_texture_from_id(cf.sprite_id);
+fn draw_entity(
+    asset_manager: &mut AssetManager,
+    frame_store: &ComponentStore<CurrentFrame>,
+    sprite_store: &ComponentStore<Sprite>,
+    entity: Entity,
+    pos: Position,
+) {
+    // Animate/Draw sprite
+    if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
+        // Source rect = column/row * frame size
+        let src = Rect::new(
+            cf.col as f32 * cf.frame_size.x,
+            cf.row as f32 * cf.frame_size.y,
+            cf.frame_size.x,
+            cf.frame_size.y,
+        );
+        let tex = asset_manager.get_texture_from_id(cf.sprite_id);
+        draw_texture_ex(
+            tex,
+            pos.position.x + cf.offset.x,
+            pos.position.y + cf.offset.y,
+            WHITE,
+            DrawTextureParams {
+                source: Some(src),
+                ..Default::default()
+            },
+        );
+        return;
+    } else if let Some(sprite) = sprite_store.get(entity) {
+        // No animation
+        if asset_manager.contains(sprite.sprite_id) {
+            let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
             draw_texture_ex(
                 tex,
-                pos.position.x + cf.offset.x,
-                pos.position.y + cf.offset.y,
+                pos.position.x,
+                pos.position.y,
                 WHITE,
                 DrawTextureParams {
-                    source: Some(src),
                     ..Default::default()
                 },
             );
-            continue; // Frame drawn, go to next entity
-        } else if let Some(sprite) = sprite_store.get(*entity) {
-            // No animation
-            if asset_manager.contains(sprite.sprite_id) {
-                let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
-                draw_texture_ex(
-                    tex,
-                    pos.position.x,
-                    pos.position.y,
-                    WHITE,
-                    DrawTextureParams {
-                        ..Default::default()
-                    },
-                );
-                continue; // sprite drawn, go to next entity
-            }
+            return;
         }
-
-        // Fallback placeholder (no sprite or missing texture)
-        draw_entity_placeholder(pos.position);
     }
+
+    // Fallback placeholder (no sprite or missing texture)
+    draw_entity_placeholder(pos.position);
 }
 
 pub fn highlight_selected_entity(
@@ -126,4 +129,46 @@ pub fn draw_entity_placeholder(pos: Vec2) {
         TILE_SIZE,
         GREEN,
     );
+}
+
+/// Sorts entites by their z-layer and filters out entities that 
+/// should not be drawn. BTreeMap automatically sorts keys.
+fn collect_layer_map<'a>(
+    world_ecs: &'a WorldEcs,
+    room: &Room,
+) -> BTreeMap<i32, Vec<(Entity, &'a Position)>> {
+    let mut map: BTreeMap<i32, Vec<(Entity, &Position)>> = BTreeMap::new();
+
+    let pos_store = world_ecs.get_store::<Position>();
+    let tile_store = world_ecs.get_store::<TileSprite>();
+    let cam_store = world_ecs.get_store::<RoomCamera>();
+    let room_store = world_ecs.get_store::<CurrentRoom>();
+    let layer_store = world_ecs.get_store::<Layer>();
+
+    for (entity, pos) in &pos_store.data {
+        // Skip tiles & camera
+        if tile_store.get(*entity).is_some() || cam_store.get(*entity).is_some() {
+            continue;
+        }
+
+        // Filter by current room
+        if let Some(cr) = room_store.get(*entity) {
+            if cr.0 != room.id { 
+                continue; 
+            }
+        } else { 
+            continue; 
+        }
+
+        // Default layer is 0 if missing
+        let z = layer_store
+            .get(*entity)
+            .map_or(0, |l| l.z);
+
+        map.entry(z)
+            .or_default()
+            .push((*entity, pos));
+    }
+
+    map
 }

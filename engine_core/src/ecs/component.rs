@@ -95,6 +95,14 @@ pub struct Position {
 }
 ecs_component!(Position);
 
+#[serde_as]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+pub struct Layer {
+    pub z: i32,
+}
+ecs_component!(Layer);
+inspector_module!(Layer);
+
 /// Component that stores the room identifier an entity belongs to.
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct CurrentRoom(pub Uuid);

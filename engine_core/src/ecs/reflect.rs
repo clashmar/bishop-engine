@@ -5,6 +5,7 @@ use macroquad::math::{Vec2, Vec3};
 pub enum FieldValue<'a> {
     Text(&'a mut String),
     Float(&'a mut f32),
+    Int(&'a mut i32),
     Bool(&'a mut bool),
     Vec2(&'a mut Vec2),
     Vec3(&'a mut Vec3),
@@ -36,6 +37,12 @@ impl ReflectField for String {
 impl ReflectField for f32 {
     fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
         FieldInfo { name, value: FieldValue::Float(field) }
+    }
+}
+
+impl ReflectField for i32 {
+    fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
+        FieldInfo { name, value: FieldValue::Int(field) }
     }
 }
 

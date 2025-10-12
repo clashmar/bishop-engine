@@ -44,7 +44,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_x = gui_input_number(self.x_id, x_field, pos.position.x);
+        let new_x = gui_input_number_f32(self.x_id, x_field, pos.position.x);
 
         // Y
         let y_label = Rect::new(
@@ -60,7 +60,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_y = gui_input_number(self.y_id, y_field, pos.position.y);
+        let new_y = gui_input_number_f32(self.y_id, y_field, pos.position.y);
 
         // Write back only if something changed
         if (new_x - pos.position.x).abs() > f32::EPSILON

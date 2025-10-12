@@ -77,21 +77,24 @@ where
             // Dispatch based on the enum variant
             match field.value {
                 FieldValue::Text(txt) => {
-                    // `txt` is `&mut String`.
                     let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());
                     if new != *txt {
                         *txt = new;
                     }
                 }
-                FieldValue::Float(num) => {
-                    // `num` is `&mut f32`
-                    let new = gui_input_number(base_id, widget_rect, *num);
-                    if (new - *num).abs() > f32::EPSILON {
-                        *num = new;
+                FieldValue::Float(f) => {
+                    let new = gui_input_number_f32(base_id, widget_rect, *f);
+                    if (new - *f).abs() > f32::EPSILON {
+                        *f = new;
+                    }
+                }
+                FieldValue::Int(i) => {
+                    let new = gui_input_number_i32(base_id, widget_rect, *i);
+                    if new != *i {
+                        *i = new;
                     }
                 }
                 FieldValue::Bool(b) => {
-                    // `b` is `&mut bool`
                     let mut v = *b;
                     if gui_checkbox(widget_rect, &mut v) {
                         *b = v;
@@ -112,7 +115,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = gui_input_number(id_x, rect_x, v.x);
+                    let new_x = gui_input_number_f32(id_x, rect_x, v.x);
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -123,7 +126,7 @@ where
                         half - 2.0,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number(id_y, rect_y, v.y);
+                    let new_y = gui_input_number_f32(id_y, rect_y, v.y);
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -146,7 +149,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third, widget_rect.h);
-                    let new_x = gui_input_number(id_x, rect_x, v.x);
+                    let new_x = gui_input_number_f32(id_x, rect_x, v.x);
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -157,7 +160,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number(id_y, rect_y, v.y);
+                    let new_y = gui_input_number_f32(id_y, rect_y, v.y);
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -168,7 +171,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_z = gui_input_number(id_z, rect_z, v.z);
+                    let new_z = gui_input_number_f32(id_z, rect_z, v.z);
                     if (new_z - v.z).abs() > f32::EPSILON {
                         v.z = new_z;
                     }

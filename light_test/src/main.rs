@@ -64,7 +64,6 @@ async fn main() {
             ..Default::default() 
         },
     ).unwrap();
-
     
     let glow_material = load_material(
         ShaderSource::Glsl { 
@@ -169,8 +168,7 @@ async fn main() {
         set_default_camera();
 
         // Constants
-        let darkness = 0.1f32;
-        // let light_color = vec3(1.0, 0.85, 0.6);
+        let darkness = 0.8f32;
         let glow = 1.0f32;
         
         {
@@ -327,7 +325,7 @@ async fn main() {
 
             gl_use_material(&composite_material);
             draw_texture_ex(
-                &ambient_rt.texture, // any texture works for size; we just need a quad
+                &ambient_rt.texture, // any texture works for size;
                 0.0,
                 0.0,
                 WHITE,
@@ -497,8 +495,7 @@ void main() {
     sum += sampleMask(rel + pixelSize * vec2(-Glow,  0.0));
     float avg = sum / 9.0;
 
-    const float SPREAD_TO_BLEND = 1.0;
-    float s = clamp(Glow / SPREAD_TO_BLEND, 0.0, 1.0);
+    float s = clamp(Glow, 0.0, 1.0);
     float blurred = mix(c00, avg, s);
 
     finalMask = max(c00, blurred);

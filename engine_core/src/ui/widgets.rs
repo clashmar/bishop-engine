@@ -3,6 +3,7 @@ use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::fmt::Display;
+use std::str::FromStr;
 use std::time::Instant;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -66,12 +67,12 @@ pub fn gui_input_text_focused(id: WidgetId, rect: Rect, current: &str) -> (Strin
     gui_input_text(id, rect, current, true, None)
 }
 
-/// Same as `gui_input_text_default` but clamps the tex to `max_len`.
+/// Same as `gui_input_text_default` but clamps the text to `max_len`.
 pub fn gui_input_text_clamped(id: WidgetId, rect: Rect, current: &str, max_len: usize) -> (String, bool) {
     gui_input_text(id, rect, current, false, Some(max_len))
 }
 
-/// Same as `gui_input_text_focused` but clamps the tex to `max_len`.
+/// Same as `gui_input_text_focused` but clamps the text to `max_len`.
 pub fn gui_input_text_clamped_focused(id: WidgetId, rect: Rect, current: &str, max_len: usize) -> (String, bool) {
     gui_input_text(id, rect, current, true, Some(max_len))
 }
@@ -83,7 +84,6 @@ fn gui_input_text(
     start_focused: bool,
     max_len: Option<usize>,
 ) -> (String, bool) {
-    // Make sure any outstanding inputs are consumed
     let mut just_gained_focus = false;
 
     // Load / initialise widget state
@@ -156,7 +156,7 @@ fn gui_input_text(
         // Backspace
         if is_key_pressed(KeyCode::Backspace) && cursor_char > 0 {
             let start = byte_offset(&text, cursor_char - 1);
-            let end   = byte_offset(&text, cursor_char);
+            let end = byte_offset(&text, cursor_char);
             text.drain(start..end);
             cursor_char -= 1;
             last_backspace = now;
@@ -167,7 +167,7 @@ fn gui_input_text(
                 || (repeat_started && elapsed >= HOLD_REPEAT_RATE)
             {
                 let start = byte_offset(&text, cursor_char - 1);
-                let end   = byte_offset(&text, cursor_char);
+                let end = byte_offset(&text, cursor_char);
                 text.drain(start..end);
                 cursor_char -= 1;
                 last_backspace = now;
@@ -178,7 +178,7 @@ fn gui_input_text(
         // Delete
         if is_key_pressed(KeyCode::Delete) && cursor_char < text.chars().count() {
             let start = byte_offset(&text, cursor_char);
-            let end   = byte_offset(&text, cursor_char + 1);
+            let end = byte_offset(&text, cursor_char + 1);
             text.drain(start..end);
         }
 
@@ -322,52 +322,52 @@ pub fn gui_button(rect: Rect, label: &str) -> bool {
     !dropdown_is_open()
 }
 
-/// Numeric field that accepts only digits, a single decimal point and an
-/// optional leading minus sign. Returns the parsed `f32`; on parse error the
-/// original `current` value is returned.
-pub fn gui_input_number(
+pub fn gui_input_number_i32(id: WidgetId, rect: Rect, current: i32) -> i32 {
+    gui_input_number_generic(id, rect, current)
+}
+
+pub fn gui_input_number_f32(id: WidgetId, rect: Rect, current: f32) -> f32 {
+    gui_input_number_generic(id, rect, current)
+}
+
+/// Generic numeric widget.
+pub fn gui_input_number_generic<T>(
     id: WidgetId,
     rect: Rect,
-     current: f32
-    ) -> f32 {
-    use std::f32::EPSILON;
-
+    current: T,
+) -> T
+where
+    T: FromStr + Display + Default + Copy + PartialEq,
+    <T as FromStr>::Err: std::fmt::Debug,
+{
     thread_local! {
         static STATE: RefCell<HashMap<WidgetId, (String, usize, bool)>> =
             RefCell::new(HashMap::new());
     }
 
-    // Load or initialise state
+    // Load or initialise the entry for this widget
     let mut txt = current.to_string();
-    let mut cursor = txt.len(); // Place the cursor at the end
+    let mut cursor = txt.len(); 
     let mut focused = false;
 
     STATE.with(|s| {
         let mut map = s.borrow_mut();
-
-        // If we already have a state entry, use it
         if let Some((saved_txt, saved_cur, saved_foc)) = map.get(&id) {
             txt = saved_txt.clone();
             cursor = *saved_cur;
             focused = *saved_foc;
         } else {
-            // First time we see this widget store the initial state.
             map.insert(id, (txt.clone(), cursor, focused));
         }
     });
 
-    // If the widget is not focused, force‑sync the displayed
-    // text with the latest current value
     if !focused {
-        // Only replace when the numeric value actually differs. This
-        // avoids flickering the cursor position when the user is typing
-        if (txt.parse::<f32>().unwrap_or(0.0) - current).abs() > EPSILON {
+        if txt.parse::<T>().unwrap_or_default() != current {
             txt = current.to_string();
-            cursor = txt.len(); // Put cursor at the end of the new text
+            cursor = txt.len();
         }
     }
 
-    // Draw background and current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
     let placeholder = "<#>";
@@ -383,18 +383,17 @@ pub fn gui_input_number(
         },
     );
 
+    // Abort input handling if a dropdown blocks interaction
     if dropdown_is_open() {
         return current;
     }
 
-    // Focus handling
     let mouse = mouse_position();
     let mouse_over = rect.contains(vec2(mouse.0, mouse.1));
     if is_mouse_button_pressed(MouseButton::Left) {
         focused = mouse_over;
     }
 
-    // Keyboard input
     if focused {
         if is_key_pressed(KeyCode::Backspace) && cursor > 0 {
             txt.remove(cursor - 1);
@@ -411,57 +410,64 @@ pub fn gui_input_number(
         }
 
         while let Some(chr) = get_char_pressed() {
+            // Tell the rest of the editor that a text field is active
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
+
             if chr.is_control() {
                 continue;
             }
 
-            // Leading minus
-            if chr == '-' && cursor == 0 && !txt.starts_with('-') {
+            // Allow a leading minus sign only for types that can represent negatives
+            if chr == '-' && cursor == 0 && !txt.starts_with('-') && T::from_str("-0").is_ok() {
                 txt.insert(cursor, chr);
                 cursor += 1;
                 continue;
             }
-            // Single decimal point
-            if chr == '.' && !txt.contains('.') {
+
+            // Floating point numbers
+            let is_float = T::from_str("0.0").is_ok();
+            if chr == '.' && is_float && !txt.contains('.') {
                 txt.insert(cursor, chr);
                 cursor += 1;
                 continue;
             }
-            // Digits
+
             if chr.is_ascii_digit() {
                 txt.insert(cursor, chr);
                 cursor += 1;
             }
         }
 
-        if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter)  {
+        if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter) {
             focused = false;
         }
+    } else {
+        // Tell the editor that no widget has focus 
+        INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
     }
 
-    // Blinking cursor
     let now = get_time();
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let prefix = &txt[..cursor];
-        let cursor_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
+        let caret_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
         draw_line(
-            cursor_x,
+            caret_x,
             rect.y + rect.h * 0.3,
-            cursor_x,
+            caret_x,
             rect.y + rect.h * 0.8,
             2.,
             WHITE,
         );
     }
 
-    // Persist state
+    // Persist state for the next frame
     STATE.with(|s| {
         let mut map = s.borrow_mut();
         map.insert(id, (txt.clone(), cursor, focused));
     });
 
-    txt.parse::<f32>().unwrap_or(current)
+    // Return the parsed value
+    txt.parse::<T>().unwrap_or(current)
 }
 
 /// Returns the byte offset of the `char_idx`‑th character in `s`.

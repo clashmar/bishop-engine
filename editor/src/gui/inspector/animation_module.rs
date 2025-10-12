@@ -313,8 +313,8 @@ pub fn draw_frame_size_fields(
     draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, WHITE);
 
     // Numeric inputs
-    clip.frame_size.x = gui_input_number(module.frame_x_id, inp_x, clip.frame_size.x);
-    clip.frame_size.y = gui_input_number(module.frame_y_id, inp_y, clip.frame_size.y);
+    clip.frame_size.x = gui_input_number_f32(module.frame_x_id, inp_x, clip.frame_size.x);
+    clip.frame_size.y = gui_input_number_f32(module.frame_y_id, inp_y, clip.frame_size.y);
 }
 
 pub fn draw_spritesheet_dimension_fields(
@@ -329,8 +329,8 @@ pub fn draw_spritesheet_dimension_fields(
     draw_text(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, WHITE);
     draw_text(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, WHITE);
 
-    clip.cols = gui_input_number(module.cols_id, inp_c, clip.cols as f32) as usize;
-    clip.rows = gui_input_number(module.rows_id, inp_r, clip.rows as f32) as usize;
+    clip.cols = gui_input_number_f32(module.cols_id, inp_c, clip.cols as f32) as usize;
+    clip.rows = gui_input_number_f32(module.rows_id, inp_r, clip.rows as f32) as usize;
 }
 
 pub fn draw_fps_and_loop(
@@ -348,7 +348,7 @@ pub fn draw_fps_and_loop(
     draw_text(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, WHITE);
     draw_text(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, WHITE);
 
-    clip.fps = gui_input_number(module.fps_id, inp_fps, clip.fps);
+    clip.fps = gui_input_number_f32(module.fps_id, inp_fps, clip.fps);
     gui_checkbox(inp_loop, &mut clip.looping);
 }
 
@@ -364,8 +364,8 @@ pub fn draw_offset_fields(
     draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, WHITE);
     draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, WHITE);
 
-    clip.offset.x = gui_input_number(module.offset_x_id, inp_x, clip.offset.x);
-    clip.offset.y = gui_input_number(module.offset_y_id, inp_y, clip.offset.y);
+    clip.offset.x = gui_input_number_f32(module.offset_x_id, inp_x, clip.offset.x);
+    clip.offset.y = gui_input_number_f32(module.offset_y_id, inp_y, clip.offset.y);
 }
 
 /// Returns every ClipId that has a concrete Clip stored in the map.

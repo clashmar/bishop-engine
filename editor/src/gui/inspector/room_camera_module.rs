@@ -69,7 +69,7 @@ impl RoomCameraModule {
             rect.h,
         );
 
-        let typed = gui_input_number(
+        let typed = gui_input_number_f32(
             self.zoom_id,
             num_rect, 
             round_to_dp(rounded_scalar * DISPLAY_FACTOR, DECIMAL_PLACES)
