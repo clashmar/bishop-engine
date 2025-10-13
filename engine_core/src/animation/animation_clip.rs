@@ -207,7 +207,10 @@ pub async fn resolve_sprite_id(
     }
 
     // Load the texture
-    asset_manager.load(&path).await
+     match asset_manager.load(&path).await {
+        Ok(id) => id,
+        Err(_) => SpriteId(Uuid::nil())
+     }
 }
 
 /// Initializes the component when an entity is instantiated into the world.

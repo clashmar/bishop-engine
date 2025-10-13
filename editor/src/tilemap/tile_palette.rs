@@ -113,7 +113,10 @@ impl TilePalette {
         self.sprite_ids.clear();
 
         for entry in &self.entries {
-            let tex_id = asset_manager.load(&entry.sprite_path).await;
+            let tex_id = match asset_manager.load(&entry.sprite_path).await {
+                Ok(id) => id,
+                Err(_) => SpriteId(Uuid::nil()),
+            };
             self.sprite_ids.push(tex_id);
         }
     }
@@ -227,7 +230,11 @@ impl TilePalette {
         
         // Preview
         if !self.ui.sprite_path.is_empty() {
-            let preview_id = asset_manager.load(&self.ui.sprite_path).await;
+            let preview_id = match asset_manager.load(&self.ui.sprite_path).await {
+                Ok(id) => id,
+                Err(_) => SpriteId(Uuid::nil()),
+            };
+
             let tex = asset_manager.get_texture_from_id(preview_id);
             draw_texture_ex(
                 tex,
@@ -298,7 +305,10 @@ impl TilePalette {
         asset_manager: &mut AssetManager,
     ) {
         // Load sprite
-        let sprite_id = asset_manager.load(&self.ui.sprite_path).await;
+        let sprite_id = match asset_manager.load(&self.ui.sprite_path).await {
+            Ok(id) => id,
+            Err(_) => SpriteId(Uuid::nil()),
+        };
 
         // Build TileDef
         let mut comps = vec![
@@ -341,7 +351,10 @@ impl TilePalette {
         asset_manager: &mut AssetManager,
     ) {
         // Load sprite
-        let sprite_id = asset_manager.load(&self.ui.sprite_path).await;
+        let sprite_id = match asset_manager.load(&self.ui.sprite_path).await {
+            Ok(id) => id,
+            Err(_) => SpriteId(Uuid::nil()),
+        };
 
         // Build TileDef
         let mut comps = vec![

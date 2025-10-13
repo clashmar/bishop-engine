@@ -1,5 +1,6 @@
 // engine_core/src/assets/asset_manager.rs
 use std::path::Path;
+use futures::executor::block_on;
 use macroquad::prelude::*;
 use uuid::Uuid;
 use std::collections::HashMap;
@@ -31,23 +32,23 @@ impl AssetManager {
 
     /// Load a texture from the assets folder.
     /// Returns the `SpriteId` that can later be used with `get`.
-    pub async fn load(&mut self, rel_path: impl AsRef<Path>) -> SpriteId {
+    pub async fn load(&mut self, rel_path: impl AsRef<Path>) -> Result<SpriteId, String> {
         let key = rel_path.as_ref().to_string_lossy().to_string();
 
         if key.trim().is_empty() {
             // Guard against path being empty
-            return SpriteId(Uuid::nil());
+            return Err("Empty texture path".into());
         }
 
         // Already loaded, reuse the same id
         if let Some(&id) = self.path_to_id.get(&key) {
-            return id;
+            return Ok(id);
         }
 
         // Load the texture from disk.
         let texture = load_texture(&key)
             .await
-            .expect("Could not load texture.");
+            .map_err(|e| format!("Failed to load texture '{}': {}", key, e))?;
 
         // Disable smoothing (needed for pixel art)
         texture.set_filter(FilterMode::Nearest);
@@ -59,7 +60,7 @@ impl AssetManager {
         self.textures.insert(id, texture);
         self.path_to_id.insert(key.clone(), id);
         self.id_to_path.insert(id, key);
-        id
+        return Ok(id);
     }
 
     /// Returns true if the texture for `id` is already present.
@@ -81,8 +82,29 @@ impl AssetManager {
             .get(&id)
             .expect("SpriteId out of range and no stored path")
             .clone();
-        futures::executor::block_on(self.load(path));
+
+        let _ = block_on(self.load(path));
         self.textures.get(&id).unwrap()
+    }
+
+    /// Returns the id for `path`, loading it if necessary.
+    pub fn get_or_load(&mut self, path: &str) -> Option<SpriteId> {
+        if path.trim().is_empty() {
+            return None;
+        }
+
+        if let Some(&id) = self.path_to_id.get(path) {
+            return Some(id);
+        }
+
+        // Blocking load
+        match block_on(self.load(path)) {
+            Ok(id) => Some(id),
+            Err(err) => {
+                info!("{}", err);
+                None
+            }
+        }
     }
 
     /// Syncs all the sprite assets for a world.
@@ -91,7 +113,10 @@ impl AssetManager {
         for (_entity, sprite) in world_ecs.get_store_mut::<Sprite>().data.iter_mut() {
             if !self.contains(sprite.sprite_id) {
                 let id = self.load(&sprite.path).await;
-                sprite.sprite_id = id;
+                sprite.sprite_id = match id {
+                    Ok(id) => id,
+                    Err(_) => SpriteId(Uuid::nil()),
+                }
             }
         }
 
@@ -99,7 +124,10 @@ impl AssetManager {
         for (_entity, tile_sprite) in world_ecs.get_store_mut::<TileSprite>().data.iter_mut() {
             if !self.contains(tile_sprite.sprite_id) {
                 let id = self.load(&tile_sprite.path).await;
-                tile_sprite.sprite_id = id;
+                tile_sprite.sprite_id = match id {
+                    Ok(id) => id,
+                    Err(_) => SpriteId(Uuid::nil()),
+                }
             }
         }
 

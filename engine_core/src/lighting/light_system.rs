@@ -1,6 +1,13 @@
 // engine_core/src/lighting/light_system.rs
 use macroquad::prelude::*;
-use crate::{assets::{asset_manager::AssetManager, sprite::SpriteId}, ecs::component::Position, lighting::{glow::Glow, light::Light, light_shaders::*}};
+use crate::{
+    assets::asset_manager::AssetManager, 
+    lighting::{
+        glow::Glow, 
+        light::Light, 
+        light_shaders::*
+    }
+};
 
 /// Max lights per layer.
 pub const MAX_LIGHTS: usize = 10;
@@ -229,29 +236,26 @@ impl LightSystem {
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
 
         for (i, (world_pos, glow)) in glows.iter().take(MAX_LIGHTS).enumerate() {
-            // TODO handle this better
-            let id = asset_manager.path_to_id.get(&glow.mask_sprite)
-                .unwrap();
+            if let Some(id) = asset_manager.get_or_load(&glow.mask_sprite) {
+                let screen_pos = render_cam.world_to_screen(*world_pos);
+                self.glow_pos[i] = screen_pos;
+                self.glow_color[i] = glow.color;
+                self.glow_color_int[i] = glow.color_intensity;
+                self.glow_brightness[i] = glow.brightness;
+                self.glow_radius[i] = glow.glow_radius;
+                self.glow_mask_pos[i] = glow.mask_pos;
+                self.glow_mask_size[i] = glow.mask_size;
 
-            let screen_pos = render_cam.world_to_screen(*world_pos);
-            self.glow_pos[i] = screen_pos;
-            self.glow_color[i] = glow.color;
-            self.glow_color_int[i] = glow.color_intensity;
-            self.glow_brightness[i] = glow.brightness;
-            self.glow_radius[i] = glow.glow_radius;
-            self.glow_mask_pos[i] = glow.mask_pos;
-            self.glow_mask_size[i] = glow.mask_size;
+                // Texture dimensions
+                if let Some((w, h)) = asset_manager.texture_size(id) {
+                    self.glow_mask_width[i]  = w;
+                    self.glow_mask_height[i] = h;
+                }
 
-            // Texture dimensions
-            if let Some((w, h)) = asset_manager.texture_size(*id) {
-                self.glow_mask_width[i]  = w;
-                self.glow_mask_height[i] = h;
+                let tex = asset_manager.get_texture_from_id(id).clone();
+                self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
             }
-
-            let tex = asset_manager.get_texture_from_id(*id).clone();
-            self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
         }
-
         
         self.glow_mat.set_uniform("GlowCount", glows.len().min(MAX_LIGHTS) as i32);
         self.glow_mat.set_uniform_array("Brightness", &self.glow_brightness);

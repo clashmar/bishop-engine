@@ -1,9 +1,10 @@
+use futures::executor::block_on;
 // editor/src/gui/inspector/sprite_module.rs
 use macroquad::prelude::*;
 use engine_core::{
     assets::{
         asset_manager::AssetManager, 
-        sprite::Sprite
+        sprite::{Sprite, SpriteId}
     }, 
     ecs::{
         entity::Entity, 
@@ -12,6 +13,7 @@ use engine_core::{
         world_ecs::WorldEcs
     }, ui::widgets::*
 };
+use uuid::Uuid;
 
 #[derive(Default)]
 pub struct SpriteModule {}
@@ -63,8 +65,11 @@ impl InspectorModule for SpriteModule {
                 sprite.path = path_str.clone();
 
                 // Load (or reuse) the texture and store the new id
-                let new_id = futures::executor::block_on(assets.load(&path_str));
-                sprite.sprite_id = new_id;
+                let new_id = block_on(assets.load(&path_str));
+                sprite.sprite_id = match new_id {
+                    Ok(id) => id,
+                    Err(_) => SpriteId(Uuid::nil()),
+                }
             }
         }
     }
