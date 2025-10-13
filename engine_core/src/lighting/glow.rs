@@ -22,26 +22,24 @@ inspector_module!(Glow);
 pub struct Glow {
     #[serde_as(as = "FromInto<[f32; 3]>")]
     pub color: Vec3,              
-    pub color_intensity: f32,
-    pub brightness: f32,          
-    #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub mask_pos: Vec2,
+    pub intensity: f32,
+    pub brightness: f32,
     #[serde_as(as = "FromInto<[f32; 2]>")]           
-    pub mask_size: Vec2,
-    pub glow_radius: f32,          
-    pub mask_sprite: String,
+    pub mask_size: Vec2, // TODO get rid of this and read from sprite
+    pub emission: f32,
+    #[widget("png")]          
+    pub sprite: String,
 }
 
 impl Default for Glow {
     fn default() -> Self {
         Self {
             color: vec3(1.0, 1.0, 1.0),
-            color_intensity: 0.5,
+            intensity: 0.5,
             brightness: 0.0,
-            mask_pos: vec2(0.0, 0.0),
             mask_size: vec2(64.0, 64.0),
-            glow_radius: 2.0,
-            mask_sprite: String::new(),
+            emission: 2.0,
+            sprite: String::new(),
         }
     }
 }
@@ -53,6 +51,6 @@ impl PostCreate for Glow {
         entity: Entity,
         asset_manager: &mut AssetManager,
     ) {
-        // TODO check if the entity already has a sprite and use that
+        // TODO check if the entity already has a sprite and use that when there is no path
     }
 }

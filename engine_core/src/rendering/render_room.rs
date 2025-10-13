@@ -11,7 +11,9 @@ use crate::{
         world_ecs::WorldEcs
     }, 
     lighting::{
-        glow::Glow, light::{self, Light}, light_system::LightSystem
+        glow::Glow, 
+        light::Light, 
+        light_system::LightSystem
     }, 
     tiles::tile::TileSprite, 
     world::room::Room

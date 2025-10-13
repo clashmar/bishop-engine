@@ -44,7 +44,7 @@ where
     fn draw(
         &mut self,
         rect: Rect,
-        _assets: &mut AssetManager,
+        asset_manager: &mut AssetManager,
         world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
@@ -73,34 +73,55 @@ where
 
             // Widget rectangle
             let widget_rect = Rect::new(rect.x + label_w, y, rect.w - label_w - 10.0, FIELD_HEIGHT);
-
             // Dispatch based on the enum variant
-            match field.value {
-                FieldValue::Text(txt) => {
+            match (field.value, field.widget_hint) {
+                (FieldValue::Text(txt), Some("png")) => {
+                    let btn_label = if txt.is_empty() {
+                        "[Pick File]".to_string()
+                    } else {
+                        "[Change File]".to_string()
+                    };
+
+                    if gui_button(widget_rect, &btn_label) {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .add_filter("PNG images", &["png"])
+                                .pick_file()
+                            {
+                                *txt = path.to_string_lossy().into_owned();
+
+                                // Load the texure in the asset manager
+                                asset_manager.get_or_load(&txt);
+                            }
+                        }
+                    }
+                }
+                (FieldValue::Text(txt), _) => {
                     let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());
                     if new != *txt {
                         *txt = new;
                     }
                 }
-                FieldValue::Float(f) => {
+                (FieldValue::Float(f), _) => {
                     let new = gui_input_number_f32(base_id, widget_rect, *f);
                     if (new - *f).abs() > f32::EPSILON {
                         *f = new;
                     }
                 }
-                FieldValue::Int(i) => {
+                (FieldValue::Int(i), _) => {
                     let new = gui_input_number_i32(base_id, widget_rect, *i);
                     if new != *i {
                         *i = new;
                     }
                 }
-                FieldValue::Bool(b) => {
+                (FieldValue::Bool(b), _) => {
                     let mut v = *b;
                     if gui_checkbox(widget_rect, &mut v) {
                         *b = v;
                     }
                 }
-                FieldValue::Vec2(v) => {
+                (FieldValue::Vec2(v), _) => {
                     let id_x = *self
                         .field_ids
                         .entry(format!("{}.x", field.name))
@@ -131,7 +152,7 @@ where
                         v.y = new_y;
                     }
                 }
-                FieldValue::Vec3(v) => {
+                (FieldValue::Vec3(v), _) => {
                     let id_x = *self
                         .field_ids
                         .entry(format!("{}.x", field.name))

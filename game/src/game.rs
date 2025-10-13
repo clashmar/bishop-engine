@@ -1,14 +1,10 @@
 // game/src/game.rs
 use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::component::{
+    assets::asset_manager::AssetManager, ecs::component::{
         CurrentRoom, 
         Position, 
         Velocity
-    }, 
-    rendering::render_room::render_room, 
-    storage::core_storage,
-    world::{
+    }, lighting::light_system::LightSystem, rendering::render_room::render_room, storage::core_storage, world::{
         room::Room, 
         world::World
     }
@@ -33,6 +29,9 @@ pub struct GameState {
     mode: Mode,
     /// Asset Manager.
     asset_manager: AssetManager,
+    /// Lighting system for the game.
+    lighting_system: LightSystem,
+
 }
 
 impl GameState {
@@ -66,6 +65,7 @@ impl GameState {
             current_room,
             mode: Mode::Explore,
             asset_manager,
+            lighting_system: LightSystem::new(),
         }
     }
 
@@ -84,6 +84,7 @@ impl GameState {
             current_room: room,
             mode: Mode::Explore,
             asset_manager,
+            lighting_system: LightSystem::new(),
         }
     }
 
@@ -127,19 +128,13 @@ impl GameState {
 
     pub fn draw(&mut self) {
         clear_background(BLUE);
-        
-        self.current_room.variants[0].tilemap.draw(
-            &self.camera.camera,
-            &self.current_room.exits,
-            &self.world.world_ecs,
-            &mut self.asset_manager,
-            self.current_room.position,
-        );
 
         render_room(
             &self.world.world_ecs, 
             &self.current_room, 
-            &mut self.asset_manager
+            &mut self.asset_manager,
+            &mut self.lighting_system,
+            &self.camera.camera,
         );
     }
 

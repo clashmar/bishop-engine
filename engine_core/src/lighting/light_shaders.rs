@@ -116,9 +116,8 @@ uniform sampler2D tex_mask7;
 
 uniform int GlowCount;
 uniform float Brightness[MAX_LIGHTS];
+uniform float Intensity[MAX_LIGHTS];
 uniform vec3 Color[MAX_LIGHTS];
-uniform float ColorIntensity[MAX_LIGHTS];
-uniform vec2 LightPos[MAX_LIGHTS];
 uniform float Glow[MAX_LIGHTS];
 uniform float maskWidth[MAX_LIGHTS];
 uniform float maskHeight[MAX_LIGHTS];
@@ -181,7 +180,7 @@ void main() {
         finalMask = max(finalMask, blurred);
 
         // Apply lighting
-        vec3 tinted = mix(scene, Color[i], ColorIntensity[i]);
+        vec3 tinted = mix(scene, Color[i], Intensity[i]);
         vec3 lit = mix(scene, tinted, blurred);
         lit += Brightness[i] * Color[i] * blurred;
 

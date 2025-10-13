@@ -8,63 +8,83 @@
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Position",
-                        data: "(\n    data: {\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\n            position: (57.76088, 43.05877),\n        ),\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            position: (31.056118, 63.43201),\n        ),\n        (\"9fb297ef-b7c6-48bd-8aa0-02f5455b1bd2\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"afdceafc-bb6b-4257-a581-751dcb6c8b13\"): (\n            position: (-0.45536423, 61.390854),\n        ),\n    },\n)",
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (\"afdceafc-bb6b-4257-a581-751dcb6c8b13\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n        (\"9fb297ef-b7c6-48bd-8aa0-02f5455b1bd2\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n    },\n)",
                     ),
                     /*[1]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n        (\"9fb297ef-b7c6-48bd-8aa0-02f5455b1bd2\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n        (\"afdceafc-bb6b-4257-a581-751dcb6c8b13\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\"06f35477-306a-4cde-9fd3-ad7d449ebbfa\"),\n    },\n)",
-                    ),
-                    /*[2]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (\"9fb297ef-b7c6-48bd-8aa0-02f5455b1bd2\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
-                    ),
-                    /*[3]*/ (
-                        type_name: "Light",
-                        data: "(\n    data: {\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\n            pos: (0.0, 0.0),\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.5,\n            radius: 10.0,\n            spread: 100.0,\n            alpha: 0.4,\n            brightness: 1.0,\n        ),\n    },\n)",
-                    ),
-                    /*[4]*/ (
-                        type_name: "Layer",
-                        data: "(\n    data: {\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\n            z: 0,\n        ),\n        (\"afdceafc-bb6b-4257-a581-751dcb6c8b13\"): (\n            z: 0,\n        ),\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            z: 0,\n        ),\n    },\n)",
-                    ),
-                    /*[5]*/ (
-                        type_name: "TileSprite",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[6]*/ (
-                        type_name: "Velocity",
-                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "Sprite",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[8]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[9]*/ (
-                        type_name: "Name",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[10]*/ (
-                        type_name: "Animation",
-                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/games/Game/assets/animation/player/female\"),\n        ),\n    },\n)",
-                    ),
-                    /*[11]*/ (
                         type_name: "CurrentFrame",
                         data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (),\n    },\n)",
                     ),
-                    /*[12]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (),\n    },\n)",
+                    /*[2]*/ (
+                        type_name: "Collider",
+                        data: "(\n    data: {},\n)",
                     ),
-                    /*[13]*/ (
+                    /*[3]*/ (
+                        type_name: "Layer",
+                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            z: 0,\n        ),\n        (\"afdceafc-bb6b-4257-a581-751dcb6c8b13\"): (\n            z: 0,\n        ),\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\n            z: 0,\n        ),\n    },\n)",
+                    ),
+                    /*[4]*/ (
+                        type_name: "Solid",
+                        data: "(\n    data: {\n        (\"a943d116-d3a2-4726-8859-5fa9b8598b76\"): (false),\n        (\"6b1ef033-4bd7-4fb9-bb4e-9caad0e67e51\"): (false),\n        (\"5ac15b72-3989-4e96-b878-4b334c9a59d6\"): (false),\n        (\"7751a1b9-c022-4cdc-af36-e9b482825639\"): (false),\n        (\"0865746d-a145-45af-9064-afe7a5abfc70\"): (false),\n        (\"74e9b7eb-3573-4e66-b598-ccc6102c4a7d\"): (false),\n        (\"608e21ff-801b-4f3e-9ff0-5e076382bb2e\"): (false),\n        (\"ccc2dc1d-1bea-4da8-9613-43f5219bdf17\"): (false),\n        (\"f9f2b876-f151-4239-8799-a7fa3f2ad198\"): (false),\n        (\"aa19dd4c-0f4f-47ff-9a9e-aa022160f29c\"): (false),\n        (\"6c363cdc-08c8-49a6-81cf-16bf8e45c2b2\"): (false),\n        (\"65a9cd51-3937-4f7c-b85c-9b25fcb97978\"): (false),\n        (\"ae9a376d-b816-48a4-9715-b4a5606a61ca\"): (false),\n    },\n)",
+                    ),
+                    /*[5]*/ (
+                        type_name: "Glow",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[6]*/ (
+                        type_name: "Sprite",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[7]*/ (
+                        type_name: "TileSprite",
+                        data: "(\n    data: {\n        (\"0865746d-a145-45af-9064-afe7a5abfc70\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"608e21ff-801b-4f3e-9ff0-5e076382bb2e\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"65a9cd51-3937-4f7c-b85c-9b25fcb97978\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"6b1ef033-4bd7-4fb9-bb4e-9caad0e67e51\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"5ac15b72-3989-4e96-b878-4b334c9a59d6\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"ae9a376d-b816-48a4-9715-b4a5606a61ca\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"6c363cdc-08c8-49a6-81cf-16bf8e45c2b2\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"ccc2dc1d-1bea-4da8-9613-43f5219bdf17\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"7751a1b9-c022-4cdc-af36-e9b482825639\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"f9f2b876-f151-4239-8799-a7fa3f2ad198\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"aa19dd4c-0f4f-47ff-9a9e-aa022160f29c\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"a943d116-d3a2-4726-8859-5fa9b8598b76\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n        (\"74e9b7eb-3573-4e66-b598-ccc6102c4a7d\"): (\n            path: \"/Users/charliesovn/Projects/Aseprite/Tile24.png\",\n        ),\n    },\n)",
+                    ),
+                    /*[8]*/ (
+                        type_name: "Animation",
+                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/games/Game/assets/animation/player/female\"),\n        ),\n    },\n)",
+                    ),
+                    /*[9]*/ (
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (\"9fb297ef-b7c6-48bd-8aa0-02f5455b1bd2\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
+                    ),
+                    /*[10]*/ (
                         type_name: "Player",
                         data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (),\n    },\n)",
                     ),
+                    /*[11]*/ (
+                        type_name: "Velocity",
+                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
+                    ),
+                    /*[12]*/ (
+                        type_name: "Name",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[13]*/ (
+                        type_name: "Walkable",
+                        data: "(\n    data: {\n        (\"0865746d-a145-45af-9064-afe7a5abfc70\"): (false),\n        (\"6b1ef033-4bd7-4fb9-bb4e-9caad0e67e51\"): (false),\n        (\"a943d116-d3a2-4726-8859-5fa9b8598b76\"): (false),\n        (\"6c363cdc-08c8-49a6-81cf-16bf8e45c2b2\"): (false),\n        (\"5ac15b72-3989-4e96-b878-4b334c9a59d6\"): (false),\n        (\"ae9a376d-b816-48a4-9715-b4a5606a61ca\"): (false),\n        (\"7751a1b9-c022-4cdc-af36-e9b482825639\"): (false),\n        (\"74e9b7eb-3573-4e66-b598-ccc6102c4a7d\"): (false),\n        (\"ccc2dc1d-1bea-4da8-9613-43f5219bdf17\"): (false),\n        (\"aa19dd4c-0f4f-47ff-9a9e-aa022160f29c\"): (false),\n        (\"f9f2b876-f151-4239-8799-a7fa3f2ad198\"): (false),\n        (\"608e21ff-801b-4f3e-9ff0-5e076382bb2e\"): (false),\n        (\"65a9cd51-3937-4f7c-b85c-9b25fcb97978\"): (false),\n    },\n)",
+                    ),
+                    /*[14]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (),\n    },\n)",
+                    ),
+                    /*[15]*/ (
+                        type_name: "Position",
+                        data: "(\n    data: {\n        (\"c70485bd-aec7-454a-bec8-7eaa1aaccee9\"): (\n            position: (31.056118, 63.43201),\n        ),\n        (\"0865746d-a145-45af-9064-afe7a5abfc70\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"ccc2dc1d-1bea-4da8-9613-43f5219bdf17\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"9fb297ef-b7c6-48bd-8aa0-02f5455b1bd2\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"74e9b7eb-3573-4e66-b598-ccc6102c4a7d\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"ae9a376d-b816-48a4-9715-b4a5606a61ca\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"7751a1b9-c022-4cdc-af36-e9b482825639\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"6c363cdc-08c8-49a6-81cf-16bf8e45c2b2\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"608e21ff-801b-4f3e-9ff0-5e076382bb2e\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"f9f2b876-f151-4239-8799-a7fa3f2ad198\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"aa19dd4c-0f4f-47ff-9a9e-aa022160f29c\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"5ac15b72-3989-4e96-b878-4b334c9a59d6\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"afdceafc-bb6b-4257-a581-751dcb6c8b13\"): (\n            position: (-0.45536423, 61.390854),\n        ),\n        (\"65a9cd51-3937-4f7c-b85c-9b25fcb97978\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\n            position: (57.76088, 43.05877),\n        ),\n        (\"6b1ef033-4bd7-4fb9-bb4e-9caad0e67e51\"): (\n            position: (32.0, 16.0),\n        ),\n        (\"a943d116-d3a2-4726-8859-5fa9b8598b76\"): (\n            position: (32.0, 16.0),\n        ),\n    },\n)",
+                    ),
+                    /*[16]*/ (
+                        type_name: "Light",
+                        data: "(\n    data: {\n        (\"33b4c9f0-f1e0-49a6-bb53-ec75cb5571f9\"): (\n            pos: (0.0, 0.0),\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.5,\n            radius: 10.0,\n            spread: 100.0,\n            alpha: 0.4,\n            brightness: 1.0,\n        ),\n    },\n)",
+                    ),
                 ],
-                tile_defs: {},
+                tile_defs: {
+                    ("8895d06c-ccaa-45a1-9523-829f4cffd8c8"): (
+                        name: "",
+                        components: [
+                            /*[0]*/ Walkable(false),
+                            /*[1]*/ Solid(false),
+                        ],
+                    ),
+                },
             ),
             rooms: [
                 /*[0]*/ (
@@ -86,6 +106,14 @@
                             tilemap: (
                                 width: 10,
                                 height: 5,
+                                tiles: {
+                                    (
+                                        2,
+                                        1,
+                                    ): (
+                                        entity: Some(("7751a1b9-c022-4cdc-af36-e9b482825639")),
+                                    ),
+                                },
                                 background: (
                                     0.78,
                                     0.78,

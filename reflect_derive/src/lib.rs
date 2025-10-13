@@ -3,14 +3,17 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    parse_macro_input, 
+    Attribute, 
     Data, 
     DeriveInput, 
-    Fields,
+    Fields, 
+    LitStr, 
+    Token, 
+    parse_macro_input
 };
 
 /// `#[derive(Reflect)]` – generates an impl of the `Reflect` trait.
-#[proc_macro_derive(Reflect)]
+#[proc_macro_derive(Reflect, attributes(widget))]
 pub fn derive_reflect(input: TokenStream) -> TokenStream {
     // Parse the input token stream into a syntax tree
     let input = parse_macro_input!(input as DeriveInput);
@@ -42,17 +45,22 @@ pub fn derive_reflect(input: TokenStream) -> TokenStream {
 
     // For each field generate a call to <FieldType>::field_info(...)
     let field_infos = fields.iter().map(|f| {
-        let field_name = f.ident.as_ref().unwrap(); // e.g. `damage`
-        let field_str = field_name.to_string(); // e.g. "damage"
+        let field_name = f.ident.as_ref().unwrap();
+        let field_str = field_name.to_string();
         let ty = &f.ty; // the field type
 
-        // The macro simply emits:
-        //   <Ty as ReflectField>::field_info(&mut self.<field>, "field")
+        let hint_opt = widget_hint(&f.attrs);
+        let hint_expr = match hint_opt {
+            Some(s) => quote! { Some(#s) },
+            None => quote! { None },
+        };
+
         quote! {
             <#ty as crate::ecs::reflect::ReflectField>::field_info(
                 &mut self.#field_name,
                 #field_str
             )
+            .with_hint(#hint_expr)
         }
     });
 
@@ -72,4 +80,30 @@ pub fn derive_reflect(input: TokenStream) -> TokenStream {
 
     // Hand the generated code back to the compiler
     TokenStream::from(expanded)
+}
+
+/// Returns the string literal that appears in `#[widget = "…"]`.
+/// If the attribute is missing, has a different name, or the value is not a
+/// string literal, `None` is returned.
+fn widget_hint(attrs: &[Attribute]) -> Option<String> {
+    for attr in attrs {
+        if !attr.path().is_ident("widget") {
+            continue;
+        }
+
+        // Parse the token stream after the path
+        let parser = |input: syn::parse::ParseStream| {
+            if input.peek(Token![=]) {
+                let _eq: Token![=] = input.parse()?;
+            }
+            let lit: LitStr = input.parse()?;
+            Ok(lit)
+        };
+
+        // If parsing fails we just ignore the attribute
+        if let Ok(lit) = attr.parse_args_with(parser) {
+            return Some(lit.value());
+        }
+    }
+    None
 }

@@ -72,9 +72,8 @@ impl LightSystem {
                 uniforms: vec![
                     UniformDesc::new("GlowCount", UniformType::Int1),
                     UniformDesc::new("Brightness", UniformType::Float1).array(MAX_LIGHTS),
+                    UniformDesc::new("Intensity", UniformType::Float1).array(MAX_LIGHTS),
                     UniformDesc::new("Color", UniformType::Float3).array(MAX_LIGHTS),
-                    UniformDesc::new("ColorIntensity", UniformType::Float1).array(MAX_LIGHTS),
-                    UniformDesc::new("LightPos", UniformType::Float2).array(MAX_LIGHTS),
                     UniformDesc::new("Glow", UniformType::Float1).array(MAX_LIGHTS),
                     UniformDesc::new("maskWidth", UniformType::Float1).array(MAX_LIGHTS),
                     UniformDesc::new("maskHeight", UniformType::Float1).array(MAX_LIGHTS),
@@ -236,14 +235,13 @@ impl LightSystem {
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
 
         for (i, (world_pos, glow)) in glows.iter().take(MAX_LIGHTS).enumerate() {
-            if let Some(id) = asset_manager.get_or_load(&glow.mask_sprite) {
+            if let Some(id) = asset_manager.get_or_load(&glow.sprite) {
                 let screen_pos = render_cam.world_to_screen(*world_pos);
                 self.glow_pos[i] = screen_pos;
                 self.glow_color[i] = glow.color;
-                self.glow_color_int[i] = glow.color_intensity;
+                self.glow_color_int[i] = glow.intensity;
                 self.glow_brightness[i] = glow.brightness;
-                self.glow_radius[i] = glow.glow_radius;
-                self.glow_mask_pos[i] = glow.mask_pos;
+                self.glow_radius[i] = glow.emission;
                 self.glow_mask_size[i] = glow.mask_size;
 
                 // Texture dimensions
@@ -259,9 +257,8 @@ impl LightSystem {
         
         self.glow_mat.set_uniform("GlowCount", glows.len().min(MAX_LIGHTS) as i32);
         self.glow_mat.set_uniform_array("Brightness", &self.glow_brightness);
+        self.glow_mat.set_uniform_array("Intensity", &self.glow_color_int);
         self.glow_mat.set_uniform_array("Color", &self.glow_color);
-        self.glow_mat.set_uniform_array("ColorIntensity", &self.glow_color_int);
-        self.glow_mat.set_uniform_array("LightPos", &self.glow_pos);
         self.glow_mat.set_uniform_array("Glow", &self.glow_radius);
         self.glow_mat.set_uniform_array("maskWidth", &self.glow_mask_width);
         self.glow_mat.set_uniform_array("maskHeight", &self.glow_mask_height);
