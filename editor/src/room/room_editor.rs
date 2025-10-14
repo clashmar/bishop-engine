@@ -14,17 +14,11 @@ use crate::{
     world::coord
 };
 use engine_core::{
-    animation::animation_system::update_animation_sytem, 
-    assets::asset_manager::AssetManager, 
-    ecs::{
+    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, ecs::{
         component::{CurrentRoom, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    lighting::light_system::LightSystem, 
-    rendering::render_room::*, 
-    ui::widgets::*, 
-    world::room::Room
+    }, lighting::light_system::LightSystem, rendering::render_room::*, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
 };
 use macroquad::prelude::*;
 
@@ -125,9 +119,15 @@ impl RoomEditor {
                     ui_was_clicked = true;
                 }
 
+                // Detect dragging
                 if !ui_was_clicked && is_mouse_button_pressed(MouseButton::Left) && !self.dragging {
+
                     self.selected_entity = None;
                     for (entity, pos) in world_ecs.get_store::<Position>().data.iter() {
+                        // Filter out tiles etc
+                        if !can_drag_entity(world_ecs, *entity) {
+                            continue;
+                        }
                         let hitbox = entity_hitbox(
                             *entity,
                             pos.position,
@@ -147,7 +147,7 @@ impl RoomEditor {
                     }
                 }
 
-                // Dragging
+                // Execute dragging
                 if self.dragging {
                     if let Some(entity) = self.selected_entity {
                         if let Some(position) = world_ecs.get_store_mut::<Position>().get_mut(entity) {
@@ -342,6 +342,8 @@ impl RoomEditor {
         self.inspector.set_target(entity);
     }
 
+    
+
     pub fn reset(&mut self) {
         self.mode = RoomEditorMode::Scene;
         self.selected_entity = None;
@@ -349,4 +351,11 @@ impl RoomEditor {
         self.request_play = false;
         self.view_preview = false
     }
+}
+
+pub fn can_drag_entity(world_ecs: &WorldEcs, entity: Entity) -> bool {
+    if world_ecs.get_store::<TileSprite>().get(entity).is_some() {
+        return false;
+    }
+    true
 }

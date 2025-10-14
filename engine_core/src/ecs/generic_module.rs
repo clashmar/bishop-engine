@@ -8,7 +8,8 @@ use crate::{
         entity::Entity, 
         reflect::{FieldValue, Reflect}, 
         world_ecs::WorldEcs
-}};
+    }
+};
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::{borrow::Cow, marker::PhantomData};

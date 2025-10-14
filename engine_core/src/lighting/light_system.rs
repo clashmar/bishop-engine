@@ -5,8 +5,8 @@ use crate::{
     lighting::{
         glow::Glow, 
         light::Light, 
-        light_shaders::*
-    }
+    }, 
+    shaders::shaders::*
 };
 
 /// Max lights per layer.
@@ -20,7 +20,6 @@ pub struct RenderCams {
     pub spot_cam: Camera2D,
     pub composite_cam: Camera2D,
 }
-
 pub struct LightSystem {
     // Render targets
     pub scene_rt: RenderTarget,
@@ -236,22 +235,22 @@ impl LightSystem {
 
         for (i, (world_pos, glow)) in glows.iter().take(MAX_LIGHTS).enumerate() {
             if let Some(id) = asset_manager.get_or_load(&glow.sprite) {
+                let tex = asset_manager.get_texture_from_id(id).clone();
+                self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
+
                 let screen_pos = render_cam.world_to_screen(*world_pos);
                 self.glow_pos[i] = screen_pos;
                 self.glow_color[i] = glow.color;
                 self.glow_color_int[i] = glow.intensity;
                 self.glow_brightness[i] = glow.brightness;
                 self.glow_radius[i] = glow.emission;
-                self.glow_mask_size[i] = glow.mask_size;
 
                 // Texture dimensions
                 if let Some((w, h)) = asset_manager.texture_size(id) {
                     self.glow_mask_width[i]  = w;
                     self.glow_mask_height[i] = h;
+                    self.glow_mask_size[i] = vec2(w, h);
                 }
-
-                let tex = asset_manager.get_texture_from_id(id).clone();
-                self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
             }
         }
         

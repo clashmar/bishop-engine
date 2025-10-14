@@ -24,8 +24,6 @@ pub struct Glow {
     pub color: Vec3,              
     pub intensity: f32,
     pub brightness: f32,
-    #[serde_as(as = "FromInto<[f32; 2]>")]           
-    pub mask_size: Vec2, // TODO get rid of this and read from sprite
     pub emission: f32,
     #[widget("png")]          
     pub sprite: String,
@@ -37,7 +35,6 @@ impl Default for Glow {
             color: vec3(1.0, 1.0, 1.0),
             intensity: 0.5,
             brightness: 0.0,
-            mask_size: vec2(64.0, 64.0),
             emission: 2.0,
             sprite: String::new(),
         }
