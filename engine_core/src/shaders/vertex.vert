@@ -1,3 +1,4 @@
+// engine_core/src/shaders/vertex.vert
 #version 100
 attribute vec3 position;
 attribute vec2 texcoord;

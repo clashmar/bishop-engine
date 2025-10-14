@@ -42,7 +42,7 @@ pub fn render_room(
     // To be implemented but it needs to happen BEFORE the loop
     lighting.init_mask_cam();
     
-    let darkness = 0.8f32; // TODO expose to editor
+    let darkness = 0.4f32; // TODO expose to editor
 
     // Flag for the tilemap
     let mut first_pass = true;
@@ -60,6 +60,7 @@ pub fn render_room(
             render_target: Some(lighting.scene_rt.clone()),
             ..Default::default()
         };
+
         set_camera(&scene_cam);
 
         // Draw the tilemap as the first layer
@@ -81,7 +82,7 @@ pub fn render_room(
         }
 
         // Glow pass
-        lighting.run_glow_pass(render_cam, glows, darkness, asset_manager);
+        lighting.run_glow_pass(render_cam, glows, asset_manager);
     }
 
     // Ambient pass
@@ -132,6 +133,8 @@ fn draw_entity(
             cf.frame_size.y,
         );
         let tex = asset_manager.get_texture_from_id(cf.sprite_id);
+
+        // Draws individual entites
         draw_texture_ex(
             tex,
             pos.position.x + cf.offset.x,

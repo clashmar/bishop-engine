@@ -12,14 +12,6 @@ use crate::{
 /// Max lights per layer.
 pub const MAX_LIGHTS: usize = 10;
 
-/// Helper struct that bundles the four cameras we need for a single layer
-pub struct RenderCams {
-    pub scene_cam: Camera2D,
-    pub glow_cam: Camera2D,
-    pub ambient_cam: Camera2D,
-    pub spot_cam: Camera2D,
-    pub composite_cam: Camera2D,
-}
 pub struct LightSystem {
     // Render targets
     pub scene_rt: RenderTarget,
@@ -49,13 +41,12 @@ pub struct LightSystem {
     pub glow_radius: Vec<f32>,
     pub glow_mask_width: Vec<f32>,
     pub glow_mask_height: Vec<f32>,
-    pub glow_mask_pos: Vec<Vec2>,
     pub glow_mask_size: Vec<Vec2>,
 }
 
 impl LightSystem {
     pub fn new() -> Self {
-        // Render‑targets are created with the screen size.
+        // Render targets are created with the screen size
         let width = screen_width() as u32;
         let height = screen_height() as u32;
 
@@ -74,13 +65,10 @@ impl LightSystem {
                     UniformDesc::new("Intensity", UniformType::Float1).array(MAX_LIGHTS),
                     UniformDesc::new("Color", UniformType::Float3).array(MAX_LIGHTS),
                     UniformDesc::new("Glow", UniformType::Float1).array(MAX_LIGHTS),
-                    UniformDesc::new("maskWidth", UniformType::Float1).array(MAX_LIGHTS),
-                    UniformDesc::new("maskHeight", UniformType::Float1).array(MAX_LIGHTS),
                     UniformDesc::new("maskPos", UniformType::Float2).array(MAX_LIGHTS),
                     UniformDesc::new("maskSize", UniformType::Float2).array(MAX_LIGHTS),
                     UniformDesc::new("screenWidth", UniformType::Float1),
                     UniformDesc::new("screenHeight", UniformType::Float1),
-                    UniformDesc::new("Darkness", UniformType::Float1),
                 ],
                 textures: vec![
                     "scene_tex".to_string(),
@@ -92,6 +80,7 @@ impl LightSystem {
                     "tex_mask5".to_string(),
                     "tex_mask6".to_string(),
                     "tex_mask7".to_string(),
+                    "tex_mask8".to_string(),
                 ],
                 ..Default::default()
             },
@@ -165,7 +154,6 @@ impl LightSystem {
             glow_radius: vec![0.0; MAX_LIGHTS],
             glow_mask_width: vec![0.0; MAX_LIGHTS],
             glow_mask_height: vec![0.0; MAX_LIGHTS],
-            glow_mask_pos: vec![vec2(0.0, 0.0); MAX_LIGHTS],
             glow_mask_size: vec![vec2(0.0, 0.0); MAX_LIGHTS],
         }
     }
@@ -187,7 +175,7 @@ impl LightSystem {
     pub fn clear_cam(rt: &RenderTarget) -> Camera2D {
         let cam = Camera2D {
             target: vec2(screen_width() * 0.5, screen_height() * 0.5),
-            zoom:   vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
             render_target: Some(rt.clone()),
             ..Default::default()
         };
@@ -219,7 +207,6 @@ impl LightSystem {
             self.glow_radius[i] = 0.0;
             self.glow_mask_width[i] = 0.0;
             self.glow_mask_height[i] = 0.0;
-            self.glow_mask_pos[i] = vec2(0.0, 0.0);
             self.glow_mask_size[i] = vec2(0.0, 0.0);
         }
     }
@@ -228,7 +215,6 @@ impl LightSystem {
         &mut self,
         render_cam: &Camera2D,
         glows: Vec<(Vec2, &Glow)>,
-        darkness: f32,
         asset_manager: &mut AssetManager,
     ) {
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
@@ -247,9 +233,9 @@ impl LightSystem {
 
                 // Texture dimensions
                 if let Some((w, h)) = asset_manager.texture_size(id) {
-                    self.glow_mask_width[i]  = w;
-                    self.glow_mask_height[i] = h;
-                    self.glow_mask_size[i] = vec2(w, h);
+                    let width = world_distance_to_screen(render_cam, w);
+                    let height = world_distance_to_screen(render_cam, h);
+                    self.glow_mask_size[i] = vec2(width, height);
                 }
             }
         }
@@ -259,19 +245,24 @@ impl LightSystem {
         self.glow_mat.set_uniform_array("Intensity", &self.glow_color_int);
         self.glow_mat.set_uniform_array("Color", &self.glow_color);
         self.glow_mat.set_uniform_array("Glow", &self.glow_radius);
-        self.glow_mat.set_uniform_array("maskWidth", &self.glow_mask_width);
-        self.glow_mat.set_uniform_array("maskHeight", &self.glow_mask_height);
-        self.glow_mat.set_uniform_array("maskPos", &self.glow_mask_pos);
+        self.glow_mat.set_uniform_array("maskPos", &self.glow_pos);
         self.glow_mat.set_uniform_array("maskSize", &self.glow_mask_size);
         self.glow_mat.set_uniform("screenWidth", screen_width());
         self.glow_mat.set_uniform("screenHeight", screen_height());
-        self.glow_mat.set_uniform("Darkness", darkness);
-        
-        LightSystem::clear_cam(&self.glow_rt);
+
+        let glow_cam = Camera2D {
+            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
+            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            render_target: Some(self.scene_rt.clone()),
+            ..Default::default()
+        };
+
+        // Draw on to the scene texture to respect z layering
+        set_camera(&glow_cam);
         
         gl_use_material(&self.glow_mat);
         draw_texture_ex(
-            &self.glow_rt.texture,
+            &self.scene_rt.texture,
             0.0,
             0.0,
             WHITE,
@@ -293,9 +284,7 @@ impl LightSystem {
             0.0,
             0.0,
             WHITE,
-            DrawTextureParams {
-                ..Default::default()
-            },
+            DrawTextureParams::default(),
         );
         gl_use_default_material();
     }
@@ -345,9 +334,7 @@ impl LightSystem {
                 0.0,
                 0.0,
                 WHITE,
-                DrawTextureParams {
-                    ..Default::default()
-                },
+                DrawTextureParams::default(),
             );
             gl_use_default_material();
         }
@@ -366,9 +353,7 @@ impl LightSystem {
             0.0,
             0.0,
             WHITE,
-            DrawTextureParams {
-                ..Default::default()
-            },
+            DrawTextureParams::default(),
         );
         gl_use_default_material();
     }

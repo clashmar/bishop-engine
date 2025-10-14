@@ -454,13 +454,10 @@ uniform vec3 Color;
 uniform float ColorIntensity;
 uniform vec2 LightPos;
 uniform float Glow;
-uniform float maskWidth;
-uniform float maskHeight;
 uniform vec2 maskPos;
 uniform vec2 maskSize;
 uniform float screenWidth;
 uniform float screenHeight;
-uniform float Darkness; 
 
 float sampleMask(vec2 uvMask)
 {
@@ -478,11 +475,11 @@ void main() {
 
     vec2 fragScreen = uv * vec2(screenWidth, screenHeight);
 
-    vec2 rel = (fragScreen - (maskPos - maskSize * 0.5)) / maskSize;
+    vec2 rel = (fragScreen - maskPos[i]) / maskSize[i];
 
     float c00 = sampleMask(rel);
 
-    vec2 pixelSize = vec2(1.0 / maskWidth, 1.0 / maskHeight);
+    vec2 pixelSize = 1.0 / maskSize[i];
 
     float sum = 0.0;
 
@@ -505,9 +502,9 @@ void main() {
     // Apply lighting
     vec3 tinted = mix(scene, Color, ColorIntensity);
     vec3 lit = mix(scene, tinted, finalMask);
-    lit += Brightness * Color * finalMask;
+    lit += * Color * finalMask;
 
-    vec3 contribution = (lit - scene * (1.0 - Darkness)) * finalMask;
+    vec3 contribution = (lit - scene * finalMask;
 
     gl_FragColor = vec4(contribution, finalMask);
 }
