@@ -17,21 +17,22 @@ uniform sampler2D tex_mask6;
 uniform sampler2D tex_mask7;
 uniform sampler2D tex_mask8;
 
-uniform int   GlowCount; 
+uniform int GlowCount; 
 uniform float Brightness[MAX_LIGHTS];
 uniform float Intensity[MAX_LIGHTS];
-uniform vec3  Color[MAX_LIGHTS];
+uniform vec3 Color[MAX_LIGHTS];
 uniform float Glow[MAX_LIGHTS];            
-uniform vec2  maskPos[MAX_LIGHTS];         
-uniform vec2  maskSize[MAX_LIGHTS];         
+uniform vec2 maskPos[MAX_LIGHTS];         
+uniform vec2 maskSize[MAX_LIGHTS]; 
 
 uniform float screenWidth;
 uniform float screenHeight;
 
-// Sample the correct mask texture for a given light index
-float sampleMask (int i, vec2 uvMask)
+
+// --- Sample the correct mask texture for a given light index ---
+float sampleMask(int i, vec2 uvMask)
 {
-    // UVs outside the mask texture return 0
+    // Reject coordinates outside the mask
     if (uvMask.x < 0.0 || uvMask.x > 1.0 ||
         uvMask.y < 0.0 || uvMask.y > 1.0)
         return 0.0;
@@ -44,56 +45,61 @@ float sampleMask (int i, vec2 uvMask)
     if (i == 5) return texture2D(tex_mask5, uvMask).a;
     if (i == 6) return texture2D(tex_mask6, uvMask).a;
     if (i == 7) return texture2D(tex_mask7, uvMask).a;
-    if (i == 8) return texture2D(tex_mask8, uvMask).a; 
+    if (i == 8) return texture2D(tex_mask8, uvMask).a;
     return 0.0;
 }
 
+
 void main()
 {
-    vec4  base   = texture2D(scene_tex, uv);
-    vec3  scene  = base.rgb;
+    vec4 base = texture2D(scene_tex, uv);
+    vec3 scene = base.rgb;
 
     vec2 fragScreen = uv * vec2(screenWidth, screenHeight);
 
-    float finalMask = 0.0;        
-    vec3  glowAccum = vec3(0.0);   
+    float finalMask = 0.0;
+    vec3 glowAccum = vec3(0.0);
 
     for (int i = 0; i < GlowCount; ++i)
     {
-        if (i >= MAX_LIGHTS) break;               
+        if (i >= MAX_LIGHTS) break;
 
-        // Convert fragment position to mask UV space
+        // Convert fragment position to mask UV
         vec2 rel = (fragScreen - maskPos[i]) / maskSize[i];
 
+        // Sample base alpha
         float c00 = sampleMask(i, rel);
 
+        // Simple 3x3 blur using Glow[i] as radius
         vec2 pixelSize = 1.0 / maskSize[i];
         float sum = 0.0;
         sum += sampleMask(i, rel + pixelSize * vec2(-Glow[i], -Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,    -Glow[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,  -Glow[i]));
         sum += sampleMask(i, rel + pixelSize * vec2( Glow[i], -Glow[i]));
         sum += sampleMask(i, rel + pixelSize * vec2( Glow[i],  0.0));
-        sum += c00;                                
+        sum += c00;
         sum += sampleMask(i, rel + pixelSize * vec2( Glow[i],  Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,    Glow[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,  Glow[i]));
         sum += sampleMask(i, rel + pixelSize * vec2(-Glow[i],  Glow[i]));
         sum += sampleMask(i, rel + pixelSize * vec2(-Glow[i],  0.0));
 
         float avg = sum / 9.0;
-        float s   = clamp(Glow[i], 0.0, 1.0);
-        float blurred = mix(c00, avg, s);         
+        float s = clamp(Glow[i], 0.0, 1.0);
+        float blurred = mix(c00, avg, s);
 
+        // Blend brighter where masks overlap
         finalMask = max(finalMask, blurred);
 
+        // Compute glow color and tint
         vec3 glowColor = Color[i] * Brightness[i] * blurred;
-
         vec3 tinted = mix(scene, Color[i], Intensity[i] * blurred);
         vec3 tintContribution = (tinted - scene) * blurred;
 
+        // Accumulate both glow and tint contributions
         glowAccum += glowColor + tintContribution;
     }
-    
-    vec3 result = mix(scene, scene + glowAccum, finalMask);
 
-    gl_FragColor = vec4(clamp(result,0.0,1.0), 1.0);
+    vec3 result = scene + glowAccum * finalMask;
+
+    gl_FragColor = vec4(clamp(result, 0.0, 1.0), clamp(length(glowAccum), 0.0, 1.0));
 }

@@ -1,5 +1,6 @@
 // editor/src/gui/inspector/inspector_panel.rs
 use engine_core::ecs::component::{Player, RoomCamera};
+use engine_core::world::room::Room;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::{
@@ -36,8 +37,14 @@ pub struct InspectorPanel {
     pending_add: Option<String>,
     /// Rectangles that were drawn this frame and are therefore active.
     active_rects: Vec<Rect>,
-    // Current vertical offset of the scroll‑view.
+    /// Current vertical offset of the scroll‑view.
     scroll_offset: f32,
+    /// Ids of the widgets at the top level of the inspector.
+    widget_ids: WidgetIds,
+}
+
+pub struct WidgetIds {
+    pub darkness_slider_id: WidgetId
 }
 
 impl InspectorPanel {
@@ -59,6 +66,10 @@ impl InspectorPanel {
         for entry in MODULES.iter() {
             modules.push((entry.factory)());
         }
+
+        let widget_ids = WidgetIds {
+            darkness_slider_id: WidgetId::default(),
+        };
         
         Self {
             rect: Rect::new(0., 0., 0., 0.),
@@ -68,6 +79,7 @@ impl InspectorPanel {
             pending_add: None,
             active_rects: Vec::new(),
             scroll_offset: 0.0,
+            widget_ids,
         }
     }
 
@@ -90,6 +102,7 @@ impl InspectorPanel {
         &mut self,
         asset_manager: &mut AssetManager,
         world_ecs: &mut WorldEcs,
+        room: &mut Room,
     ) -> bool {
         self.active_rects.clear();
    
@@ -229,13 +242,42 @@ impl InspectorPanel {
             // No entity selected – show the old “Create” button
             let create_label = "Create";
             let txt_create = measure_text(create_label, None, 20, 1.0);
-            let button = self.register_rect(Rect::new(
+            let create_btn = self.register_rect(Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - PADDING,
                 self.rect.y + BTN_MARGIN,
                 txt_create.width + PADDING,
                 BTN_HEIGHT,
             ));
-            return gui_button(button, create_label);
+
+            // Darkness slider
+            let slider_width = 150.0;
+            let slider_rect = self.register_rect(Rect::new(
+                create_btn.x + create_btn.w - slider_width,
+                create_btn.y + BTN_HEIGHT + 5.0,
+                slider_width,
+                BTN_HEIGHT,
+            ));
+
+            let (new_val, changed) = gui_slider(
+                self.widget_ids.darkness_slider_id,
+                slider_rect,
+                0.0,
+                1.0,
+                room.darkness,                      
+            );
+
+            if changed {
+                // Clamp just in case and write back to the room
+                room.darkness = new_val.clamp(0.0, 1.0);
+            }
+
+            let txt_val = format!("{:.2}", room.darkness);
+            let txt_measure = measure_text(&txt_val, None, 20, 1.0);
+            let txt_x = slider_rect.x - txt_measure.width - SPACING;
+            let txt_y = slider_rect.y + 20.;
+            draw_text(&txt_val, txt_x, txt_y, 20.0, WHITE);
+
+            return gui_button(create_btn, create_label);
         }
 
         // Process pending component addition

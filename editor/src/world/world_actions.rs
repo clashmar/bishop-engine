@@ -31,6 +31,7 @@ impl WorldEditor {
                 exits: vec![],
                 adjacent_rooms: vec![],
                 variants: vec![variant],
+                darkness: 0.
             };
 
             let id = room.id;

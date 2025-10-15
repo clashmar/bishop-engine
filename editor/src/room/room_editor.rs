@@ -306,7 +306,11 @@ impl RoomEditor {
                         self.inspector.set_target(None); // clears the panel
                     }
                     
-                    self.create_entity_requested = self.inspector.draw(asset_manager, world_ecs);
+                    self.create_entity_requested = self.inspector.draw(
+                        asset_manager, 
+                        world_ecs,
+                        room,
+                    );
 
                     if self.inspector.target.is_none() {
                         self.selected_entity = None;

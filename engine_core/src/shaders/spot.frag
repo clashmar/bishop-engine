@@ -34,6 +34,7 @@ void main() {
     vec3 result = vec3(0.0);
     float totalMask = 0.0;
 
+
     for (int i = 0; i < LightCount; ++i) {
         if (i >= MAX_LIGHTS) break;
 
@@ -43,18 +44,16 @@ void main() {
                                       dist);
         mask *= LightAlpha[i];
 
-        // colour tint
         vec3 tinted = mix(scene, LightColor[i], LightIntensity[i]);
-        // final lit colour for this light
         vec3 lit = mix(scene, tinted, mask);
         lit += LightBrightness[i] * LightColor[i] * mask;
 
-        // contribution (same formula you already used)
         vec3 contrib = (lit - scene * (1.0 - Darkness)) * mask;
 
         result += contrib;
         totalMask += mask;
     }
 
-    gl_FragColor = vec4(clamp(result, 0.0, 1.0), totalMask);
+    float normalizedMask = clamp(totalMask, 0.0, 1.0);
+gl_FragColor = vec4(clamp(scene + result, 0.0, 1.0), normalizedMask);
 }

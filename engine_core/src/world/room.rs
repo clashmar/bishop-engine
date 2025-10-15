@@ -27,6 +27,7 @@ pub struct Room {
     pub exits: Vec<Exit>,
     pub adjacent_rooms: Vec<Uuid>,
     pub variants: Vec<RoomVariant>,
+    pub darkness: f32,
 }
 
 impl Room {
@@ -44,6 +45,7 @@ impl Room {
         exits: vec![],
         adjacent_rooms: vec![],
         variants: vec![first_variant],
+        darkness: 0.,
         };
 
         let _camera = room.create_room_camera(world_ecs);

@@ -15,16 +15,18 @@ pub const MAX_LIGHTS: usize = 10;
 pub struct LightSystem {
     // Render targets
     pub scene_rt: RenderTarget,
-    pub glow_rt: RenderTarget,
     pub ambient_rt: RenderTarget,
+    pub glow_rt: RenderTarget,
     pub spot_rt: RenderTarget,
     pub mask_rt: RenderTarget,
-    pub composite_rt: RenderTarget,
+    pub scene_comp_rt: RenderTarget,
+    pub final_comp_rt: RenderTarget,
     /// Materials
-    pub glow_mat: Material,
     pub ambient_mat: Material,
+    pub glow_mat: Material,
     pub spot_mat: Material,
-    pub composite_mat: Material,
+    pub scene_comp_mat: Material,
+    pub final_comp_mat: Material,
     /// Cached light data
     pub pos: Vec<Vec2>,
     pub color: Vec<Vec3>,
@@ -36,11 +38,9 @@ pub struct LightSystem {
     /// Cached glow data
     pub glow_brightness: Vec<f32>,
     pub glow_color: Vec<Vec3>,
-    pub glow_color_int: Vec<f32>,
+    pub glow_intensity: Vec<f32>,
     pub glow_pos: Vec<Vec2>,
     pub glow_radius: Vec<f32>,
-    pub glow_mask_width: Vec<f32>,
-    pub glow_mask_height: Vec<f32>,
     pub glow_mask_size: Vec<Vec2>,
 }
 
@@ -116,14 +116,25 @@ impl LightSystem {
             },
         ).unwrap();
 
-        let composite_mat = load_material(
+        let scene_comp_mat = load_material(
+            ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: SCENE_FRAGMENT_SHADER },
+            MaterialParams {
+                textures: vec![
+                    "amb_tex".to_string(),
+                    "glow_tex".to_string(),
+                    "scene_comp_tex".to_string(),
+                ],
+                ..Default::default()
+            },
+        ).unwrap();
+
+        let final_comp_mat = load_material(
             ShaderSource::Glsl { vertex: VERTEX_SHADER, fragment: COMPOSITE_FRAGMENT_SHADER },
             MaterialParams {
                 textures: vec![
-                    "ambient_tex".to_string(),
+                    "scene_comp_tex".to_string(),
                     "spot_tex".to_string(),
-                    "glow_tex".to_string(),
-                    "composite_tex".to_string(),
+                    "final_comp_tex".to_string(),
                 ],
                 ..Default::default()
             },
@@ -131,15 +142,17 @@ impl LightSystem {
 
         Self {
             scene_rt: make_render_target(),
-            glow_rt: make_render_target(),
             ambient_rt: make_render_target(),
+            glow_rt: make_render_target(),
             spot_rt: make_render_target(),
             mask_rt: make_render_target(),
-            composite_rt: make_render_target(),
-            glow_mat,
+            scene_comp_rt: make_render_target(),
+            final_comp_rt: make_render_target(),
             ambient_mat,
+            glow_mat,
             spot_mat,
-            composite_mat,
+            scene_comp_mat,
+            final_comp_mat,
             pos: vec![vec2(0.0, 0.0); MAX_LIGHTS],
             color: vec![vec3(0.0, 0.0, 0.0); MAX_LIGHTS],
             intensity: vec![0.0; MAX_LIGHTS],
@@ -149,13 +162,183 @@ impl LightSystem {
             brightness: vec![0.0; MAX_LIGHTS],
             glow_brightness:vec![0.0; MAX_LIGHTS],
             glow_color: vec![vec3(0.0, 0.0, 0.0); MAX_LIGHTS],
-            glow_color_int: vec![0.0; MAX_LIGHTS],
+            glow_intensity: vec![0.0; MAX_LIGHTS],
             glow_pos: vec![vec2(0.0, 0.0); MAX_LIGHTS],
             glow_radius: vec![0.0; MAX_LIGHTS],
-            glow_mask_width: vec![0.0; MAX_LIGHTS],
-            glow_mask_height: vec![0.0; MAX_LIGHTS],
             glow_mask_size: vec![vec2(0.0, 0.0); MAX_LIGHTS],
         }
+    }
+
+    pub fn run_ambient_pass(
+        &mut self,
+        darkness: f32,
+    ) {
+        LightSystem::clear_cam(&self.ambient_rt);
+
+        self.ambient_mat.set_texture("tex", self.scene_rt.texture.clone());
+        self.ambient_mat.set_uniform("Darkness", darkness);
+
+        gl_use_material(&self.ambient_mat);
+        draw_texture_ex(
+            &self.scene_rt.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams::default(),
+        );
+        gl_use_default_material();
+    }
+
+    pub fn run_glow_pass(
+        &mut self,
+        render_cam: &Camera2D,
+        glows: Vec<(Vec2, &Glow)>,
+        asset_manager: &mut AssetManager,
+    ) {
+        LightSystem::clear_cam(&self.glow_rt);
+        self.clear_glow_buffers();
+        if glows.is_empty() {
+            return;
+        }
+
+        self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
+
+        for (i, (world_pos, glow)) in glows.iter().take(MAX_LIGHTS).enumerate() {
+            if let Some(id) = asset_manager.get_or_load(&glow.sprite) {
+                let tex = asset_manager.get_texture_from_id(id).clone();
+                self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
+
+                let screen_pos = render_cam.world_to_screen(*world_pos);
+                self.glow_pos[i] = screen_pos;
+                self.glow_color[i] = glow.color;
+                self.glow_intensity[i] = glow.intensity;
+                self.glow_brightness[i] = glow.brightness;
+                self.glow_radius[i] = glow.emission;
+
+                // Texture dimensions
+                if let Some((w, h)) = asset_manager.texture_size(id) {
+                    let width = world_distance_to_screen(render_cam, w);
+                    let height = world_distance_to_screen(render_cam, h);
+                    self.glow_mask_size[i] = vec2(width, height);
+                }
+            }
+        }
+        
+        self.glow_mat.set_uniform("GlowCount", glows.len().min(MAX_LIGHTS) as i32);
+        self.glow_mat.set_uniform_array("Brightness", &self.glow_brightness);
+        self.glow_mat.set_uniform_array("Intensity", &self.glow_intensity);
+        self.glow_mat.set_uniform_array("Color", &self.glow_color);
+        self.glow_mat.set_uniform_array("Glow", &self.glow_radius);
+        self.glow_mat.set_uniform_array("maskPos", &self.glow_pos);
+        self.glow_mat.set_uniform_array("maskSize", &self.glow_mask_size);
+        self.glow_mat.set_uniform("screenWidth", screen_width());
+        self.glow_mat.set_uniform("screenHeight", screen_height());
+        
+        gl_use_material(&self.glow_mat);
+        draw_texture_ex(
+            &self.glow_rt.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams::default(),
+        );
+        
+        gl_use_default_material();
+    }
+
+    pub fn run_spotlight_pass(
+        &mut self,
+        render_cam: &Camera2D, 
+        lights: Vec<(Vec2, Light)>,
+        darkness: f32,
+    ) {
+        LightSystem::clear_cam(&self.spot_rt);
+        self.clear_light_buffers();
+
+        if !lights.is_empty() {
+            let light_count = lights.len(); 
+
+            for i in 0..light_count {
+                let (pos, l) = &lights[i];
+                let world_pos = *pos + l.pos;
+
+                self.pos[i] = render_cam.world_to_screen(world_pos);
+                self.radius[i] = world_distance_to_screen(render_cam, l.radius);
+                self.spread[i] = world_distance_to_screen(render_cam, l.spread);
+                self.color[i] = l.color;
+                self.intensity[i] = l.intensity;
+                self.alpha[i] = l.alpha;
+                self.brightness[i] = l.brightness;
+            }
+
+            self.spot_mat.set_texture("tex", self.scene_comp_rt.texture.clone());
+            self.spot_mat.set_texture("light_mask", self.mask_rt.texture.clone());
+
+            self.spot_mat.set_uniform("LightCount", light_count as i32);
+            self.spot_mat.set_uniform_array("LightPos", &self.pos);
+            self.spot_mat.set_uniform_array("LightColor", &self.color);
+            self.spot_mat.set_uniform_array("LightIntensity", &self.intensity);
+            self.spot_mat.set_uniform_array("LightRadius", &self.radius);
+            self.spot_mat.set_uniform_array("LightSpread", &self.spread);
+            self.spot_mat.set_uniform_array("LightAlpha", &self.alpha);
+            self.spot_mat.set_uniform_array("LightBrightness", &self.brightness);
+            self.spot_mat.set_uniform("ScreenWidth", screen_width());
+            self.spot_mat.set_uniform("ScreenHeight", screen_height());
+            self.spot_mat.set_uniform("Darkness", darkness);
+
+            gl_use_material(&self.spot_mat);
+            draw_texture_ex(
+                &self.spot_rt.texture,
+                0.0,
+                0.0,
+                WHITE,
+                DrawTextureParams::default(),
+            );
+            gl_use_default_material();
+        }
+    }
+
+    pub fn run_scene_pass(&mut self) {
+        let scene_comp_cam = Camera2D {
+            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
+            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            render_target: Some(self.scene_comp_rt.clone()),
+            ..Default::default()
+        };
+
+        set_camera(&scene_comp_cam);
+
+        self.scene_comp_mat.set_texture("amb_tex", self.ambient_rt.texture.clone());
+        self.scene_comp_mat.set_texture("glow_tex", self.glow_rt.texture.clone());
+        self.scene_comp_mat.set_texture("scene_comp_tex", self.scene_comp_rt.texture.clone());
+
+        gl_use_material(&self.scene_comp_mat);
+        draw_texture_ex(
+            &self.scene_comp_rt.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams::default(),
+        );
+        gl_use_default_material();
+    }
+
+    pub fn run_final_pass(&mut self) {
+        LightSystem::clear_cam(&self.final_comp_rt);
+
+        self.final_comp_mat.set_texture("scene_comp_tex", self.scene_comp_rt.texture.clone());
+        self.final_comp_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
+        self.final_comp_mat.set_texture("final_comp_tex", self.final_comp_rt.texture.clone());
+
+        gl_use_material(&self.final_comp_mat);
+        draw_texture_ex(
+            &self.final_comp_rt.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams::default(),
+        );
+        gl_use_default_material();
     }
 
     /// Sets the mask render target background to white.
@@ -202,160 +385,11 @@ impl LightSystem {
         for i in 0..MAX_LIGHTS {
             self.glow_brightness[i] = 0.0;
             self.glow_color[i] = vec3(0.0, 0.0, 0.0);
-            self.glow_color_int[i] = 0.0;
+            self.glow_intensity[i] = 0.0;
             self.glow_pos[i] = vec2(0.0, 0.0);
             self.glow_radius[i] = 0.0;
-            self.glow_mask_width[i] = 0.0;
-            self.glow_mask_height[i] = 0.0;
             self.glow_mask_size[i] = vec2(0.0, 0.0);
         }
-    }
-
-    pub fn run_glow_pass(
-        &mut self,
-        render_cam: &Camera2D,
-        glows: Vec<(Vec2, &Glow)>,
-        asset_manager: &mut AssetManager,
-    ) {
-        self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
-
-        for (i, (world_pos, glow)) in glows.iter().take(MAX_LIGHTS).enumerate() {
-            if let Some(id) = asset_manager.get_or_load(&glow.sprite) {
-                let tex = asset_manager.get_texture_from_id(id).clone();
-                self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
-
-                let screen_pos = render_cam.world_to_screen(*world_pos);
-                self.glow_pos[i] = screen_pos;
-                self.glow_color[i] = glow.color;
-                self.glow_color_int[i] = glow.intensity;
-                self.glow_brightness[i] = glow.brightness;
-                self.glow_radius[i] = glow.emission;
-
-                // Texture dimensions
-                if let Some((w, h)) = asset_manager.texture_size(id) {
-                    let width = world_distance_to_screen(render_cam, w);
-                    let height = world_distance_to_screen(render_cam, h);
-                    self.glow_mask_size[i] = vec2(width, height);
-                }
-            }
-        }
-        
-        self.glow_mat.set_uniform("GlowCount", glows.len().min(MAX_LIGHTS) as i32);
-        self.glow_mat.set_uniform_array("Brightness", &self.glow_brightness);
-        self.glow_mat.set_uniform_array("Intensity", &self.glow_color_int);
-        self.glow_mat.set_uniform_array("Color", &self.glow_color);
-        self.glow_mat.set_uniform_array("Glow", &self.glow_radius);
-        self.glow_mat.set_uniform_array("maskPos", &self.glow_pos);
-        self.glow_mat.set_uniform_array("maskSize", &self.glow_mask_size);
-        self.glow_mat.set_uniform("screenWidth", screen_width());
-        self.glow_mat.set_uniform("screenHeight", screen_height());
-
-        let glow_cam = Camera2D {
-            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
-            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
-            render_target: Some(self.scene_rt.clone()),
-            ..Default::default()
-        };
-
-        // Draw on to the scene texture to respect z layering
-        set_camera(&glow_cam);
-        
-        gl_use_material(&self.glow_mat);
-        draw_texture_ex(
-            &self.scene_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
-        
-        gl_use_default_material();
-    }
-    
-    pub fn run_ambient_pass(&mut self, darkness: f32) {
-        self.ambient_mat.set_texture("tex", self.scene_rt.texture.clone());
-        self.ambient_mat.set_uniform("Darkness", darkness);
-
-        LightSystem::clear_cam(&self.ambient_rt);
-
-        gl_use_material(&self.ambient_mat);
-        draw_texture_ex(
-            &self.ambient_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
-        gl_use_default_material();
-    }
-
-    pub fn run_spotlight_pass(
-        &mut self,
-        render_cam: &Camera2D, 
-        lights: Vec<(Vec2, Light)>,
-        darkness: f32,
-    ) {
-        if !lights.is_empty() {
-            let light_count = lights.len(); 
-
-            for i in 0..light_count {
-                let (pos, l) = &lights[i];
-                let world_pos = *pos + l.pos;
-
-                self.pos[i] = render_cam.world_to_screen(world_pos);
-                self.radius[i] = world_distance_to_screen(render_cam, l.radius);
-                self.spread[i] = world_distance_to_screen(render_cam, l.spread);
-                self.color[i] = l.color;
-                self.intensity[i] = l.intensity;
-                self.alpha[i] = l.alpha;
-                self.brightness[i] = l.brightness;
-            }
-
-            self.spot_mat.set_texture("tex", self.scene_rt.texture.clone());
-            self.spot_mat.set_texture("light_mask", self.mask_rt.texture.clone());
-
-            self.spot_mat.set_uniform("LightCount", light_count as i32);
-            self.spot_mat.set_uniform_array("LightPos", &self.pos);
-            self.spot_mat.set_uniform_array("LightColor", &self.color);
-            self.spot_mat.set_uniform_array("LightIntensity", &self.intensity);
-            self.spot_mat.set_uniform_array("LightRadius", &self.radius);
-            self.spot_mat.set_uniform_array("LightSpread", &self.spread);
-            self.spot_mat.set_uniform_array("LightAlpha", &self.alpha);
-            self.spot_mat.set_uniform_array("LightBrightness", &self.brightness);
-            self.spot_mat.set_uniform("ScreenWidth", screen_width());
-            self.spot_mat.set_uniform("ScreenHeight", screen_height());
-            self.spot_mat.set_uniform("Darkness", darkness);
-
-            LightSystem::clear_cam(&self.spot_rt);
-
-            gl_use_material(&self.spot_mat);
-            draw_texture_ex(
-                &self.spot_rt.texture,
-                0.0,
-                0.0,
-                WHITE,
-                DrawTextureParams::default(),
-            );
-            gl_use_default_material();
-        }
-    }
-
-    pub fn run_composite_pass(&mut self) {
-        self.composite_mat.set_texture("ambient_tex", self.ambient_rt.texture.clone());
-        self.composite_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
-        self.composite_mat.set_texture("composite_tex", self.composite_rt.texture.clone());
-
-        LightSystem::clear_cam(&self.composite_rt);
-
-        gl_use_material(&self.composite_mat);
-        draw_texture_ex(
-            &self.composite_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
-        gl_use_default_material();
     }
 }
 

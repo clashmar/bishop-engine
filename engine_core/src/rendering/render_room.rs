@@ -36,22 +36,18 @@ pub fn render_room(
     // Organize entities by layer
     let layer_map = collect_layer_map(world_ecs, room);
 
-    LightSystem::clear_cam(&lighting.composite_rt);
+    LightSystem::clear_cam(&lighting.scene_comp_rt);
+    LightSystem::clear_cam(&lighting.final_comp_rt);
 
     // Draw each blocking texture in black onto a white background
     // To be implemented but it needs to happen BEFORE the loop
     lighting.init_mask_cam();
-    
-    let darkness = 0.4f32; // TODO expose to editor
 
     // Flag for the tilemap
     let mut first_pass = true;
     let tilemap = &room.current_variant().tilemap; 
 
     for (_z, (entities, glows)) in layer_map {
-        // Reset before using them
-        lighting.clear_light_buffers();
-
         // Reset the cameras (except the composite cam)
         // Scene cam needs to draw to the current render cam
         let scene_cam = Camera2D {
@@ -60,8 +56,9 @@ pub fn render_room(
             render_target: Some(lighting.scene_rt.clone()),
             ..Default::default()
         };
-
+        
         set_camera(&scene_cam);
+        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
 
         // Draw the tilemap as the first layer
         if first_pass {
@@ -81,31 +78,36 @@ pub fn render_room(
             );
         }
 
-        // Glow pass
-        lighting.run_glow_pass(render_cam, glows, asset_manager);
-    }
+        // Ambient pass
+        lighting.run_ambient_pass(room.darkness);
 
-    // Ambient pass
-    lighting.run_ambient_pass(darkness);
+        // Glow pass
+        lighting.run_glow_pass(
+            render_cam, 
+            glows, 
+            asset_manager,
+        );
+
+        // Combine all scene renders
+        lighting.run_scene_pass();
+    }
         
     let lights = collect_lights(world_ecs, room);
     
     // Spotlight pass
-    if !lights.is_empty() {
-        lighting.run_spotlight_pass(
-            render_cam, 
-            lights, 
-            darkness
-        );
-    }
-
+    lighting.run_spotlight_pass(
+        render_cam, 
+        lights, 
+        room.darkness
+    );
+    
     // Composite pass
-    lighting.run_composite_pass();
+    lighting.run_final_pass();
 
     // Draw everything to the screen
     set_default_camera();
     draw_texture_ex(
-        &lighting.composite_rt.texture,
+        &lighting.final_comp_rt.texture,
         0.0,
         0.0,
         WHITE,
