@@ -13,10 +13,8 @@ void main() {
     vec4 spot = texture2D(spot_tex, uv);
     vec4 existing = texture2D(final_comp_tex, uv);
 
-    // Combine ambient and spotlight pass for this layer
     vec4 current = mix(scene, scene + spot, spot.a);
 
-    // Blend current layer over existing composite
     vec4 outCol = mix(existing, current, current.a);
 
     gl_FragColor = vec4(clamp(outCol.rgb, 0.0, 1.0), 1.0);

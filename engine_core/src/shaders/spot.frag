@@ -55,5 +55,5 @@ void main() {
     }
 
     float normalizedMask = clamp(totalMask, 0.0, 1.0);
-gl_FragColor = vec4(clamp(scene + result, 0.0, 1.0), normalizedMask);
+    gl_FragColor = vec4(clamp(scene + result, 0.0, 1.0), normalizedMask);
 }

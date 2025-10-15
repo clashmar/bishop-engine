@@ -21,15 +21,13 @@ uniform int GlowCount;
 uniform float Brightness[MAX_LIGHTS];
 uniform float Intensity[MAX_LIGHTS];
 uniform vec3 Color[MAX_LIGHTS];
-uniform float Glow[MAX_LIGHTS];            
+uniform float Emission[MAX_LIGHTS];            
 uniform vec2 maskPos[MAX_LIGHTS];         
 uniform vec2 maskSize[MAX_LIGHTS]; 
 
 uniform float screenWidth;
 uniform float screenHeight;
 
-
-// --- Sample the correct mask texture for a given light index ---
 float sampleMask(int i, vec2 uvMask)
 {
     // Reject coordinates outside the mask
@@ -49,57 +47,47 @@ float sampleMask(int i, vec2 uvMask)
     return 0.0;
 }
 
-
 void main()
 {
-    vec4 base = texture2D(scene_tex, uv);
-    vec3 scene = base.rgb;
+    vec3 baseScene = texture2D(scene_tex, uv).rgb;
 
     vec2 fragScreen = uv * vec2(screenWidth, screenHeight);
-
     float finalMask = 0.0;
     vec3 glowAccum = vec3(0.0);
 
-    for (int i = 0; i < GlowCount; ++i)
-    {
+    for (int i = 0; i < GlowCount; ++i) {
         if (i >= MAX_LIGHTS) break;
 
-        // Convert fragment position to mask UV
         vec2 rel = (fragScreen - maskPos[i]) / maskSize[i];
-
-        // Sample base alpha
         float c00 = sampleMask(i, rel);
 
-        // Simple 3x3 blur using Glow[i] as radius
+        // 3×3 blur TODO: Improve range and clarity
         vec2 pixelSize = 1.0 / maskSize[i];
         float sum = 0.0;
-        sum += sampleMask(i, rel + pixelSize * vec2(-Glow[i], -Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,  -Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2( Glow[i], -Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2( Glow[i],  0.0));
+        sum += sampleMask(i, rel + pixelSize * vec2(-Emission[i], -Emission[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2( 0.0, -Emission[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2( Emission[i], -Emission[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2( Emission[i],  0.0));
         sum += c00;
-        sum += sampleMask(i, rel + pixelSize * vec2( Glow[i],  Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,  Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2(-Glow[i],  Glow[i]));
-        sum += sampleMask(i, rel + pixelSize * vec2(-Glow[i],  0.0));
-
+        sum += sampleMask(i, rel + pixelSize * vec2( Emission[i],  Emission[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2( 0.0,  Emission[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2(-Emission[i],  Emission[i]));
+        sum += sampleMask(i, rel + pixelSize * vec2(-Emission[i],  0.0));
         float avg = sum / 9.0;
-        float s = clamp(Glow[i], 0.0, 1.0);
-        float blurred = mix(c00, avg, s);
 
-        // Blend brighter where masks overlap
+        float blurred = mix(c00, avg, clamp(Emission[i],0.0,1.0));
         finalMask = max(finalMask, blurred);
 
-        // Compute glow color and tint
         vec3 glowColor = Color[i] * Brightness[i] * blurred;
-        vec3 tinted = mix(scene, Color[i], Intensity[i] * blurred);
-        vec3 tintContribution = (tinted - scene) * blurred;
 
-        // Accumulate both glow and tint contributions
+        vec3 tinted = mix(baseScene, Color[i], Intensity[i] * blurred);
+        vec3 tintContribution = (tinted - baseScene) * blurred;
+
         glowAccum += glowColor + tintContribution;
     }
 
-    vec3 result = scene + glowAccum * finalMask;
+    vec3 outRGB = glowAccum;               
+    float outA = finalMask;
 
-    gl_FragColor = vec4(clamp(result, 0.0, 1.0), clamp(length(glowAccum), 0.0, 1.0));
+    gl_FragColor = vec4(clamp(outRGB,0.0,1.0), outA);
 }

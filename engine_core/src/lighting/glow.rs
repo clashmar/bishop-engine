@@ -34,8 +34,8 @@ impl Default for Glow {
         Self {
             color: vec3(1.0, 1.0, 1.0),
             intensity: 0.5,
-            brightness: 0.0,
-            emission: 2.0,
+            brightness: 0.5,
+            emission: 0.0,
             sprite: String::new(),
         }
     }

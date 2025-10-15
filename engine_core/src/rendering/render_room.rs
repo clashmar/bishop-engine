@@ -48,7 +48,6 @@ pub fn render_room(
     let tilemap = &room.current_variant().tilemap; 
 
     for (_z, (entities, glows)) in layer_map {
-        // Reset the cameras (except the composite cam)
         // Scene cam needs to draw to the current render cam
         let scene_cam = Camera2D {
             target: render_cam.target,
@@ -57,7 +56,7 @@ pub fn render_room(
             ..Default::default()
         };
         
-        set_camera(&scene_cam);
+        set_camera(&scene_cam); // Set before clearing!
         clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
 
         // Draw the tilemap as the first layer
@@ -78,41 +77,33 @@ pub fn render_room(
             );
         }
 
-        // Ambient pass
+        // Render the darkened scene
         lighting.run_ambient_pass(room.darkness);
 
-        // Glow pass
+        // Render glow per layer
         lighting.run_glow_pass(
             render_cam, 
             glows, 
             asset_manager,
         );
 
-        // Combine all scene renders
+        // Render the undarkened room for lighting pass
+        lighting.run_undarkened_pass();
+
+        // Combine scene renders
         lighting.run_scene_pass();
     }
-        
+
+    // Lighting pass
     let lights = collect_lights(world_ecs, room);
-    
-    // Spotlight pass
     lighting.run_spotlight_pass(
         render_cam, 
         lights, 
         room.darkness
     );
     
-    // Composite pass
+    // Composite the final render
     lighting.run_final_pass();
-
-    // Draw everything to the screen
-    set_default_camera();
-    draw_texture_ex(
-        &lighting.final_comp_rt.texture,
-        0.0,
-        0.0,
-        WHITE,
-        DrawTextureParams::default(),
-    );
 }
 
 fn draw_entity(
@@ -127,7 +118,6 @@ fn draw_entity(
 
     // Animate/Draw sprite
     if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
-        // Source rect = column/row * frame size
         let src = Rect::new(
             cf.col as f32 * cf.frame_size.x,
             cf.row as f32 * cf.frame_size.y,
@@ -222,8 +212,8 @@ pub fn draw_entity_placeholder(pos: Vec2) {
 fn collect_layer_map<'a>(
     world_ecs: &'a WorldEcs,
     room: &Room,
-) -> BTreeMap<i32, (Vec<(Entity, &'a Position)>, Vec<(Vec2, &'a Glow)>)> {
-    let mut map: BTreeMap<i32, (Vec<(Entity, &Position)>, Vec<(Vec2, &Glow)>)> = BTreeMap::new();
+) -> BTreeMap<i32, (Vec<(Entity, &'a Position)>, Vec<(&'a Glow, Vec2)>)> {
+    let mut map: BTreeMap<i32, (Vec<(Entity, &Position)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
     let pos_store = world_ecs.get_store::<Position>();
     let tile_store = world_ecs.get_store::<TileSprite>();
@@ -256,8 +246,8 @@ fn collect_layer_map<'a>(
         entry.0.push((*entity, pos));
 
         // If the entity also has a Glow component
-        if let Some(l) = glow_store.get(*entity) {
-            entry.1.push((pos.position, l));
+        if let Some(glow) = glow_store.get(*entity) {
+            entry.1.push((glow, pos.position));
         }
     }
 
