@@ -1,57 +1,144 @@
-use core::{constants::*, player::Player, tilemap::{self, TileMap}, tile::GridPos};
-use crate::{modes::Mode};
+// game/src/game.rs
+use engine_core::{
+    assets::asset_manager::AssetManager, 
+    ecs::component::{
+        CurrentRoom, 
+        Position, 
+        Velocity
+    }, 
+    lighting::light_system::LightSystem, 
+    rendering::render_room::render_room, 
+    storage::core_storage, 
+    world::{
+        room::Room, 
+        world::World
+    }
+};
+use crate::{
+    input::player_input::update_player_input, 
+    modes::Mode, 
+    physics::physics_system::update_physics
+};
 use macroquad::prelude::*;
-use crate::camera::Camera;
+use engine_core::camera::game_camera::GameCamera;
 
-#[derive(Debug, Clone)]
 pub struct GameState {
-    map: TileMap,
-    player: Player,
+    /// The whole world, including its persistent ecs.
+    world: World,
+    /// Camera that follows the player.
+    camera: GameCamera,
+    /// Current room
+    current_room: Room,
+    /// Current mode.
     mode: Mode,
-    camera: Camera,
+    /// Asset Manager.
+    asset_manager: AssetManager,
+    /// Lighting system for the game.
+    lighting_system: LightSystem,
 }
 
 impl GameState {
-    pub fn new() -> Self {
-        let start_pos = GridPos::new(0, 10);
-        let map = tilemap::get_current_map();
+    pub async fn new() -> Self {
+        let world_id = core_storage::most_recent_world_id()
+            .expect("No world folder found in assets/worlds");
 
-        let player = Player { 
-            grid_position: start_pos, 
-            actual_position: tilemap::tile_to_world(start_pos, map.height),
-            velocity_x: 0.0,
-            velocity_y: 0.0,
-            is_airborne: false,
-            has_double_jump: true,
-            color: BLUE ,
-        };
+        let mut world = core_storage::load_world_by_id(&world_id)
+            .expect("Failed to deserialize world.ron");
+
+        let start_room_id = world
+            .starting_room
+            .or_else(|| world.rooms.first().map(|m| m.id))
+            .expect("World has no starting room nor any rooms");
+
+        let current_room = world
+            .rooms
+            .iter()
+            .find(|m| m.id == start_room_id)
+            .expect("Missing id for the starting room")
+            .clone();
+
+        let camera = Room::get_room_camera(&world.world_ecs, current_room.id)
+            .expect("Tested room was missing a camera.");
+
+        let asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
         Self {
-            map: tilemap::get_current_map(),
-            player: player,
+            world,
+            camera,
+            current_room,
             mode: Mode::Explore,
-            camera: Camera { 
-                position: player.actual_position,
-            },
+            asset_manager,
+            lighting_system: LightSystem::new(),
+        }
+    }
+
+    pub async fn for_room(
+        room: Room,
+        mut world: World,
+    ) -> Self {
+        let asset_manager = AssetManager::new(&mut world.world_ecs).await;
+
+        let camera = Room::get_room_camera(&world.world_ecs, room.id)
+            .expect("Tested room was missing a camera.");
+
+        Self {
+            world,
+            camera,
+            current_room: room,
+            mode: Mode::Explore,
+            asset_manager,
+            lighting_system: LightSystem::new(),
         }
     }
 
     pub fn update(&mut self) {
-        match self.mode {
-            Mode::Explore => {
-                self.player.update(&self.map);
-
-                // Keep camera locked on player in explore mode
-                self.camera.position = self.player.actual_position;
-            }
-            Mode::Combat => {
-                self.camera.move_camera();
-            }
-        }
-
         if is_key_pressed(KeyCode::C) {
             self.toggle_mode();
         }
+
+        let player = self.world.world_ecs.get_player_entity();
+
+        let player_vel = self.world.world_ecs
+            .get_store_mut::<Velocity>()
+            .get_mut(player)
+            .expect("Player must have a Velocity component");
+
+        update_player_input(player_vel);
+
+        // If an entity exits the current room
+        if let Some((exiting_entity, target_id, new_pos)) = update_physics(&mut self.world.world_ecs, &self.current_room) {
+            let new_room = self.world
+                .rooms
+                .iter()
+                .find(|r| r.id == target_id)
+                .expect("Target room not found");
+
+            // Only update the new current room if the player exits
+            if exiting_entity == player {
+                self.current_room = new_room.clone();
+
+                self.camera = Room::get_room_camera(&self.world.world_ecs, new_room.id)
+                    .expect("New room missing a camera");
+            }
+
+            let cur_room_mut = self.world.world_ecs.get_mut::<CurrentRoom>(exiting_entity).unwrap();
+            cur_room_mut.0 = new_room.id;
+
+            let pos_mut = self.world.world_ecs.get_mut::<Position>(exiting_entity).unwrap();
+            pos_mut.position = new_pos;
+        }
+    }
+
+    pub fn draw(&mut self) {
+        clear_background(BLUE);
+
+        render_room(
+            &self.world.world_ecs, 
+            &self.current_room, 
+            &mut self.asset_manager,
+            &mut self.lighting_system,
+            &self.camera.camera,
+        );
     }
 
     fn toggle_mode(&mut self) {
@@ -59,21 +146,5 @@ impl GameState {
             Mode::Explore => Mode::Combat,
             Mode::Combat => Mode::Explore,
         };
-    }
-
-    pub fn draw(&self) {
-        clear_background(BLACK);
-
-        self.camera.update_camera();
-
-        // self.map.draw();
-
-        draw_rectangle(
-            self.player.actual_position.x,
-            self.player.actual_position.y,
-            PLAYER_WIDTH,
-            PLAYER_HEIGHT,
-            self.player.color,
-        );
     }
 }

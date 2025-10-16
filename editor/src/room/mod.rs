@@ -1,3 +1,2 @@
 pub mod room_editor;
-pub mod entity_palette;
-mod room_actions;
+mod room_editor_rendering;

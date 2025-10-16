@@ -1,14 +1,23 @@
-use uuid::Uuid;
-use macroquad::prelude::*;
-use crate::camera_controller::CameraController;
-use crate::controls::controls::Controls;
-use crate::tilemap::tile_palette::TilePalette;
-use crate::{storage::world_storage, room::room_editor::RoomEditor, world::world_editor::WorldEditor};
-use core::assets::asset_manager::AssetManager;
-use core::world::room::Room;
-use core::world::{world::World};
-use core::constants::*;
+// editor/src/editor.rs
 use std::io;
+use macroquad::prelude::*;
+use uuid::Uuid;
+use crate::{
+    editor_camera_controller::EditorCameraController,
+    controls::controls::Controls,
+    room::room_editor::RoomEditor,
+    storage::editor_storage,
+    tilemap::tile_palette::TilePalette,
+    world::world_editor::WorldEditor,
+    playtest::room_playtest,
+};
+use engine_core::{
+    assets::asset_manager::AssetManager, 
+    constants::*, 
+    game::game::Game, 
+    physics::collider_system, 
+    world::room::Room
+};
 
 pub enum EditorMode {
     World,
@@ -16,128 +25,151 @@ pub enum EditorMode {
 }
 
 pub struct Editor {
-    pub world: World,
+    pub game: Game,
     pub mode: EditorMode,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
-    pub camera: Camera2D, 
-    pub current_room: Option<Room>,
+    pub camera: Camera2D,
     pub current_room_id: Option<Uuid>,
-    pub assets: AssetManager,
+    pub asset_manager: AssetManager,
 }
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
-        let world = if let Some(latest_id) = world_storage::most_recent_world_id() {
-             world_storage::load_world_by_id(&latest_id).expect("Could not load world")
-        } else if let Some(name) = world_storage::prompt_user_input().await {
-            world_storage::create_new_world(name)
+        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
+            editor_storage::load_game_by_name(&name)?
+        } else if let Some(name) = editor_storage::prompt_user_input().await {
+            editor_storage::create_new_game(name)
         } else {
             // User pressed Escape
-            world_storage::create_new_world("untitled".to_string())
+            editor_storage::create_new_game("untitled".to_string())
         };
 
-        let camera = CameraController::camera_for_room(
+        let camera = EditorCameraController::camera_for_room(
             DEFAULT_ROOM_SIZE,
             DEFAULT_ROOM_POSITION,
         );
 
-        let mut assets = AssetManager::new();
+        let world = game.current_world_mut();
 
-        let mut palette = match world_storage::load_palette(&world.id) {
+        let mut asset_manager = AssetManager::new(&mut world.world_ecs).await;
+
+        let mut palette = match editor_storage::load_palette(&game.name) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Failed to load palette: {e}");
                 // Fall back to a new palette
-                TilePalette::new(vec2(10.0, 10.0), 32.0, 2, 2)
+                TilePalette::new()
             }
         };
 
         // Re‑load all sprite textures that belong to the palette.
-        palette.rebuild_runtime(&mut assets).await;
+        palette.rebuild_runtime(&mut asset_manager).await;
 
         let mut editor = Self {
-            world,
+            game,
             mode: EditorMode::World,
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
             camera,
-            current_room: None,
             current_room_id: None,
-            assets,
+            asset_manager,
         };
 
         // Give the palette to the tilemap editor
-        editor.room_editor.tilemap_editor.palette = palette;
-        editor.room_editor.entity_palette.load_prefabs_from_disk(&editor.world.id, &mut editor.assets);
+        editor.room_editor.tilemap_editor.panel.palette = palette;
 
         Ok(editor)
     }
 
     pub async fn update(&mut self) {
-        CameraController::update(&mut self.camera);
+        if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui() {
+            EditorCameraController::update(&mut self.camera);
+        }
+        
         match self.mode {
             EditorMode::World => {
                 // Update returns the id of the room being edited
-                if let Some(room_id) = self.world_editor.update(&mut self.camera, &mut self.world).await {
-                    match world_storage::load_room(&self.world.id, room_id) {
-                        Ok(room) => {
-                            self.current_room = Some(room);
-                            self.current_room_id = Some(room_id);
-                            self.sync_assets();
-                            self.mode = EditorMode::Room(room_id);
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to load room {room_id}: {e}");
-                        }
-                    }
+                if let Some(room_id) = self.world_editor.update(&mut self.camera, &mut self.game.current_world_mut()).await {
+                    self.current_room_id = Some(room_id);
+                    self.mode = EditorMode::Room(room_id);
                 }
             }
             EditorMode::Room(room_id) => {
-                let done = {
-                    let meta_slice = &mut self.world.rooms_metadata[..];
-                    let room = self.current_room.as_mut().expect("room must be loaded");
+                let world = self.game.current_world_mut();
 
+                let other_bounds: Vec<(Vec2, Vec2)> = world.rooms
+                    .iter()
+                    .filter(|r| r.id != room_id)
+                    .map(|r| (r.position, r.size))
+                    .collect();
+                
+                let room = world.rooms
+                    .iter_mut()
+                    .find(|r| r.id == room_id)
+                    .expect("Could not find room in world.");
+
+                let done = {
                     // Returns true if escaped
                     self.room_editor.update(
-                            &mut self.camera, 
-                            room, 
-                            room_id, 
-                            meta_slice,
-                            &mut self.world.world_ecs,
-                            &mut self.assets,
-                            &self.world.id,
-                        )
+                        &mut self.camera, 
+                        room,
+                        &other_bounds,
+                        &mut world.world_ecs,
+                        &mut self.asset_manager,
+                    ).await
                 };
 
+                collider_system::update_colliders_from_sprites(
+                    &mut self.game.current_world_mut().world_ecs,
+                    &mut self.asset_manager,
+                );
+
+                // Launch play‑test if the play button was pressed
+                if self.room_editor.request_play {
+                    let world = self.game.current_world();
+
+                    // Write the payload
+                    if let Some(room_id) = &self.current_room_id {
+                        let room = self.get_room_from_id(room_id);
+                        let payload_path = room_playtest::write_playtest_payload(room, &world);
+
+                        // Build the binary first
+                        match room_playtest::build_playtest_binary().await {
+                            Ok(exe_path) => {
+                                // Launch the binary
+                                if let Err(e) = std::process::Command::new(&exe_path)
+                                    .arg(&payload_path)
+                                    .spawn()
+                                {
+                                    eprintln!("Failed to launch play‑test: {e}");
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("{e}");
+                            }
+                        }
+                    }
+                    // Reset the request flag so we don’t spawn multiple processes (and really ruin everything)
+                    self.room_editor.request_play = false;              
+                }
+
                 if done {
-                    // Take the edited room out of the editor
-                    if let Some(ref edited_room) = self.current_room {
-                        if let Err(e) = world_storage::save_room(
-                            &self.world.id,
-                            room_id,
-                            edited_room,
-                        ) {
-                            eprintln!("Could not save room {room_id}: {e}");
-                        }
-                        world_storage::save_world(&self.world)
-                            .expect("Could not save world.");
+                    // Save everything
+                    editor_storage::save_game(&self.game)
+                        .expect("Could not save game.");
 
-                        if let Some(_) = self.current_room_id {
-                            let palette = &mut self.room_editor.tilemap_editor.palette;
-                            world_storage::save_palette(palette, &self.world.id)
-                                .expect("Could not save tile palette");
-                        }
-                    }
+                    let palette = &mut self.room_editor.tilemap_editor.panel.palette;
+                    editor_storage::save_palette(palette, &self.game.name)
+                        .expect("Could not save tile palette");
 
-                    // Find the metadata for the room we just left for center_on_room.
-                    if let Some(meta) = self.world.rooms_metadata.iter()
+                    // Find the room we just left for center_on_room
+                    if let Some(room) = self.game.current_world_mut().rooms.iter()
                         .find(|m| m.id == room_id) {
-                        self.world_editor.center_on_room(&mut self.camera, meta);
+                        self.world_editor.center_on_room(&mut self.camera, room);
                     }
 
-                    // Clean up the temporary cache.
-                    self.current_room = None;
+                    // Clean up the temporary cache
                     self.current_room_id = None;
                     self.room_editor.reset();
                     self.mode = EditorMode::World;
@@ -146,58 +178,52 @@ impl Editor {
         }
 
         if Controls::save() {
-            world_storage::save_world(&self.world)
-                .expect("Could not save world.");
+            editor_storage::save_game(&self.game)
+                .expect("Could not save game.");
+        }
+
+        if Controls::undo() {
+            crate::global::request_undo();
+        }
+
+        if Controls::redo() {
+            crate::global::request_redo();
         }
     }
 
     pub fn draw(&mut self) {
         match self.mode {
             EditorMode::World => {
-                self.world_editor.draw(&self.camera, &self.world);
+                self.world_editor.draw(&self.camera, &self.game.current_world_mut());
             }
             EditorMode::Room(room_id) => {
-                let meta = self.world.rooms_metadata
-                    .iter()
-                    .find(|m| m.id == room_id)
-                    .expect("metadata must exist");
-
-                // The room should already be loaded but lazy loads if not
-                if self.current_room.is_none() {
-                    match world_storage::load_room(&self.world.id, room_id) {
-                        Ok(room) => self.current_room = Some(room),
-                        Err(e) => eprintln!("Failed to load room {room_id}: {e}"),
-                    }
+                // The room id should already be set
+                if self.current_room_id.is_none() {
+                    self.current_room_id = Some(room_id);
                 }
 
-                if let Some(ref room) = self.current_room {
-                    self.room_editor.draw(
-                        &self.camera, 
-                        room, 
-                        meta, 
-                        &mut self.world.world_ecs,
-                        &mut self.assets,
-                    );
-                }
+                let world = self.game.current_world_mut();
+
+                let room = world.rooms
+                    .iter_mut()
+                    .find(|r| r.id == room_id)
+                    .expect("Could not find room in world.");
+
+                self.room_editor.draw(
+                    &self.camera,
+                    room,
+                    &mut world.world_ecs,
+                    &mut self.asset_manager,
+                );
             }
         }
     }
 
-    fn sync_assets(&mut self) {
-        // Iterate over all non-tile sprites
-        for (_entity, sprite) in self.world.world_ecs.sprites.data.iter_mut() {
-            if !self.assets.contains(sprite.sprite_id) {
-                let id = futures::executor::block_on(self.assets.load(&sprite.path));
-                sprite.sprite_id = id;
-            }
-        }
-
-        // Iterate over all tile‑sprites
-        for (_entity, tile_sprite) in self.world.world_ecs.tile_sprites.data.iter_mut() {
-            if !self.assets.contains(tile_sprite.sprite_id) {
-                let new_id = futures::executor::block_on(self.assets.load(&tile_sprite.path));
-                tile_sprite.sprite_id = new_id;
-            }
-        }
+    fn get_room_from_id(&self, room_id: &Uuid) -> &Room {
+        self.game
+            .current_world().rooms
+            .iter()
+            .find(|m| m.id == *room_id)
+            .expect("Could not find room from id.")
     }
 }

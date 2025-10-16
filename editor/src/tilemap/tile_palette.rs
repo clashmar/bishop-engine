@@ -1,19 +1,20 @@
-use core::{
+// editor/src/tilemap/tile_palette.rs
+use std::collections::VecDeque;
+use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use engine_core::{global::tile_size, ui::widgets::*};
+use serde_with::serde_as;
+use engine_core::{
     assets::{asset_manager::AssetManager, sprite::SpriteId},
     ecs::world_ecs::WorldEcs,
     tiles::{
         tile_def::{TileComponentSpec, TileDef, TileDefId}
     },
 };
-use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use crate::gui::*;
-use serde_with::serde_as;
-use serde_with::FromInto;
 
 #[derive(Serialize, Deserialize)]
-struct PaletteEntry {
+pub struct PaletteEntry {
     def_id: TileDefId,
     sprite_id: SpriteId,
     sprite_path: String,
@@ -22,22 +23,20 @@ struct PaletteEntry {
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 pub struct TilePalette {
-    #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub position: Vec2,
     pub tile_size: f32,
     pub columns: usize,
     pub rows: usize,
     pub selected_index: usize,
-    entries: Vec<PaletteEntry>,
+    pub entries: Vec<PaletteEntry>,
     #[serde(skip)]
     pub ui: TilePaletteUi,
     #[serde(skip)]
     pub sprite_ids: Vec<SpriteId>,
     #[serde(skip)]
-    create_requested: bool,
-    edit_requested: bool,
-    delete_requested: Option<usize>,
+    command_queue: VecDeque<PaletteCmd>,
 }
+
+enum PaletteCmd { Create, Edit, Delete(usize) }
 
 #[derive(Clone, Default, PartialEq)]
 pub enum TilePaletteUiMode {
@@ -60,19 +59,30 @@ pub struct TilePaletteUi {
 }
 
 impl TilePalette {
-    pub fn new(position: Vec2, tile_size: f32, columns: usize, rows: usize) -> Self {
+    pub fn new() -> Self {
         Self {
             ui: TilePaletteUi::default(),
-            position,
-            tile_size,
-            columns,
-            rows,
+            tile_size: tile_size(),
+            columns: 1,
+            rows: 0,
             selected_index: 0,
             entries: Vec::new(),
             sprite_ids: Vec::new(),
-            create_requested: false,
-            edit_requested: false,
-            delete_requested: None,
+            command_queue: VecDeque::new(),
+        }
+    }
+
+    pub async fn update(
+        &mut self,
+        world_ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
+    ) {
+        while let Some(cmd) = self.command_queue.pop_front() {
+            match cmd {
+                PaletteCmd::Create => self.create_tile(world_ecs, asset_manager).await,
+                PaletteCmd::Edit => self.edit_tile(world_ecs, asset_manager).await,
+                PaletteCmd::Delete(i) => self.delete_tile(i, world_ecs).await,
+            }
         }
     }
 
@@ -103,21 +113,34 @@ impl TilePalette {
         self.sprite_ids.clear();
 
         for entry in &self.entries {
-            let tex_id = asset_manager.load(&entry.sprite_path).await;
+            let tex_id = match asset_manager.load(&entry.sprite_path).await {
+                Ok(id) => id,
+                Err(_) => SpriteId(Uuid::nil()),
+            };
             self.sprite_ids.push(tex_id);
         }
     }
 
     pub fn draw(
         &mut self,
+        rect: Rect,
         asset_manager: &mut AssetManager,
         world_ecs: &WorldEcs,
     ) {
+        // Draw grid
         for i in 0..self.entries.len() {
             let col = i % self.columns;
             let row = i / self.columns;
-            let x = self.position.x + col as f32 * self.tile_size;
-            let y = self.position.y + row as f32 * self.tile_size;
+            let y = rect.y + (row as f32 * tile_size());
+
+            // Skip rows that are completely outside the visible area
+            if y + self.tile_size < rect.y
+                || y > rect.y + tile_size() * 5.0
+            {
+                continue;
+            }
+
+            let x = rect.x + col as f32 * self.tile_size;
 
             let tex = asset_manager.get_texture_from_id(self.sprite_ids[i]);
             draw_texture_ex(
@@ -130,29 +153,30 @@ impl TilePalette {
                     ..Default::default()
                 },
             );
-
             if i == self.selected_index {
                 draw_rectangle_lines(x, y, self.tile_size, self.tile_size, 3.0, RED);
             }
         }
 
-        self.draw_add_and_edit_buttons();
-
-        // This is an async function but we don’t await here.
-        // It only sets create_requested; the actual work is done
-        // later by `process_create_request`.
         futures::executor::block_on(self.draw_tile_dialog(asset_manager, world_ecs));
     }
 
     /// Called from `TileMapEditor::handle_ui_click` when the mouse
     /// is over the palette area. Returns `true` if the click was
     /// consumed (i.e. user selected a tile).
-    pub fn handle_click(&mut self, mouse_pos: Vec2, _camera: &Camera2D) -> bool {
-        if !self.is_mouse_over(mouse_pos, _camera) {
+    pub fn handle_click(&mut self, mouse_pos: Vec2, rect: Rect) -> bool {
+        if !Rect::new(
+            rect.x, 
+            rect.y,
+            self.columns as f32 * self.tile_size,
+            self.rows as f32 * self.tile_size
+        )
+            .contains(mouse_pos) {
             return false;
         }
-        let local_x = mouse_pos.x - self.position.x;
-        let local_y = mouse_pos.y - self.position.y;
+
+        let local_x = mouse_pos.x - rect.x;
+        let local_y = mouse_pos.y - rect.y;
         let col = (local_x / self.tile_size) as usize;
         let row = (local_y / self.tile_size) as usize;
         let idx = row * self.columns + col;
@@ -161,48 +185,6 @@ impl TilePalette {
             return true;
         }
         false
-    }
-
-    #[inline]
-    fn is_mouse_over(&self, mouse_pos: Vec2, _camera: &Camera2D) -> bool {
-        let w = self.columns as f32 * self.tile_size;
-        let h = self.rows as f32 * self.tile_size;
-        Rect::new(self.position.x, self.position.y, w, h).contains(mouse_pos)
-    }
-
-    /// Draw the “Add” button. When a tile is selected,
-    /// draw the “Edit” button as well.
-    fn draw_add_and_edit_buttons(&mut self) {
-        // Add Tile
-        let btn_add = Rect::new(
-            self.position.x,
-            self.position.y + (self.rows as f32 * self.tile_size) + 10.,
-            self.tile_size * 2.,
-            30.,
-        );
-
-        if gui_button(btn_add, "Add") {
-            self.ui = TilePaletteUi::default(); // reset fields
-            self.ui.open = true;
-            self.ui.mode = TilePaletteUiMode::Create;
-        }
-
-        // Draw Edit button if a tile is selected
-        if !self.entries.is_empty() {
-            let btn_edit = Rect::new(
-                btn_add.x + btn_add.w + 5.0,              
-                btn_add.y,
-                btn_add.w,
-                btn_add.h,
-            );
-            if gui_button(btn_edit, "Edit") {
-                // Initialise the dialog with the currently selected tile.
-                self.ui.mode = TilePaletteUiMode::Edit;
-                self.ui.edit_index = self.selected_index;
-                self.ui.edit_initialized = true; // will fill fields on first draw
-                self.ui.open = true;
-            }
-        }
     }
 
     async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager, world_ecs: &WorldEcs) {
@@ -235,10 +217,6 @@ impl TilePalette {
         draw_rectangle(panel.x, panel.y, panel.w, panel.h, Color::new(0., 0., 0., 0.6));
         draw_rectangle_lines(panel.x, panel.y, panel.w, panel.h, 2., WHITE);
 
-        // Name
-        let name_rect = Rect::new(panel.x + 10., panel.y + 20., panel.w - 20., 30.);
-        self.ui.name = gui_input_text(name_rect, &self.ui.name);
-
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);
         if gui_button(sprite_rect, "Pick sprite") {
@@ -252,7 +230,11 @@ impl TilePalette {
         
         // Preview
         if !self.ui.sprite_path.is_empty() {
-            let preview_id = asset_manager.load(&self.ui.sprite_path).await;
+            let preview_id = match asset_manager.load(&self.ui.sprite_path).await {
+                Ok(id) => id,
+                Err(_) => SpriteId(Uuid::nil()),
+            };
+
             let tex = asset_manager.get_texture_from_id(preview_id);
             draw_texture_ex(
                 tex,
@@ -269,7 +251,6 @@ impl TilePalette {
         // Component check‑boxes
         let mut walk = self.ui.walkable;
         let mut solid = self.ui.solid;
-        let mut dmg = self.ui.damage;
 
         let cb_walk = Rect::new(panel.x + 10., panel.y + 110., 20., 20.);
         if gui_checkbox(cb_walk, &mut walk) {
@@ -283,10 +264,6 @@ impl TilePalette {
         }
         draw_text("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., WHITE);
 
-        let dmg_rect = Rect::new(panel.x + 10., panel.y + 170., panel.w - 20., 30.);
-        dmg = gui_input_number(dmg_rect, dmg);
-        self.ui.damage = dmg.max(0.0);
-
         let btn_label = match self.ui.mode {
             TilePaletteUiMode::Create => { "Create" },
             TilePaletteUiMode::Edit => { "Update" }, 
@@ -295,15 +272,12 @@ impl TilePalette {
         // Create/Update
         let btn_ok = Rect::new(panel.x + 30., panel.y + 220., 100., 30.);
         if gui_button(btn_ok, btn_label) {
-            // Signal the request – the editor will pick it up next frame.
-            match self.ui.mode {
-                TilePaletteUiMode::Create => {
-                    self.create_requested = true;
-                },
-                TilePaletteUiMode::Edit => {
-                    self.edit_requested = true;
-                }
-            }
+            // Add the request to the queue, it will be excecuted next frame
+            let cmd = match self.ui.mode {
+                TilePaletteUiMode::Create => PaletteCmd::Create,
+                TilePaletteUiMode::Edit   => PaletteCmd::Edit,
+            };
+            self.command_queue.push_back(cmd);
             self.ui.open = false;
         }
 
@@ -317,47 +291,31 @@ impl TilePalette {
         if self.ui.mode == TilePaletteUiMode::Edit {
             let btn_del = Rect::new(panel.x + 30., panel.y + 260., 240., 30.);
             if gui_button(btn_del, "Delete") {
-                self.delete_requested = Some(self.ui.edit_index);
+                //Add the request to the queue
+                let cmd = PaletteCmd::Delete(self.ui.edit_index);
+                self.command_queue.push_back(cmd);
                 self.ui.open = false;
             }
         }
     }
 
-    pub async fn process_requests(
-        &mut self, 
-        world_ecs: &mut WorldEcs,
-        asset_manager: &mut AssetManager,
-    ) {
-        if self.create_requested {
-            self.process_create_request(world_ecs, asset_manager).await;
-        }
-        if self.edit_requested {
-            self.process_edit_request(world_ecs, asset_manager).await;
-        }
-        if self.delete_requested.is_some() {
-            self.process_delete_request(world_ecs).await;
-        }
-    }
-
-    pub async fn process_create_request(
+    pub async fn create_tile(
         &mut self,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) {
-        if !self.create_requested {
-            return;
-        }
-        // Reset early to avoid double-processing.
-        self.create_requested = false;
-
         // Load sprite
-        let sprite_id = asset_manager.load(&self.ui.sprite_path).await;
+        let sprite_id = match asset_manager.load(&self.ui.sprite_path).await {
+            Ok(id) => id,
+            Err(_) => SpriteId(Uuid::nil()),
+        };
 
         // Build TileDef
         let mut comps = vec![
             TileComponentSpec::Walkable(self.ui.walkable),
             TileComponentSpec::Solid(self.ui.solid),
         ];
+        
         if self.ui.damage > 0.0 {
             comps.push(TileComponentSpec::Damage(self.ui.damage));
         }
@@ -387,19 +345,16 @@ impl TilePalette {
         self.rows = (needed + self.columns - 1) / self.columns; // ceil‑div
     }
 
-    pub async fn process_edit_request(
+    pub async fn edit_tile(
         &mut self,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
     ) {
-        if !self.edit_requested {
-            return;
-        }
-        // Reset early to avoid double-processing.
-        self.edit_requested = false;
-
         // Load sprite
-        let sprite_id = asset_manager.load(&self.ui.sprite_path).await;
+        let sprite_id = match asset_manager.load(&self.ui.sprite_path).await {
+            Ok(id) => id,
+            Err(_) => SpriteId(Uuid::nil()),
+        };
 
         // Build TileDef
         let mut comps = vec![
@@ -423,21 +378,40 @@ impl TilePalette {
         self.entries[self.ui.edit_index].sprite_id = sprite_id;
     }
 
-    pub async fn process_delete_request(&mut self, world_ecs: &mut WorldEcs) {
-        if let Some(idx) = self.delete_requested.take() {
-            // Remove the definition from the world
-            let def_id = self.entries[idx].def_id;
-            world_ecs.tile_defs.remove(&def_id);
+    pub async fn delete_tile(&mut self, idx: usize, world_ecs: &mut WorldEcs) {
+        // Remove the definition from the world
+        let def_id = self.entries[idx].def_id;
+        world_ecs.tile_defs.remove(&def_id);
 
-            // Remove palette entry and sprite id
-            self.entries.remove(idx);
-            self.sprite_ids.remove(idx);
+        // Remove palette entry and sprite id
+        self.entries.remove(idx);
+        self.sprite_ids.remove(idx);
 
-            // Adjust selected index safely
-            self.selected_index = self.entries.len().saturating_sub(1);
-            
-            // Re‑compute rows
-            self.rows = (self.entries.len() + self.columns - 1) / self.columns;
-        }
+        // Adjust selected index safely
+        self.selected_index = self.entries.len().saturating_sub(1);
+        
+        // Re‑compute rows
+        self.rows = (self.entries.len() + self.columns - 1) / self.columns;
+    }
+
+    /// The current height of the palette.
+    pub fn height(&self) -> f32 {
+        self.rows as f32 * self.tile_size
+    }
+
+    /// Called after self.columns changes.
+    fn recompute_rows(&mut self) {
+        self.rows = if self.columns == 0 {
+            0
+        } else {
+            (self.entries.len() + self.columns - 1) / self.columns
+        };
+    }
+
+    /// Set the column count based on an available width.
+    pub fn set_columns_for_width(&mut self, available_width: f32) {
+        let cols = (available_width / self.tile_size).floor() as usize;
+        self.columns = cols.max(1); // at least one column
+        self.recompute_rows();
     }
 }
