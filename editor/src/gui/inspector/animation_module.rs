@@ -3,7 +3,10 @@ use strum::IntoEnumIterator;
 use engine_core::{
     animation::{
             animation_clip::{
-            Animation, ClipDef, ClipId, ClipState, VariantFolder
+            Animation, ClipDef, 
+            ClipId, 
+            ClipState, 
+            VariantFolder
         }, 
         animation_system::CurrentFrame
     }, 

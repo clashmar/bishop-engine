@@ -72,7 +72,7 @@ impl RoomEditor {
         asset_manager: &mut AssetManager,
     ) -> bool {
         if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
-            clear_all_text_focus();
+            clear_all_input_focus(); // TODO: Find a way to clear focus even when over ui
         }
 
         if is_key_pressed(KeyCode::Escape) && !input_is_focused() {

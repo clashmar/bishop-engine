@@ -21,10 +21,31 @@ pub struct RoomCameraModule {
     pub slider_id: WidgetId,
 }
 
+impl InspectorModule for RoomCameraModule {
+    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+        world_ecs.get::<RoomCamera>(entity).is_some()
+    }
+
+    fn draw(
+        &mut self,
+        rect: Rect,
+        _asset_manager: &mut AssetManager,
+        world_ecs: &mut WorldEcs,
+        entity: Entity,
+    ) {
+        // Editable numeric field for zoom
+        let edit_rect = Rect::new(
+            rect.x,
+            rect.y + 30.0,
+            rect.w,
+            40.0,
+        );
+        self.draw_zoom_field(edit_rect, world_ecs, entity);
+    }
+}
+
 impl RoomCameraModule {
-    /// Draw a **single** numeric field that edits the *scalar* zoom.
-    /// The scalar is converted to a non‑uniform `Vec2` that respects the
-    /// current screen aspect.
+    /// Draw a single numeric field that edits the scalar zoom.
     fn draw_zoom_field(
         &self,
         rect: Rect,
@@ -99,29 +120,6 @@ impl RoomCameraModule {
         if (new_scalar - scalar).abs() > f32::EPSILON {
             cam.scalar_zoom = new_scalar;
         }
-    }
-}
-
-impl InspectorModule for RoomCameraModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
-        world_ecs.get::<RoomCamera>(entity).is_some()
-    }
-
-    fn draw(
-        &mut self,
-        rect: Rect,
-        _asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
-        entity: Entity,
-    ) {
-        // Editable numeric field for zoom
-        let edit_rect = Rect::new(
-            rect.x,
-            rect.y + 30.0,
-            rect.w,
-            40.0,
-        );
-        self.draw_zoom_field(edit_rect, world_ecs, entity);
     }
 }
 

@@ -29,6 +29,11 @@ thread_local! {
 }
 
 thread_local! {
+    static INPUT_NUMBER_STATE: RefCell<HashMap<WidgetId, (String, usize, bool)>> =
+        RefCell::new(HashMap::new());
+}
+
+thread_local! {
     static INPUT_FOCUSED: RefCell<bool> = RefCell::new(false);
 }
 
@@ -96,8 +101,8 @@ fn gui_input_text(
     INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
 
-        if let Some((saved, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&id) {
-            text = saved.clone();
+        if let Some((saved_text, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&id) {
+            text = saved_text.clone();
             cursor_char = if start_focused { text.chars().count() } else { *saved_cur };
             focused = if start_focused { true } else { *saved_foc };
             just_gained_focus = start_focused && !*saved_foc;
@@ -106,9 +111,18 @@ fn gui_input_text(
         } else {
             focused = start_focused;
             just_gained_focus = start_focused;
+            cursor_char = text.chars().count();
             map.insert(id, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
         }
     });
+
+    // Stop the widget overwriting the next component
+    if !focused {
+        if text != current {
+            text = current.to_string();
+            cursor_char = text.len();
+        }
+    }
 
     // Draw background & current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 1.0));
@@ -208,8 +222,6 @@ fn gui_input_text(
         if is_key_pressed(KeyCode::Escape) || is_key_down(KeyCode::Enter) {
             focused = false;
         }
-    } else {
-        INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
     }
 
     // Blinking cursor
@@ -241,17 +253,176 @@ fn gui_input_text(
 /// Remove any stored state for the given id.
 pub fn gui_input_text_reset(id: WidgetId) {
     INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
-
     INPUT_TEXT_STATE.with(|s| {
         let mut map = s.borrow_mut();
         map.remove(&id);
     });
 }
 
+pub fn gui_input_number_i32(id: WidgetId, rect: Rect, current: i32) -> i32 {
+    gui_input_number_generic(id, rect, current)
+}
+
+pub fn gui_input_number_f32(id: WidgetId, rect: Rect, current: f32) -> f32 {
+    gui_input_number_generic(id, rect, current)
+}
+
+/// Generic numeric widget.
+pub fn gui_input_number_generic<T>(
+    id: WidgetId,
+    rect: Rect,
+    current: T,
+) -> T
+where
+    T: FromStr + Display + Default + Copy + PartialEq,
+    <T as FromStr>::Err: std::fmt::Debug,
+{
+    // Load or initialise the entry for this widget
+    let mut text = current.to_string();
+    let mut cursor_char = text.len(); 
+    let mut focused = false;
+
+    INPUT_NUMBER_STATE.with(|s| {
+        let mut map = s.borrow_mut();
+        if let Some((saved_text, saved_cur, saved_foc)) = map.get(&id) {
+            text = saved_text.clone();
+            cursor_char = *saved_cur;
+            focused = *saved_foc;
+        } else {
+            cursor_char = text.chars().count();
+            map.insert(id, (text.clone(), cursor_char, focused));
+        }
+    });
+
+    // Stop the widget overwriting the next component
+    if !focused {
+        if text.parse::<T>().unwrap_or_default() != current {
+            text = current.to_string();
+            cursor_char = text.len();
+        }
+    }
+
+    // Draw background & current text
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
+    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
+    let placeholder = "<#>";
+    let display = if text.is_empty() { placeholder } else { &text };
+    draw_text_ex(
+        display,
+        rect.x + 5.,
+        rect.y + rect.h * 0.7,
+        TextParams {
+            font_size: 20,
+            color: WHITE,
+            ..Default::default()
+        },
+    );
+
+    // Abort input handling if a dropdown blocks interaction
+    if dropdown_is_open() {
+        return current;
+    }
+
+    let mouse = mouse_position();
+    let mouse_over = rect.contains(vec2(mouse.0, mouse.1));
+    if is_mouse_button_pressed(MouseButton::Left) {
+        focused = mouse_over;
+    }
+
+    if focused {
+        INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
+
+        if is_key_pressed(KeyCode::Backspace) && cursor_char > 0 {
+            text.remove(cursor_char - 1);
+            cursor_char -= 1;
+        }
+        if is_key_pressed(KeyCode::Delete) && cursor_char < text.len() {
+            text.remove(cursor_char);
+        }
+        if is_key_pressed(KeyCode::Left) && cursor_char > 0 {
+            cursor_char -= 1;
+        }
+        if is_key_pressed(KeyCode::Right) && cursor_char < text.len() {
+            cursor_char += 1;
+        }
+
+        while let Some(chr) = get_char_pressed() {
+            // Tell the rest of the editor that a text field is active
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
+
+            if chr.is_control() {
+                continue;
+            }
+
+            // Allow a leading minus sign only for types that can represent negatives
+            if chr == '-' && cursor_char == 0 && !text.starts_with('-') && T::from_str("-0").is_ok() {
+                text.insert(cursor_char, chr);
+                cursor_char += 1;
+                continue;
+            }
+
+            // Floating point numbers
+            let is_float = T::from_str("0.0").is_ok();
+            if chr == '.' && is_float && !text.contains('.') {
+                text.insert(cursor_char, chr);
+                cursor_char += 1;
+                continue;
+            }
+
+            if chr.is_ascii_digit() {
+                text.insert(cursor_char, chr);
+                cursor_char += 1;
+            }
+        }
+
+        if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter) {
+            focused = false;
+        }
+    } 
+
+    let now = get_time();
+    if focused && ((now * 2.0) as i32 % 2 == 0) {
+        let prefix = &text[..cursor_char];
+        let caret_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
+        draw_line(
+            caret_x,
+            rect.y + rect.h * 0.3,
+            caret_x,
+            rect.y + rect.h * 0.8,
+            2.,
+            WHITE,
+        );
+    }
+
+    // Persist state for the next frame
+    INPUT_NUMBER_STATE.with(|s| {
+        let mut map = s.borrow_mut();
+        map.insert(id, (text.clone(), cursor_char, focused));
+    });
+
+    // Return the parsed value
+    text.parse::<T>().unwrap_or(current)
+}
+
+/// Remove any stored state for the given numeric widget.
+pub fn gui_input_number_reset(id: WidgetId) {
+    INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+    INPUT_NUMBER_STATE.with(|s| {
+        let mut map = s.borrow_mut();
+        map.remove(&id);
+    });
+}
+
 /// Clears the focused flag of all text fields.
-pub fn clear_all_text_focus() {
+pub fn clear_all_input_focus() {
     INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
     INPUT_TEXT_STATE.with(|s| {
+        let mut map = s.borrow_mut();
+        for (_, entry) in map.iter_mut() {
+            entry.2 = false;
+        }
+    });
+    INPUT_NUMBER_STATE.with(|s| {
         let mut map = s.borrow_mut();
         for (_, entry) in map.iter_mut() {
             entry.2 = false;
@@ -320,153 +491,6 @@ pub fn gui_button(rect: Rect, label: &str) -> bool {
     is_mouse_button_pressed(MouseButton::Left) && 
     hovered && 
     !dropdown_is_open()
-}
-
-pub fn gui_input_number_i32(id: WidgetId, rect: Rect, current: i32) -> i32 {
-    gui_input_number_generic(id, rect, current)
-}
-
-pub fn gui_input_number_f32(id: WidgetId, rect: Rect, current: f32) -> f32 {
-    gui_input_number_generic(id, rect, current)
-}
-
-/// Generic numeric widget.
-pub fn gui_input_number_generic<T>(
-    id: WidgetId,
-    rect: Rect,
-    current: T,
-) -> T
-where
-    T: FromStr + Display + Default + Copy + PartialEq,
-    <T as FromStr>::Err: std::fmt::Debug,
-{
-    thread_local! {
-        static STATE: RefCell<HashMap<WidgetId, (String, usize, bool)>> =
-            RefCell::new(HashMap::new());
-    }
-
-    // Load or initialise the entry for this widget
-    let mut txt = current.to_string();
-    let mut cursor = txt.len(); 
-    let mut focused = false;
-
-    STATE.with(|s| {
-        let mut map = s.borrow_mut();
-        if let Some((saved_txt, saved_cur, saved_foc)) = map.get(&id) {
-            txt = saved_txt.clone();
-            cursor = *saved_cur;
-            focused = *saved_foc;
-        } else {
-            map.insert(id, (txt.clone(), cursor, focused));
-        }
-    });
-
-    if !focused {
-        if txt.parse::<T>().unwrap_or_default() != current {
-            txt = current.to_string();
-            cursor = txt.len();
-        }
-    }
-
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
-    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
-    let placeholder = "<#>";
-    let display = if txt.is_empty() { placeholder } else { &txt };
-    draw_text_ex(
-        display,
-        rect.x + 5.,
-        rect.y + rect.h * 0.7,
-        TextParams {
-            font_size: 20,
-            color: WHITE,
-            ..Default::default()
-        },
-    );
-
-    // Abort input handling if a dropdown blocks interaction
-    if dropdown_is_open() {
-        return current;
-    }
-
-    let mouse = mouse_position();
-    let mouse_over = rect.contains(vec2(mouse.0, mouse.1));
-    if is_mouse_button_pressed(MouseButton::Left) {
-        focused = mouse_over;
-    }
-
-    if focused {
-        INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
-
-        if is_key_pressed(KeyCode::Backspace) && cursor > 0 {
-            txt.remove(cursor - 1);
-            cursor -= 1;
-        }
-        if is_key_pressed(KeyCode::Delete) && cursor < txt.len() {
-            txt.remove(cursor);
-        }
-        if is_key_pressed(KeyCode::Left) && cursor > 0 {
-            cursor -= 1;
-        }
-        if is_key_pressed(KeyCode::Right) && cursor < txt.len() {
-            cursor += 1;
-        }
-
-        while let Some(chr) = get_char_pressed() {
-            // Tell the rest of the editor that a text field is active
-            INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
-
-            if chr.is_control() {
-                continue;
-            }
-
-            // Allow a leading minus sign only for types that can represent negatives
-            if chr == '-' && cursor == 0 && !txt.starts_with('-') && T::from_str("-0").is_ok() {
-                txt.insert(cursor, chr);
-                cursor += 1;
-                continue;
-            }
-
-            // Floating point numbers
-            let is_float = T::from_str("0.0").is_ok();
-            if chr == '.' && is_float && !txt.contains('.') {
-                txt.insert(cursor, chr);
-                cursor += 1;
-                continue;
-            }
-
-            if chr.is_ascii_digit() {
-                txt.insert(cursor, chr);
-                cursor += 1;
-            }
-        }
-
-        if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter) {
-            focused = false;
-        }
-    }
-
-    let now = get_time();
-    if focused && ((now * 2.0) as i32 % 2 == 0) {
-        let prefix = &txt[..cursor];
-        let caret_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
-        draw_line(
-            caret_x,
-            rect.y + rect.h * 0.3,
-            caret_x,
-            rect.y + rect.h * 0.8,
-            2.,
-            WHITE,
-        );
-    }
-
-    // Persist state for the next frame
-    STATE.with(|s| {
-        let mut map = s.borrow_mut();
-        map.insert(id, (txt.clone(), cursor, focused));
-    });
-
-    // Return the parsed value
-    txt.parse::<T>().unwrap_or(current)
 }
 
 /// Returns the byte offset of the `char_idx`‑th character in `s`.
@@ -646,7 +670,6 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
             // Apply the scroll offset
             let draw_y = entry_y - state.scroll_offset;
 
-            // TODO: We can still see entries that are row above and one row below the scrollable area
             // Skip entries that are above or below the visible area
             if draw_y + rect.h < list_rect.y + rect.h          
                 || draw_y > list_rect.y + list_rect.h - rect.h
@@ -786,7 +809,7 @@ mod dropdown_state {
     }
 }
 
-// helper, called at the end of gui_dropdown
+// Helper, called at the end of gui_dropdown
 fn update_global_dropdown_flag() {
     dropdown_state::STATE.with(|s| {
         let any = s.borrow().values().any(|st| st.open);
