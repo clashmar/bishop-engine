@@ -1,9 +1,7 @@
 // editor/src/world/world_editor.rs
 use engine_core::{
-    global::tile_size, 
-    world::{
-        room::{ExitDirection, Room}, 
-        world::World
+    game::game::Game, global::{set_tile_size, tile_size}, ui::widgets::*, world::{
+        room::{ExitDirection, Room}, world::World
     }
 };
 use macroquad::prelude::*;
@@ -30,6 +28,7 @@ pub struct WorldEditor {
     show_grid: bool,
     placing_start: Option<Vec2>,
     placing_end: Option<Vec2>, 
+    tile_size_id: WidgetId,
 }
 
 impl WorldEditor {
@@ -43,6 +42,7 @@ impl WorldEditor {
             show_grid: true,
             placing_start: None,
             placing_end: None,
+            tile_size_id: WidgetId::default(),
         }
     }
 
@@ -170,9 +170,11 @@ impl WorldEditor {
         };
     }
 
-    pub fn draw(&mut self, camera: &Camera2D, world: &World) {
+    pub fn draw(&mut self, camera: &Camera2D, game: &mut Game) {
         set_camera(camera);
         clear_background(LIGHTGRAY);
+
+        let world = game.current_world();
 
         let rooms = &world.rooms;
 
@@ -193,7 +195,7 @@ impl WorldEditor {
         }
 
         self.draw_room_names(camera, rooms); 
-        self.draw_ui(camera, world);
+        self.draw_ui(camera, game);
         
         set_default_camera();
         self.draw_coordinates(camera);
@@ -372,8 +374,24 @@ impl WorldEditor {
         }
     }
 
-    fn draw_ui(&self, camera: &Camera2D, world: &World) {
-        set_default_camera(); // screen space
+    fn draw_ui(&self, camera: &Camera2D, game: &mut Game) {
+        set_default_camera();
+
+        let ts_rect = Rect::new(
+            screen_width() - 150.0,
+            10.0,                  
+            140.0,                 
+            30.0,                 
+        );
+
+        // Tile size field
+        let new = gui_input_number_f32(self.tile_size_id, ts_rect, game.tile_size);
+        if new != game.tile_size {
+            game.tile_size = new;
+            set_tile_size(new);
+        }
+
+        let world = game.current_world();
 
         for element in &self.ui_elements {
             element.draw(world);
