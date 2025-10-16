@@ -180,3 +180,12 @@ pub struct Damage {
 }
 ecs_component!(Damage);
 
+
+#[derive(Clone, Serialize, Deserialize, Default, Reflect)]
+pub struct Name {
+    pub amount: String,
+}
+ecs_component!(Name);
+inspector_module!(Name);
+
+
