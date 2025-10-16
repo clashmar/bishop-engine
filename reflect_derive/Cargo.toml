@@ -1,0 +1,13 @@
+[package]
+name = "reflect_derive"
+version = "0.1.0"
+edition = "2024"
+publish = false  
+
+[lib]
+proc-macro = true 
+
+[dependencies]
+syn = { version = "2", features = ["full", "parsing"] }
+quote = "1"
+proc-macro2 = "1"

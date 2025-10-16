@@ -1,7 +1,7 @@
-use core::{world::world::World};
+use engine_core::{world::world::World};
 use std::{future::Future, pin::Pin};
 
-use crate::{gui::ui_element::WorldUiElement, storage::world_storage, world::world_editor::mouse_over_rect};
+use crate::{gui::ui_element::WorldUiElement, storage::editor_storage, world::world_editor::mouse_over_rect};
 use macroquad::prelude::*;
 
 const FONT_SIZE: f32 = 40.0;
@@ -28,18 +28,18 @@ impl WorldUiElement for WorldNameUi {
 
     fn on_click<'a>(&'a self, world: &'a mut World) -> Pin<Box<dyn Future<Output=()> + Send + 'a>> {
         Box::pin(async move {
-            if let Some(new_name) = world_storage::prompt_user_input().await {
+            if let Some(new_name) = editor_storage::prompt_user_input().await {
                 let new_name = new_name.trim().to_string();
                 if new_name.is_empty() || new_name == world.name { return; }
 
                 // Update the index
-                let mut idx = world_storage::load_index().expect("load index");
-                idx.insert(world.id, new_name.clone());
-                world_storage::save_index(&idx).expect("save index");
+                // let mut idx = editor_storage::load_world_index().expect("load index");
+                // idx.insert(world.id, new_name.clone());
+                // editor_storage::save_world_index(&idx).expect("save index");
 
-                // Update the in‑memory struct and persist the single file
-                world.name = new_name;
-                world_storage::save_world(world).expect("save world");
+                // // Update the in‑memory struct and persist the single file
+                // world.name = new_name;
+                // editor_storage::save_world(world).expect("save world");
             }
         })
     }
