@@ -1,10 +1,15 @@
 // game/src/playtest_main.rs
 use std::{env, fs};
-use engine_core::{constants::*, 
+use engine_core::{
+    constants::{
+        world_virtual_height, 
+        world_virtual_width
+    }, 
     world::{
         room::Room, 
         world::World
-    }};
+    }
+};
 use game_lib::game::GameState;
 use macroquad::prelude::*;
 use ron::de::from_str;
@@ -19,8 +24,8 @@ struct PlaytestPayload {
 fn window_conf() -> Conf {
     Conf {
         window_title: "Playtest".to_owned(),
-        window_height: WORLD_VIRTUAL_HEIGHT as i32,
-        window_width: WORLD_VIRTUAL_WIDTH as i32,
+        window_width: world_virtual_width() as i32,
+        window_height: world_virtual_height() as i32,
         fullscreen: true,
         window_resizable: false,
         ..Default::default()

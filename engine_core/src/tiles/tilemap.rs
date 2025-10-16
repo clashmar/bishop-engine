@@ -2,9 +2,9 @@
 use std::collections::HashMap;
 use serde_with::{serde_as, FromInto};
 use crate::assets::asset_manager::{AssetManager};
-use crate::constants::*;
 use crate::ecs::component::Position;
 use crate::ecs::world_ecs::WorldEcs;
+use crate::global::tile_size;
 use crate::tiles::tile::{Tile, TileSprite};
 use crate::world::room::{Exit, ExitDirection};
 use crate::world::world::GridPos;
@@ -45,13 +45,13 @@ impl TileMap {
         draw_rectangle(
             room_position.x,
             room_position.y,
-            self.width as f32 * TILE_SIZE,
-            self.height as f32 * TILE_SIZE,
+            self.width as f32 * tile_size(),
+            self.height as f32 * tile_size(),
             self.background,
         );
 
         for ((x, y), tile) in &self.tiles {
-            let tile_pos = vec2(*x as f32 * TILE_SIZE, *y as f32 * TILE_SIZE) + room_position;
+            let tile_pos = vec2(*x as f32 * tile_size(), *y as f32 * tile_size()) + room_position;
 
             if let Some(sprite) = tile
                 .entity                    
@@ -64,7 +64,7 @@ impl TileMap {
                     tile_pos.y,
                     WHITE,
                     DrawTextureParams {
-                        dest_size: Some(vec2(TILE_SIZE, TILE_SIZE)),
+                        dest_size: Some(vec2(tile_size(), tile_size())),
                         ..Default::default()
                     },
                 );
@@ -75,7 +75,7 @@ impl TileMap {
 
     fn draw_exits(&self, exits: &Vec<Exit>, room_position: Vec2) {
         for exit in exits {
-            let position = exit.position * TILE_SIZE + room_position;
+            let position = exit.position * tile_size() + room_position;
             self.draw_exit(position, exit.direction);
         }
     }
@@ -91,9 +91,9 @@ impl TileMap {
         let y = position.y;
 
         // Draw semi-transparent rectangle
-        draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, LIGHTGRAY);
+        draw_rectangle(x, y, tile_size(), tile_size(), LIGHTGRAY);
 
-        let arrow_center = vec2(x + TILE_SIZE / 2.0, y + TILE_SIZE / 2.0);
+        let arrow_center = vec2(x + tile_size() / 2.0, y + tile_size() / 2.0);
         let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
 
         let offsets = match direction {
@@ -104,9 +104,9 @@ impl TileMap {
         };
 
         draw_triangle(
-            arrow_center + offsets[0] * TILE_SIZE / 4.0,
-            arrow_center + offsets[1] * TILE_SIZE / 4.0,
-            arrow_center + offsets[2] * TILE_SIZE / 4.0,
+            arrow_center + offsets[0] * tile_size() / 4.0,
+            arrow_center + offsets[1] * tile_size() / 4.0,
+            arrow_center + offsets[2] * tile_size() / 4.0,
             arrow_color
         );
     }
@@ -124,7 +124,7 @@ impl TileMap {
     }
 
     pub fn pixel_to_grid(pixel: f32) -> i32 {
-        (pixel / TILE_SIZE).floor() as i32
+        (pixel / tile_size()).floor() as i32
     }
 
     pub fn any_tiles_in_range<F>(
@@ -170,8 +170,8 @@ impl TileMap {
 
 pub fn tile_to_world(grid_position: GridPos) -> Vec2 {
     Vec2::new(
-        grid_position.x() as f32 * TILE_SIZE,
-        grid_position.y() as f32 * TILE_SIZE,
+        grid_position.x() as f32 * tile_size(),
+        grid_position.y() as f32 * tile_size(),
     )
 }
 
@@ -198,8 +198,8 @@ pub fn shift_tiles(
         // Update the position component
         if let Some(entity) = tile.entity {
             if let Some(pos) = world_ecs.get_mut::<Position>(entity) {
-                pos.position.x += dx as f32 * TILE_SIZE;
-                pos.position.y += dy as f32 * TILE_SIZE;
+                pos.position.x += dx as f32 * tile_size();
+                pos.position.y += dy as f32 * tile_size();
             }
         }
 

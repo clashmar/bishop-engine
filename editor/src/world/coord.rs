@@ -1,6 +1,6 @@
 // editor/src/world/coord.rs
+use engine_core::global::tile_size;
 use macroquad::prelude::*;
-use engine_core::constants::*;
 
 /// Convert the current mouse position (screen pixels) to world
 /// coordinates using the supplied camera.
@@ -19,7 +19,7 @@ pub fn snap_to_grid(pos: Vec2) -> Vec2 {
 /// hovering over.
 pub fn mouse_world_grid(camera: &Camera2D) -> Vec2 {
     let world = mouse_world_pos(camera);
-    (world / TILE_SIZE).floor()
+    (world / tile_size()).floor()
 }
 
 /// Turn a world‑space `Vec2` into screen coordinates using the current camera.
@@ -36,7 +36,7 @@ pub fn overlaps_existing_rooms(
     let a_max = pos + size;
 
     other_bounds.iter().any(|(b_pos, mut b_size)| {
-        b_size *= TILE_SIZE;
+        b_size *= tile_size();
 
         let b_min = *b_pos;
         let b_max = *b_pos + b_size;

@@ -1,22 +1,21 @@
 // engine_core/src/rendering/render_entities.rs
 use crate::{
-    animation::animation_system::CurrentFrame, assets::{
+    animation::animation_system::CurrentFrame, 
+    assets::{
         asset_manager::AssetManager, 
         sprite::Sprite
     }, 
-    constants::*, 
     ecs::{
         component::*, 
         entity::Entity, 
         world_ecs::WorldEcs
     }, 
+    global::tile_size, 
     lighting::{
         glow::Glow, 
         light::Light, 
         light_system::LightSystem
-    }, 
-    tiles::tile::TileSprite, 
-    world::room::Room
+    }, tiles::tile::TileSprite, world::room::Room
 };
 use std::collections::BTreeMap;
 use macroquad::prelude::*;
@@ -207,15 +206,15 @@ pub fn sprite_dimensions(
     from_anim
         .or_else(from_sprite)
         .or_else(from_glow)
-        .unwrap_or((TILE_SIZE, TILE_SIZE))
+        .unwrap_or((tile_size(), tile_size()))
 }
 
 pub fn draw_entity_placeholder(pos: Vec2) {
     draw_rectangle(
         pos.x,
         pos.y,
-        TILE_SIZE,
-        TILE_SIZE,
+        tile_size(),
+        tile_size(),
         GREEN,
     );
 }

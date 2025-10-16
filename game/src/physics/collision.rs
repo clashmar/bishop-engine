@@ -4,10 +4,10 @@ use engine_core::{
     ecs::{
         component::{Collider, Position, Solid},
         world_ecs::WorldEcs,
-    },
-    tiles::tilemap::TileMap,
+    }, 
+    global::tile_size, 
+    tiles::tilemap::TileMap
 };
-use engine_core::constants::*;
 
 /// Information returned by the sweep test.
 pub struct SweepResult {
@@ -113,8 +113,8 @@ pub fn sweep_move(
         let Some(entity) = tile.entity else { continue };
         if let Some(solid) = world_ecs.get::<Solid>(entity) {
             if solid.0 {
-                let tile_pos = room_origin + vec2(*x as f32 * TILE_SIZE, *y as f32 * TILE_SIZE);
-                let tile_aabb = (tile_pos, tile_pos + vec2(TILE_SIZE, TILE_SIZE));
+                let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
+                let tile_aabb = (tile_pos, tile_pos + vec2(tile_size(), tile_size()));
                 obstacles.push(tile_aabb);
             }
         }

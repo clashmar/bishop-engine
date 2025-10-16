@@ -1,5 +1,8 @@
 // editor/src/world/world_actions.rs
-use engine_core::{constants::TILE_SIZE, tiles::tilemap::TileMap};
+use engine_core::{ 
+    global::tile_size, 
+    tiles::tilemap::TileMap
+};
 use uuid::Uuid;
 use engine_core::{world::{room::{Room, RoomVariant}, world::World}};
 use crate::world::coord;
@@ -96,7 +99,7 @@ impl WorldEditor {
         top_left: Vec2,
         size: Vec2,
     ) -> Uuid {
-        let origin_in_pixels = top_left * TILE_SIZE;
+        let origin_in_pixels = top_left * tile_size();
 
         // The name could be generated automatically or asked from the UI.
         let new_id = self.create_room(world, "untitled", origin_in_pixels, size);

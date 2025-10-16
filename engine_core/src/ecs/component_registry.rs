@@ -20,7 +20,7 @@ pub struct ComponentReg {
     /// Convert a concrete `ComponentStore<T>` (as a reference) into a `String`.
     pub to_ron: fn(&dyn Any) -> String,
     /// Convert a `String` back into a boxed concrete store.
-    pub from_ron: fn(String) -> Box<dyn Any + Send>,
+    pub from_ron: fn(String) -> Box<dyn Any + Send + Sync>,
     /// Factory that creates the component (and its dependencies) for an entity.
     pub factory: fn(&mut WorldEcs, Entity),
     /// Returns true if the supplied entity already owns this component.
@@ -136,7 +136,7 @@ macro_rules! ecs_component {
                 ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
                     .expect("failed to serialize ComponentStore")
             }
-            fn __from_ron(text: String) -> Box<dyn std::any::Any + Send> {
+            fn __from_ron(text: String) -> Box<dyn std::any::Any + Send + Sync> {
                 let concrete: $crate::ecs::component::ComponentStore<$ty> =
                     ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
                 Box::new(concrete)
@@ -239,7 +239,7 @@ macro_rules! ecs_component {
                 ron::ser::to_string_pretty(concrete, ron::ser::PrettyConfig::default())
                     .expect("failed to serialize ComponentStore")
             }
-            fn __from_ron(text: String) -> Box<dyn std::any::Any + Send> {
+            fn __from_ron(text: String) -> Box<dyn std::any::Any + Send + Sync> {
                 let concrete: $crate::ecs::component::ComponentStore<$ty> =
                     ron::de::from_str(&text).expect("failed to deserialize ComponentStore");
                 Box::new(concrete)

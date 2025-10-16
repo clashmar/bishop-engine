@@ -1,7 +1,7 @@
 use engine_core::{
-    constants::TILE_SIZE,
-    ecs::component::Collider,
-    world::room::{ExitDirection, Room},
+    ecs::component::Collider, 
+    global::tile_size, 
+    world::room::{ExitDirection, Room}
 };
 use macroquad::prelude::*;
 use uuid::Uuid;
@@ -17,12 +17,12 @@ pub fn crossed_exit(
     let entity_rect = Rect::new(new_pos.x, new_pos.y, collider.width, collider.height);
 
     let room_min = room.position;
-    let room_max = room.position + room.size * TILE_SIZE;
+    let room_max = room.position + room.size * tile_size();
 
     for exit in &room.exits {
         // world‑space rectangle of the exit tile
-        let exit_world = room.position + exit.position * TILE_SIZE;
-        let exit_rect = Rect::new(exit_world.x, exit_world.y, TILE_SIZE, TILE_SIZE);
+        let exit_world = room.position + exit.position * tile_size();
+        let exit_rect = Rect::new(exit_world.x, exit_world.y, tile_size(), tile_size());
 
         // No overlap
         if !entity_rect.overlaps(&exit_rect) {
@@ -83,10 +83,10 @@ fn fits_exit(entity_rect: Rect, exit_rect: Rect, direction: ExitDirection) -> bo
     // Required minimum overlap
     let required = match direction {
         ExitDirection::Left | ExitDirection::Right => {
-            TOLERANCE * entity_rect.h.min(TILE_SIZE)
+            TOLERANCE * entity_rect.h.min(tile_size())
         }
         ExitDirection::Up | ExitDirection::Down => {
-            TOLERANCE * entity_rect.w.min(TILE_SIZE)
+            TOLERANCE * entity_rect.w.min(tile_size())
         }
     };
 

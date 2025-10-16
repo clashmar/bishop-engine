@@ -9,9 +9,10 @@ use std::fmt;
 use crate::{
     assets::{
         asset_manager::AssetManager, 
-        sprite::SpriteId}, 
-        constants::TILE_SIZE, 
-        ecs_component
+        sprite::SpriteId
+    },
+    ecs_component, 
+    global::tile_size
 };
 
 /// The animation component for an entity.
@@ -144,7 +145,7 @@ pub struct ClipDef {
 impl Default for ClipDef {
     fn default() -> ClipDef {
         ClipDef {
-            frame_size: vec2(TILE_SIZE, TILE_SIZE),
+            frame_size: vec2(tile_size(), tile_size()),
             cols: 5,
             rows: 1,
             fps: 4.0,

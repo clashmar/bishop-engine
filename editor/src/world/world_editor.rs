@@ -1,5 +1,11 @@
 // editor/src/world/world_editor.rs
-use engine_core::{constants::TILE_SIZE, world::{room::{ExitDirection, Room}, world::World}};
+use engine_core::{
+    global::tile_size, 
+    world::{
+        room::{ExitDirection, Room}, 
+        world::World
+    }
+};
 use macroquad::prelude::*;
 use uuid::Uuid;
 use crate::{editor_camera_controller::{EditorCameraController}, canvas::grid};
@@ -142,7 +148,7 @@ impl WorldEditor {
             .map(|rm| (rm.position, rm.size))
             .collect();
 
-        coord::overlaps_existing_rooms(top_left * TILE_SIZE, size * TILE_SIZE, &bounds)
+        coord::overlaps_existing_rooms(top_left * tile_size(), size * tile_size(), &bounds)
     }
 
     fn reset_placing(&mut self) {
@@ -196,7 +202,7 @@ impl WorldEditor {
     pub fn draw_rooms(&self, camera: &Camera2D, rooms: &Vec<Room>) {
         for room in rooms {
             let rect = scaled_room_rect(room);
-            let inset = ROOM_LINE_INSET * TILE_SIZE;
+            let inset = ROOM_LINE_INSET * tile_size();
 
             // Draw the room outline
             draw_rectangle_lines(
@@ -213,7 +219,7 @@ impl WorldEditor {
     fn draw_exits(&self, rooms: &Vec<Room>) {
         for room in rooms {
             for exit in &room.exits {
-                let exit_world_coord = (room.position / TILE_SIZE) + exit.position;
+                let exit_world_coord = (room.position / tile_size()) + exit.position;
                 // Decide color based on whether it's linked
                 let color = if exit.target_room_id.is_some() {
                     GREEN
@@ -227,34 +233,34 @@ impl WorldEditor {
 
     fn draw_exit_marker(&self, exit_world_coord: Vec2, dir: ExitDirection, color: Color) {
         let thickness = 4.0;
-        let length = TILE_SIZE;
+        let length = tile_size();
         let offset = 1.0; 
 
         match dir {
             ExitDirection::Up => draw_rectangle(
-                exit_world_coord.x * TILE_SIZE,
-                exit_world_coord.y * TILE_SIZE + TILE_SIZE,
+                exit_world_coord.x * tile_size(),
+                exit_world_coord.y * tile_size() + tile_size(),
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Down => draw_rectangle(
-                exit_world_coord.x * TILE_SIZE,
-                exit_world_coord.y * TILE_SIZE - thickness + offset,
+                exit_world_coord.x * tile_size(),
+                exit_world_coord.y * tile_size() - thickness + offset,
                 length,
                 thickness,
                 color,
             ),
             ExitDirection::Left => draw_rectangle(
-                (exit_world_coord.x + 1.0) * TILE_SIZE - offset,
-                exit_world_coord.y * TILE_SIZE,
+                (exit_world_coord.x + 1.0) * tile_size() - offset,
+                exit_world_coord.y * tile_size(),
                 thickness,
                 length,
                 color,
             ),
             ExitDirection::Right => draw_rectangle(
-                (exit_world_coord.x - 1.0) * TILE_SIZE + TILE_SIZE - thickness + offset,
-                exit_world_coord.y * TILE_SIZE,
+                (exit_world_coord.x - 1.0) * tile_size() + tile_size() - thickness + offset,
+                exit_world_coord.y * tile_size(),
                 thickness,
                 length,
                 color,
@@ -267,7 +273,7 @@ impl WorldEditor {
         for room in rooms {
             let rect = scaled_room_rect(room);
             if rect.contains(world_mouse) {
-                let inset = ROOM_LINE_INSET * TILE_SIZE;
+                let inset = ROOM_LINE_INSET * tile_size();
 
                 // Choose highlight color based on mode
                 let color = match self.mode {
@@ -340,12 +346,12 @@ impl WorldEditor {
         if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
             let (top_left, size) = rect_from_points(start, end);
             let color = if self.intersects_existing_room(rooms, top_left, size) { HIGHLIGHT_ERROR_COLOR } else { HIGHLIGHT_COLOR };
-            let inset = ROOM_LINE_INSET * TILE_SIZE;
+            let inset = ROOM_LINE_INSET * tile_size();
             draw_rectangle_lines(
-                top_left.x * TILE_SIZE + inset / 2.0,
-                top_left.y * TILE_SIZE + inset / 2.0,
-                size.x * TILE_SIZE - inset,
-                size.y * TILE_SIZE - inset,
+                top_left.x * tile_size() + inset / 2.0,
+                top_left.y * tile_size() + inset / 2.0,
+                size.x * tile_size() - inset,
+                size.y * tile_size() - inset,
                 HOVER_LINE_THICKNESS / camera.zoom.x,
                 color,
             );
@@ -357,10 +363,10 @@ impl WorldEditor {
                 HIGHLIGHT_COLOR
             };
             draw_rectangle(
-                hover_tile.x * TILE_SIZE,
-                hover_tile.y * TILE_SIZE,
-                TILE_SIZE,
-                TILE_SIZE,
+                hover_tile.x * tile_size(),
+                hover_tile.y * tile_size(),
+                tile_size(),
+                tile_size(),
                 color,
             );
         }
@@ -392,8 +398,8 @@ fn scaled_room_rect(room: &Room) -> Rect {
     Rect::new(
         room.position.x,
         room.position.y,
-        size.x * TILE_SIZE,
-        size.y * TILE_SIZE,
+        size.x * tile_size(),
+        size.y * tile_size(),
     )
 }
 

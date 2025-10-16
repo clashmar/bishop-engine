@@ -5,6 +5,7 @@ use crate::{
         component::{CurrentRoom, Position, RoomCamera}, 
         world_ecs::WorldEcs
     }, 
+    global::tile_size, 
     tiles::tilemap::TileMap
 };
 use std::{io, path::PathBuf};
@@ -69,12 +70,12 @@ impl Room {
             exit.target_room_id = None;
 
             // Local to world position
-            let exit_world_pos = ( self.position / TILE_SIZE ) + exit.position;
+            let exit_world_pos = ( self.position / tile_size() ) + exit.position;
 
             'other_rooms: for (_, other_room) in other_rooms.iter().enumerate() {
                 for other_exit in &other_room.exits {
                     // World position of the other room's exit
-                    let other_world_pos = (other_room.position / TILE_SIZE) + other_exit.position;
+                    let other_world_pos = (other_room.position / tile_size()) + other_exit.position;
 
                     let linked = match exit.direction {
                         ExitDirection::Up => {
@@ -110,7 +111,7 @@ impl Room {
 
     pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
         self.exits.iter().map(|exit| {
-            (self.position / TILE_SIZE + exit.position, exit.direction)
+            (self.position / tile_size() + exit.position, exit.direction)
         }).collect()
     }
 
@@ -154,7 +155,7 @@ impl Room {
     #[inline]
     pub fn room_bounds(&self) -> (Vec2, Vec2) {
         let min = self.position;
-        let max = self.position + self.size * TILE_SIZE;
+        let max = self.position + self.size * tile_size();
         (min, max)
     }
 

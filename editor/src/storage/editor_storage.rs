@@ -2,11 +2,10 @@
 use macroquad::prelude::*;
 use uuid::Uuid;
 use engine_core::{
-    ecs::{
+    constants::DEFAULT_TILE_SIZE, ecs::{
         component::{CurrentRoom, Player, Position}, 
         world_ecs::WorldEcs
-    }, 
-    game::game::Game, world::{
+    }, game::game::Game, world::{
         room::Room,
         world::World,
     }
@@ -37,6 +36,7 @@ pub fn create_new_game(name: String) -> Game {
         name,
         worlds: vec![world],
         current_world_id: current_id,
+        tile_size: DEFAULT_TILE_SIZE,
     };
 
     // Save the game.

@@ -1,7 +1,10 @@
 // editor/src/canvas/grid.rs
-use engine_core::{constants::TILE_SIZE};
+use engine_core::global::tile_size;
 use macroquad::prelude::*;
-use crate::{editor_camera_controller::{self, EditorCameraController}, world::world_editor::LINE_THICKNESS_MULTIPLIER};
+use crate::{
+    editor_camera_controller::{self, EditorCameraController}, 
+    world::world_editor::LINE_THICKNESS_MULTIPLIER
+};
 
 const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
 
@@ -18,11 +21,11 @@ pub fn draw_grid(camera: &Camera2D) {
     let screen_h = screen_height() / scalar;
 
     // start_x / start_y are the first grid lines that are left / top of the view.
-    let start_x = ((cam_pos.x - screen_w / 2.0) / TILE_SIZE).floor() * TILE_SIZE;
-    let start_y = ((cam_pos.y - screen_h / 2.0) / TILE_SIZE).floor() * TILE_SIZE;
+    let start_x = ((cam_pos.x - screen_w / 2.0) / tile_size()).floor() * tile_size();
+    let start_y = ((cam_pos.y - screen_h / 2.0) / tile_size()).floor() * tile_size();
     // end_x / end_y extend a little beyond the view so the last line is drawn.
-    let end_x = cam_pos.x + screen_w / 2.0 + TILE_SIZE;
-    let end_y = cam_pos.y + screen_h / 2.0 + TILE_SIZE;
+    let end_x = cam_pos.x + screen_w / 2.0 + tile_size();
+    let end_y = cam_pos.y + screen_h / 2.0 + tile_size();
 
     // Draw vertical lines.
     let mut x = start_x;
@@ -35,7 +38,7 @@ pub fn draw_grid(camera: &Camera2D) {
             line_thickness,
             GRID_LINE_COLOR,
         );
-        x += TILE_SIZE;
+        x += tile_size();
     }
 
     // Draw horizontal lines.
@@ -49,6 +52,6 @@ pub fn draw_grid(camera: &Camera2D) {
             line_thickness,
             GRID_LINE_COLOR,
         );
-        y += TILE_SIZE;
+        y += tile_size();
     }
 }

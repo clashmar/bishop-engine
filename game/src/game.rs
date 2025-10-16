@@ -1,10 +1,15 @@
 // game/src/game.rs
 use engine_core::{
-    assets::asset_manager::AssetManager, ecs::component::{
+    assets::asset_manager::AssetManager, 
+    ecs::component::{
         CurrentRoom, 
         Position, 
         Velocity
-    }, lighting::light_system::LightSystem, rendering::render_room::render_room, storage::core_storage, world::{
+    }, 
+    lighting::light_system::LightSystem, 
+    rendering::render_room::render_room, 
+    storage::core_storage, 
+    world::{
         room::Room, 
         world::World
     }
@@ -31,7 +36,6 @@ pub struct GameState {
     asset_manager: AssetManager,
     /// Lighting system for the game.
     lighting_system: LightSystem,
-
 }
 
 impl GameState {

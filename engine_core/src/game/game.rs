@@ -17,6 +17,8 @@ pub struct Game {
     pub worlds: Vec<World>,
     /// Id of the currently active world.
     pub current_world_id: Uuid,
+    /// Tile size of the game that the world scales to.
+    pub tile_size: f32,
 }
 
 impl Game {

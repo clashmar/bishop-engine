@@ -10,7 +10,7 @@ pub struct GameCamera {
 
 pub fn zoom_from_scalar(scalar: f32) -> Vec2 {
     // Fixed virtual aspect
-    let aspect = WORLD_VIRTUAL_WIDTH / WORLD_VIRTUAL_HEIGHT;
+    let aspect = world_virtual_width() / world_virtual_height();
 
     if aspect >= 1.0 {
         vec2(scalar / aspect, scalar)

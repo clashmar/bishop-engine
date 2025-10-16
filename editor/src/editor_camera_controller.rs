@@ -2,6 +2,7 @@
 use macroquad::prelude::*;
 use engine_core::{
     constants::*, 
+    global::*, 
     world::room::Room
 };
 
@@ -67,8 +68,8 @@ impl EditorCameraController {
 
     /// Returns a camera centered on a room.
     pub fn camera_for_room(room_size: Vec2, room_position: Vec2) -> Camera2D {
-        let max_dim_px = (room_size * TILE_SIZE).max_element() / 1.5;
-        let scalar = EDITOR_ZOOM_FACTOR / max_dim_px;
+        let max_dim_px = (room_size * tile_size()).max_element() / 1.5;
+        let scalar = editor_zoom_factor() / max_dim_px;
 
         let aspect = screen_width() / screen_height();
         let (zoom_x, zoom_y) = if aspect > 1.0 {
@@ -78,7 +79,7 @@ impl EditorCameraController {
         };
 
         Camera2D {
-            target: (room_position + (room_size * TILE_SIZE) / 2.0),
+            target: (room_position + (room_size * tile_size()) / 2.0),
             zoom: vec2(zoom_x, zoom_y),
             ..Default::default()
         }

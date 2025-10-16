@@ -1,6 +1,6 @@
 // engine_core/src/world/world.rs
+use crate::global::tile_size;
 use crate::tiles::tilemap::TileMap;
-use crate::constants::TILE_SIZE;
 use crate::ecs::{world_ecs::WorldEcs};
 use serde_with::FromInto;
 use uuid::Uuid;
@@ -60,8 +60,8 @@ impl GridPos {
     /// Convert from world coordinates to tile coordinates
     pub fn from_world(world_pos: Vec2) -> Self {
         GridPos::new(
-            (world_pos.x / TILE_SIZE) as i32,
-            (world_pos.y / TILE_SIZE) as i32,
+            (world_pos.x / tile_size()) as i32,
+            (world_pos.y / tile_size()) as i32,
         )
     }
 
@@ -75,8 +75,8 @@ impl GridPos {
     }
     
     pub fn from_world_edge(world_pos: Vec2, map: &TileMap) -> Self {
-        let mut x = (world_pos.x / TILE_SIZE).floor() as i32;
-        let mut y = (world_pos.y / TILE_SIZE).floor() as i32;
+        let mut x = (world_pos.x / tile_size()).floor() as i32;
+        let mut y = (world_pos.y / tile_size()).floor() as i32;
 
         // Snap to map edges
         if x < 0 { x = -1; }

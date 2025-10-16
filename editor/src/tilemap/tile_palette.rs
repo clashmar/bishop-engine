@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use engine_core::{constants::TILE_SIZE, ui::widgets::*};
+use engine_core::{global::tile_size, ui::widgets::*};
 use serde_with::serde_as;
 use engine_core::{
     assets::{asset_manager::AssetManager, sprite::SpriteId},
@@ -62,7 +62,7 @@ impl TilePalette {
     pub fn new() -> Self {
         Self {
             ui: TilePaletteUi::default(),
-            tile_size: TILE_SIZE,
+            tile_size: tile_size(),
             columns: 1,
             rows: 0,
             selected_index: 0,
@@ -131,11 +131,11 @@ impl TilePalette {
         for i in 0..self.entries.len() {
             let col = i % self.columns;
             let row = i / self.columns;
-            let y = rect.y + (row as f32 * TILE_SIZE);
+            let y = rect.y + (row as f32 * tile_size());
 
             // Skip rows that are completely outside the visible area
             if y + self.tile_size < rect.y
-                || y > rect.y + TILE_SIZE * 5.0
+                || y > rect.y + tile_size() * 5.0
             {
                 continue;
             }

@@ -1,17 +1,27 @@
 // editor/src/room/room_editor_actions.rs
 use engine_core::{
-    animation::animation_clip::Animation, assets::{asset_manager::AssetManager, sprite::Sprite}, camera::game_camera::zoom_from_scalar, constants::*, ecs::{
+    animation::animation_clip::Animation, 
+    assets::{
+        asset_manager::AssetManager, 
+        sprite::Sprite
+    }, 
+    camera::game_camera::zoom_from_scalar, 
+    ecs::{
         component::{Collider, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, lighting::{glow::Glow, light::Light}, rendering::render_room::sprite_dimensions, world::room::Room
+    }, 
+    global::tile_size, 
+    lighting::{glow::Glow, light::Light}, 
+    rendering::render_room::sprite_dimensions, 
+    world::room::Room
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
 use crate::world::coord;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
-const THICKNESS: f32 = (TILE_SIZE * 0.175).max(1.0);
+fn thickness() -> f32 { (tile_size() * 0.175).max(1.0) }
 
 impl RoomEditor {
     /// Draw the cursor coordinates in world space.
@@ -110,7 +120,7 @@ pub fn entity_hitbox(
     // If this is a camera or light, move the position from the top left
     // corner to the visual centre to match how it's drawn
     let corrected_pos = if world_ecs.has_any::<(RoomCamera, Light)>(entity) {
-        position - vec2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
+        position - vec2(tile_size() * 0.5, tile_size() * 0.5)
     } else {
         position
     };
@@ -131,38 +141,38 @@ pub fn entity_hitbox(
 /// Draw an icon for a `RoomCamera`.
 pub fn draw_camera_placeholder(pos: Vec2) {
     // Offset the camera placeholder 
-    let half_tile = TILE_SIZE * 0.5;
+    let half_tile = tile_size() * 0.5;
     let body = Rect::new(
         pos.x - half_tile,   
         pos.y - half_tile,
-        TILE_SIZE,
-        TILE_SIZE,
+        tile_size(),
+        tile_size(),
     );
 
     let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
     let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
     let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
 
-    draw_rectangle_lines(body.x, body.y, body.w, body.h, THICKNESS, green);
+    draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
 
-    let finder_w = TILE_SIZE * 0.3;
-    let finder_h = TILE_SIZE * 0.6;
+    let finder_w = tile_size() * 0.3;
+    let finder_h = tile_size() * 0.6;
     let finder = Rect::new(
-        body.x + THICKNESS,                     
+        body.x + thickness(),                     
         body.y + (body.h - finder_h) / 2.0,
         finder_w,
         finder_h,
     );
     draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
-                         THICKNESS * 0.75, blue);
+                         thickness() * 0.75, blue);
 
-    let lens_radius = TILE_SIZE * 0.1;
+    let lens_radius = tile_size() * 0.1;
     let lens_center = vec2(
-        body.x + body.w - lens_radius * 2.0 - THICKNESS,
+        body.x + body.w - lens_radius * 2.0 - thickness(),
         body.y + body.h / 2.0,
     );
     draw_circle_lines(lens_center.x, lens_center.y,
-                      lens_radius, THICKNESS * 0.75, red);
+                      lens_radius, thickness() * 0.75, red);
 }
 
 /// Draw an icon for a `Light` that has no other visual component.
@@ -175,22 +185,22 @@ pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
         if let Some(position) = world_ecs.get_store::<Position>().get(*entity) {
             let pos = position.position;
 
-            let half_tile = TILE_SIZE * 0.5;
+            let half_tile = tile_size() * 0.5;
             let body = Rect::new(
                 pos.x - half_tile,
                 pos.y - half_tile,
-                TILE_SIZE,
-                TILE_SIZE,
+                tile_size(),
+                tile_size(),
             );
 
             let cyan = Color::new(0.0, 0.78, 0.78, PLACEHOLDER_OPACITY);
             let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
 
             // Outer square
-            draw_rectangle_lines(body.x, body.y, body.w, body.h, THICKNESS, cyan);
+            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), cyan);
 
             // Lens
-            let lens_radius = TILE_SIZE * 0.2;
+            let lens_radius = tile_size() * 0.2;
             let lens_center = vec2(
                 body.x + body.w / 2.,
                 body.y + body.h / 2.,
@@ -200,7 +210,7 @@ pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
                 lens_center.x,
                 lens_center.y,
                 lens_radius,
-                THICKNESS * 0.75,
+                thickness() * 0.75,
                 yellow,
             );
         }
@@ -219,25 +229,25 @@ pub fn draw_glow_placeholders(world_ecs: &WorldEcs, asset_manager: &mut AssetMan
 
             if let Some(sprite_id) = asset_manager.get_or_load(&glow.sprite_path) {
                 if let Some((w, h)) = asset_manager.texture_size(sprite_id) {
-                    pos = pos + vec2((w / 2.) - TILE_SIZE / 2., (h / 2.) - TILE_SIZE / 2.);
+                    pos = pos + vec2((w / 2.) - tile_size() / 2., (h / 2.) - tile_size() / 2.);
                 }
             }
 
             let body = Rect::new(
                 pos.x,
                 pos.y,
-                TILE_SIZE,
-                TILE_SIZE,
+                tile_size(),
+                tile_size(),
             );
 
             let cyan = Color::new(0.0, 0.78, 0.78, PLACEHOLDER_OPACITY);
             let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
 
             // Outer square
-            draw_rectangle_lines(body.x, body.y, body.w, body.h, THICKNESS, cyan);
+            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), cyan);
 
             // Lens
-            let lens_radius = TILE_SIZE * 0.2;
+            let lens_radius = tile_size() * 0.2;
             let lens_center = vec2(
                 body.x + body.w / 2.,
                 body.y + body.h / 2.,
@@ -247,7 +257,7 @@ pub fn draw_glow_placeholders(world_ecs: &WorldEcs, asset_manager: &mut AssetMan
                 lens_center.x,
                 lens_center.y,
                 lens_radius,
-                THICKNESS * 0.75,
+                thickness() * 0.75,
                 yellow,
             );
         }

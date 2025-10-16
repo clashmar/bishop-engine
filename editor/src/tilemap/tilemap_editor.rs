@@ -7,11 +7,11 @@ use crate::{gui::{
 
 use engine_core::{
     assets::asset_manager::AssetManager,
-    constants::*,
     ecs::{
         component::Position,
         world_ecs::{WorldEcs},
     },
+    global::tile_size,
     tiles::{
         tile::{Tile, TileSprite},
         tilemap::TileMap,
@@ -179,8 +179,8 @@ impl TileMapEditor  {
                 .create_entity()
                 .with(Position {
                     position: vec2(
-                        x as f32 * TILE_SIZE,
-                        y as f32 * TILE_SIZE,
+                        x as f32 * tile_size(),
+                        y as f32 * tile_size(),
                     ),
                 })
                 .with(TileSprite { 
@@ -251,12 +251,12 @@ impl TileMapEditor  {
             let max_line_width = 5.0;
             let line_width = (base_width / zoom_scale).clamp(min_line_width, max_line_width);
 
-            let x = tile_pos.x() as f32 * TILE_SIZE + room_position.x;
-            let y = tile_pos.y() as f32 * TILE_SIZE + room_position.y;
+            let x = tile_pos.x() as f32 * tile_size() + room_position.x;
+            let y = tile_pos.y() as f32 * tile_size() + room_position.y;
 
             match self.mode {
                 TilemapEditorMode::Tiles => {
-                    draw_rectangle_lines(x, y, TILE_SIZE, TILE_SIZE, line_width, RED);
+                    draw_rectangle_lines(x, y, tile_size(), tile_size(), line_width, RED);
                 }
                 TilemapEditorMode::Exits => {
                     let exit_direction = self.exit_direction_from_position(tile_pos, map);
