@@ -4,13 +4,8 @@ use reflect_derive::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use crate::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        component::PostCreate, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, 
-    ecs_component, inspector_module
+    ecs_component, 
+    inspector_module
 };
 
 ecs_component!(Glow);
@@ -19,6 +14,7 @@ inspector_module!(Glow);
 /// A single glow source.  
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, Reflect)]
+#[serde(default)]
 pub struct Glow {
     #[serde_as(as = "FromInto<[f32; 3]>")]
     pub color: Vec3,              
@@ -38,16 +34,5 @@ impl Default for Glow {
             emission: 0.0,
             sprite_path: String::new(),
         }
-    }
-}
-
-impl PostCreate for Glow {
-    fn post_create(
-        &mut self,
-        world_ecs: &mut WorldEcs,
-        entity: Entity,
-        asset_manager: &mut AssetManager,
-    ) {
-        // TODO check if the entity already has a sprite and use that when there is no path
     }
 }

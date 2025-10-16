@@ -22,7 +22,6 @@ use crate::{
 use macroquad::prelude::*;
 use engine_core::camera::game_camera::GameCamera;
 
-// #[derive(Debug, Clone)]
 pub struct GameState {
     /// The whole world, including its persistent ecs.
     world: World,

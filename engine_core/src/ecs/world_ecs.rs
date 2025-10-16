@@ -11,7 +11,7 @@ use crate::{
 }; 
 use serde::{Deserialize, Serialize};
 use serde::ser::{SerializeStruct, Serializer};
-use serde::de::{self, Deserializer};
+use serde::de::Deserializer;
 use macroquad::prelude::*;
 
 
@@ -202,17 +202,24 @@ impl<'de> Deserialize<'de> for WorldEcs {
 
         let helper = Helper::deserialize(deserializer)?;
 
-        // Re‑build the component map
+        // Rebuild the component map
         let mut stores = HashMap::new();
         for stored in &helper.components {
-            let reg = inventory::iter::<ComponentReg>()
-                .find(|r| r.type_name == stored.type_name)
-                .ok_or_else(|| {
-                    de::Error::custom(format!(
-                        "unknown component type '{}'",
+            // Try to find a registry entry
+            let reg_opt = inventory::iter::<ComponentReg>()
+                .find(|r| r.type_name == stored.type_name);
+
+            let reg = match reg_opt {
+                Some(r) => r,
+                None => {
+                    // Unknown component
+                    eprintln!(
+                        "Skipping unknown component '{}' (probably removed or renamed).",
                         stored.type_name
-                    ))
-                })?;
+                    );
+                    continue;
+                }
+            };
             let any_box = (reg.from_ron)(stored.data.clone());
             let type_id = reg.type_id;
             stores.insert(type_id, any_box);

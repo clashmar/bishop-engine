@@ -7,6 +7,7 @@ use crate::{ecs_component, inspector_module};
 
 #[serde_as]
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
+#[serde(default)]
 pub struct Light {
     /// Relative to the entity the light is attached to.
     #[serde_as(as = "FromInto<[f32; 2]>")]
@@ -31,7 +32,7 @@ impl Default for Light {
             color: vec3(1., 1., 1.), 
             intensity: 0.5, 
             radius: 50.,
-            spread: 100., 
+            spread: 50., 
             alpha: 0.5, 
             brightness: 1.,
         }

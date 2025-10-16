@@ -89,6 +89,7 @@ pub trait PostCreate {
 
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Position {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
@@ -97,6 +98,7 @@ ecs_component!(Position);
 
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+#[serde(default)]
 pub struct Layer {
     pub z: i32,
 }
@@ -105,6 +107,7 @@ inspector_module!(Layer);
 
 /// Component that stores the room identifier an entity belongs to.
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct CurrentRoom(pub Uuid);
 ecs_component!(CurrentRoom);
 
@@ -118,14 +121,16 @@ ecs_component!(Player, [
     ]);
 
 /// Component for a room camera used by the game.
-#[serde_as]
+#[serde_as] 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct RoomCamera {
     pub scalar_zoom: f32,
 }
 ecs_component!(RoomCamera);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+#[serde(default)]
 pub struct Velocity {
     pub x: f32,
     pub y: f32,
@@ -133,6 +138,7 @@ pub struct Velocity {
 ecs_component!(Velocity);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
+#[serde(default)]
 pub struct Collider {
     pub width: f32,
     pub height: f32,
@@ -173,12 +179,4 @@ pub struct Damage {
     pub amount: f32,
 }
 ecs_component!(Damage);
-
-
-#[derive(Clone, Serialize, Deserialize, Default, Reflect)]
-pub struct Name {
-    pub name: String,
-}
-ecs_component!(Name);
-inspector_module!(Name);
 

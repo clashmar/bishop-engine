@@ -17,6 +17,7 @@ use crate::{
 
 /// The animation component for an entity.
 #[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Animation {
     /// Defineds the animations that belong to the entity.
     pub clips: HashMap<ClipId, ClipDef>,
@@ -125,6 +126,7 @@ impl fmt::Display for ClipId {
 /// Definition for an animation set.
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ClipDef {
     /// Width and height of a single cell.
     #[serde_as(as = "FromInto<[f32; 2]>")]
@@ -157,6 +159,7 @@ impl Default for ClipDef {
 
 /// A full set of clip definitions that can be reused.
 #[derive(Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct AnimationDef {
     pub clips: HashMap<ClipId, ClipDef>,
 }
@@ -167,6 +170,7 @@ pub struct VariantFolder(pub String);
 
 /// Runtime state for a single clip.
 #[derive(Default, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ClipState {
     /// Accumulated time since the last frame change.
     pub timer: f32,

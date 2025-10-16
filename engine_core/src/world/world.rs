@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct World {
     pub id: Uuid,
     pub name: String,

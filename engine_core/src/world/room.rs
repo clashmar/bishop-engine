@@ -17,7 +17,8 @@ use serde_with::serde_as;
 use crate::{constants::*};
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(default)]
 pub struct Room {
     pub id: Uuid, 
     pub name: String,
@@ -166,6 +167,7 @@ impl Room {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct RoomVariant {
     pub id: String,
     pub tilemap: TileMap,      
@@ -180,8 +182,9 @@ impl Default for RoomVariant {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ExitDirection {
+    #[default]
     Up,
     Right,
     Down,
@@ -189,7 +192,8 @@ pub enum ExitDirection {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Clone, Debug, Copy)]
+#[derive(Serialize, Deserialize, Clone, Debug, Copy, Default)]
+#[serde(default)]
 pub struct Exit {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     // Local grid coordinate

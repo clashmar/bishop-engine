@@ -7,7 +7,8 @@ use crate::
 ;
 
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Game {
     /// Unique identifier of the game.
     pub id: Uuid,
