@@ -12,11 +12,7 @@ use crate::{
     playtest::room_playtest,
 };
 use engine_core::{
-    assets::asset_manager::AssetManager, 
-    constants::*, 
-    game::game::Game, 
-    physics::collider_system, 
-    world::room::Room
+    assets::asset_manager::AssetManager, constants::*, game::game::Game, global::set_tile_size, physics::collider_system, world::room::Room
 };
 
 pub enum EditorMode {
@@ -44,6 +40,8 @@ impl Editor {
             // User pressed Escape
             editor_storage::create_new_game("untitled".to_string())
         };
+
+        set_tile_size(game.tile_size);
 
         let camera = EditorCameraController::camera_for_room(
             DEFAULT_ROOM_SIZE,
@@ -194,7 +192,10 @@ impl Editor {
     pub fn draw(&mut self) {
         match self.mode {
             EditorMode::World => {
-                self.world_editor.draw(&self.camera, &self.game.current_world_mut());
+                self.world_editor.draw(
+                    &self.camera, 
+                    &mut self.game,
+                );
             }
             EditorMode::Room(room_id) => {
                 // The room id should already be set
