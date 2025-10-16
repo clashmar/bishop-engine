@@ -18,7 +18,7 @@ use engine_core::{
         component::{CurrentRoom, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, lighting::light_system::LightSystem, rendering::render_room::*, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
+    }, lighting::{light::Light, light_system::LightSystem}, rendering::render_room::*, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
 };
 use macroquad::prelude::*;
 
@@ -264,8 +264,6 @@ impl RoomEditor {
 
                 self.inspector.set_rect(inspector_rect);
 
-                // tilemap.draw(render_cam, exits, world_ecs, asset_manager, room.position);
-
                 // Draws everything in the room. Same implementation as the game.
                 render_room(
                     world_ecs, 
@@ -283,16 +281,14 @@ impl RoomEditor {
                     }
                     
                     draw_camera_placeholder(room_camera.position);
+                    draw_light_placeholders(world_ecs);
+                    draw_glow_placeholders(world_ecs, asset_manager);
 
                     if let Some(selected_entity) = self.selected_entity {
-                        let is_camera = world_ecs
-                            .get_store::<RoomCamera>()
-                            .get(selected_entity)
-                            .is_some();
-
-                        if !is_camera {
+                        if !world_ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
                             highlight_selected_entity(world_ecs, selected_entity, asset_manager, YELLOW);
                         }
+
                         draw_collider(world_ecs, selected_entity);
                         self.draw_camera_viewport(camera, world_ecs, selected_entity);
                     }
@@ -345,8 +341,6 @@ impl RoomEditor {
         self.selected_entity = entity;
         self.inspector.set_target(entity);
     }
-
-    
 
     pub fn reset(&mut self) {
         self.mode = RoomEditorMode::Scene;

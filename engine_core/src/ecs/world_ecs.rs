@@ -5,7 +5,7 @@ use crate::{
     ecs::{
         component::*, 
         component_registry::{ComponentReg, StoredComponent}, 
-        entity::{Entity, EntityBuilder}
+        entity::{Entity, EntityBuilder}, has_any::HasAny
     }, 
     tiles::tile_def::{TileDef, TileDefId}
 }; 
@@ -54,6 +54,15 @@ impl WorldEcs {
         T: Component + 'static,
     {
         self.get_store::<T>().contains(entity)
+    }
+
+    #[inline]
+    /// Check whether an entity has any components in tuple `T`.
+    pub fn has_any<T>(&self, entity: Entity) -> bool
+    where
+        T: HasAny,
+    {
+        T::has_any(self, entity)
     }
 
     /// Remove all component data that belongs to `entity`.

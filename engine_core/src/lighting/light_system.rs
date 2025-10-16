@@ -149,7 +149,7 @@ impl LightSystem {
                 pipeline_params: PipelineParams {
                     color_blend: Some(BlendState::new(
                         Equation::Add,
-                        BlendFactor::Value(BlendValue::SourceAlpha),
+                        BlendFactor::One,
                         BlendFactor::OneMinusValue(BlendValue::SourceAlpha)
                     )),
                     alpha_blend: Some(BlendState::new(
@@ -210,15 +210,7 @@ impl LightSystem {
         self.ambient_mat.set_texture("tex", self.scene_rt.texture.clone());
         self.ambient_mat.set_uniform("Darkness", darkness);
 
-        gl_use_material(&self.ambient_mat);
-        draw_texture_ex(
-            &self.scene_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
-        gl_use_default_material();
+        self.draw_pass(&self.ambient_mat, &self.scene_rt.texture);
     }
 
     /// Renders glow textures per-layer in the room.
@@ -237,7 +229,7 @@ impl LightSystem {
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
 
         for (i, (glow, world_pos)) in glows.iter().take(MAX_LIGHTS).enumerate() {
-            if let Some(id) = asset_manager.get_or_load(&glow.sprite) {
+            if let Some(id) = asset_manager.get_or_load(&glow.sprite_path) {
                 let tex = asset_manager.get_texture_from_id(id).clone();
                 self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
 
@@ -253,8 +245,8 @@ impl LightSystem {
                 // Texture dimensions
                 if let Some((w, h)) = asset_manager.texture_size(id) {
                     buffer.mask_size = vec2(
-                        world_distance_to_screen(render_cam, w),
-                        world_distance_to_screen(render_cam, h),
+                        world_distance_to_uniform(render_cam, w),
+                        world_distance_to_uniform(render_cam, h),
                     );
                 }
             }
@@ -270,14 +262,7 @@ impl LightSystem {
         self.glow_mat.set_uniform("screenWidth", screen_width());
         self.glow_mat.set_uniform("screenHeight", screen_height());
         
-        gl_use_material(&self.glow_mat);
-        draw_texture_ex(
-            &self.glow_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
+        self.draw_pass(&self.glow_mat, &self.glow_rt.texture);
         
         gl_use_default_material();
     }
@@ -297,15 +282,7 @@ impl LightSystem {
         self.undarkened_mat.set_texture("glow_tex", self.glow_rt.texture.clone());
         self.undarkened_mat.set_texture("undarkened_tex", self.undarkened_rt.texture.clone());
 
-        gl_use_material(&self.undarkened_mat);
-        draw_texture_ex(
-            &self.undarkened_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
-        gl_use_default_material();
+        self.draw_pass(&self.undarkened_mat, &self.undarkened_rt.texture);
     }
 
     /// Renders spotlights using the undarkened scene texture.
@@ -324,11 +301,11 @@ impl LightSystem {
             for i in 0..light_count {
                 let (pos, l) = &lights[i];
                 let world_pos = *pos + l.pos;
-                let mut buffer = self.light_bufffers[i];
+                let buffer = &mut self.light_bufffers[i];
 
                 buffer.pos = render_cam.world_to_screen(world_pos);
-                buffer.radius = world_distance_to_screen(render_cam, l.radius);
-                buffer.spread = world_distance_to_screen(render_cam, l.spread);
+                buffer.radius = world_distance_to_uniform(render_cam, l.radius);
+                buffer.spread = world_distance_to_uniform(render_cam, l.spread);
                 buffer.color = l.color;
                 buffer.intensity = l.intensity;
                 buffer.alpha = l.alpha;
@@ -350,15 +327,7 @@ impl LightSystem {
             self.spot_mat.set_uniform("ScreenHeight", screen_height());
             self.spot_mat.set_uniform("Darkness", darkness);
 
-            gl_use_material(&self.spot_mat);
-            draw_texture_ex(
-                &self.spot_rt.texture,
-                0.0,
-                0.0,
-                WHITE,
-                DrawTextureParams::default(),
-            );
-            gl_use_default_material();
+            self.draw_pass(&self.spot_mat, &self.spot_rt.texture);
         }
     }
 
@@ -377,15 +346,7 @@ impl LightSystem {
         self.scene_comp_mat.set_texture("glow_tex", self.glow_rt.texture.clone());
         self.scene_comp_mat.set_texture("scene_comp_tex", self.scene_comp_rt.texture.clone());
 
-        gl_use_material(&self.scene_comp_mat);
-        draw_texture_ex(
-            &self.scene_comp_rt.texture,
-            0.0,
-            0.0,
-            WHITE,
-            DrawTextureParams::default(),
-        );
-        gl_use_default_material();
+        self.draw_pass(&self.scene_comp_mat, &self.scene_comp_rt.texture);
     }
 
     /// The last composite stage for rendering a room before post-processing.
@@ -396,9 +357,14 @@ impl LightSystem {
         self.final_comp_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
         self.final_comp_mat.set_texture("final_comp_tex", self.final_comp_rt.texture.clone());
 
-        gl_use_material(&self.final_comp_mat);
+        self.draw_pass(&self.final_comp_mat, &self.final_comp_rt.texture);
+    }
+
+    /// Sets and draws the supplied material and resets to default.
+    pub fn draw_pass(&self, material: &Material, quad: &Texture2D) {
+        gl_use_material(material);
         draw_texture_ex(
-            &self.final_comp_rt.texture,
+            quad,
             0.0,
             0.0,
             WHITE,
@@ -418,6 +384,21 @@ impl LightSystem {
         set_camera(&mask_cam);
         clear_background(WHITE);
         gl_use_default_material();
+    }
+
+    /// Sets, clears and returns the scene camera.
+    pub fn clear_scene_cam(&self, render_cam: &Camera2D) -> Camera2D {
+        let scene_cam = Camera2D {
+            target: render_cam.target,
+            zoom: render_cam.zoom,
+            render_target: Some(self.scene_rt.clone()),
+            ..Default::default()
+        };
+        
+        // Clear the texture every layer
+        set_camera(&scene_cam); // Set before clearing!
+        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
+        scene_cam
     }
 
     /// Sets, clears the given render target and returns the camera for it.
@@ -449,7 +430,7 @@ impl LightSystem {
 }
 
 /// Distance conversion for shader uniforms.
-pub fn world_distance_to_screen(cam: &Camera2D, distance: f32) -> f32 {
+pub fn world_distance_to_uniform(cam: &Camera2D, distance: f32) -> f32 {
     let scale = cam.zoom.x * screen_width() * 0.5; 
     (distance * scale).abs()
 }

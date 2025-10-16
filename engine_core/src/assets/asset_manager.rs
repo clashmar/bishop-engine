@@ -107,6 +107,19 @@ impl AssetManager {
         }
     }
 
+    /// Returns the id for `path` or `None` if not loaded.
+    pub fn get_or_none(&self, path: &str) -> Option<SpriteId> {
+        if path.trim().is_empty() {
+            return None;
+        }
+
+        if let Some(&id) = self.path_to_id.get(path) {
+            return Some(id)
+        }
+
+        None
+    }
+ 
     /// Syncs all the sprite assets for a world.
     pub async fn sync_all_assets(&mut self, world_ecs: &mut WorldEcs) {
         // Load all non‑tile sprites

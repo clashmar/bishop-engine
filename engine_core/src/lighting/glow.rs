@@ -26,17 +26,17 @@ pub struct Glow {
     pub brightness: f32,
     pub emission: f32,
     #[widget("png")]          
-    pub sprite: String,
+    pub sprite_path: String,
 }
 
 impl Default for Glow {
     fn default() -> Self {
         Self {
             color: vec3(1.0, 1.0, 1.0),
-            intensity: 0.5,
+            intensity: 0.1,
             brightness: 0.5,
             emission: 0.0,
-            sprite: String::new(),
+            sprite_path: String::new(),
         }
     }
 }

@@ -17,12 +17,12 @@ use crate::{
 
 /// Marker trait for components.
 pub trait Component: Send + Sync {
-    fn store_mut(world: &mut crate::ecs::world_ecs::WorldEcs)
+    fn store_mut(world: &mut WorldEcs)
         -> &mut ComponentStore<Self>
     where
         Self: Sized;
         
-    fn store(world: &crate::ecs::world_ecs::WorldEcs)
+    fn store(world: &WorldEcs)
         -> &ComponentStore<Self>
     where
         Self: Sized;

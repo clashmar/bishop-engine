@@ -34,8 +34,13 @@ pub fn render_room(
     let frame_store = world_ecs.get_store::<CurrentFrame>();
 
     // Organize entities by layer
-    let layer_map = collect_layer_map(world_ecs, room);
+    let mut layer_map = collect_layer_map(world_ecs, room);
 
+    if layer_map.is_empty() {
+        layer_map.insert(0, (Vec::new(), Vec::new()));
+    }
+
+    // Clear composite textures before each run
     LightSystem::clear_cam(&lighting.scene_comp_rt);
     LightSystem::clear_cam(&lighting.final_comp_rt);
 
@@ -49,15 +54,7 @@ pub fn render_room(
 
     for (_z, (entities, glows)) in layer_map {
         // Scene cam needs to draw to the current render cam
-        let scene_cam = Camera2D {
-            target: render_cam.target,
-            zoom: render_cam.zoom,
-            render_target: Some(lighting.scene_rt.clone()),
-            ..Default::default()
-        };
-        
-        set_camera(&scene_cam); // Set before clearing!
-        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
+        lighting.clear_scene_cam(render_cam);
 
         // Draw the tilemap as the first layer
         if first_pass {
@@ -157,6 +154,11 @@ fn draw_entity(
         }
     }
 
+    // Don't draw placeholders for these components
+    if world_ecs.has_any::<(Light, Glow)>(entity) {
+        return;
+    }
+
     // Fallback placeholder (no sprite or missing texture)
     draw_entity_placeholder(pos.position);
 }
@@ -194,7 +196,18 @@ pub fn sprite_dimensions(
             .and_then(|spr| asset_manager.texture_size(spr.sprite_id))
     };
 
-    from_anim.or_else(from_sprite).unwrap_or((TILE_SIZE, TILE_SIZE))
+    let from_glow = || {
+        world_ecs
+            .get_store::<Glow>()
+            .get(entity)
+            .and_then(|glow| asset_manager.get_or_none(&glow.sprite_path))
+            .and_then(|sprite_id| asset_manager.texture_size(sprite_id))
+    };
+
+    from_anim
+        .or_else(from_sprite)
+        .or_else(from_glow)
+        .unwrap_or((TILE_SIZE, TILE_SIZE))
 }
 
 pub fn draw_entity_placeholder(pos: Vec2) {
@@ -251,6 +264,11 @@ fn collect_layer_map<'a>(
         }
     }
 
+    // There always needs to be at least one layer otherwise nothing will be drawn
+    if map.is_empty() {
+        map.insert(0, (Vec::new(), Vec::new()));
+    }
+
     map
 }
 
@@ -266,8 +284,8 @@ fn collect_lights(
 
     for (entity, light) in &light_store.data {
         // Filter by current room
-        if let Some(cr) = room_store.get(*entity) {
-            if cr.0 != room.id { 
+        if let Some(current_room) = room_store.get(*entity) {
+            if current_room.0 != room.id { 
                 continue; 
             }
         } else { 
@@ -278,10 +296,6 @@ fn collect_lights(
             lights.push((pos.position, *light));
         }
     }
-    lights
-}
 
-pub fn world_distance_to_screen(cam: &Camera2D, distance: f32) -> f32 {
-    let scale = cam.zoom.x * screen_width() * 0.5; 
-    (distance * scale).abs()
+    lights
 }

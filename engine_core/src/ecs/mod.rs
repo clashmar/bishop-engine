@@ -7,3 +7,4 @@ pub mod module_factory;
 pub mod generic_module;
 pub mod module;
 pub mod capture;
+pub mod has_any;

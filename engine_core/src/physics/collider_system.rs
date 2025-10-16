@@ -45,7 +45,6 @@ pub fn update_colliders_from_sprites(world_ecs: &mut WorldEcs, assets: &mut Asse
                     pending.push((*entity, col));
                 }
             }
-            
         }
     }
 

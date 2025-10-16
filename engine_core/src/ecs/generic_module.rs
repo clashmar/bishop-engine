@@ -17,6 +17,10 @@ use std::{borrow::Cow, marker::PhantomData};
 const TOP_PADDING: f32 = 10.0;
 const FIELD_HEIGHT: f32 = 30.0;
 const SPACING: f32 = 5.0;
+const LABEL_PADDING: f32 = 10.0;
+const MIN_WIDGET_WIDTH: f32 = 80.0;
+const MIN_LABEL_WIDTH: f32 = 80.0;
+const FONT_SIZE: f32 = 18.0;
 
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
@@ -57,7 +61,6 @@ where
 
         // Layout constants
         let mut y = rect.y + TOP_PADDING;
-        let label_w = 80.0;
 
         // Iterate over the fields supplied by the `Reflect` impl
         for field in component.fields() {
@@ -68,12 +71,24 @@ where
                 .entry(base_key.clone())
                 .or_insert_with(WidgetId::default);
 
-            // Draw the field label
-            let label = capitalise(field.name);
-            draw_text(&label, rect.x, y + 22.0, 18.0, WHITE);
+            // Prepare the field label
+            let label = parse_field_name(field.name);
+            let label_w = measure_text(&label, None, FONT_SIZE as u16, 1.0).width.max(MIN_LABEL_WIDTH);
+            let widget_x = rect.x + label_w + LABEL_PADDING;
+
+            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, WHITE);
 
             // Widget rectangle
-            let widget_rect = Rect::new(rect.x + label_w, y, rect.w - label_w - 10.0, FIELD_HEIGHT);
+            let widget_x = if widget_x > rect.x + rect.w - MIN_WIDGET_WIDTH {
+                // Clamp the widget size to the min length
+                rect.x + rect.w - MIN_WIDGET_WIDTH
+            } else {
+                widget_x
+            };
+
+            let widget_w = (rect.x + rect.w) - widget_x - 10.0;
+            let widget_rect = Rect::new(widget_x, y, widget_w.max(MIN_WIDGET_WIDTH), FIELD_HEIGHT);
+
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
                 (FieldValue::Text(txt), Some("png")) => {
@@ -83,7 +98,11 @@ where
                         "[Change File]".to_string()
                     };
 
-                    if gui_button(widget_rect, &btn_label) {
+                    let remove_w = widget_rect.h;
+                    let picker_rect = Rect::new(widget_rect.x, widget_rect.y, widget_w - remove_w - SPACING, widget_rect.h);
+                    let remove_rect = Rect::new(widget_rect.x + widget_w - remove_w, widget_rect.y, remove_w, widget_rect.h);
+
+                    if gui_button(picker_rect, &btn_label) {
                         #[cfg(not(target_arch = "wasm32"))]
                         {
                             if let Some(path) = rfd::FileDialog::new()
@@ -96,6 +115,10 @@ where
                                 asset_manager.get_or_load(&txt);
                             }
                         }
+                    }
+
+                    if gui_button(remove_rect, "x") {
+                        *txt = "".to_string()
                     }
                 }
                 (FieldValue::Text(txt), _) => {
@@ -221,23 +244,49 @@ where
     }
 }
 
-fn capitalise(name: &str) -> Cow<str> {
-    // Fast path – already starts with an ASCII upper‑case letter
-    if name
-        .chars()
-        .next()
-        .map(|c| c.is_ascii_uppercase())
-        .unwrap_or(false)
+pub fn parse_field_name(name: &str) -> Cow<str> {
+    // Fast path
+    if !name.contains('_')
+        && name
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_uppercase())
+            .unwrap_or(false)
     {
         return Cow::Borrowed(name);
     }
 
-    // Build a new owned string with the first char upper‑cased
-    let mut chars = name.chars();
-    let first = chars.next().map(|c| c.to_ascii_uppercase());
-    let rest: String = chars.collect();
-    match first {
-        Some(f) => Cow::Owned(format!("{}{}", f, rest)),
-        None => Cow::Borrowed(name), // empty string – should never happen
-    }
+    // Split on '_' and capitalise each segment
+    let mut parts = name.split('_').filter(|s| !s.is_empty());
+
+    // Build the first part (to avoid an extra allocation when possible)
+    let first = match parts.next() {
+        Some(p) => {
+            let mut chars = p.chars();
+            let first_char = chars.next().map(|c| c.to_ascii_uppercase());
+            let rest: String = chars.collect();
+            match first_char {
+                Some(f) => format!("{}{}", f, rest),
+                None => String::new(),
+            }
+        }
+        None => return Cow::Borrowed(name), // empty input
+    };
+
+    // Append the remaining parts, each preceded by a space
+    let result = parts.fold(first, |mut acc, part| {
+        let mut chars = part.chars();
+        let first_char = chars.next().map(|c| c.to_ascii_uppercase());
+        let rest: String = chars.collect();
+        match first_char {
+            Some(f) => {
+                acc.push(' ');
+                acc.push_str(&format!("{}{}", f, rest));
+            }
+            None => {}
+        }
+        acc
+    });
+
+    Cow::Owned(result)
 }

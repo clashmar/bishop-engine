@@ -1,19 +1,17 @@
 // editor/src/room/room_editor_actions.rs
 use engine_core::{
-    assets::asset_manager::AssetManager, 
-    camera::game_camera::zoom_from_scalar, 
-    constants::*, 
-    ecs::{
+    animation::animation_clip::Animation, assets::{asset_manager::AssetManager, sprite::Sprite}, camera::game_camera::zoom_from_scalar, constants::*, ecs::{
         component::{Collider, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    rendering::render_room::sprite_dimensions, 
-    world::room::Room
+    }, lighting::{glow::Glow, light::Light}, rendering::render_room::sprite_dimensions, world::room::Room
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
 use crate::world::coord;
+
+const PLACEHOLDER_OPACITY: f32 = 0.2;
+const THICKNESS: f32 = (TILE_SIZE * 0.175).max(1.0);
 
 impl RoomEditor {
     /// Draw the cursor coordinates in world space.
@@ -79,44 +77,6 @@ impl RoomEditor {
     }
 }
 
-/// Draw an icon for the `RoomCamera`.
-pub fn draw_camera_placeholder(pos: Vec2) {
-    // Offset the camera placeholder 
-    let half_tile = TILE_SIZE * 0.5;
-    let body = Rect::new(
-        pos.x - half_tile,   
-        pos.y - half_tile,
-        TILE_SIZE,
-        TILE_SIZE,
-    );
-
-    let thickness = (TILE_SIZE * 0.2).max(1.0);
-    let green = Color::new(0.0, 0.89, 0.19, 0.5);
-    let blue  = Color::new(0.0, 0.47, 0.95, 0.5);
-    let red   = Color::new(0.9, 0.16, 0.22, 0.5);
-
-    draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness, green);
-
-    let finder_w = TILE_SIZE * 0.3;
-    let finder_h = TILE_SIZE * 0.6;
-    let finder = Rect::new(
-        body.x + thickness,                     
-        body.y + (body.h - finder_h) / 2.0,
-        finder_w,
-        finder_h,
-    );
-    draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
-                         thickness * 0.75, blue);
-
-    let lens_radius = TILE_SIZE * 0.1;
-    let lens_center = vec2(
-        body.x + body.w - lens_radius * 2.0 - thickness,
-        body.y + body.h / 2.0,
-    );
-    draw_circle_lines(lens_center.x, lens_center.y,
-                      lens_radius, thickness * 0.75, red);
-}
-
 /// Draw the outline of the collider for an entity if it has one.
 pub fn draw_collider(
     world_ecs: &WorldEcs,
@@ -147,9 +107,9 @@ pub fn entity_hitbox(
 ) -> Rect {
     let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
 
-    // If this is a camera, move the position from the top left
+    // If this is a camera or light, move the position from the top left
     // corner to the visual centre to match how it's drawn
-    let corrected_pos = if world_ecs.get_store::<RoomCamera>().get(entity).is_some() {
+    let corrected_pos = if world_ecs.has_any::<(RoomCamera, Light)>(entity) {
         position - vec2(TILE_SIZE * 0.5, TILE_SIZE * 0.5)
     } else {
         position
@@ -166,4 +126,130 @@ pub fn entity_hitbox(
     let rect_h = (bottom_right.y - top_left.y).abs();
 
     Rect::new(rect_x, rect_y, rect_w, rect_h)
+}
+
+/// Draw an icon for a `RoomCamera`.
+pub fn draw_camera_placeholder(pos: Vec2) {
+    // Offset the camera placeholder 
+    let half_tile = TILE_SIZE * 0.5;
+    let body = Rect::new(
+        pos.x - half_tile,   
+        pos.y - half_tile,
+        TILE_SIZE,
+        TILE_SIZE,
+    );
+
+    let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
+    let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
+    let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
+
+    draw_rectangle_lines(body.x, body.y, body.w, body.h, THICKNESS, green);
+
+    let finder_w = TILE_SIZE * 0.3;
+    let finder_h = TILE_SIZE * 0.6;
+    let finder = Rect::new(
+        body.x + THICKNESS,                     
+        body.y + (body.h - finder_h) / 2.0,
+        finder_w,
+        finder_h,
+    );
+    draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
+                         THICKNESS * 0.75, blue);
+
+    let lens_radius = TILE_SIZE * 0.1;
+    let lens_center = vec2(
+        body.x + body.w - lens_radius * 2.0 - THICKNESS,
+        body.y + body.h / 2.0,
+    );
+    draw_circle_lines(lens_center.x, lens_center.y,
+                      lens_radius, THICKNESS * 0.75, red);
+}
+
+/// Draw an icon for a `Light` that has no other visual component.
+pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
+    for (entity, _light) in world_ecs.get_store::<Light>().data.iter() {
+        if world_ecs.has_any::<(Sprite, Animation)>(*entity) {
+            continue;
+        }
+
+        if let Some(position) = world_ecs.get_store::<Position>().get(*entity) {
+            let pos = position.position;
+
+            let half_tile = TILE_SIZE * 0.5;
+            let body = Rect::new(
+                pos.x - half_tile,
+                pos.y - half_tile,
+                TILE_SIZE,
+                TILE_SIZE,
+            );
+
+            let cyan = Color::new(0.0, 0.78, 0.78, PLACEHOLDER_OPACITY);
+            let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
+
+            // Outer square
+            draw_rectangle_lines(body.x, body.y, body.w, body.h, THICKNESS, cyan);
+
+            // Lens
+            let lens_radius = TILE_SIZE * 0.2;
+            let lens_center = vec2(
+                body.x + body.w / 2.,
+                body.y + body.h / 2.,
+            );
+
+            draw_circle_lines(
+                lens_center.x,
+                lens_center.y,
+                lens_radius,
+                THICKNESS * 0.75,
+                yellow,
+            );
+        }
+    }
+}
+
+/// Draw a placeholder for a `Glow` that has no other visual component.
+pub fn draw_glow_placeholders(world_ecs: &WorldEcs, asset_manager: &mut AssetManager) {
+    for (entity, glow) in world_ecs.get_store::<Glow>().data.iter() {
+        if world_ecs.has_any::<(Sprite, Animation)>(*entity) {
+            continue;
+        }
+
+        if let Some(position) = world_ecs.get_store::<Position>().get(*entity) {
+            let mut pos = position.position;
+
+            if let Some(sprite_id) = asset_manager.get_or_load(&glow.sprite_path) {
+                if let Some((w, h)) = asset_manager.texture_size(sprite_id) {
+                    pos = pos + vec2((w / 2.) - TILE_SIZE / 2., (h / 2.) - TILE_SIZE / 2.);
+                }
+            }
+
+            let body = Rect::new(
+                pos.x,
+                pos.y,
+                TILE_SIZE,
+                TILE_SIZE,
+            );
+
+            let cyan = Color::new(0.0, 0.78, 0.78, PLACEHOLDER_OPACITY);
+            let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
+
+            // Outer square
+            draw_rectangle_lines(body.x, body.y, body.w, body.h, THICKNESS, cyan);
+
+            // Lens
+            let lens_radius = TILE_SIZE * 0.2;
+            let lens_center = vec2(
+                body.x + body.w / 2.,
+                body.y + body.h / 2.,
+            );
+
+            draw_circle_lines(
+                lens_center.x,
+                lens_center.y,
+                lens_radius,
+                THICKNESS * 0.75,
+                yellow,
+            );
+        }
+    }
 }
