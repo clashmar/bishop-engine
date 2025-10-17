@@ -110,7 +110,7 @@ fn draw_entity(
     entity: Entity,
     pos: Position,
 ) {
-    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
     // Animate/Draw sprite
     if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
@@ -173,12 +173,12 @@ pub fn highlight_selected_entity(
         None => return,
     };
 
-    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
     draw_rectangle_lines(pos.position.x, pos.position.y, width, height, 2.0, color);
 }
 
-pub fn sprite_dimensions(
+pub fn entity_dimensions(
     world_ecs: &WorldEcs,
     asset_manager: &AssetManager,
     entity: Entity,

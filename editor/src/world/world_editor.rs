@@ -1,6 +1,6 @@
 // editor/src/world/world_editor.rs
 use engine_core::{
-    game::game::Game, global::{set_tile_size, tile_size}, ui::widgets::*, world::{
+    game::game::Game, global::{self, tile_size}, ui::widgets::*, world::{
         room::{ExitDirection, Room}, world::World
     }
 };
@@ -385,10 +385,10 @@ impl WorldEditor {
         );
 
         // Tile size field
-        let new = gui_input_number_f32(self.tile_size_id, ts_rect, game.tile_size);
-        if new != game.tile_size {
-            game.tile_size = new;
-            set_tile_size(new);
+        let new_size = gui_input_number_f32(self.tile_size_id, ts_rect, game.tile_size);
+        if new_size != game.tile_size {
+            let old_size = game.tile_size;
+            global::update_tile_size(game, old_size, new_size);
         }
 
         let world = game.current_world();
