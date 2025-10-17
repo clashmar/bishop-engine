@@ -13,7 +13,7 @@ use engine_core::{
     }, 
     global::tile_size, 
     lighting::{glow::Glow, light::Light}, 
-    rendering::render_room::sprite_dimensions, 
+    rendering::render_room::entity_dimensions, 
     world::room::Room
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
@@ -115,7 +115,7 @@ pub fn entity_hitbox(
     world_ecs: &WorldEcs,
     asset_manager: &mut AssetManager,
 ) -> Rect {
-    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
     // If this is a camera or light, move the position from the top left
     // corner to the visual centre to match how it's drawn

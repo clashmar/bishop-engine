@@ -4,6 +4,7 @@ use crate::global::tile_size;
 
 /// Default tile size that the world scales to.
 pub const DEFAULT_TILE_SIZE: f32 = 16.0;
+pub const MINIMUM_TILE_SIZE: f32 = 9.0;
 
 /// Base tile size for editor scaling.
 pub const BASE_TILE_SIZE: f32 = 32.0;
