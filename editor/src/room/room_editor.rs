@@ -1,6 +1,6 @@
 // editor/src/room/room_editor.rs
 use engine_core::{
-    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, ecs::{
+    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::game_camera::get_room_camera, ecs::{
         component::{CurrentRoom, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
@@ -208,7 +208,7 @@ impl RoomEditor {
             }
             RoomEditorMode::Scene => {
                 // !This is the camera I'm referring to!
-                let room_camera = Room::get_room_camera(world_ecs, room.id)
+                let room_camera = get_room_camera(world_ecs, room.id)
                     .expect("This room should have a camera.");
 
                 let render_cam = if self.view_preview {

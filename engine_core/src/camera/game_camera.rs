@@ -1,6 +1,7 @@
 // engine_core/src/camera/game_camera.rs
-use crate::{constants::*, global::tile_size};
+use crate::{ecs::{component::{CurrentRoom, Position, RoomCamera}, world_ecs::WorldEcs}, global::*};
 use macroquad::prelude::*;
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct GameCamera {
@@ -8,9 +9,13 @@ pub struct GameCamera {
     pub camera: Camera2D,
 }
 
+pub fn world_virtual_width() -> f32 { cam_tile_dims().0 * tile_size() }
+pub fn world_virtual_height() -> f32 { cam_tile_dims().1 * tile_size() }
+
 pub fn game_render_target() -> RenderTarget {
     let width = world_virtual_width() as u32;
     let height = world_virtual_height() as u32;
+    
     let rt = render_target(
         width,
         height,
@@ -20,8 +25,33 @@ pub fn game_render_target() -> RenderTarget {
     rt
 }
 
-pub fn world_virtual_width() -> f32 { CAMERA_TILES_X * tile_size() }
-pub fn world_virtual_height() -> f32 { CAMERA_TILES_Y * tile_size() }
+/// Returns a `GameCamera` for a room from its id, if one exists.
+pub fn get_room_camera(world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera> {
+    let pos_store = world_ecs.get_store::<Position>();
+    let cam_store = world_ecs.get_store::<RoomCamera>();
+    let room_store = world_ecs.get_store::<CurrentRoom>();
+
+    for (entity, room_cam) in cam_store.data.iter() {
+        if let Some(current_room) = room_store.get(*entity) {
+            if current_room.0 != room_id { continue; }
+
+            let position = pos_store.data
+                .get(entity)
+                .expect("Camera should always have position.")
+                .position;
+
+            let camera = Camera2D {
+                target: position,
+                zoom: room_cam.zoom,
+                render_target: Some(game_render_target()),
+                ..Default::default()
+            };
+
+            return Some(GameCamera { position, camera, });
+        }
+    }
+    None
+}
 
 pub fn zoom_from_scalar(scalar: f32) -> Vec2 {
     // Fixed virtual aspect

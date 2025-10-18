@@ -125,7 +125,8 @@ ecs_component!(Player, [
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct RoomCamera {
-    pub scalar_zoom: f32,
+    #[serde_as(as = "FromInto<[f32; 2]>")]
+    pub zoom: Vec2,
 }
 ecs_component!(RoomCamera);
 
