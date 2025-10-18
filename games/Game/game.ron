@@ -9,80 +9,80 @@
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Kinematic",
-                        data: "(\n    data: {},\n)",
+                        type_name: "Player",
+                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (),\n    },\n)",
                     ),
                     /*[1]*/ (
-                        type_name: "Name",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[2]*/ (
                         type_name: "Velocity",
                         data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
                     ),
+                    /*[2]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (),\n    },\n)",
+                    ),
                     /*[3]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\n            scalar_zoom: 0.01651,\n        ),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\n            scalar_zoom: 0.01,\n        ),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
-                    ),
-                    /*[4]*/ (
-                        type_name: "CurrentFrame",
-                        data: "(\n    data: {\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (),\n    },\n)",
-                    ),
-                    /*[5]*/ (
-                        type_name: "Walkable",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[6]*/ (
-                        type_name: "Sprite",
-                        data: "(\n    data: {\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            sprite_id: (\"74e8e1b2-fc3d-42cc-a482-3f5881421201\"),\n            path: \"/Users/charliesovn/Projects/Aseprite/cat.png\",\n        ),\n    },\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\"cfe878af-9708-49be-a0b1-ab17a90b8a9c\"),\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\"82c4e6a7-8569-409c-a755-9e93d4f6db1a\"),\n        (\"7d07b898-9307-438e-8bdf-5260df312a3a\"): (\"82c4e6a7-8569-409c-a755-9e93d4f6db1a\"),\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\"cfe878af-9708-49be-a0b1-ab17a90b8a9c\"),\n    },\n)",
-                    ),
-                    /*[8]*/ (
                         type_name: "TileSprite",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[9]*/ (
+                    /*[4]*/ (
                         type_name: "Glow",
                         data: "(\n    data: {\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.1,\n            brightness: 0.6,\n            emission: 0.0,\n            sprite_path: \"/Users/charliesovn/Projects/Aseprite/cat.png\",\n        ),\n    },\n)",
                     ),
+                    /*[5]*/ (
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\"cfe878af-9708-49be-a0b1-ab17a90b8a9c\"),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\"cfe878af-9708-49be-a0b1-ab17a90b8a9c\"),\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\"82c4e6a7-8569-409c-a755-9e93d4f6db1a\"),\n        (\"7d07b898-9307-438e-8bdf-5260df312a3a\"): (\"82c4e6a7-8569-409c-a755-9e93d4f6db1a\"),\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n    },\n)",
+                    ),
+                    /*[6]*/ (
+                        type_name: "Animation",
+                        data: "(\n    data: {\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n    },\n)",
+                    ),
+                    /*[7]*/ (
+                        type_name: "CurrentFrame",
+                        data: "(\n    data: {\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (),\n    },\n)",
+                    ),
+                    /*[8]*/ (
+                        type_name: "Position",
+                        data: "(\n    data: {\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\n            position: (-82.23172, -21.935379),\n        ),\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            position: (34.125473, 36.878036),\n        ),\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\n            position: (-64.085434, 34.078148),\n        ),\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            position: (-121.081696, -28.378197),\n        ),\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (\n            position: (-84.97219, 9.824265),\n        ),\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\n            position: (-20.388939, 125.92069),\n        ),\n        (\"7d07b898-9307-438e-8bdf-5260df312a3a\"): (\n            position: (191.76347, 32.14953),\n        ),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\n            position: (159.99998, 0.0),\n        ),\n    },\n)",
+                    ),
+                    /*[9]*/ (
+                        type_name: "Name",
+                        data: "(\n    data: {},\n)",
+                    ),
                     /*[10]*/ (
-                        type_name: "Light",
-                        data: "(\n    data: {\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\n            pos: (0.0, 0.0),\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.5,\n            radius: 50.0,\n            spread: 50.0,\n            alpha: 0.5,\n            brightness: 1.0,\n        ),\n    },\n)",
+                        type_name: "Layer",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[11]*/ (
-                        type_name: "Position",
-                        data: "(\n    data: {\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            position: (-121.081696, -28.378197),\n        ),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\n            position: (-82.23172, -21.935379),\n        ),\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            position: (34.125473, 36.878036),\n        ),\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (\n            position: (-84.97219, 9.824265),\n        ),\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\n            position: (-20.388939, 125.92069),\n        ),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\n            position: (159.99998, 0.0),\n        ),\n        (\"7d07b898-9307-438e-8bdf-5260df312a3a\"): (\n            position: (191.76347, 32.14953),\n        ),\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\n            position: (-64.085434, 34.078148),\n        ),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\n            position: (0.0, 0.0),\n        ),\n    },\n)",
+                        type_name: "Solid",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[12]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (),\n    },\n)",
+                        type_name: "Sprite",
+                        data: "(\n    data: {\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            sprite_id: (\"785cffcb-7337-47ae-b6c9-495d7ac37db5\"),\n            path: \"/Users/charliesovn/Projects/Aseprite/cat.png\",\n        ),\n    },\n)",
                     ),
                     /*[13]*/ (
                         type_name: "Damage",
                         data: "(\n    data: {},\n)",
                     ),
                     /*[14]*/ (
-                        type_name: "Layer",
+                        type_name: "Kinematic",
                         data: "(\n    data: {},\n)",
                     ),
                     /*[15]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[16]*/ (
-                        type_name: "Solid",
+                        type_name: "Walkable",
                         data: "(\n    data: {},\n)",
                     ),
+                    /*[16]*/ (
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\n            scalar_zoom: 0.00515,\n        ),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\n            scalar_zoom: 0.01,\n        ),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\n            scalar_zoom: 0.01,\n        ),\n    },\n)",
+                    ),
                     /*[17]*/ (
-                        type_name: "Player",
-                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (),\n    },\n)",
+                        type_name: "Light",
+                        data: "(\n    data: {\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\n            pos: (0.0, 0.0),\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.5,\n            radius: 50.0,\n            spread: 50.0,\n            alpha: 0.5,\n            brightness: 1.0,\n        ),\n    },\n)",
                     ),
                     /*[18]*/ (
-                        type_name: "Animation",
-                        data: "(\n    data: {\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n        (\"d29284ea-339a-4425-8d30-03b02ce10e92\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n    },\n)",
+                        type_name: "Collider",
+                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
                     ),
                 ],
                 tile_defs: {},
@@ -202,7 +202,7 @@
                             ),
                         ),
                     ],
-                    darkness: 0.41689453,
+                    darkness: 0.37998047,
                 ),
             ],
             starting_room: Some("cfe878af-9708-49be-a0b1-ab17a90b8a9c"),

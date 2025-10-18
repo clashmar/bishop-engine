@@ -1,4 +1,4 @@
-// engine_core/src/lighting/light_system.rs
+// engine_core/src/lighting/render_system.rs
 use macroquad::{miniquad::{BlendFactor, BlendState, BlendValue, Equation}, prelude::*};
 use crate::{
     assets::asset_manager::AssetManager, camera::game_camera::*, lighting::{
@@ -31,7 +31,7 @@ pub struct GlowBuffer {
     mask_size: Vec2,
 }
 
-pub struct LightSystem {
+pub struct RenderSystem {
     // Render targets
     pub scene_rt: RenderTarget,
     pub ambient_rt: RenderTarget,
@@ -53,7 +53,7 @@ pub struct LightSystem {
     glow_bufffers: [GlowBuffer; MAX_LIGHTS],
 }
 
-impl LightSystem {
+impl RenderSystem {
     pub fn new() -> Self {
         // Render targets are created with the screen size
         let width = screen_width() as u32;
@@ -203,7 +203,7 @@ impl LightSystem {
         &mut self,
         darkness: f32,
     ) {
-        LightSystem::clear_cam(&self.ambient_rt);
+        RenderSystem::clear_cam(&self.ambient_rt);
 
         self.ambient_mat.set_texture("tex", self.scene_rt.texture.clone());
         self.ambient_mat.set_uniform("Darkness", darkness);
@@ -218,11 +218,13 @@ impl LightSystem {
         glows: Vec<(&Glow, Vec2)>,
         asset_manager: &mut AssetManager,
     ) {
-        LightSystem::clear_cam(&self.glow_rt);
+        RenderSystem::clear_cam(&self.glow_rt);
         self.clear_glow_buffers();
         if glows.is_empty() {
             return;
         }
+
+        let (preview, target_w, target_h) = determine_resolution(render_cam); 
 
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
 
@@ -231,7 +233,14 @@ impl LightSystem {
                 let tex = asset_manager.get_texture_from_id(id).clone();
                 self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
 
-                let screen_pos = render_cam.world_to_screen(*world_pos);
+                let screen_pos = world_to_target(
+                    render_cam, 
+                    *world_pos, 
+                    target_w, 
+                    target_h, 
+                    preview
+                );
+
                 let buffer = &mut self.glow_bufffers[i];
                 buffer.pos = screen_pos;
                 buffer.pos = screen_pos;
@@ -242,11 +251,11 @@ impl LightSystem {
 
                 // Texture dimensions
                 if let Some((w, h)) = asset_manager.texture_size(id) {
-                    buffer.mask_size = vec2(
-                        world_distance_to_uniform(render_cam, w),
-                        world_distance_to_uniform(render_cam, h),
-                    );
-                }
+                buffer.mask_size = vec2(
+                    world_distance_to_uniform_target(render_cam, w, target_w),
+                    world_distance_to_uniform_target(render_cam, h, target_w),
+                );
+            }
             }
         }
         
@@ -257,8 +266,8 @@ impl LightSystem {
         self.glow_mat.set_uniform_array("Emission", &self.glow_bufffers.map(|g| g.emission));
         self.glow_mat.set_uniform_array("maskPos", &self.glow_bufffers.map(|g| g.pos));
         self.glow_mat.set_uniform_array("maskSize", &self.glow_bufffers.map(|g| g.mask_size));
-        self.glow_mat.set_uniform("screenWidth", screen_width());
-        self.glow_mat.set_uniform("screenHeight", screen_height());
+        self.glow_mat.set_uniform("screenWidth", target_w);
+        self.glow_mat.set_uniform("screenHeight", target_h);
         
         self.draw_pass(&self.glow_mat, &self.glow_rt.texture);
         
@@ -290,10 +299,12 @@ impl LightSystem {
         lights: Vec<(Vec2, Light)>,
         darkness: f32,
     ) {
-        LightSystem::clear_cam(&self.spot_rt);
+        RenderSystem::clear_cam(&self.spot_rt);
         self.clear_light_buffers();
 
         if !lights.is_empty() {
+            let (preview, target_w, target_h) = determine_resolution(render_cam); 
+
             let light_count = lights.len(); 
 
             for i in 0..light_count {
@@ -301,9 +312,16 @@ impl LightSystem {
                 let world_pos = *pos + l.pos;
                 let buffer = &mut self.light_bufffers[i];
 
-                buffer.pos = render_cam.world_to_screen(world_pos);
-                buffer.radius = world_distance_to_uniform(render_cam, l.radius);
-                buffer.spread = world_distance_to_uniform(render_cam, l.spread);
+                buffer.pos = world_to_target(
+                    render_cam, 
+                    world_pos, 
+                    target_w, 
+                    target_h, 
+                    preview
+                );
+
+                buffer.radius = world_distance_to_uniform_target(render_cam, l.radius, target_w);
+                buffer.spread = world_distance_to_uniform_target(render_cam, l.spread, target_w);
                 buffer.color = l.color;
                 buffer.intensity = l.intensity;
                 buffer.alpha = l.alpha;
@@ -321,8 +339,8 @@ impl LightSystem {
             self.spot_mat.set_uniform_array("LightSpread", &self.light_bufffers.map(|g| g.spread));
             self.spot_mat.set_uniform_array("LightAlpha", &self.light_bufffers.map(|g| g.alpha));
             self.spot_mat.set_uniform_array("LightBrightness", &self.light_bufffers.map(|g| g.brightness));
-            self.spot_mat.set_uniform("ScreenWidth", screen_width());
-            self.spot_mat.set_uniform("ScreenHeight", screen_height());
+            self.spot_mat.set_uniform("ScreenWidth", target_w);
+            self.spot_mat.set_uniform("ScreenHeight", target_h);
             self.spot_mat.set_uniform("Darkness", darkness);
 
             self.draw_pass(&self.spot_mat, &self.spot_rt.texture);
@@ -349,7 +367,7 @@ impl LightSystem {
 
     /// The last composite stage for rendering a room before post-processing.
     pub fn run_final_pass(&mut self) {
-        LightSystem::clear_cam(&self.final_comp_rt);
+        RenderSystem::clear_cam(&self.final_comp_rt);
 
         self.final_comp_mat.set_texture("scene_comp_tex", self.scene_comp_rt.texture.clone());
         self.final_comp_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
@@ -492,8 +510,40 @@ impl LightSystem {
     }
 }
 
+/// Returns whether to use screen or virtual height with appropriate dimensions.
+fn determine_resolution(render_cam: &Camera2D) -> (bool, f32, f32) {
+    let preview = render_cam.render_target.is_some();
+    let (target_w, target_h) = if preview {
+        (world_virtual_width(), world_virtual_height())
+    } else {
+        (screen_width(), screen_height())
+    };
+
+    (preview, target_w, target_h)
+}
+
 /// Distance conversion for shader uniforms.
-pub fn world_distance_to_uniform(cam: &Camera2D, distance: f32) -> f32 {
-    let scale = cam.zoom.x * screen_width() * 0.5; 
+fn world_distance_to_uniform_target(cam: &Camera2D, distance: f32, target_w: f32) -> f32 {
+    let scale = cam.zoom.x * target_w * 0.5;
     (distance * scale).abs()
+}
+
+fn world_to_target(
+    cam: &Camera2D, 
+    world_pos: Vec2, 
+    target_w: f32, 
+    target_h: f32,
+    preview: bool,
+) -> Vec2 {
+    let screen = cam.world_to_screen(world_pos);
+    let scale_x = target_w / screen_width();
+    let scale_y = target_h / screen_height();
+
+    let x = screen.x * scale_x;
+    let mut y = screen.y * scale_y;
+    if preview {
+        y = target_h - y;
+    }
+
+    vec2(x, y)
 }
