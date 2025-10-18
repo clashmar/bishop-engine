@@ -228,6 +228,17 @@ impl RoomEditor {
                     render_cam,
                 );
 
+                // Present room depending on view mode
+                if self.view_preview {
+                    light_system.present_game();
+                } else {
+                    set_default_camera();
+                    light_system.draw_pass(
+                        &light_system.final_comp_mat, 
+                        &light_system.final_comp_rt.texture
+                    );
+                }
+
                 if !self.view_preview {
                     set_camera(camera);
 

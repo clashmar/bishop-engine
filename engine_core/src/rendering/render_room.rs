@@ -1,4 +1,4 @@
-// engine_core/src/rendering/render_entities.rs
+// engine_core/src/rendering/render_room.rs
 use crate::{
     animation::animation_system::CurrentFrame, 
     assets::{
