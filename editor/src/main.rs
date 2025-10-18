@@ -28,7 +28,7 @@ fn window_conf() -> Conf {
         window_title: "Bishop Engine".to_owned(),
         window_height: height,
         window_width: width,
-        fullscreen: false,
+        fullscreen: true,
         window_resizable: true,
         ..Default::default()
     }

@@ -5,7 +5,6 @@ use engine_core::{
         asset_manager::AssetManager, 
         sprite::Sprite
     }, 
-    camera::game_camera::zoom_from_scalar, 
     ecs::{
         component::{Collider, Position, RoomCamera}, 
         entity::Entity, 
@@ -56,10 +55,8 @@ impl RoomEditor {
             None => return,
         };
 
-        let room_zoom = zoom_from_scalar(room_cam.scalar_zoom);
-
-        let factor_x = editor_cam.zoom.x / room_zoom.x;
-        let factor_y = editor_cam.zoom.y / room_zoom.y;
+        let factor_x = editor_cam.zoom.x / room_cam.zoom.x;
+        let factor_y = editor_cam.zoom.y / room_cam.zoom.y;
 
         let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
         let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));

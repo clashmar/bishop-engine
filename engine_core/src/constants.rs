@@ -17,11 +17,11 @@ pub const GAME_SAVE_ROOT: &str = "games";
 /// Scale to the base resolution.
 pub fn editor_zoom_factor() -> f32 { tile_size() / BASE_TILE_SIZE }
 
-pub const CAMERA_TILES_X: f32 = 55.0;     
-pub const CAMERA_TILES_Y: f32 = 35.0;
+pub const DEFAULT_CAM_TILES_X: f32 = 16.0;     
+pub const DEFAULT_CAM_TILES_Y: f32 = 10.0;
 
-pub const FIXED_WINDOW_WIDTH:  i32 = (CAMERA_TILES_X * BASE_TILE_SIZE) as i32;
-pub const FIXED_WINDOW_HEIGHT: i32 = (CAMERA_TILES_Y * BASE_TILE_SIZE) as i32;
+pub const FIXED_WINDOW_WIDTH:  i32 = (DEFAULT_CAM_TILES_X * 3. * BASE_TILE_SIZE) as i32;
+pub const FIXED_WINDOW_HEIGHT: i32 = (DEFAULT_CAM_TILES_Y * 3. * BASE_TILE_SIZE) as i32;
 
 // Prevents the window from becoming absurdly small/large
 pub const MIN_WINDOW_WIDTH:  i32 = 640;

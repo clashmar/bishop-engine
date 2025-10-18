@@ -1,13 +1,33 @@
 // engine_core/src/global.rs
-use crate::{constants::{DEFAULT_TILE_SIZE, MINIMUM_TILE_SIZE}, ecs::component::Position, game::game::Game};
+use crate::{constants::*, ecs::component::Position, game::game::Game};
 use std::sync::Mutex;
 
 static TILE_SIZE: Mutex<f32> = Mutex::new(DEFAULT_TILE_SIZE);
+static CAM_TILE_DIMS: Mutex<(f32, f32)> = Mutex::new((DEFAULT_CAM_TILES_X, DEFAULT_CAM_TILES_Y));
+
+/// Returns the tile size of the active game, or the default if not initialized.
+pub fn tile_size() -> f32 {
+    *TILE_SIZE.lock().unwrap()
+}
+
+/// Returns the width and height of the game virtual screen in terms of grid tiles, 
+/// or the default if not initialized.
+pub fn cam_tile_dims() -> (f32, f32) {
+    *CAM_TILE_DIMS.lock().unwrap()
+}
 
 /// Sets the global tile size. Call when creating/loading a game.
 pub fn set_global_tile_size(size: f32) {
     let mut guard = TILE_SIZE.lock().unwrap();
     *guard = size.max(0.0).max(MINIMUM_TILE_SIZE);
+}
+
+/// Sets the global tile size. Call when creating/loading a game.
+pub fn set_global_cam_tile_dims(dims: (f32, f32)) {
+    let mut guard = CAM_TILE_DIMS.lock().unwrap();
+    let x = dims.0.max(1.0);
+    let y = dims.1.max(1.0);
+    *guard = (x, y);
 }
 
 /// Updates the global tile size and entity positions.
@@ -30,9 +50,4 @@ pub fn update_tile_size(game: &mut Game, old_size: f32, new_size: f32) {
             pos.position *= sf;
         }
     }
-}
-
-/// Returns the tile size of the active game, or the default if not initialized.
-pub fn tile_size() -> f32 {
-    *TILE_SIZE.lock().unwrap()
 }
