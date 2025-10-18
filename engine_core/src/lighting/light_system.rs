@@ -427,6 +427,27 @@ impl LightSystem {
             .iter_mut()
             .for_each(|slot| *slot = GlowBuffer::default());
     }
+
+    /// Re-creates every render target with the supplied size.
+    pub fn resize(&mut self, width: u32, height: u32) {
+        let make = || {
+            let rt = render_target(width, height);
+            rt.texture.set_filter(FilterMode::Nearest);
+            rt
+        };
+
+        self.scene_rt = make();
+        self.ambient_rt = make();
+        self.glow_rt = make();
+        self.undarkened_rt = make();
+        self.spot_rt = make();
+        self.mask_rt = make();
+        self.scene_comp_rt = make();
+        self.final_comp_rt = make();
+
+        // Reset the mask cam
+        self.init_mask_cam();
+    }
 }
 
 /// Distance conversion for shader uniforms.

@@ -1,6 +1,6 @@
 // editor/src/editor.rs
 use engine_core::{
-    assets::asset_manager::AssetManager, constants::*, game::game::Game, global::set_global_tile_size, physics::collider_system, world::room::Room
+    assets::asset_manager::AssetManager, constants::*, game::game::Game, global::set_global_tile_size, lighting::light_system::LightSystem, physics::collider_system, world::room::Room
 };
 use std::io;
 use macroquad::prelude::*;
@@ -28,6 +28,7 @@ pub struct Editor {
     pub camera: Camera2D,
     pub current_room_id: Option<Uuid>,
     pub asset_manager: AssetManager,
+    pub light_system: LightSystem,
 }
 
 impl Editor {
@@ -73,6 +74,7 @@ impl Editor {
             camera,
             current_room_id: None,
             asset_manager,
+            light_system: LightSystem::new(),
         };
 
         // Give the palette to the tilemap editor
@@ -216,6 +218,7 @@ impl Editor {
                     room,
                     &mut world.world_ecs,
                     &mut self.asset_manager,
+                    &mut self.light_system,
                 );
             }
         }

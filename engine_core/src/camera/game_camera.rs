@@ -1,5 +1,5 @@
 // engine_core/src/camera/game_camera.rs
-use crate::constants::*;
+use crate::{constants::*, global::tile_size};
 use macroquad::prelude::*;
 
 #[derive(Debug)]
@@ -7,6 +7,21 @@ pub struct GameCamera {
     pub position: Vec2,
     pub camera: Camera2D,
 }
+
+pub fn game_render_target() -> RenderTarget {
+    let width = world_virtual_width() as u32;
+    let height = world_virtual_height() as u32;
+    let rt = render_target(
+        width,
+        height,
+    );
+    // Always use Nearest
+    rt.texture.set_filter(FilterMode::Nearest);
+    rt
+}
+
+pub fn world_virtual_width() -> f32 { CAMERA_TILES_X * tile_size() }
+pub fn world_virtual_height() -> f32 { CAMERA_TILES_Y * tile_size() }
 
 pub fn zoom_from_scalar(scalar: f32) -> Vec2 {
     // Fixed virtual aspect
