@@ -1,12 +1,10 @@
 // engine_core/src/lighting/light_system.rs
 use macroquad::{miniquad::{BlendFactor, BlendState, BlendValue, Equation}, prelude::*};
 use crate::{
-    assets::asset_manager::AssetManager, 
-    lighting::{
+    assets::asset_manager::AssetManager, camera::game_camera::*, lighting::{
         glow::Glow, 
         light::Light, 
-    }, 
-    shaders::shaders::*
+    }, shaders::shaders::*
 };
 
 /// Max lights per layer.
@@ -351,13 +349,57 @@ impl LightSystem {
 
     /// The last composite stage for rendering a room before post-processing.
     pub fn run_final_pass(&mut self) {
-        set_default_camera();
+        LightSystem::clear_cam(&self.final_comp_rt);
 
         self.final_comp_mat.set_texture("scene_comp_tex", self.scene_comp_rt.texture.clone());
         self.final_comp_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
         self.final_comp_mat.set_texture("final_comp_tex", self.final_comp_rt.texture.clone());
 
         self.draw_pass(&self.final_comp_mat, &self.final_comp_rt.texture);
+    }
+
+    // Presents the final visual of the game.
+    pub fn present_game(&self) {
+        set_default_camera();
+        let tex = &self.final_comp_rt.texture;
+
+        // Fixed logical size of the virtual render target.
+        let virt_w = world_virtual_width();
+        let virt_h = world_virtual_height(); 
+        let win_w = screen_width();
+        let win_h = screen_height();
+        let scale_w = win_w / virt_w;
+        let scaled_h = virt_h * scale_w;
+        
+        if scaled_h <= win_h {
+            // Full‑width, vertical letter‑boxing
+            let offset_y = (win_h - scaled_h) / 2.0;
+            draw_texture_ex(
+                tex,
+                0.0,
+                offset_y,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(win_w, scaled_h)),
+                    ..Default::default()
+                },
+            );
+        } else {
+            // Height‑limited, proportional shrink
+            let scale_h = win_h / virt_h;
+            let scaled_w = virt_w * scale_h;
+            let offset_x = (win_w - scaled_w) / 2.0;
+            draw_texture_ex(
+                tex,
+                offset_x,
+                0.0,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(scaled_w, win_h)),
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     /// Sets and draws the supplied material and resets to default.
