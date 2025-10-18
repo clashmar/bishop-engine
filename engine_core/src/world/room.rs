@@ -1,6 +1,6 @@
 // engine_core/src/world/room.rs
 use crate::{
-    camera::game_camera::{GameCamera, zoom_from_scalar}, 
+    camera::game_camera::{GameCamera, game_render_target, zoom_from_scalar}, 
     ecs::{
         component::{CurrentRoom, Position, RoomCamera}, 
         world_ecs::WorldEcs
@@ -142,7 +142,10 @@ impl Room {
 
                 let camera = Camera2D {
                     target: position,
-                    zoom:   zoom_vec,
+                    zoom: zoom_vec,
+                    // This line can be commented out and has no effect on the behaviour
+                    // I would expect this to draw to the virtual render target but is has no effect
+                    render_target: Some(game_render_target()),
                     ..Default::default()
                 };
 

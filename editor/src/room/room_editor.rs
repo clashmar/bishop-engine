@@ -32,7 +32,6 @@ pub struct RoomEditor {
     pub tilemap_editor: TileMapEditor,
     pub inspector: InspectorPanel,
     pub selected_entity: Option<Entity>,
-    pub light_system: LightSystem,
     show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
@@ -50,7 +49,6 @@ impl RoomEditor {
             tilemap_editor: TileMapEditor::new(),
             inspector: InspectorPanel::new(),
             selected_entity: None,
-            light_system: LightSystem::new(),
             show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
@@ -175,7 +173,8 @@ impl RoomEditor {
         camera: &Camera2D,
         room: &mut Room,
         world_ecs: &mut WorldEcs, 
-        asset_manager: &mut AssetManager
+        asset_manager: &mut AssetManager,
+        light_system: &mut LightSystem,
     ) {
         self.request_play = false; // This is very important
 
@@ -208,6 +207,7 @@ impl RoomEditor {
                 }
             }
             RoomEditorMode::Scene => {
+                // !This is the camera I'm referring to!
                 let room_camera = Room::get_room_camera(world_ecs, room.id)
                     .expect("This room should have a camera.");
 
@@ -224,7 +224,7 @@ impl RoomEditor {
                     world_ecs, 
                     room, 
                     asset_manager,
-                    &mut self.light_system,
+                    light_system,
                     render_cam,
                 );
 

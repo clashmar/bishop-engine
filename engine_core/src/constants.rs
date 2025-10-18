@@ -20,9 +20,6 @@ pub fn editor_zoom_factor() -> f32 { tile_size() / BASE_TILE_SIZE }
 pub const CAMERA_TILES_X: f32 = 55.0;     
 pub const CAMERA_TILES_Y: f32 = 35.0;
 
-pub fn world_virtual_width() -> f32 { CAMERA_TILES_X * tile_size() }
-pub fn world_virtual_height() -> f32 { CAMERA_TILES_Y * tile_size() }
-
 pub const FIXED_WINDOW_WIDTH:  i32 = (CAMERA_TILES_X * BASE_TILE_SIZE) as i32;
 pub const FIXED_WINDOW_HEIGHT: i32 = (CAMERA_TILES_Y * BASE_TILE_SIZE) as i32;
 
