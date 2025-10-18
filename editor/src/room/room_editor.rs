@@ -4,7 +4,7 @@ use engine_core::{
         component::{CurrentRoom, Position, RoomCamera}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, global::tile_size, input::get_omni_input_pressed, lighting::{light::Light, light_system::LightSystem}, rendering::render_room::*, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
+    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
 };
 use crate::{
     canvas::grid, 
@@ -174,7 +174,7 @@ impl RoomEditor {
         room: &mut Room,
         world_ecs: &mut WorldEcs, 
         asset_manager: &mut AssetManager,
-        light_system: &mut LightSystem,
+        render_system: &mut RenderSystem,
     ) {
         self.request_play = false; // This is very important
 
@@ -224,18 +224,18 @@ impl RoomEditor {
                     world_ecs, 
                     room, 
                     asset_manager,
-                    light_system,
+                    render_system,
                     render_cam,
                 );
 
                 // Present room depending on view mode
                 if self.view_preview {
-                    light_system.present_game();
+                    render_system.present_game();
                 } else {
                     set_default_camera();
-                    light_system.draw_pass(
-                        &light_system.final_comp_mat, 
-                        &light_system.final_comp_rt.texture
+                    render_system.draw_pass(
+                        &render_system.final_comp_mat, 
+                        &render_system.final_comp_rt.texture
                     );
                 }
 

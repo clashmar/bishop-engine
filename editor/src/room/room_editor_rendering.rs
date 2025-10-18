@@ -73,7 +73,7 @@ impl RoomEditor {
         let top_left = pos - half;
 
         let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
-        const BASE_THICKNESS: f32 = 3.0;
+        const BASE_THICKNESS: f32 = 1.;
         let thickness = BASE_THICKNESS * (MAX_ZOOM / editor_scalar).max(1.0);
 
         draw_rectangle_lines(
