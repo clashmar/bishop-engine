@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
         let cur_screen = (screen_width() as u32, screen_height() as u32);
         if cur_screen != current_window_size {
             with_editor(|editor| 
-                Box::pin(editor.light_system.resize(cur_screen.0, cur_screen.1))
+                Box::pin(editor.render_system.resize(cur_screen.0, cur_screen.1))
             );
             current_window_size = cur_screen;
         }

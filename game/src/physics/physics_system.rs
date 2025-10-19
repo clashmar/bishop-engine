@@ -5,8 +5,7 @@ use engine_core::{
         component::{Collider, PhysicsBody, Position, Velocity}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    world::room::Room
+    }, world::room::Room
 };
 use uuid::Uuid;
 use crate::{
@@ -15,14 +14,12 @@ use crate::{
     world::world_helpers::*
 };
 
-/// Fixed time‑step (seconds).
-const DT: f32 = 1.0 / 60.0;
-
 /// Applies physics to all entities with a `PhysicsBody` component.
 /// Returns `Some((entity, exit_id, position))` when an entity crosses an exit, otherwise `None`.
 pub fn update_physics(
     world_ecs: &mut WorldEcs,
     room: &Room,
+    dt: f32,
 ) -> Option<(Entity, Uuid, Vec2)> {
     let tilemap = &room.variants[0].tilemap;
     let entities: Vec<_> = world_ecs
@@ -43,8 +40,8 @@ pub fn update_physics(
             (p.position, *v, c)
         };
 
-        vel_cur.y += GRAVITY * DT;
-        let delta = Vec2::new(vel_cur.x * DT, vel_cur.y * DT);
+        vel_cur.y += GRAVITY * dt;
+        let delta = Vec2::new(vel_cur.x * dt, vel_cur.y * dt);
 
         let sweep = sweep_move(
             world_ecs,
