@@ -1,21 +1,16 @@
-// engine_core/src/rendering/render_entities.rs
+// engine_core/src/rendering/render_room.rs
 use crate::{
-    animation::animation_system::CurrentFrame, 
-    assets::{
+    animation::animation_system::CurrentFrame, assets::{
         asset_manager::AssetManager, 
         sprite::Sprite
-    }, 
-    ecs::{
+    }, camera::game_camera::RoomCamera, ecs::{
         component::*, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    global::tile_size, 
-    lighting::{
+    }, global::tile_size, lighting::{
         glow::Glow, 
-        light::Light, 
-        light_system::LightSystem
-    }, tiles::tile::TileSprite, world::room::Room
+        light::Light,
+    }, rendering::render_system::RenderSystem, tiles::tile::TileSprite, world::room::Room
 };
 use std::collections::BTreeMap;
 use macroquad::prelude::*;
@@ -25,7 +20,7 @@ pub fn render_room(
     world_ecs: &WorldEcs,
     room: &Room,
     asset_manager: &mut AssetManager,
-    lighting: &mut LightSystem,
+    render_system: &mut RenderSystem,
     render_cam: &Camera2D,
 ) {
     // Cache the needed stores
@@ -40,12 +35,12 @@ pub fn render_room(
     }
 
     // Clear composite textures before each run
-    LightSystem::clear_cam(&lighting.scene_comp_rt);
-    LightSystem::clear_cam(&lighting.final_comp_rt);
+    RenderSystem::clear_cam(&render_system.scene_comp_rt);
+    RenderSystem::clear_cam(&render_system.final_comp_rt);
 
     // Draw each blocking texture in black onto a white background
     // To be implemented but it needs to happen BEFORE the loop
-    lighting.init_mask_cam();
+    render_system.init_mask_cam();
 
     // Flag for the tilemap
     let mut first_pass = true;
@@ -53,7 +48,7 @@ pub fn render_room(
 
     for (_z, (entities, glows)) in layer_map {
         // Scene cam needs to draw to the current render cam
-        lighting.clear_scene_cam(render_cam);
+        render_system.clear_scene_cam(render_cam);
 
         // Draw the tilemap as the first layer
         if first_pass {
@@ -74,32 +69,32 @@ pub fn render_room(
         }
 
         // Render the darkened scene
-        lighting.run_ambient_pass(room.darkness);
+        render_system.run_ambient_pass(room.darkness);
 
         // Render glow per layer
-        lighting.run_glow_pass(
+        render_system.run_glow_pass(
             render_cam, 
             glows, 
             asset_manager,
         );
 
         // Render the undarkened room for lighting pass
-        lighting.run_undarkened_pass();
+        render_system.run_undarkened_pass();
 
         // Combine scene renders
-        lighting.run_scene_pass();
+        render_system.run_scene_pass();
     }
 
     // Lighting pass
     let lights = collect_lights(world_ecs, room);
-    lighting.run_spotlight_pass(
+    render_system.run_spotlight_pass(
         render_cam, 
         lights, 
         room.darkness
     );
     
     // Composite the final render
-    lighting.run_final_pass();
+    render_system.run_final_pass();
 }
 
 fn draw_entity(
@@ -110,7 +105,7 @@ fn draw_entity(
     entity: Entity,
     pos: Position,
 ) {
-    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
     // Animate/Draw sprite
     if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
@@ -173,12 +168,12 @@ pub fn highlight_selected_entity(
         None => return,
     };
 
-    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
     draw_rectangle_lines(pos.position.x, pos.position.y, width, height, 2.0, color);
 }
 
-pub fn sprite_dimensions(
+pub fn entity_dimensions(
     world_ecs: &WorldEcs,
     asset_manager: &AssetManager,
     entity: Entity,

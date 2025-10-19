@@ -1,4 +1,7 @@
 // editor/src/editor.rs
+use engine_core::{
+    assets::asset_manager::AssetManager, constants::*, game::game::Game, global::set_global_tile_size, physics::collider_system, rendering::render_system::RenderSystem, world::room::Room
+};
 use std::io;
 use macroquad::prelude::*;
 use uuid::Uuid;
@@ -10,13 +13,6 @@ use crate::{
     tilemap::tile_palette::TilePalette,
     world::world_editor::WorldEditor,
     playtest::room_playtest,
-};
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    constants::*, 
-    game::game::Game, 
-    physics::collider_system, 
-    world::room::Room
 };
 
 pub enum EditorMode {
@@ -32,6 +28,7 @@ pub struct Editor {
     pub camera: Camera2D,
     pub current_room_id: Option<Uuid>,
     pub asset_manager: AssetManager,
+    pub light_system: RenderSystem,
 }
 
 impl Editor {
@@ -44,6 +41,9 @@ impl Editor {
             // User pressed Escape
             editor_storage::create_new_game("untitled".to_string())
         };
+
+        // Set global tile size that the game scales to
+        set_global_tile_size(game.tile_size);
 
         let camera = EditorCameraController::camera_for_room(
             DEFAULT_ROOM_SIZE,
@@ -74,6 +74,7 @@ impl Editor {
             camera,
             current_room_id: None,
             asset_manager,
+            light_system: RenderSystem::new(),
         };
 
         // Give the palette to the tilemap editor
@@ -194,7 +195,10 @@ impl Editor {
     pub fn draw(&mut self) {
         match self.mode {
             EditorMode::World => {
-                self.world_editor.draw(&self.camera, &self.game.current_world_mut());
+                self.world_editor.draw(
+                    &self.camera, 
+                    &mut self.game,
+                );
             }
             EditorMode::Room(room_id) => {
                 // The room id should already be set
@@ -214,6 +218,7 @@ impl Editor {
                     room,
                     &mut world.world_ecs,
                     &mut self.asset_manager,
+                    &mut self.light_system,
                 );
             }
         }

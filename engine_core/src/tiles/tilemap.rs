@@ -39,7 +39,7 @@ impl TileMap {
         asset_manager: &mut AssetManager,
         room_position: Vec2,
     ) {
-        clear_background(BLACK);
+        clear_background(RED);
 
         // Background
         draw_rectangle(

@@ -1,20 +1,13 @@
 // editor/src/room/room_editor_actions.rs
 use engine_core::{
-    animation::animation_clip::Animation, 
-    assets::{
+    animation::animation_clip::Animation, assets::{
         asset_manager::AssetManager, 
         sprite::Sprite
-    }, 
-    camera::game_camera::zoom_from_scalar, 
-    ecs::{
-        component::{Collider, Position, RoomCamera}, 
+    }, camera::game_camera::RoomCamera, ecs::{
+        component::{Collider, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    global::tile_size, 
-    lighting::{glow::Glow, light::Light}, 
-    rendering::render_room::sprite_dimensions, 
-    world::room::Room
+    }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
@@ -56,10 +49,8 @@ impl RoomEditor {
             None => return,
         };
 
-        let room_zoom = zoom_from_scalar(room_cam.scalar_zoom);
-
-        let factor_x = editor_cam.zoom.x / room_zoom.x;
-        let factor_y = editor_cam.zoom.y / room_zoom.y;
+        let factor_x = editor_cam.zoom.x / room_cam.zoom.x;
+        let factor_y = editor_cam.zoom.y / room_cam.zoom.y;
 
         let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
         let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
@@ -73,7 +64,7 @@ impl RoomEditor {
         let top_left = pos - half;
 
         let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
-        const BASE_THICKNESS: f32 = 3.0;
+        const BASE_THICKNESS: f32 = 1.;
         let thickness = BASE_THICKNESS * (MAX_ZOOM / editor_scalar).max(1.0);
 
         draw_rectangle_lines(
@@ -115,7 +106,7 @@ pub fn entity_hitbox(
     world_ecs: &WorldEcs,
     asset_manager: &mut AssetManager,
 ) -> Rect {
-    let (width, height) = sprite_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
     // If this is a camera or light, move the position from the top left
     // corner to the visual centre to match how it's drawn

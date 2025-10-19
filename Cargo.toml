@@ -4,6 +4,5 @@ members = [
     "engine_core",
     "game",
     "editor",
-    "reflect_derive", 
-    "light_test",
+    "reflect_derive",
     ]
