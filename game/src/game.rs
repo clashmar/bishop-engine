@@ -1,22 +1,16 @@
+use std::collections::HashMap;
+
 // game/src/game.rs
 use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::component::{
-        CurrentRoom, 
-        Position, 
-        Velocity
-    }, 
-    lighting::light_system::RenderSystem, 
-    rendering::render_room::render_room, 
-    storage::core_storage, 
-    world::{
+    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::game_camera::get_room_camera, ecs::{component::{
+        CurrentRoom, Position, Velocity
+    }, entity::Entity}, rendering::{render_room::render_room, render_system::RenderSystem}, storage::core_storage, world::{
         room::Room, 
         world::World
     }
 };
 use crate::{
     input::player_input::update_player_input, 
-    modes::Mode, 
     physics::physics_system::update_physics
 };
 use macroquad::prelude::*;
@@ -29,12 +23,12 @@ pub struct GameState {
     camera: GameCamera,
     /// Current room
     current_room: Room,
-    /// Current mode.
-    mode: Mode,
     /// Asset Manager.
     asset_manager: AssetManager,
     /// Lighting system for the game.
-    lighting_system: RenderSystem,
+    render_system: RenderSystem,
+    /// Holds the Position of every entity rendered in the previous frame.
+    prev_positions: HashMap<Entity, Vec2>,
 }
 
 impl GameState {
@@ -57,7 +51,7 @@ impl GameState {
             .expect("Missing id for the starting room")
             .clone();
 
-        let camera = Room::get_room_camera(&world.world_ecs, current_room.id)
+        let camera = get_room_camera(&world.world_ecs, current_room.id)
             .expect("Tested room was missing a camera.");
 
         let asset_manager = AssetManager::new(&mut world.world_ecs).await;
@@ -66,9 +60,9 @@ impl GameState {
             world,
             camera,
             current_room,
-            mode: Mode::Explore,
             asset_manager,
-            lighting_system: RenderSystem::new(),
+            render_system: RenderSystem::new(),
+            prev_positions: HashMap::new(),
         }
     }
 
@@ -78,35 +72,36 @@ impl GameState {
     ) -> Self {
         let asset_manager = AssetManager::new(&mut world.world_ecs).await;
 
-        let camera = Room::get_room_camera(&world.world_ecs, room.id)
+        let camera = get_room_camera(&world.world_ecs, room.id)
             .expect("Tested room was missing a camera.");
 
         Self {
             world,
             camera,
             current_room: room,
-            mode: Mode::Explore,
             asset_manager,
-            lighting_system: RenderSystem::new(),
+            render_system: RenderSystem::new(),
+            prev_positions: HashMap::new(),
         }
     }
 
-    pub fn update(&mut self) {
-        if is_key_pressed(KeyCode::C) {
-            self.toggle_mode();
-        }
-
+    pub async fn fixed_update(&mut self, dt: f32) {
         let player = self.world.world_ecs.get_player_entity();
-
         let player_vel = self.world.world_ecs
             .get_store_mut::<Velocity>()
             .get_mut(player)
             .expect("Player must have a Velocity component");
-
         update_player_input(player_vel);
 
+        update_animation_sytem(
+            &mut self.world.world_ecs,
+            &mut self.asset_manager,
+            dt, 
+            self.current_room.id,
+        ).await;
+
         // If an entity exits the current room
-        if let Some((exiting_entity, target_id, new_pos)) = update_physics(&mut self.world.world_ecs, &self.current_room) {
+        if let Some((exiting_entity, target_id, new_pos)) = update_physics(&mut self.world.world_ecs, &self.current_room, dt) {
             let new_room = self.world
                 .rooms
                 .iter()
@@ -117,7 +112,7 @@ impl GameState {
             if exiting_entity == player {
                 self.current_room = new_room.clone();
 
-                self.camera = Room::get_room_camera(&self.world.world_ecs, new_room.id)
+                self.camera = get_room_camera(&self.world.world_ecs, new_room.id)
                     .expect("New room missing a camera");
             }
 
@@ -127,24 +122,39 @@ impl GameState {
             let pos_mut = self.world.world_ecs.get_mut::<Position>(exiting_entity).unwrap();
             pos_mut.position = new_pos;
         }
+
+        self.refresh_previous_positions();
     }
 
-    pub fn draw(&mut self) {
+    pub fn render(&mut self, alpha: f32) {
         clear_background(BLUE);
 
         render_room(
             &self.world.world_ecs, 
             &self.current_room, 
             &mut self.asset_manager,
-            &mut self.lighting_system,
+            &mut self.render_system,
             &self.camera.camera,
+            alpha,
+            Some(&self.prev_positions),
         );
+
+        // Store the current positions for the next frame
+        self.render_system.present_game();
     }
 
-    fn toggle_mode(&mut self) {
-        self.mode = match self.mode {
-            Mode::Explore => Mode::Combat,
-            Mode::Combat => Mode::Explore,
-        };
+    /// Updates the previous position for all entities in the active room.
+    fn refresh_previous_positions(&mut self) {
+        self.prev_positions.clear();
+        let pos_store = self.world.world_ecs.get_store::<Position>();
+        let room_store = self.world.world_ecs.get_store::<CurrentRoom>();
+
+        for (entity, pos) in pos_store.data.iter() {
+            if let Some(cr) = room_store.get(*entity) {
+                if cr.0 == self.current_room.id {
+                    self.prev_positions.insert(*entity, pos.position);
+                }
+            }
+        }
     }
 }

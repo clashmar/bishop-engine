@@ -12,7 +12,7 @@ use crate::{
         light::Light,
     }, rendering::render_system::RenderSystem, tiles::tile::TileSprite, world::room::Room
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use macroquad::prelude::*;
 
 /// Draws everything needed for the given room.
@@ -22,13 +22,15 @@ pub fn render_room(
     asset_manager: &mut AssetManager,
     render_system: &mut RenderSystem,
     render_cam: &Camera2D,
+    alpha: f32,
+    prev_positions: Option<&HashMap<Entity, Vec2>>, 
 ) {
     // Cache the needed stores
     let sprite_store = world_ecs.get_store::<Sprite>();
     let frame_store = world_ecs.get_store::<CurrentFrame>();
 
     // Organize entities by layer
-    let mut layer_map = collect_layer_map(world_ecs, room);
+    let mut layer_map = collect_interpolated_layer_map(world_ecs, room, alpha, prev_positions);
 
     if layer_map.is_empty() {
         layer_map.insert(0, (Vec::new(), Vec::new()));
@@ -58,13 +60,14 @@ pub fn render_room(
 
         // Draw all entities
         for (entity, pos) in entities {
+            
             draw_entity(
             world_ecs,
             asset_manager,
             frame_store,
             sprite_store,
             entity,
-            *pos,
+            pos,
             );
         }
 
@@ -86,7 +89,7 @@ pub fn render_room(
     }
 
     // Lighting pass
-    let lights = collect_lights(world_ecs, room);
+    let lights = collect_lights(world_ecs, room, alpha, prev_positions);
     render_system.run_spotlight_pass(
         render_cam, 
         lights, 
@@ -103,7 +106,7 @@ fn draw_entity(
     frame_store: &ComponentStore<CurrentFrame>,
     sprite_store: &ComponentStore<Sprite>,
     entity: Entity,
-    pos: Position,
+    pos: Vec2,
 ) {
     let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
 
@@ -120,8 +123,8 @@ fn draw_entity(
         // Draws individual entites
         draw_texture_ex(
             tex,
-            pos.position.x + cf.offset.x,
-            pos.position.y + cf.offset.y,
+            pos.x + cf.offset.x,
+            pos.y + cf.offset.y,
             WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(width, height)),
@@ -136,8 +139,8 @@ fn draw_entity(
             let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
             draw_texture_ex(
                 tex,
-                pos.position.x,
-                pos.position.y,
+                pos.x,
+                pos.y,
                 WHITE,
                 DrawTextureParams {
                     dest_size: Some(vec2(width, height)),
@@ -154,7 +157,7 @@ fn draw_entity(
     }
 
     // Fallback placeholder (no sprite or missing texture)
-    draw_entity_placeholder(pos.position);
+    draw_entity_placeholder(pos);
 }
 
 pub fn highlight_selected_entity(
@@ -214,13 +217,15 @@ pub fn draw_entity_placeholder(pos: Vec2) {
     );
 }
 
-/// Sorts entites by their z-layer and filters out entities that 
-/// should not be drawn. BTreeMap automatically sorts keys.
-fn collect_layer_map<'a>(
+/// Sorts entites by their z-layer, filters out entities that should not be 
+/// drawn and interpolates the draw positions. BTreeMap automatically sorts keys.
+fn collect_interpolated_layer_map<'a>(
     world_ecs: &'a WorldEcs,
     room: &Room,
-) -> BTreeMap<i32, (Vec<(Entity, &'a Position)>, Vec<(&'a Glow, Vec2)>)> {
-    let mut map: BTreeMap<i32, (Vec<(Entity, &Position)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
+    alpha: f32,
+    prev_positions: Option<&HashMap<Entity, Vec2>>,
+) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
+    let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
     let pos_store = world_ecs.get_store::<Position>();
     let tile_store = world_ecs.get_store::<TileSprite>();
@@ -244,17 +249,25 @@ fn collect_layer_map<'a>(
             continue; 
         }
 
+        // Interpolate the draw position
+        let draw_pos = interpolate_draw_position(
+            *entity, 
+            pos.position, 
+            alpha, 
+            prev_positions
+        );
+
         // Default layer is 0 if missing
         let z = layer_store
             .get(*entity)
             .map_or(0, |l| l.z);
 
         let entry = map.entry(z).or_default();
-        entry.0.push((*entity, pos));
+        entry.0.push((*entity, draw_pos));
 
         // If the entity also has a Glow component
         if let Some(glow) = glow_store.get(*entity) {
-            entry.1.push((glow, pos.position));
+            entry.1.push((glow, draw_pos));
         }
     }
 
@@ -269,6 +282,8 @@ fn collect_layer_map<'a>(
 fn collect_lights(
     world_ecs: &WorldEcs,
     room: &Room, 
+    alpha: f32,
+    prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> Vec<(Vec2, Light)> {
     let mut lights: Vec<(Vec2, Light)> = Vec::new();
 
@@ -287,9 +302,41 @@ fn collect_lights(
         }
 
         if let Some(pos) = pos_store.get(*entity) {
-            lights.push((pos.position, *light));
+            // Interpolate the draw position
+            let draw_pos = interpolate_draw_position(
+                *entity, 
+                pos.position, 
+                alpha, 
+                prev_positions
+            );
+
+            lights.push((draw_pos, *light));
         }
     }
 
     lights
+}
+
+/// Returns the interpolated draw position or the current position.
+fn interpolate_draw_position(
+    entity: Entity,
+    current_pos: Vec2, 
+    alpha: f32,
+    prev_positions: Option<&HashMap<Entity, Vec2>>,
+) -> Vec2 {
+    if let Some(prev_map) = prev_positions {
+        if let Some(prev_pos) = prev_map.get(&entity) {
+            lerp(*prev_pos, current_pos, alpha)
+        }
+        else {
+            current_pos
+        }
+    } else {
+        current_pos
+    }
+}
+
+#[inline]
+fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
+    a + (b - a) * t
 }

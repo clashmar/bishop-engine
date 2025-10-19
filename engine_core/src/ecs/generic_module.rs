@@ -76,7 +76,7 @@ where
             let label_w = measure_text(&label, None, FONT_SIZE as u16, 1.0).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
-            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, WHITE);
+            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
 
             // Widget rectangle
             let widget_x = if widget_x > rect.x + rect.w - MIN_WIDGET_WIDTH {

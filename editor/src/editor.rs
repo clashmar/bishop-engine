@@ -28,7 +28,7 @@ pub struct Editor {
     pub camera: Camera2D,
     pub current_room_id: Option<Uuid>,
     pub asset_manager: AssetManager,
-    pub light_system: RenderSystem,
+    pub render_system: RenderSystem,
 }
 
 impl Editor {
@@ -74,7 +74,7 @@ impl Editor {
             camera,
             current_room_id: None,
             asset_manager,
-            light_system: RenderSystem::new(),
+            render_system: RenderSystem::new(),
         };
 
         // Give the palette to the tilemap editor
@@ -218,7 +218,7 @@ impl Editor {
                     room,
                     &mut world.world_ecs,
                     &mut self.asset_manager,
-                    &mut self.light_system,
+                    &mut self.render_system,
                 );
             }
         }

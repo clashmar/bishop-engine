@@ -21,8 +21,10 @@ impl Default for WidgetId {
 const HOLD_INITIAL_DELAY: f64 = 0.50;
 const HOLD_REPEAT_RATE: f64 = 0.05;
 const SPACING: f32 = 10.0;  
-const FIELD_TEXT_SIZE: f32 = 20.0; 
-
+pub const FIELD_TEXT_SIZE: f32 = 20.0; 
+pub const FIELD_TEXT_COLOR: Color = WHITE;
+pub const OUTLINE_COLOR: Color = WHITE;
+pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
 
 thread_local! {
     static INPUT_TEXT_STATE: RefCell<HashMap<WidgetId, (String, usize, bool, f64, bool)>> =
@@ -126,7 +128,7 @@ fn gui_input_text(
     }
 
     // Draw background & current text
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 1.0));
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
     let placeholder = "<type here>";
     let display = if text.is_empty() { placeholder } else { &text };
@@ -136,7 +138,7 @@ fn gui_input_text(
         rect.y + rect.h * 0.7,
         TextParams {
             font_size: 20,
-            color: WHITE,
+            color: FIELD_TEXT_COLOR,
             ..Default::default()
         },
     );
@@ -237,7 +239,7 @@ fn gui_input_text(
             cursor_x,
             rect.y + rect.h * 0.8,
             2.,
-            WHITE,
+            OUTLINE_COLOR,
         );
     }
 
@@ -304,7 +306,7 @@ where
     }
 
     // Draw background & current text
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
     let placeholder = "<#>";
     let display = if text.is_empty() { placeholder } else { &text };
@@ -314,7 +316,7 @@ where
         rect.y + rect.h * 0.7,
         TextParams {
             font_size: 20,
-            color: WHITE,
+            color: FIELD_TEXT_COLOR,
             ..Default::default()
         },
     );
@@ -391,7 +393,7 @@ where
             caret_x,
             rect.y + rect.h * 0.8,
             2.,
-            WHITE,
+            OUTLINE_COLOR,
         );
     }
 
@@ -433,8 +435,8 @@ pub fn clear_all_input_focus() {
 
 /// Simple toggle widget. Returns `true` when the value changed this frame.
 pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
-    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
+    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
 
     if *value {
         draw_line(
@@ -474,20 +476,20 @@ pub fn gui_button(rect: Rect, label: &str) -> bool {
     let mouse = mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    // Don't highligh if a dropdown is open
+    // Don't highlight if a dropdown is open
     let bg = if hovered && !dropdown_is_open() {
         Color::new(0.2, 0.2, 0.2, 0.8)
     } else {
-        Color::new(0., 0., 0., 0.6)
+        FIELD_BACKGROUND_COLOR
     };
 
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, bg);
-    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
+    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
 
     let txt_dims = measure_text(label, None, 20, 1.0);
     let txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
     let txt_y = rect.y + rect.h * 0.7;
-    draw_text(label, txt_x, txt_y, 20., WHITE);
+    draw_text(label, txt_x, txt_y, 20., FIELD_TEXT_COLOR);
 
     is_mouse_button_pressed(MouseButton::Left) && 
     hovered && 
@@ -531,9 +533,9 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     let handle_x = rect.x + norm * (rect.w - handle_sz);
 
     // Draw background & handle
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0., 0., 0., 0.5));
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
     draw_rectangle(rect.x, track_y, rect.w, track_h, Color::new(0.2, 0.2, 0.2, 0.8));
-    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
+    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
 
     let handle_col = if dragging && !dropdown_is_open() {
         Color::new(0.6, 0.6, 0.9, 1.0)
@@ -660,9 +662,8 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
             list_rect.y,
             list_rect.w,
             list_rect.h,
-            Color::new(0., 0., 0., 1.0),
+            FIELD_BACKGROUND_COLOR,
         );
-
         
         for (i, opt) in options.iter().enumerate() {
             // The Y position the entry would have without scrolling
@@ -709,7 +710,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
                 20.,
-                WHITE,
+                FIELD_TEXT_COLOR,
             );
 
             // Scrollbar on the right hand side
@@ -745,7 +746,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
                 list_rect.w, 
                 list_rect.h, 
                 2., 
-                WHITE
+                OUTLINE_COLOR
             );
         }
     }
@@ -845,7 +846,7 @@ pub fn gui_stepper(
     let val_w = measure_text("3.0", None, FIELD_TEXT_SIZE as u16, 1.0).width + SPACING + 5.0;
 
     // Label
-    draw_text(&label, rect.x, rect.y, FIELD_TEXT_SIZE, WHITE);
+    draw_text(&label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
 
     // Display value
     let val_rect = Rect::new(
@@ -862,7 +863,7 @@ pub fn gui_stepper(
         val_rect.w,
         btn_w + 15.0,
         2.,
-        WHITE,
+        OUTLINE_COLOR,
     );
 
     let txt = format!("{:.1}", steps[idx]);
@@ -871,7 +872,7 @@ pub fn gui_stepper(
         val_rect.x + 7.5,
         val_rect.y + 17.5,
         FIELD_TEXT_SIZE,
-        WHITE,
+        FIELD_TEXT_COLOR,
     );
 
     // “‑” button

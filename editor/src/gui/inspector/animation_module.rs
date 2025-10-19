@@ -152,7 +152,7 @@ impl InspectorModule for AnimationModule {
                 rect.x + sprite_btn.w + SPACING + PADDING, 
                 y + LABEL_Y_OFFSET, 
                 20.0, 
-                WHITE
+                FIELD_TEXT_COLOR
             );
 
             y += MARGIN + PADDING;
@@ -312,8 +312,8 @@ pub fn draw_frame_size_fields(
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
 
     // Render the two labels
-    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, WHITE);
-    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     // Numeric inputs
     clip.frame_size.x = gui_input_number_f32(module.frame_x_id, inp_x, clip.frame_size.x);
@@ -329,8 +329,8 @@ pub fn draw_spritesheet_dimension_fields(
     const LABELS: [&str; 2] = ["Cols:", "Rows:"];
     let (lbl_c, inp_c, lbl_r, inp_r) = layout_pair(y, rect, LABELS);
 
-    draw_text(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, WHITE);
-    draw_text(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     clip.cols = gui_input_number_f32(module.cols_id, inp_c, clip.cols as f32) as usize;
     clip.rows = gui_input_number_f32(module.rows_id, inp_r, clip.rows as f32) as usize;
@@ -348,8 +348,8 @@ pub fn draw_fps_and_loop(
     inp_loop.h = CHECKBOX_SIZE;
     inp_loop.y += 5.;
 
-    draw_text(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, WHITE);
-    draw_text(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     clip.fps = gui_input_number_f32(module.fps_id, inp_fps, clip.fps);
     gui_checkbox(inp_loop, &mut clip.looping);
@@ -364,8 +364,8 @@ pub fn draw_offset_fields(
     const LABELS: [&str; 2] = ["Offset X:", "Offset Y:"];
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
 
-    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, WHITE);
-    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, WHITE);
+    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     clip.offset.x = gui_input_number_f32(module.offset_x_id, inp_x, clip.offset.x);
     clip.offset.y = gui_input_number_f32(module.offset_y_id, inp_y, clip.offset.y);

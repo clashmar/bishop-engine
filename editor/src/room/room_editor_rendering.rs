@@ -4,11 +4,12 @@ use engine_core::{
         asset_manager::AssetManager, 
         sprite::Sprite
     }, camera::game_camera::RoomCamera, ecs::{
-        component::{Collider, Position}, 
+        component::{Collider, CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
     }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
 };
+use uuid::Uuid;
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
 use crate::world::coord;
@@ -167,8 +168,18 @@ pub fn draw_camera_placeholder(pos: Vec2) {
 }
 
 /// Draw an icon for a `Light` that has no other visual component.
-pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
+pub fn draw_light_placeholders(
+    world_ecs: &WorldEcs,
+    room_id: Uuid,
+) {
+    let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, _light) in world_ecs.get_store::<Light>().data.iter() {
+        // Only draw placeholders in this room
+        if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+            if *id != room_id { continue; }
+        }
+
+        // Don't draw if there is a Sprite or Animation component
         if world_ecs.has_any::<(Sprite, Animation)>(*entity) {
             continue;
         }
@@ -209,8 +220,19 @@ pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
 }
 
 /// Draw a placeholder for a `Glow` that has no other visual component.
-pub fn draw_glow_placeholders(world_ecs: &WorldEcs, asset_manager: &mut AssetManager) {
+pub fn draw_glow_placeholders(
+    world_ecs: &WorldEcs, 
+    asset_manager: &mut AssetManager,
+    room_id: Uuid,
+) {
+    let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, glow) in world_ecs.get_store::<Glow>().data.iter() {
+        // Only draw placeholders in this room
+        if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+            if *id != room_id { continue; }
+        }
+
+        // Don't draw if there is a Sprite or Animation component
         if world_ecs.has_any::<(Sprite, Animation)>(*entity) {
             continue;
         }
