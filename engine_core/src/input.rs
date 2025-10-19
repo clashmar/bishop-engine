@@ -39,3 +39,10 @@ pub fn get_horizontal_input() -> f32 {
 
     dir_x
 }
+
+pub fn jump() -> bool {
+    if is_key_pressed(KeyCode::Space) {
+        return true
+    }
+    false
+}
