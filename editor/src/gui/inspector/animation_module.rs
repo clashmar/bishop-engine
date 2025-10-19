@@ -17,7 +17,7 @@ use engine_core::{
         module_factory::ModuleFactoryEntry, 
         world_ecs::WorldEcs
     }, 
-    ui::widgets::*
+    ui::{toast::WarningToast, widgets::*}
 };
 use macroquad::prelude::*;
 use crate::gui::gui_constants::*;

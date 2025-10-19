@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::str::FromStr;
-use std::time::Instant;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Opaque, never‑changing identifier for a logical UI widget.
@@ -19,9 +18,11 @@ impl Default for WidgetId {
     }
 }
 
-const WIDGET_PADDING: f32 = 20.0;
 const HOLD_INITIAL_DELAY: f64 = 0.50;
-const HOLD_REPEAT_RATE: f64   = 0.05;
+const HOLD_REPEAT_RATE: f64 = 0.05;
+const SPACING: f32 = 10.0;  
+const FIELD_TEXT_SIZE: f32 = 20.0; 
+
 
 thread_local! {
     static INPUT_TEXT_STATE: RefCell<HashMap<WidgetId, (String, usize, bool, f64, bool)>> =
@@ -817,66 +818,85 @@ fn update_global_dropdown_flag() {
     });
 }
 
-/// A simple toast that disappears after a short delay.
-pub struct WarningToast {
-    /// Text that will be shown.
-    pub msg: String,
-    /// When the toast was created.
-    start: Instant,
-    /// How long the toast stays visible (seconds).
-    pub duration: f32,
-    /// Whether the toast is currently visible.
-    pub active: bool,
-}
+pub fn gui_stepper(
+    rect: Rect,
+    label: &str,
+    steps: &[f32],
+    current: f32,
+) -> f32 {
+    let mut idx = steps
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| {
+            (*a - current).abs()
+                .partial_cmp(&(*b - current).abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .map(|(i, _)| i)
+        .unwrap_or(0);
 
-impl WarningToast {
-    /// Create a new toast that lives for `duration` seconds.
-    pub fn new<S: Into<String>>(msg: S, duration: f32) -> Self {
-        Self {
-            msg: msg.into(),
-            start: Instant::now(),
-            duration,
-            active: true,
-        }
+    // Layout
+    const Y_OFFSET: f32 = 15.0;
+
+    let label = format!("{}:", label);
+    let label_width = measure_text(&label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
+
+    let btn_w = FIELD_TEXT_SIZE * 1.2;
+    let val_w = measure_text("3.0", None, FIELD_TEXT_SIZE as u16, 1.0).width + SPACING + 5.0;
+
+    // Label
+    draw_text(&label, rect.x, rect.y, FIELD_TEXT_SIZE, WHITE);
+
+    // Display value
+    let val_rect = Rect::new(
+        rect.x + label_width + SPACING,
+        rect.y - Y_OFFSET,
+        val_w,
+        rect.h,
+    );
+
+    // White outline
+    draw_rectangle_lines(
+        val_rect.x,
+        val_rect.y - 7.5,
+        val_rect.w,
+        btn_w + 15.0,
+        2.,
+        WHITE,
+    );
+
+    let txt = format!("{:.1}", steps[idx]);
+    draw_text(
+        &txt,
+        val_rect.x + 7.5,
+        val_rect.y + 17.5,
+        FIELD_TEXT_SIZE,
+        WHITE,
+    );
+
+    // “‑” button
+    let decrease_rect = Rect::new(
+        val_rect.x + val_w + SPACING,
+        rect.y - Y_OFFSET,
+        btn_w,
+        btn_w,
+    );
+
+    if gui_button(decrease_rect, "-") && idx > 0 {
+        idx -= 1;
     }
 
-    /// Call each frame. Draws the toast if it is still alive.
-    pub fn update(&mut self) {
-        if !self.active {
-            return;
-        }
-        // Hide after the elapsed time.
-        if self.start.elapsed().as_secs_f32() >= self.duration {
-            self.active = false;
-            return;
-        }
-        
-        let txt = measure_text(&self.msg, None, 18, 1.0);
-
-        // Top left
-        let bg_rect = Rect::new(
-            WIDGET_PADDING,                         
-            WIDGET_PADDING,                        
-            txt.width + WIDGET_PADDING * 2.0,       
-            txt.height + WIDGET_PADDING * 2.0,      
-        );
-
-        // Background
-        draw_rectangle(
-            bg_rect.x,
-            bg_rect.y,
-            bg_rect.w,
-            bg_rect.h,
-            Color::new(0.0, 0.0, 0.0, 0.7),
-        );
-
-        // Text
-        draw_text(
-            &self.msg,
-            bg_rect.x + WIDGET_PADDING,
-            bg_rect.y + txt.height + WIDGET_PADDING / 2.0,
-            18.0,
-            WHITE,
-        );
+    // “+” button
+    let increase_rect = Rect::new(
+        decrease_rect.x + btn_w + SPACING,
+        rect.y - Y_OFFSET,
+        btn_w,
+        btn_w,
+    );
+    if gui_button(increase_rect, "+") && idx + 1 < steps.len() {
+        idx += 1;
     }
+
+    steps[idx]
 }
+

@@ -3,7 +3,7 @@ use crate::{
     animation::animation_system::CurrentFrame, assets::{
         asset_manager::AssetManager, 
         sprite::Sprite
-    }, ecs::{
+    }, camera::game_camera::RoomCamera, ecs::{
         component::*, 
         entity::Entity, 
         world_ecs::WorldEcs

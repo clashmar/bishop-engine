@@ -1,7 +1,7 @@
 // editor/src/room/room_editor.rs
 use engine_core::{
-    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::game_camera::get_room_camera, ecs::{
-        component::{CurrentRoom, Position, RoomCamera}, 
+    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::game_camera::{RoomCamera, get_room_camera}, ecs::{
+        component::{CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
     }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, tiles::tile::TileSprite, ui::widgets::*, world::room::Room

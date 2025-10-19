@@ -1,5 +1,6 @@
+use engine_core::camera::game_camera::RoomCamera;
 // editor/src/gui/inspector/inspector_panel.rs
-use engine_core::ecs::component::{Player, RoomCamera};
+use engine_core::ecs::component::Player;
 use engine_core::world::room::Room;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;

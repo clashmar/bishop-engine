@@ -1,7 +1,7 @@
 // engine_core/src/world/room.rs
 use crate::{
-    ecs::{
-        component::{CurrentRoom, Position, RoomCamera}, 
+    camera::game_camera::RoomCamera, ecs::{
+        component::{CurrentRoom, Position}, 
         world_ecs::WorldEcs
     }, global::tile_size, tiles::tilemap::TileMap
 };
@@ -116,9 +116,7 @@ impl Room {
     pub fn create_room_camera(&self, world_ecs: &mut WorldEcs) {
         let _camera = world_ecs.create_entity()
             .with(Position { position: self.position })
-            .with(RoomCamera { 
-                zoom: vec2(0., 0.),
-            })
+            .with(RoomCamera::default())
             .with(CurrentRoom(self.id));
     }
 
