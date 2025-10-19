@@ -120,16 +120,6 @@ ecs_component!(Player, [
     PhysicsBody
     ]);
 
-/// Component for a room camera used by the game.
-#[serde_as] 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct RoomCamera {
-    #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub zoom: Vec2,
-}
-ecs_component!(RoomCamera);
-
 #[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 #[serde(default)]
 pub struct Velocity {

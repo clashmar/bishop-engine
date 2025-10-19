@@ -9,7 +9,7 @@ pub const MINIMUM_TILE_SIZE: f32 = 9.0;
 /// Base tile size for editor scaling.
 pub const BASE_TILE_SIZE: f32 = 32.0;
 
-pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(10.0, 5.0);
+pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(16.0, 10.0);
 pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
 
 pub const GAME_SAVE_ROOT: &str = "games";

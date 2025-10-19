@@ -1,87 +1,71 @@
 (
     save_version: 1,
-    id: "32bc7788-42a2-4aff-ac47-302787155c87",
+    id: "5562b169-7171-4cc5-85df-d71b7456837b",
     name: "Game",
     worlds: [
         /*[0]*/ (
-            id: "df5a41a5-1e8e-44c5-83fe-641a21c0d988",
+            id: "a8d5522c-1439-4ec1-a0fd-70d34b7e040f",
             name: "new",
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Player",
-                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (),\n    },\n)",
-                    ),
-                    /*[1]*/ (
-                        type_name: "Position",
-                        data: "(\n    data: {\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\n            position: (-64.0, 32.0),\n        ),\n        (\"7d07b898-9307-438e-8bdf-5260df312a3a\"): (\n            position: (191.76347, 32.14953),\n        ),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\n            position: (64.919716, 41.63629),\n        ),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\n            position: (159.99998, 0.0),\n        ),\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            position: (-2.7622833, -12.173206),\n        ),\n        (\"2ca41773-e951-4191-80e1-b4ffa110771b\"): (\n            position: (-118.85315, -12.241856),\n        ),\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            position: (-116.0, 24.0),\n        ),\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\n            position: (79.10542, 43.31435),\n        ),\n        (\"47d6d62d-df37-4753-a049-1d810e9caf93\"): (\n            position: (-36.53672, 4.369625),\n        ),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\n            position: (-82.23172, -21.935379),\n        ),\n    },\n)",
-                    ),
-                    /*[2]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (\"2ca41773-e951-4191-80e1-b4ffa110771b\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\"cfe878af-9708-49be-a0b1-ab17a90b8a9c\"),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\"82c4e6a7-8569-409c-a755-9e93d4f6db1a\"),\n        (\"47d6d62d-df37-4753-a049-1d810e9caf93\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\"cfe878af-9708-49be-a0b1-ab17a90b8a9c\"),\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\"728987e4-9884-4d31-9660-58cbb81aa722\"),\n        (\"7d07b898-9307-438e-8bdf-5260df312a3a\"): (\"82c4e6a7-8569-409c-a755-9e93d4f6db1a\"),\n    },\n)",
-                    ),
-                    /*[3]*/ (
-                        type_name: "Walkable",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[4]*/ (
-                        type_name: "Animation",
-                        data: "(\n    data: {\n        (\"47d6d62d-df37-4753-a049-1d810e9caf93\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 15.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/bishop-engine/assets/animation/player/female\"),\n        ),\n    },\n)",
-                    ),
-                    /*[5]*/ (
-                        type_name: "Solid",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[6]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "Velocity",
-                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[8]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (\"087fcf04-7336-4db2-a896-1ade167b17cd\"): (),\n    },\n)",
-                    ),
-                    /*[9]*/ (
-                        type_name: "Layer",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[10]*/ (
-                        type_name: "Glow",
-                        data: "(\n    data: {\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.1,\n            brightness: 0.6,\n            emission: 0.0,\n            sprite_path: \"/Users/charliesovn/Projects/Aseprite/cat.png\",\n        ),\n    },\n)",
-                    ),
-                    /*[11]*/ (
                         type_name: "TileSprite",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[12]*/ (
+                    /*[1]*/ (
+                        type_name: "Animation",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[2]*/ (
+                        type_name: "Light",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[3]*/ (
+                        type_name: "Position",
+                        data: "(\n    data: {\n        (\"099c847d-9617-49da-a5ec-4004afd54730\"): (\n            position: (128.0, 80.0),\n        ),\n        (\"4d2e4690-da3b-444c-8e8c-d44de36b0ce9\"): (\n            position: (1.0, 1.0),\n        ),\n    },\n)",
+                    ),
+                    /*[4]*/ (
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (\"099c847d-9617-49da-a5ec-4004afd54730\"): (\n            zoom: (0.0078125, 0.0125),\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
+                    ),
+                    /*[5]*/ (
+                        type_name: "Collider",
+                        data: "(\n    data: {\n        (\"4d2e4690-da3b-444c-8e8c-d44de36b0ce9\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
+                    ),
+                    /*[6]*/ (
+                        type_name: "Layer",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[7]*/ (
                         type_name: "Name",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[13]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (\"592377e8-43d4-4f52-9ac9-a26aafd0d3f9\"): (\n            zoom: (0.0, 0.0),\n        ),\n        (\"5d35d110-8875-46dc-b99e-600a4ff808f2\"): (\n            zoom: (0.0078125, 0.0125),\n        ),\n        (\"f06ab5e6-0dfb-4190-a4e6-73920e0b72ab\"): (\n            zoom: (0.0, 0.0),\n        ),\n    },\n)",
+                    /*[8]*/ (
+                        type_name: "Player",
+                        data: "(\n    data: {\n        (\"4d2e4690-da3b-444c-8e8c-d44de36b0ce9\"): (),\n    },\n)",
                     ),
-                    /*[14]*/ (
-                        type_name: "Kinematic",
+                    /*[9]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (\"4d2e4690-da3b-444c-8e8c-d44de36b0ce9\"): (),\n    },\n)",
+                    ),
+                    /*[10]*/ (
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (\"099c847d-9617-49da-a5ec-4004afd54730\"): (\"7c12de76-2319-4689-8dcf-da26d69556b6\"),\n        (\"4d2e4690-da3b-444c-8e8c-d44de36b0ce9\"): (\"7c12de76-2319-4689-8dcf-da26d69556b6\"),\n    },\n)",
+                    ),
+                    /*[11]*/ (
+                        type_name: "Sprite",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[15]*/ (
+                    /*[12]*/ (
+                        type_name: "Velocity",
+                        data: "(\n    data: {\n        (\"4d2e4690-da3b-444c-8e8c-d44de36b0ce9\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
+                    ),
+                    /*[13]*/ (
                         type_name: "CurrentFrame",
-                        data: "(\n    data: {\n        (\"de6b443f-ff71-4104-ab74-0874fc16cce7\"): (),\n        (\"47d6d62d-df37-4753-a049-1d810e9caf93\"): (),\n    },\n)",
+                        data: "(\n    data: {},\n)",
                     ),
-                    /*[16]*/ (
-                        type_name: "Sprite",
-                        data: "(\n    data: {\n        (\"15b3a913-2b36-43d0-b704-b2764a116551\"): (\n            sprite_id: (\"1a6d9b4b-1069-4669-be9d-bb318cd76606\"),\n            path: \"/Users/charliesovn/Projects/Aseprite/cat.png\",\n        ),\n    },\n)",
-                    ),
-                    /*[17]*/ (
-                        type_name: "Light",
-                        data: "(\n    data: {\n        (\"4db3f491-41f9-49ea-98d5-9810c0a3e00c\"): (\n            pos: (0.0, 0.0),\n            color: (1.0, 1.0, 1.0),\n            intensity: 0.5,\n            radius: 50.0,\n            spread: 50.0,\n            alpha: 0.5,\n            brightness: 1.0,\n        ),\n    },\n)",
-                    ),
-                    /*[18]*/ (
-                        type_name: "Damage",
+                    /*[14]*/ (
+                        type_name: "Glow",
                         data: "(\n    data: {},\n)",
                     ),
                 ],
@@ -89,54 +73,15 @@
             ),
             rooms: [
                 /*[0]*/ (
-                    id: "cfe878af-9708-49be-a0b1-ab17a90b8a9c",
+                    id: "7c12de76-2319-4689-8dcf-da26d69556b6",
                     name: "untitled",
                     position: (
                         0.0,
                         0.0,
                     ),
                     size: (
+                        16.0,
                         10.0,
-                        5.0,
-                    ),
-                    exits: [
-                        /*[0]*/ (
-                            position: (
-                                -1.0,
-                                0.0,
-                            ),
-                            direction: Left,
-                            target_room_id: Some("728987e4-9884-4d31-9660-58cbb81aa722"),
-                        ),
-                    ],
-                    adjacent_rooms: [],
-                    variants: [
-                        /*[0]*/ (
-                            id: "default",
-                            tilemap: (
-                                width: 10,
-                                height: 5,
-                                background: (
-                                    0.78,
-                                    0.78,
-                                    0.78,
-                                    1.0,
-                                ),
-                            ),
-                        ),
-                    ],
-                    darkness: 0.0,
-                ),
-                /*[1]*/ (
-                    id: "82c4e6a7-8569-409c-a755-9e93d4f6db1a",
-                    name: "untitled",
-                    position: (
-                        159.99998,
-                        0.0,
-                    ),
-                    size: (
-                        5.0,
-                        5.0,
                     ),
                     exits: [],
                     adjacent_rooms: [],
@@ -144,8 +89,8 @@
                         /*[0]*/ (
                             id: "default",
                             tilemap: (
-                                width: 5,
-                                height: 5,
+                                width: 16,
+                                height: 10,
                                 background: (
                                     0.78,
                                     0.78,
@@ -157,61 +102,14 @@
                     ],
                     darkness: 0.0,
                 ),
-                /*[2]*/ (
-                    id: "728987e4-9884-4d31-9660-58cbb81aa722",
-                    name: "untitled",
-                    position: (
-                        -128.0,
-                        -48.0,
-                    ),
-                    size: (
-                        8.0,
-                        13.0,
-                    ),
-                    exits: [
-                        /*[0]*/ (
-                            position: (
-                                8.0,
-                                0.0,
-                            ),
-                            direction: Right,
-                            target_room_id: None,
-                        ),
-                        /*[1]*/ (
-                            position: (
-                                8.0,
-                                3.0,
-                            ),
-                            direction: Right,
-                            target_room_id: Some("cfe878af-9708-49be-a0b1-ab17a90b8a9c"),
-                        ),
-                    ],
-                    adjacent_rooms: [],
-                    variants: [
-                        /*[0]*/ (
-                            id: "default",
-                            tilemap: (
-                                width: 8,
-                                height: 13,
-                                background: (
-                                    0.09019608,
-                                    0.78,
-                                    0.78,
-                                    1.0,
-                                ),
-                            ),
-                        ),
-                    ],
-                    darkness: 0.37998047,
-                ),
             ],
-            starting_room: Some("cfe878af-9708-49be-a0b1-ab17a90b8a9c"),
+            starting_room: Some("7c12de76-2319-4689-8dcf-da26d69556b6"),
             starting_position: Some((
                 1.0,
                 1.0,
             )),
         ),
     ],
-    current_world_id: "df5a41a5-1e8e-44c5-83fe-641a21c0d988",
+    current_world_id: "a8d5522c-1439-4ec1-a0fd-70d34b7e040f",
     tile_size: 16.0,
 )

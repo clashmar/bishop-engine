@@ -1,19 +1,13 @@
 // editor/src/room/room_editor_actions.rs
 use engine_core::{
-    animation::animation_clip::Animation, 
-    assets::{
+    animation::animation_clip::Animation, assets::{
         asset_manager::AssetManager, 
         sprite::Sprite
-    }, 
-    ecs::{
-        component::{Collider, Position, RoomCamera}, 
+    }, camera::game_camera::RoomCamera, ecs::{
+        component::{Collider, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    global::tile_size, 
-    lighting::{glow::Glow, light::Light}, 
-    rendering::render_room::entity_dimensions, 
-    world::room::Room
+    }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
