@@ -1,12 +1,9 @@
 // engine_core/src/world/room.rs
 use crate::{
-    camera::game_camera::{GameCamera, zoom_from_scalar}, 
-    ecs::{
-        component::{CurrentRoom, Position, RoomCamera}, 
+    camera::game_camera::RoomCamera, ecs::{
+        component::{CurrentRoom, Position}, 
         world_ecs::WorldEcs
-    }, 
-    global::tile_size, 
-    tiles::tilemap::TileMap
+    }, global::tile_size, tiles::tilemap::TileMap
 };
 use std::{io, path::PathBuf};
 use uuid::Uuid;
@@ -119,37 +116,8 @@ impl Room {
     pub fn create_room_camera(&self, world_ecs: &mut WorldEcs) {
         let _camera = world_ecs.create_entity()
             .with(Position { position: self.position })
-            .with(RoomCamera { scalar_zoom: 0.01 })
+            .with(RoomCamera::default())
             .with(CurrentRoom(self.id));
-    }
-
-    /// Returns a `GameCamera` for a room from its id, if one exists.
-    pub fn get_room_camera(world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera> {
-        let pos_store = world_ecs.get_store::<Position>();
-        let cam_store = world_ecs.get_store::<RoomCamera>();
-        let room_store = world_ecs.get_store::<CurrentRoom>();
-
-        for (entity, room_cam) in cam_store.data.iter() {
-            if let Some(current_room) = room_store.get(*entity) {
-                if current_room.0 != room_id { continue; }
-
-                let position = pos_store.data
-                    .get(entity)
-                    .expect("Camera should always have position.")
-                    .position;
-
-                let zoom_vec = zoom_from_scalar(room_cam.scalar_zoom);
-
-                let camera = Camera2D {
-                    target: position,
-                    zoom:   zoom_vec,
-                    ..Default::default()
-                };
-
-                return Some(GameCamera { position, camera, });
-            }
-        }
-        None
     }
 
     /// Returns the axis‑aligned rectangle that a room occupies in world space.

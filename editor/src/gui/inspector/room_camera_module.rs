@@ -1,9 +1,11 @@
 // editor/src/gui/inspector/camera_module.rs
-use engine_core::ecs::component::RoomCamera;
+use strum::IntoEnumIterator;
+use engine_core::camera::game_camera::*;
 use engine_core::ecs::module::CollapsibleModule;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
+use crate::gui::gui_constants::*;
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::{
@@ -17,89 +19,10 @@ pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 
 #[derive(Default)]
 pub struct RoomCameraModule {
+    pub mode_id: WidgetId,
     pub zoom_id: WidgetId,
     pub slider_id: WidgetId,
-}
-
-impl RoomCameraModule {
-    /// Draw a **single** numeric field that edits the *scalar* zoom.
-    /// The scalar is converted to a non‑uniform `Vec2` that respects the
-    /// current screen aspect.
-    fn draw_zoom_field(
-        &self,
-        rect: Rect,
-        world_ecs: &mut WorldEcs,
-        entity: Entity,
-    ) {
-        let cam = world_ecs
-            .get_mut::<RoomCamera>(entity)
-            .expect("Camera must exist");
-
-        // To keep zoom values nice to work with
-        const DISPLAY_FACTOR: f32 = 1000.0;
-        const DECIMAL_PLACES: u32 = 5;
-        const SPACING: f32 = 5.0;
-
-        // Current scalar
-        let scalar = cam.scalar_zoom; 
-        let rounded_scalar = round_to_dp(scalar, DECIMAL_PLACES);
-
-        // Zoom label
-        let zoom_label = "Zoom: ";
-        let font_size_zoom = 20.0;
-        let label_width = measure_text(zoom_label, None, font_size_zoom as u16, 1.0).width;
-        draw_text(zoom_label, rect.x + 2.0, rect.y + 5.0, font_size_zoom, WHITE);
-
-        let num_text = "000000"; // So width will never bigger than a five digit number
-        let num_width = measure_text(&num_text, None, font_size_zoom as u16, 1.0).width;
-
-        // Numeric field 
-        let num_rect = Rect::new(
-            rect.x + label_width,
-            rect.y - font_size_zoom,
-            num_width + SPACING,
-            rect.h,
-        );
-
-        // Slider
-        let slider_rect = Rect::new(
-            rect.x + label_width + num_width + 2.0 * SPACING,
-            rect.y - font_size_zoom,
-            rect.w - (label_width + num_width + 3.0 * SPACING),
-            rect.h,
-        );
-
-        let typed = gui_input_number_f32(
-            self.zoom_id,
-            num_rect, 
-            round_to_dp(rounded_scalar * DISPLAY_FACTOR, DECIMAL_PLACES)
-        );
-
-        let mut new_scalar = scalar; 
-
-        if (typed - rounded_scalar).abs() > f32::EPSILON {
-            // User typed a new number
-            new_scalar = round_to_dp(typed / DISPLAY_FACTOR, DECIMAL_PLACES);
-        }
-
-        // Slider
-        let (slider_val, slider_changed) = gui_slider(
-            self.slider_id,
-            slider_rect,
-            0.001, // min
-            0.05, // max       
-            rounded_scalar,
-        );        
-
-        if slider_changed {
-            new_scalar = slider_val;
-        }
-        
-        // Write back if anything changed
-        if (new_scalar - scalar).abs() > f32::EPSILON {
-            cam.scalar_zoom = new_scalar;
-        }
-    }
+    pub cam_mode_id: WidgetId,
 }
 
 impl InspectorModule for RoomCameraModule {
@@ -114,14 +37,190 @@ impl InspectorModule for RoomCameraModule {
         world_ecs: &mut WorldEcs,
         entity: Entity,
     ) {
-        // Editable numeric field for zoom
-        let edit_rect = Rect::new(
+        let cam = world_ecs
+            .get_mut::<RoomCamera>(entity)
+            .expect("Camera must exist");
+
+        let mut y = rect.y + SPACING;
+
+        // Layout dropdown now but draw at the end
+        let mode_label = "Zoom Mode: ";
+        let label_width = measure_text(mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
+        draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, WHITE);
+
+        let mode_rect = Rect::new(rect.x + label_width + SPACING, y, rect.w - label_width - SPACING, 30.0);
+        let current_mode = cam.zoom_mode;
+        let current_label = format!("{current_mode}");
+        let zoom_options: Vec<ZoomMode> = ZoomMode::iter()
+            .collect();
+
+        // Advance y for the next position
+        y += mode_rect.h + mode_rect.h + SPACING;
+
+        match cam.zoom_mode   {
+            ZoomMode::Step => {
+                // Fields to change the global virtual screen dimensions
+                let scale_rect = Rect::new(
+                    rect.x,
+                    y,
+                    rect.w,
+                    40.0,               
+                );
+
+                const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 3.0];
+                
+                let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width());
+                let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar);
+
+                if (new_scalar - current_scalar).abs() > f32::EPSILON {
+                    let width = world_virtual_width() * new_scalar;
+                    let height = world_virtual_height() * new_scalar;
+                    cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
+                }
+            }
+            ZoomMode::Free => {
+                // Editable numeric field and slider for zoom
+                let zoom_rect = Rect::new(
+                    rect.x,
+                    y,
+                    rect.w,
+                    35.0,
+                );
+
+                self.draw_freeform_mode(
+                    zoom_rect,
+                    cam,
+                );
+            }
+        }
+
+        // Advance y for the next position
+        y += 30.0;
+
+        // Camera mode
+        let cam_mode_label = "Camera Mode: ";
+        let cam_label_width = measure_text(cam_mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
+        draw_text(
+            cam_mode_label,
             rect.x,
-            rect.y + 30.0,
-            rect.w,
-            40.0,
+            y + 20.0,
+            FIELD_TEXT_SIZE,
+            WHITE,
         );
-        self.draw_zoom_field(edit_rect, world_ecs, entity);
+
+        let cam_mode_rect = Rect::new(
+            rect.x + cam_label_width + SPACING,
+            y,
+            rect.w - cam_label_width - SPACING,
+            30.0,
+        );
+
+        // Current value & label
+        let current_cam_mode = cam.camera_mode;
+        let current_cam_label = format!("{current_cam_mode}");
+        let cam_mode_options: Vec<CameraMode> = vec![
+            CameraMode::Fixed,
+            CameraMode::Follow(FollowRestriction::Free),
+            CameraMode::Follow(FollowRestriction::ClampY),
+            CameraMode::Follow(FollowRestriction::ClampX),
+        ];
+
+        // Advance y for the next position
+        y += cam_mode_rect.h + SPACING;
+
+        // Render the dropdowns in reverse order
+        if let Some(new_cam_mode) = gui_dropdown(
+            self.cam_mode_id,
+            cam_mode_rect,
+            &current_cam_label,
+            &cam_mode_options,
+            |mode| mode.ui_label(),
+        ) {
+            if new_cam_mode != current_cam_mode {
+                cam.camera_mode = new_cam_mode;
+            }
+        }
+        
+        if let Some(new_mode) = gui_dropdown(
+            self.mode_id, 
+            mode_rect, 
+            &current_label, 
+            &zoom_options,
+            |mode| mode.ui_label(),
+        ) {
+            if new_mode != current_mode {
+                cam.zoom_mode = new_mode;
+            }
+        }
+    }
+}
+
+impl RoomCameraModule {
+    // Draw a single numeric field that edits the scalar zoom.
+    fn draw_freeform_mode(
+        &self,
+        rect: Rect,
+        cam: &mut RoomCamera,
+    ) {
+        let scalar = 2.0 / (cam.zoom.x * world_virtual_width());
+
+        const MIN: f32 = 0.5;
+        const MAX: f32 = 3.0;
+        let scalar = scalar.clamp(MIN, MAX);
+
+        // Label
+        let label = "Scale: ";
+        let label_width = measure_text(label, None, FIELD_TEXT_SIZE as u16, 1.0).width + 1.0;
+        let num_width = measure_text("0.00", None, FIELD_TEXT_SIZE as u16, 1.0).width;
+        draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE, WHITE);
+
+        // Numeric field 
+        let num_rect = Rect::new(
+            rect.x + label_width,
+            rect.y - FIELD_TEXT_SIZE,
+            num_width + SPACING,
+            rect.h,
+        );
+
+        // Slider
+        let slider_rect = Rect::new(
+            rect.x + label_width + num_width + 2.0 * SPACING,
+            rect.y - FIELD_TEXT_SIZE,
+            rect.w - (label_width + num_width + 2.0 * SPACING),
+            rect.h,
+        );
+
+        // Numeric field
+        let typed = gui_input_number_f32(
+            self.zoom_id,
+            num_rect,
+            round_to_dp(scalar, 2),
+        );
+
+        // Slider
+        let (slider_val, slider_changed) = gui_slider(
+            self.slider_id,
+            slider_rect,
+            MIN, // min
+            MAX, // max
+            round_to_dp(scalar, 2),
+        );      
+
+        // Resolve the new scalar
+        let mut new_scalar = scalar;
+        if (typed - scalar).abs() > f32::EPSILON {
+            new_scalar = round_to_dp(typed, 2).clamp(MIN, MAX);
+        }
+        if slider_changed {
+            new_scalar = round_to_dp(slider_val, 2).clamp(MIN, MAX);
+        }
+        
+        // Write back if anything changed
+        if (new_scalar - scalar).abs() > f32::EPSILON {
+            let width = world_virtual_width() * new_scalar;
+            let height = world_virtual_height() * new_scalar;
+            cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
+        }
     }
 }
 

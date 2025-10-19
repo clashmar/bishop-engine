@@ -14,8 +14,8 @@ pub trait InspectorModule {
     fn draw(
         &mut self,
         rect: Rect,
-        assets: &mut AssetManager,
-        ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
+        world_ecs: &mut WorldEcs,
         entity: Entity,
     );
 

@@ -6,7 +6,7 @@ use engine_core::{
         Position, 
         Velocity
     }, 
-    lighting::light_system::LightSystem, 
+    lighting::light_system::RenderSystem, 
     rendering::render_room::render_room, 
     storage::core_storage, 
     world::{
@@ -34,7 +34,7 @@ pub struct GameState {
     /// Asset Manager.
     asset_manager: AssetManager,
     /// Lighting system for the game.
-    lighting_system: LightSystem,
+    lighting_system: RenderSystem,
 }
 
 impl GameState {
@@ -68,7 +68,7 @@ impl GameState {
             current_room,
             mode: Mode::Explore,
             asset_manager,
-            lighting_system: LightSystem::new(),
+            lighting_system: RenderSystem::new(),
         }
     }
 
@@ -87,7 +87,7 @@ impl GameState {
             current_room: room,
             mode: Mode::Explore,
             asset_manager,
-            lighting_system: LightSystem::new(),
+            lighting_system: RenderSystem::new(),
         }
     }
 

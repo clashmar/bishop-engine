@@ -32,6 +32,7 @@ pub fn create_new_game(name: String) -> Game {
     let world = create_new_world();
     let current_id = world.id;
     let game = Game {
+        save_version: 1,
         id: Uuid::new_v4(),
         name,
         worlds: vec![world],
