@@ -12,6 +12,7 @@ pub fn crossed_exit(
     collider: &Collider,
     room: &Room,
 ) -> Option<Uuid> {
+    println!("{}", delta);
     // Position after the movement
     let new_pos = entity_position + delta;
     let entity_rect = Rect::new(new_pos.x, new_pos.y, collider.width, collider.height);

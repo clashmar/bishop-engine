@@ -41,6 +41,7 @@ pub fn update_physics(
         };
 
         vel_cur.y += GRAVITY * dt;
+
         let delta = Vec2::new(vel_cur.x * dt, vel_cur.y * dt);
 
         let sweep = sweep_move(
@@ -63,7 +64,7 @@ pub fn update_physics(
         }
 
         // Exit check
-        if let Some(target_id) = crossed_exit(new_pos, sweep.allowed_delta, &collider, room) {
+        if let Some(target_id) = crossed_exit(new_pos, delta, &collider, room) {
             {
                 let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
                 pos_mut.position = new_pos;

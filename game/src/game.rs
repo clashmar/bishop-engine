@@ -85,20 +85,11 @@ impl GameState {
         }
     }
 
-    pub async fn fixed_update(&mut self, dt: f32) {
-        let player = self.world.world_ecs.get_player_entity();
-        let player_vel = self.world.world_ecs
-            .get_store_mut::<Velocity>()
-            .get_mut(player)
-            .expect("Player must have a Velocity component");
-        update_player_input(player_vel);
+    pub fn fixed_update(&mut self, dt: f32) {
+        // Store the current positions for the next frame
+        self.refresh_previous_positions();
 
-        update_animation_sytem(
-            &mut self.world.world_ecs,
-            &mut self.asset_manager,
-            dt, 
-            self.current_room.id,
-        ).await;
+        let player = self.world.world_ecs.get_player_entity();
 
         // If an entity exits the current room
         if let Some((exiting_entity, target_id, new_pos)) = update_physics(&mut self.world.world_ecs, &self.current_room, dt) {
@@ -122,8 +113,22 @@ impl GameState {
             let pos_mut = self.world.world_ecs.get_mut::<Position>(exiting_entity).unwrap();
             pos_mut.position = new_pos;
         }
+    }
 
-        self.refresh_previous_positions();
+    pub async fn update_async(&mut self, dt: f32) {
+        let player = self.world.world_ecs.get_player_entity();
+        let player_vel = self.world.world_ecs
+            .get_store_mut::<Velocity>()
+            .get_mut(player)
+            .expect("Player must have a Velocity component");
+        update_player_input(player_vel);
+
+        update_animation_sytem(
+            &mut self.world.world_ecs,
+            &mut self.asset_manager,
+            dt, 
+            self.current_room.id,
+        ).await;
     }
 
     pub fn render(&mut self, alpha: f32) {
@@ -139,7 +144,6 @@ impl GameState {
             Some(&self.prev_positions),
         );
 
-        // Store the current positions for the next frame
         self.render_system.present_game();
     }
 
