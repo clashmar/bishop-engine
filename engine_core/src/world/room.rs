@@ -36,8 +36,10 @@ impl Room {
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
         };
 
+        let id = Uuid::new_v4();
+
         let room = Room {
-        id: Uuid::new_v4(),
+        id,
         name: "untitled".to_string(),
         position: DEFAULT_ROOM_POSITION,
         size: DEFAULT_ROOM_SIZE,
@@ -47,7 +49,7 @@ impl Room {
         darkness: 0.,
         };
 
-        let _camera = room.create_room_camera(world_ecs);
+        let _camera = room.create_room_camera(world_ecs, id);
 
         room
     }
@@ -113,10 +115,10 @@ impl Room {
         }).collect()
     }
 
-    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs) {
+    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: Uuid) {
         let _camera = world_ecs.create_entity()
             .with(Position { position: self.position })
-            .with(RoomCamera::default())
+            .with(RoomCamera::new(room_id))
             .with(CurrentRoom(self.id));
     }
 

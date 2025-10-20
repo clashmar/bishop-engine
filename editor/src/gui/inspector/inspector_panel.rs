@@ -1,6 +1,6 @@
 use engine_core::camera::game_camera::RoomCamera;
 // editor/src/gui/inspector/inspector_panel.rs
-use engine_core::ecs::component::Player;
+use engine_core::ecs::component::{CurrentRoom, Player, Position};
 use engine_core::world::room::Room;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
@@ -222,9 +222,7 @@ impl InspectorPanel {
 
             // Remove button
             // Don't show remove for player entity or camera
-            if !(world_ecs.get_store::<Player>().contains(entity) 
-                || world_ecs.get_store::<RoomCamera>().contains(entity)
-            ) {
+            if !(world_ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
                 if gui_button(remove_rect, remove_label) || Controls::delete() && !input_is_focused() {
@@ -240,7 +238,7 @@ impl InspectorPanel {
                 }
             }
         } else {
-            // No entity selected – show the old “Create” button
+            // No entity selected
             let create_label = "Create";
             let txt_create = measure_text(create_label, None, 20, 1.0);
             let create_btn = self.register_rect(Rect::new(
@@ -249,6 +247,26 @@ impl InspectorPanel {
                 txt_create.width + PADDING,
                 BTN_HEIGHT,
             ));
+
+            let add_cam_label = "Add Camera";
+            let txt_cam = measure_text(add_cam_label, None, 20, 1.0);
+            let cam_btn_w = txt_cam.width + PADDING;
+            let cam_btn = self.register_rect(Rect::new(
+                create_btn.x - SPACING - cam_btn_w,
+                create_btn.y,
+                cam_btn_w,
+                BTN_HEIGHT,
+            ));
+
+            if gui_button(cam_btn, add_cam_label) {
+                // Create a new RoomCamera entity that belongs to the current room
+                let _ = world_ecs
+                    .create_entity()
+                    .with(RoomCamera::new(room.id))
+                    .with(Position { position: room.position })
+                    .with(CurrentRoom(room.id))
+                    .finish();
+            }
 
             // Darkness slider
             let slider_width = 150.0;

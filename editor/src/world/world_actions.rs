@@ -39,7 +39,7 @@ impl WorldEditor {
 
             let id = room.id;
             
-            let _camera = room.create_room_camera(&mut world.world_ecs);
+            let _camera = room.create_room_camera(&mut world.world_ecs, id);
 
             world.rooms.push(room);
             id

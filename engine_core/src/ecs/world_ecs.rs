@@ -142,6 +142,16 @@ impl WorldEcs {
 
         *player
     }
+
+    /// Returns the player Position.
+    pub fn get_player_position(&self) -> Position {
+        let player_entity = self.get_player_entity();
+
+        self.get_store::<Position>()
+            .get(player_entity)
+            .cloned()
+            .expect("Player should always have a Position component.")
+    }
 }
 
 impl Serialize for WorldEcs {

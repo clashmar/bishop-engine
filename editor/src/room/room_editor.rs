@@ -209,7 +209,7 @@ impl RoomEditor {
                 }
             }
             RoomEditorMode::Scene => {
-                // !This is the camera I'm referring to!
+                // TODO: Pick best camera for preview from room cameras
                 let room_camera = get_room_camera(world_ecs, room.id)
                     .expect("This room should have at least one camera.");
 
@@ -250,7 +250,7 @@ impl RoomEditor {
                         grid::draw_grid(camera);
                     }
                     
-                    draw_camera_placeholder(room_camera.position);
+                    draw_camera_placeholders(&world_ecs, room.id);
                     draw_light_placeholders(world_ecs, room.id);
                     draw_glow_placeholders(world_ecs, asset_manager, room.id);
 

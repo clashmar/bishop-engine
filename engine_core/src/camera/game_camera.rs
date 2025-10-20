@@ -1,5 +1,5 @@
 // engine_core/src/camera/game_camera.rs
-use crate::{ecs::{component::{CurrentRoom, Position}, world_ecs::WorldEcs}, ecs_component, global::*};
+use crate::{ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, ecs_component, global::*};
 use std::fmt;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -7,10 +7,24 @@ use serde_with::{serde_as, FromInto};
 use strum_macros::EnumIter;
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GameCamera {
-    pub position: Vec2,
     pub camera: Camera2D,
+}
+
+impl Clone for GameCamera {
+    fn clone(&self) -> Self {
+        Self {
+            camera: Camera2D {
+                target: self.camera.target,
+                zoom: self.camera.zoom,
+                rotation: self.camera.rotation,
+                offset: self.camera.offset,
+                render_target: self.camera.render_target.clone(),
+                ..Default::default()
+            },
+        }
+    }
 }
 
 pub fn world_virtual_width() -> f32 { cam_tile_dims().0 * tile_size() }
@@ -18,21 +32,23 @@ pub fn world_virtual_height() -> f32 { cam_tile_dims().1 * tile_size() }
 
 /// Component for a room camera used by the game.
 #[serde_as] 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
 #[serde(default)]
 pub struct RoomCamera {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub zoom: Vec2,
+    pub room_id: Uuid,
     pub zoom_mode: ZoomMode,
     pub camera_mode: CameraMode,
 }
 ecs_component!(RoomCamera);
 
-impl Default for RoomCamera {
-    fn default() -> Self {
+impl RoomCamera {
+    pub fn new(room_id: Uuid) -> Self {
         let zoom = vec2(1.0 / world_virtual_width() * 2.0, 1.0 / world_virtual_height() * 2.0);
         RoomCamera { 
             zoom, 
+            room_id,
             zoom_mode: ZoomMode::Step,
             camera_mode: CameraMode::Fixed,
         }
@@ -122,6 +138,50 @@ pub fn game_render_target() -> RenderTarget {
     rt
 }
 
+/// Returns every `GameCamera` for a room from its id.
+pub fn get_room_cameras(world_ecs: &WorldEcs, room_id: Uuid) -> Vec<(Entity, RoomCamera)> {
+    let cam_store = world_ecs.get_store::<RoomCamera>();
+    let room_store = world_ecs.get_store::<CurrentRoom>();
+
+    cam_store
+        .data
+        .iter()
+        .filter_map(|(entity, room_cam)| {
+            let cur = room_store.get(*entity)?;
+            if cur.0 != room_id {
+                return None;
+            }
+            Some((*entity, *room_cam))
+        })
+        .collect()
+}
+
+/// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
+pub fn room_to_game_camera(
+    world_ecs: &WorldEcs, 
+    entity: &Entity, 
+    room_camera: &RoomCamera
+) -> GameCamera {
+    let pos_store  = world_ecs.get_store::<Position>();
+
+    // Get the world position of the entity
+    let position = pos_store
+        .data
+        .get(entity)
+        .expect("Camera should always have a Position component")
+        .position;
+
+    // Build the GameCamera
+    let camera = Camera2D {
+        target: position,
+        zoom: room_camera.zoom,
+        render_target: Some(game_render_target()),
+        ..Default::default()
+    };
+
+    GameCamera { camera }  
+}
+
 /// Returns a `GameCamera` for a room from its id, if one exists.
 pub fn get_room_camera(world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera> {
     let pos_store = world_ecs.get_store::<Position>();
@@ -144,7 +204,7 @@ pub fn get_room_camera(world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera
                 ..Default::default()
             };
 
-            return Some(GameCamera { position, camera, });
+            return Some(GameCamera { camera, });
         }
     }
     None
@@ -158,28 +218,6 @@ pub fn zoom_from_scalar(scalar: f32) -> Vec2 {
         vec2(scalar / aspect, scalar)
     } else {
         vec2(scalar, scalar * aspect)
-    }
-}
-
-impl GameCamera {
-    pub fn update_camera(&mut self) {
-        // let cam_x = self.position.x as f32 + TILE_SIZE / 2.0;
-
-        // // Offset the camera upwards
-        // let vertical_offset = screen_height() / 2.0;
-        // let cam_y = self.position.y + TILE_SIZE / 2.0 - vertical_offset;
-
-        // self.camera.target = vec2(cam_x, cam_y);
-        // self.camera.zoom = vec2(1.2 / screen_width(), 1.2 / screen_height());
-
-        // set_camera(&self.camera);
-
-    }
-
-    pub fn move_camera(&mut self) {
-        // let speed = 4.0; // pixels per frame
-        // let input = input::get_omni_input(); // returns Vec2 (e.g. (1, 0))
-        // self.position += input * speed;
     }
 }
 

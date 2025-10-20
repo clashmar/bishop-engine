@@ -2,7 +2,7 @@
 use engine_core::{ecs::component::Velocity, input::*};
 
 /// Walk speed in world units per second.
-const PLAYER_SPEED: f32 = 125.0;
+const PLAYER_SPEED: f32 = 100.0;
 /// Jump speed in world units per second.
 pub const JUMP_SPEED: f32 = 250.0; 
 
