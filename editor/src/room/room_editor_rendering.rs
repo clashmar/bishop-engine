@@ -131,40 +131,59 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholder(pos: Vec2) {
-    // Offset the camera placeholder 
-    let half_tile = tile_size() * 0.5;
-    let body = Rect::new(
-        pos.x - half_tile,   
-        pos.y - half_tile,
-        tile_size(),
-        tile_size(),
-    );
+pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: Uuid) {
+    let cam_store = world_ecs.get_store::<RoomCamera>();
+    let pos_store = world_ecs.get_store::<Position>();
+    let room_store = world_ecs.get_store::<CurrentRoom>();
 
-    let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
-    let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
-    let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
+    let positions: Vec<Vec2> = cam_store
+        .data
+        .iter()
+        .filter_map(|(entity, _room_cam)| {
+            let cur_room = room_store.get(*entity)?;
+            if cur_room.0 != room_id {
+                return None;
+            }
+            let pos = pos_store.get(*entity)?;
+            Some(pos.position)
+        })
+        .collect();
+    
+    for pos in positions {
+        // Offset the camera placeholder 
+        let half_tile = tile_size() * 0.5;
+        let body = Rect::new(
+            pos.x - half_tile,   
+            pos.y - half_tile,
+            tile_size(),
+            tile_size(),
+        );
 
-    draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
+        let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
+        let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
+        let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
 
-    let finder_w = tile_size() * 0.3;
-    let finder_h = tile_size() * 0.6;
-    let finder = Rect::new(
-        body.x + thickness(),                     
-        body.y + (body.h - finder_h) / 2.0,
-        finder_w,
-        finder_h,
-    );
-    draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
-                         thickness() * 0.75, blue);
+        draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
 
-    let lens_radius = tile_size() * 0.1;
-    let lens_center = vec2(
-        body.x + body.w - lens_radius * 2.0 - thickness(),
-        body.y + body.h / 2.0,
-    );
-    draw_circle_lines(lens_center.x, lens_center.y,
-                      lens_radius, thickness() * 0.75, red);
+        let finder_w = tile_size() * 0.3;
+        let finder_h = tile_size() * 0.6;
+        let finder = Rect::new(
+            body.x + thickness(),                     
+            body.y + (body.h - finder_h) / 2.0,
+            finder_w,
+            finder_h,
+        );
+        draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
+                            thickness() * 0.75, blue);
+
+        let lens_radius = tile_size() * 0.1;
+        let lens_center = vec2(
+            body.x + body.w - lens_radius * 2.0 - thickness(),
+            body.y + body.h / 2.0,
+        );
+        draw_circle_lines(lens_center.x, lens_center.y,
+                        lens_radius, thickness() * 0.75, red);
+        }
 }
 
 /// Draw an icon for a `Light` that has no other visual component.

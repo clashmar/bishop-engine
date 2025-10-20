@@ -62,9 +62,6 @@ async fn main() {
         if accumulator > MAX_ACCUM {
             accumulator = MAX_ACCUM;
         }
-        
-        // Per frame async work
-        game.update_async(frame_dt).await;
 
         // Fixed‑step physics
         while accumulator >= FIXED_DT {
@@ -72,10 +69,12 @@ async fn main() {
             accumulator -= FIXED_DT;
         }
 
+        // Per frame async work
+        game.update_async(frame_dt).await;
+
         // Interpolation factor for rendering
         let alpha = accumulator / FIXED_DT;
         game.render(alpha);
-        
         next_frame().await;
     }
 }
