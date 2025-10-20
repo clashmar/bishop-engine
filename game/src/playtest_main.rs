@@ -54,25 +54,17 @@ async fn main() {
     let mut accumulator = 0.0_f32;
 
     loop {
-        // Time elapsed since last frame
         let frame_dt = get_frame_time();
-        accumulator += frame_dt;
+        accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
 
-        // Clamp the backlog
-        if accumulator > MAX_ACCUM {
-            accumulator = MAX_ACCUM;
-        }
+        let steps = (accumulator / FIXED_DT) as u32;
+        accumulator -= steps as f32 * FIXED_DT;
 
-        // Fixed‑step physics
-        while accumulator >= FIXED_DT {
+        for _ in 0..steps {
             game.fixed_update(FIXED_DT);
-            accumulator -= FIXED_DT;
         }
 
-        // Per frame async work
         game.update_async(frame_dt).await;
-
-        // Interpolation factor for rendering
         let alpha = accumulator / FIXED_DT;
         game.render(alpha);
         next_frame().await;
