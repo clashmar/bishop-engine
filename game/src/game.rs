@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use engine_core::{
     animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::camera_manager::CameraManager, ecs::{component::{
         CurrentRoom, Position, Velocity
-    }, entity::Entity}, rendering::{render_room::render_room, render_system::RenderSystem}, storage::core_storage, world::{
+    }, entity::Entity}, rendering::{render_room::{lerp, render_room}, render_system::RenderSystem}, storage::core_storage, world::{
         room::Room, transition_manager::{TransitionManager, TransitionState}, world::World
     }
 };
@@ -38,13 +38,11 @@ impl GameState {
         let mut world = core_storage::load_world_by_id(&world_id)
             .expect("Failed to deserialize world.ron");
 
-        let start_room_id = world
-            .starting_room
+        let start_room_id = world.starting_room
             .or_else(|| world.rooms.first().map(|m| m.id))
             .expect("World has no starting room nor any rooms");
 
-        let current_room = world
-            .rooms
+        let current_room = world.rooms
             .iter()
             .find(|m| m.id == start_room_id)
             .expect("Missing id for the starting room")
@@ -87,6 +85,7 @@ impl GameState {
     pub fn fixed_update(&mut self, dt: f32) {
         // Store the current positions for the next frame
         self.refresh_previous_positions();
+        self.camera_manager.previous_position = Some(self.camera_manager.active.camera.target);
 
         let player = self.world.world_ecs.get_player_entity();
 
@@ -140,12 +139,25 @@ impl GameState {
     pub fn render(&mut self, alpha: f32) {
         clear_background(BLUE);
 
+        let interpolated_target = lerp(
+            self.camera_manager.previous_position.unwrap_or_default(),
+            self.camera_manager.active.camera.target,
+            alpha,
+        );
+
+        // Create a new interpolated camera
+        let render_cam = Camera2D {
+            target: interpolated_target,
+            zoom: self.camera_manager.active.camera.zoom,
+            ..Default::default()
+        };
+
         render_room(
             &self.world.world_ecs, 
             &self.current_room, 
             &mut self.asset_manager,
             &mut self.render_system,
-            &self.camera_manager.active.camera,
+            &render_cam,
             alpha,
             Some(&self.prev_positions),
         );
@@ -155,16 +167,15 @@ impl GameState {
 
     /// Updates the previous position for all entities in the active room.
     fn refresh_previous_positions(&mut self) {
-        self.prev_positions.clear();
         let pos_store = self.world.world_ecs.get_store::<Position>();
         let room_store = self.world.world_ecs.get_store::<CurrentRoom>();
 
-        for (entity, pos) in pos_store.data.iter() {
-            if let Some(cr) = room_store.get(*entity) {
-                if cr.0 == self.current_room.id {
-                    self.prev_positions.insert(*entity, pos.position);
-                }
-            }
-        }
+        self.prev_positions = pos_store.data
+            .iter()
+            .filter_map(|(entity, pos)| {
+                room_store.get(*entity).filter(|cr| cr.0 == self.current_room.id)
+                    .map(|_| (*entity, pos.position))
+            })
+            .collect();
     }
 }

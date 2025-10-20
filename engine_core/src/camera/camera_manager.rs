@@ -11,20 +11,22 @@ pub struct CameraManager {
     room_cameras: Vec<(Entity, RoomCamera)>,
     /// The id of the room we are currently tracking or `None`.
     current_room: Option<Uuid>,
+
+    pub previous_position: Option<Vec2>,
 }
 
 impl CameraManager {
     /// Initialise with the player’s starting room.
     pub fn new(world_ecs: &WorldEcs, room_id: Uuid, player_pos: Vec2) -> Self {
         let room_cameras = get_room_cameras(world_ecs, room_id);
-        let active_camera = Self::find_best_camera_for_room(world_ecs, &room_cameras, player_pos)
-            .unwrap().0;
- 
+        let (active_camera, _) = Self::find_best_camera_for_room(world_ecs, &room_cameras, player_pos)
+            .expect("room must contain at least one camera");
 
         Self { 
             active: active_camera,
             room_cameras,
             current_room: Some(room_id),
+            previous_position: None,
         }
     }
 
@@ -35,20 +37,20 @@ impl CameraManager {
         room: &Room,
         player_pos: Vec2) 
         {
-        // If the player moved to another room we need a fresh list.
+        // If the player moved to another get the new cameras
         if self.current_room != Some(room.id) {
             self.current_room = Some(room.id);
             self.room_cameras = get_room_cameras(world_ecs, self.current_room.unwrap());
         }
 
-        // Pick the camera
+        // Pick the best camera
         if let Some((best_cam, mode)) = Self::find_best_camera_for_room(
             world_ecs, 
             &self.room_cameras, player_pos
         ) {
             self.active = best_cam;
 
-            // Apply follow‑restriction (updates `self.target` only)
+            // Apply follow if needed
             if let CameraMode::Follow(restriction) = mode {
                 self.apply_follow(&restriction, player_pos);
             }

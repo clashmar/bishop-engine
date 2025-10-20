@@ -60,7 +60,6 @@ pub fn render_room(
 
         // Draw all entities
         for (entity, pos) in entities {
-            
             draw_entity(
             world_ecs,
             asset_manager,
@@ -337,6 +336,6 @@ fn interpolate_draw_position(
 }
 
 #[inline]
-fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
+pub fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
     a + (b - a) * t
 }
