@@ -103,7 +103,7 @@ pub fn sweep_move(
     desired_delta: Vec2,
     collider: Collider,
 ) -> SweepResult {
-    // Gather every solid AABB we have to test against
+    // Gather every solid AABB to test against
     let mut obstacles: Vec<(Vec2, Vec2)> = Vec::new();
 
     // Tiles
@@ -145,7 +145,9 @@ pub fn sweep_move(
         }
     }
 
-    obstacles.extend(room_bounds_aabbs(room_origin, tilemap.width, tilemap.height));
+    obstacles.extend(
+        room_bounds_aabbs(room_origin, tilemap.width, tilemap.height)
+    );
 
     // Sweep X axis, then Y axis
     let (allowed_x, blocked_x) = resolve_axis(
@@ -186,11 +188,10 @@ fn room_bounds_aabbs(origin: Vec2, map_width: usize, map_height: usize) -> Vec<(
     // Right wall
     let right = (origin + vec2(width, 0.0), origin + vec2(width + thickness, height));
 
-    // Top wall
-    let top = (origin - vec2(0.0, thickness), origin + vec2(width, 0.0));
+    // Ignore top wall (we don't need to jump of it... yet)
 
     // Bottom wall
     let bottom = (origin + vec2(0.0, height), origin + vec2(width, height + thickness));
 
-    vec![left, right, top, bottom]
+    vec![left, right, bottom]
 }

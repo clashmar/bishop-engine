@@ -1,6 +1,6 @@
 // engine_core/src/camera/game_camera.rs
 use crate::{ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, ecs_component, global::*};
-use std::fmt;
+use std::{f32::consts::E, fmt};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
@@ -10,6 +10,7 @@ use uuid::Uuid;
 #[derive(Debug, Default)]
 pub struct GameCamera {
     pub camera: Camera2D,
+    pub id: Uuid,
 }
 
 impl Clone for GameCamera {
@@ -23,6 +24,7 @@ impl Clone for GameCamera {
                 render_target: self.camera.render_target.clone(),
                 ..Default::default()
             },
+            id: self.id,
         }
     }
 }
@@ -160,26 +162,32 @@ pub fn get_room_cameras(world_ecs: &WorldEcs, room_id: Uuid) -> Vec<(Entity, Roo
 pub fn room_to_game_camera(
     world_ecs: &WorldEcs, 
     entity: &Entity, 
-    room_camera: &RoomCamera
+    room_camera: &RoomCamera,
+    player_pos: Vec2, 
 ) -> GameCamera {
     let pos_store  = world_ecs.get_store::<Position>();
 
-    // Get the world position of the entity
-    let position = pos_store
-        .data
-        .get(entity)
-        .expect("Camera should always have a Position component")
-        .position;
+    // If the camera is a Follow cam user the player as the target
+    let target = match room_camera.camera_mode {
+        CameraMode::Follow(_) => player_pos,
+        CameraMode::Fixed => {
+            pos_store
+                .data
+                .get(entity)
+                .expect("Camera should always have a Position component")
+                .position
+        }
+    };
 
     // Build the GameCamera
     let camera = Camera2D {
-        target: position,
+        target,
         zoom: room_camera.zoom,
         render_target: Some(game_render_target()),
         ..Default::default()
     };
 
-    GameCamera { camera }  
+    GameCamera { camera, id: entity.0 }  
 }
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
@@ -204,7 +212,7 @@ pub fn get_room_camera(world_ecs: &WorldEcs, room_id: Uuid) -> Option<GameCamera
                 ..Default::default()
             };
 
-            return Some(GameCamera { camera, });
+            return Some(GameCamera { camera, id: entity.0});
         }
     }
     None

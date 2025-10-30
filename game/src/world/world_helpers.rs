@@ -20,7 +20,7 @@ pub fn crossed_exit(
     let room_max = room.position + room.size * tile_size();
 
     for exit in &room.exits {
-        // world‑space rectangle of the exit tile
+        // World‑space rectangle of the exit tile
         let exit_world = room.position + exit.position * tile_size();
         let exit_rect = Rect::new(exit_world.x, exit_world.y, tile_size(), tile_size());
 
