@@ -1,10 +1,10 @@
 // game/src/playtest_main.rs
 use std::{env, fs};
 use engine_core::{
-    constants::*, world::{
-        room::Room, 
-        world::World
-    }
+    constants::*, 
+    game::game::Game, 
+    world::room::Room
+    
 };
 use game_lib::game::GameState;
 use macroquad::prelude::*;
@@ -14,7 +14,7 @@ use ron::de::from_str;
 #[derive(serde::Deserialize)]
 struct PlaytestPayload {
     room: Room,
-    world: World,
+    game: Game,
 }
 
 fn window_conf() -> Conf {
@@ -47,10 +47,10 @@ async fn main() {
 
     let PlaytestPayload {
         room,
-        world,
+        game,
     } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
-    let mut game = GameState::for_room(room, world).await;
+    let mut game = GameState::for_room(room, game).await;
     let mut accumulator = 0.0_f32;
 
     loop {
@@ -65,6 +65,7 @@ async fn main() {
         }
 
         game.update_async(frame_dt).await;
+        
         let alpha = accumulator / FIXED_DT;
         game.render(alpha);
         next_frame().await;

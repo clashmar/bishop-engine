@@ -3,7 +3,6 @@ use crate::ecs::entity::Entity;
 use crate::{camera::game_camera::*, ecs::world_ecs::WorldEcs, world::room::Room};
 use macroquad::prelude::*;
 use uuid::Uuid;
-
 pub struct CameraManager {
     /// The game camera that is fed to the renderer.
     pub active: GameCamera,
@@ -38,7 +37,10 @@ impl CameraManager {
         player_pos: Vec2) 
         {
         // If the player moved to another get the new cameras
+        let mut changed_room = false;
+
         if self.current_room != Some(room.id) {
+            changed_room = true;
             self.current_room = Some(room.id);
             self.room_cameras = get_room_cameras(world_ecs, self.current_room.unwrap());
         }
@@ -48,7 +50,11 @@ impl CameraManager {
             world_ecs, 
             &self.room_cameras, player_pos
         ) {
-            self.active = best_cam;
+            // Prevent interpolation with the previous camera
+            if best_cam.id != self.active.id {
+                self.active = best_cam;
+                self.previous_position = Some(self.active.camera.target);
+            }
 
             // Apply follow if needed
             if let CameraMode::Follow(restriction) = mode {
@@ -67,7 +73,7 @@ impl CameraManager {
         let mut closest: Option<(f32, GameCamera, CameraMode)> = None;
 
         for &(entity, ref cam) in room_cameras.iter() {
-            let game_cam = room_to_game_camera(world_ecs, &entity, cam);
+            let game_cam = room_to_game_camera(world_ecs, &entity, cam, player_pos);
             match cam.camera_mode {
                 CameraMode::Fixed => {
                     if Self::point_in_camera_view(&game_cam, player_pos) {

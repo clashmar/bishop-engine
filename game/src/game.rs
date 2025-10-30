@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use engine_core::{
     animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::camera_manager::CameraManager, ecs::{component::{
         CurrentRoom, Position, Velocity
-    }, entity::Entity}, rendering::{render_room::{lerp, render_room}, render_system::RenderSystem}, storage::core_storage, world::{
+    }, entity::Entity}, game::game::Game, rendering::{render_room::{lerp, render_room}, render_system::RenderSystem}, storage::core_storage, world::{
         room::Room, transition_manager::{TransitionManager, TransitionState}, world::World
     }
 };
@@ -14,8 +14,8 @@ use crate::{
 use macroquad::prelude::*;
 
 pub struct GameState {
-    /// The whole world, including its persistent ecs.
-    world: World,
+    /// The whole game.
+    game: Game,
     /// Camera that follows the player.
     camera_manager: CameraManager,
     /// Manages transitions between rooms.
@@ -32,28 +32,28 @@ pub struct GameState {
 
 impl GameState {
     pub async fn new() -> Self {
-        let world_id = core_storage::most_recent_world_id()
-            .expect("No world folder found in assets/worlds");
+        let game_folder = core_storage::most_recent_game_folder()
+            .expect("No valid game folder found in games/");
 
-        let mut world = core_storage::load_world_by_id(&world_id)
-            .expect("Failed to deserialize world.ron");
+        let mut game = core_storage::load_game_from_folder(&game_folder)
+            .expect("Failed to deserialize game.ron");
 
-        let start_room_id = world.starting_room
-            .or_else(|| world.rooms.first().map(|m| m.id))
-            .expect("World has no starting room nor any rooms");
+        let start_room_id = game.current_world().starting_room
+            .or_else(|| game.worlds.first().map(|m| m.starting_room.expect("Game has no starting room.")))
+            .expect("Game has no starting room nor any rooms");
 
-        let current_room = world.rooms
+        let current_room = game.current_world().rooms
             .iter()
             .find(|m| m.id == start_room_id)
             .expect("Missing id for the starting room")
             .clone();
 
-        let player_pos = world.world_ecs.get_player_position().position;
-        let camera_manager = CameraManager::new(&world.world_ecs, current_room.id, player_pos);
-        let asset_manager = AssetManager::new(&mut world.world_ecs).await;
+        let player_pos = game.current_world().world_ecs.get_player_position().position;
+        let camera_manager = CameraManager::new(&game.current_world().world_ecs, current_room.id, player_pos);
+        let asset_manager = AssetManager::new(&mut game.current_world_mut().world_ecs).await;
 
         Self {
-            world,
+            game,
             camera_manager,
             transition_manager: TransitionManager::new(),
             current_room,
@@ -63,16 +63,16 @@ impl GameState {
         }
     }
 
-    pub async fn for_room(
-        room: Room,
-        mut world: World,
-    ) -> Self {
-        let player_pos = world.world_ecs.get_player_position().position;
-        let asset_manager = AssetManager::new(&mut world.world_ecs).await;
-        let camera_manager = CameraManager::new(&world.world_ecs, room.id, player_pos);
+    pub async fn for_room(room: Room, mut game: Game) -> Self {
+        let world_ecs = &mut game.current_world_mut().world_ecs;
+
+        let player_pos = world_ecs.get_player_position().position;
+
+        let asset_manager = AssetManager::new(world_ecs).await;
+        let camera_manager = CameraManager::new(world_ecs, room.id, player_pos);
 
         Self {
-            world,
+            game,
             camera_manager,
             transition_manager: TransitionManager::new(),
             current_room: room,
@@ -84,52 +84,60 @@ impl GameState {
 
     pub fn fixed_update(&mut self, dt: f32) {
         // Store the current positions for the next frame
-        self.refresh_previous_positions();
-        self.camera_manager.previous_position = Some(self.camera_manager.active.camera.target);
+        self.store_previous_positions();
 
-        let player = self.world.world_ecs.get_player_entity();
+        let current_world = self.game.current_world_mut();
+
+        let player = current_world.world_ecs.get_player_entity();
 
         // If an entity exits the current room
         if let Some((exiting_entity, target_id, new_pos)) = 
-        update_physics(&mut self.world.world_ecs, &self.current_room, dt) {
-            let new_room = self.world
+            update_physics(
+                &mut current_world.world_ecs, 
+                &self.current_room, 
+                dt
+            ) {
+            let new_room = current_world
                 .rooms
                 .iter()
                 .find(|r| r.id == target_id)
                 .expect("Target room not found");
 
-            // Only update the new current room if the player exits
+            // Only update the game current room if the player exits
             if exiting_entity == player {
                 self.current_room = new_room.clone();
             }
 
-            let cur_room_mut = self.world.world_ecs.get_mut::<CurrentRoom>(exiting_entity).unwrap();
+            let cur_room_mut = current_world.world_ecs.get_mut::<CurrentRoom>(exiting_entity).unwrap();
             cur_room_mut.0 = new_room.id;
 
-            let pos_mut = self.world.world_ecs.get_mut::<Position>(exiting_entity).unwrap();
+            let pos_mut = current_world.world_ecs.get_mut::<Position>(exiting_entity).unwrap();
             pos_mut.position = new_pos;
         }
     }
 
     pub async fn update_async(&mut self, dt: f32) {
-        let player = self.world.world_ecs.get_player_entity();
-        let player_pos = self.world.world_ecs.get_player_position().position;
+        let current_world = self.game.current_world_mut();
 
-        let player_vel = self.world.world_ecs
+        let player = current_world.world_ecs.get_player_entity();
+        let player_pos = current_world.world_ecs.get_player_position().position;
+
+        let player_vel = current_world.world_ecs
             .get_store_mut::<Velocity>()
             .get_mut(player)
             .expect("Player must have a Velocity component");
+
         update_player_input(player_vel);
 
         // Update the camera
         self.camera_manager.update_active(
-            &self.world.world_ecs,
+            &current_world.world_ecs,
             &self.current_room,
             player_pos,
         );
 
         update_animation_sytem(
-            &mut self.world.world_ecs,
+            &mut current_world.world_ecs,
             &mut self.asset_manager,
             dt, 
             self.current_room.id,
@@ -138,6 +146,8 @@ impl GameState {
 
     pub fn render(&mut self, alpha: f32) {
         clear_background(BLUE);
+
+        let current_world = self.game.current_world_mut();
 
         let interpolated_target = lerp(
             self.camera_manager.previous_position.unwrap_or_default(),
@@ -153,7 +163,7 @@ impl GameState {
         };
 
         render_room(
-            &self.world.world_ecs, 
+            &current_world.world_ecs, 
             &self.current_room, 
             &mut self.asset_manager,
             &mut self.render_system,
@@ -166,9 +176,14 @@ impl GameState {
     }
 
     /// Updates the previous position for all entities in the active room.
-    fn refresh_previous_positions(&mut self) {
-        let pos_store = self.world.world_ecs.get_store::<Position>();
-        let room_store = self.world.world_ecs.get_store::<CurrentRoom>();
+    fn store_previous_positions(&mut self) {
+        let current_world = self.game.current_world_mut();
+
+        let pos_store = current_world.world_ecs.get_store::<Position>();
+        let room_store = current_world.world_ecs.get_store::<CurrentRoom>();
+
+        // Store the camera target
+        self.camera_manager.previous_position = Some(self.camera_manager.active.camera.target);
 
         self.prev_positions = pos_store.data
             .iter()
