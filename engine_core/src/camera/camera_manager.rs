@@ -10,7 +10,7 @@ pub struct CameraManager {
     room_cameras: Vec<(Entity, RoomCamera)>,
     /// The id of the room we are currently tracking or `None`.
     current_room: Option<Uuid>,
-
+    /// The stored previous position of the active game camera.
     pub previous_position: Option<Vec2>,
 }
 
@@ -36,11 +36,8 @@ impl CameraManager {
         room: &Room,
         player_pos: Vec2) 
         {
-        // If the player moved to another get the new cameras
-        let mut changed_room = false;
-
+        // If the player moved to another room get the new cameras
         if self.current_room != Some(room.id) {
-            changed_room = true;
             self.current_room = Some(room.id);
             self.room_cameras = get_room_cameras(world_ecs, self.current_room.unwrap());
         }

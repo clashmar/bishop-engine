@@ -7,7 +7,16 @@ async fn main() {
     let mut game = GameState::new().await;
     let mut accumulator = 0.0_f32;
 
+    let mut current_window_size = (screen_width() as u32, screen_height() as u32);
+
     loop {
+        // Update the render system if the window is resized
+        let cur_screen = (screen_width() as u32, screen_height() as u32);
+        if cur_screen != current_window_size {
+            game.render_system.resize(cur_screen.0, cur_screen.1);
+            current_window_size = cur_screen;
+        }
+
         // Time elapsed since last frame
         let frame_dt = get_frame_time();
         accumulator += frame_dt;
