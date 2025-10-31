@@ -128,12 +128,10 @@ impl Editor {
 
                 // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {
-                    let world = self.game.current_world();
-
                     // Write the payload
                     if let Some(room_id) = &self.current_room_id {
                         let room = self.get_room_from_id(room_id);
-                        let payload_path = room_playtest::write_playtest_payload(room, &world);
+                        let payload_path = room_playtest::write_playtest_payload(room, &self.game);
 
                         // Build the binary first
                         match room_playtest::build_playtest_binary().await {

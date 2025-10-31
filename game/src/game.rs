@@ -25,7 +25,7 @@ pub struct GameState {
     /// Asset Manager.
     asset_manager: AssetManager,
     /// Rendering system for the game.
-    render_system: RenderSystem,
+    pub render_system: RenderSystem,
     /// Holds the Position of every entity rendered in the previous frame.
     prev_positions: HashMap<Entity, Vec2>,
 }

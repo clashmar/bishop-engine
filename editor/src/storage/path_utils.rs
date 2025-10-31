@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 use engine_core::constants::*;
 
-// TODO: Make this OS agnostic future proof
+// TODO: Make this OS agnostic future proof and not dependent on current dir
 /// Returns the absolute path to the folder that stores all games.
 pub fn absolute_save_root() -> PathBuf {
     let root_dir = std::env::current_dir()
