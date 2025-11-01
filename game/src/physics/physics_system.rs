@@ -7,7 +7,6 @@ use engine_core::{
         world_ecs::WorldEcs
     }, world::room::Room
 };
-use uuid::Uuid;
 use crate::{
     constants::*, 
     physics::collision::sweep_move, 
@@ -20,7 +19,7 @@ pub fn update_physics(
     world_ecs: &mut WorldEcs,
     room: &Room,
     dt: f32,
-) -> Option<(Entity, Uuid, Vec2)> {
+) -> Option<(Entity, usize, Vec2)> {
     let tilemap = &room.variants[0].tilemap;
     let entities: Vec<_> = world_ecs
         .get_store::<PhysicsBody>()

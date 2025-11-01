@@ -6,7 +6,6 @@ use engine_core::{
         world_ecs::WorldEcs
     }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, ui::widgets::*, world::room::Room
 };
-use uuid::Uuid;
 use crate::{
     canvas::grid, 
     commands::entity_commands::{MoveEntityCmd, PasteEntityCmd}, 
@@ -306,7 +305,7 @@ impl RoomEditor {
     /// Handles mouse selection / movement.
     fn handle_selection(
         &mut self,
-        room_id: Uuid,
+        room_id: usize,
         camera: &Camera2D,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
@@ -393,7 +392,7 @@ impl RoomEditor {
     fn handle_keyboard_move(
         &mut self,
         world_ecs: &mut WorldEcs,
-        room_id: Uuid,
+        room_id: usize,
     ) {
         // Only act when an entity is selected and no drag is in progress
         if self.dragging || self.selected_entity.is_none() {
@@ -447,7 +446,7 @@ impl RoomEditor {
 pub fn can_select_entity_in_room(
     world_ecs: &WorldEcs,
     entity: Entity,
-    room_id: Uuid,
+    room_id: usize,
 ) -> bool {
     // Make sure the entity is in the requested room
     match world_ecs.get_store::<CurrentRoom>().get(entity) {

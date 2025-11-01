@@ -1,3 +1,4 @@
+use crate::assets::sprite::SpriteId;
 // engine_core/src/ecs/generic_module.rs
 use crate::ecs::module::InspectorModule;
 use crate::ui::widgets::*;
@@ -91,8 +92,8 @@ where
 
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
-                (FieldValue::Text(txt), Some("png")) => {
-                    let btn_label = if txt.is_empty() {
+                (FieldValue::SpriteId(id), _) => {
+                    let btn_label = if id.0 == 0 {
                         "[Pick File]".to_string()
                     } else {
                         "[Change File]".to_string()
@@ -109,16 +110,16 @@ where
                                 .add_filter("PNG images", &["png"])
                                 .pick_file()
                             {
-                                *txt = path.to_string_lossy().into_owned();
+                                let path_str = path.to_string_lossy().into_owned();
 
-                                // Load the texure in the asset manager
-                                asset_manager.get_or_load(&txt);
+                                *id = asset_manager.get_or_load(&path_str)
+                                    .expect("Could not find id for sprite path.");
                             }
                         }
                     }
 
                     if gui_button(remove_rect, "x") {
-                        *txt = "".to_string()
+                        *id = SpriteId(0);
                     }
                 }
                 (FieldValue::Text(txt), _) => {

@@ -9,7 +9,6 @@ use engine_core::{
         world_ecs::WorldEcs
     }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
 };
-use uuid::Uuid;
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
 use crate::world::coord;
@@ -131,7 +130,7 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: Uuid) {
+pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: usize) {
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let pos_store = world_ecs.get_store::<Position>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
@@ -189,7 +188,7 @@ pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: Uuid) {
 /// Draw an icon for a `Light` that has no other visual component.
 pub fn draw_light_placeholders(
     world_ecs: &WorldEcs,
-    room_id: Uuid,
+    room_id: usize,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, _light) in world_ecs.get_store::<Light>().data.iter() {
@@ -242,7 +241,7 @@ pub fn draw_light_placeholders(
 pub fn draw_glow_placeholders(
     world_ecs: &WorldEcs, 
     asset_manager: &mut AssetManager,
-    room_id: Uuid,
+    room_id: usize,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, glow) in world_ecs.get_store::<Glow>().data.iter() {
@@ -259,10 +258,8 @@ pub fn draw_glow_placeholders(
         if let Some(position) = world_ecs.get_store::<Position>().get(*entity) {
             let mut pos = position.position;
 
-            if let Some(sprite_id) = asset_manager.get_or_load(&glow.sprite_path) {
-                if let Some((w, h)) = asset_manager.texture_size(sprite_id) {
-                    pos = pos + vec2((w / 2.) - tile_size() / 2., (h / 2.) - tile_size() / 2.);
-                }
+            if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
+                pos = pos + vec2((w / 2.) - tile_size() / 2., (h / 2.) - tile_size() / 2.);
             }
 
             let body = Rect::new(

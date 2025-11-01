@@ -229,33 +229,31 @@ impl RenderSystem {
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
 
         for (i, (glow, world_pos)) in glows.iter().take(MAX_LIGHTS).enumerate() {
-            if let Some(id) = asset_manager.get_or_load(&glow.sprite_path) {
-                let tex = asset_manager.get_texture_from_id(id).clone();
-                self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
+            let tex = asset_manager.get_texture_from_id(glow.sprite_id).clone();
+            self.glow_mat.set_texture(&format!("tex_mask{}", i), tex);
 
-                let screen_pos = world_to_target(
-                    render_cam, 
-                    *world_pos, 
-                    target_w, 
-                    target_h, 
-                    preview
-                );
+            let screen_pos = world_to_target(
+                render_cam, 
+                *world_pos, 
+                target_w, 
+                target_h, 
+                preview
+            );
 
-                let buffer = &mut self.glow_bufffers[i];
-                buffer.pos = screen_pos;
-                buffer.pos = screen_pos;
-                buffer.color = glow.color;
-                buffer.intensity = glow.intensity;
-                buffer.brightness = glow.brightness;
-                buffer.emission = glow.emission;
+            let buffer = &mut self.glow_bufffers[i];
+            buffer.pos = screen_pos;
+            buffer.pos = screen_pos;
+            buffer.color = glow.color;
+            buffer.intensity = glow.intensity;
+            buffer.brightness = glow.brightness;
+            buffer.emission = glow.emission;
 
-                // Texture dimensions
-                if let Some((w, h)) = asset_manager.texture_size(id) {
+            // Texture dimensions
+            if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
                 buffer.mask_size = vec2(
                     world_distance_to_uniform_target(render_cam, w, target_w),
                     world_distance_to_uniform_target(render_cam, h, target_w),
                 );
-            }
             }
         }
         

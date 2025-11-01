@@ -6,7 +6,6 @@ use crate::{
     }, global::tile_size, tiles::tilemap::TileMap
 };
 use std::{io, path::PathBuf};
-use uuid::Uuid;
 use serde_with::FromInto;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -17,14 +16,14 @@ use crate::{constants::*};
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(default)]
 pub struct Room {
-    pub id: Uuid, 
+    pub id: usize, 
     pub name: String,
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2, // Top-left origin in pixels
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub size: Vec2,
     pub exits: Vec<Exit>,
-    pub adjacent_rooms: Vec<Uuid>,
+    pub adjacent_rooms: Vec<usize>,
     pub variants: Vec<RoomVariant>,
     pub darkness: f32,
 }
@@ -36,7 +35,7 @@ impl Room {
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
         };
 
-        let id = Uuid::new_v4();
+        let id = 0;
 
         let room = Room {
         id,
@@ -115,7 +114,7 @@ impl Room {
         }).collect()
     }
 
-    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: Uuid) {
+    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: usize) {
         let _camera = world_ecs.create_entity()
             .with(Position { position: self.position })
             .with(RoomCamera::new(room_id))
@@ -169,5 +168,5 @@ pub struct Exit {
     // Local grid coordinate
     pub position: Vec2,                 
     pub direction: ExitDirection,      
-    pub target_room_id: Option<Uuid>, 
+    pub target_room_id: Option<usize>, 
 }

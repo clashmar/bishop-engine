@@ -83,7 +83,7 @@ pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
     // Parse the RON
     match ron::from_str::<Game>(&ron_string) {
         Ok(mut game) => {
-            game.init_asset_manager().await;
+            game.initialize().await;
             Ok(game)
         },
         // Corrupt file

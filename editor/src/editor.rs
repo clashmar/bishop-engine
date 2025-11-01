@@ -4,7 +4,6 @@ use engine_core::{
 };
 use std::io;
 use macroquad::prelude::*;
-use uuid::Uuid;
 use crate::{
     editor_camera_controller::EditorCameraController,
     controls::controls::Controls,
@@ -17,7 +16,7 @@ use crate::{
 
 pub enum EditorMode {
     World,
-    Room(Uuid),
+    Room(usize),
 }
 
 pub struct Editor {
@@ -26,7 +25,7 @@ pub struct Editor {
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
     pub camera: Camera2D,
-    pub current_room_id: Option<Uuid>,
+    pub current_room_id: Option<usize>,
     pub render_system: RenderSystem,
 }
 
@@ -227,7 +226,7 @@ impl Editor {
         }
     }
 
-    fn get_room_from_id(&self, room_id: &Uuid) -> &Room {
+    fn get_room_from_id(&self, room_id: &usize) -> &Room {
         self.game
             .current_world().rooms
             .iter()

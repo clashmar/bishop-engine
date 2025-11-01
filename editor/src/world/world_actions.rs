@@ -3,21 +3,20 @@ use engine_core::{
     global::tile_size, 
     tiles::tilemap::TileMap
 };
-use uuid::Uuid;
 use engine_core::{world::{room::{Room, RoomVariant}, world::World}};
 use crate::world::coord;
 use macroquad::prelude::*;
 use crate::world::world_editor::WorldEditor;
 
 impl WorldEditor {
-    /// Create a new room and return its Uuid.
+    /// Create a new room and return its id.
     pub fn create_room(
         &mut self,
         world: &mut World,
         name: &str,
         position: Vec2,
         size: Vec2,
-    ) -> Uuid {
+    ) -> usize {
         let new_id = {
             let tilemap = TileMap::new(size.x as usize, size.y as usize);
 
@@ -26,8 +25,10 @@ impl WorldEditor {
                 tilemap,
             };
 
+            let id = self.allocate_room_id(&world);
+
             let room = Room {
-                id: Uuid::new_v4(),
+                id,
                 name: name.to_string(),
                 position,
                 size,
@@ -36,8 +37,6 @@ impl WorldEditor {
                 variants: vec![variant],
                 darkness: 0.
             };
-
-            let id = room.id;
             
             let _camera = room.create_room_camera(&mut world.world_ecs, id);
 
@@ -62,7 +61,7 @@ impl WorldEditor {
     }
 
     /// Delete a room by its UUID.
-    pub fn delete_room(&mut self, world: &mut World, room_id: Uuid) {
+    pub fn delete_room(&mut self, world: &mut World, room_id: usize) {
         // Find the index of the room we want to remove
         let idx = match world.rooms.iter().position(|m| m.id == room_id) {
             Some(i) => i,
@@ -98,12 +97,9 @@ impl WorldEditor {
         world: &mut World,
         top_left: Vec2,
         size: Vec2,
-    ) -> Uuid {
+    ) -> usize {
         let origin_in_pixels = top_left * tile_size();
-
-        // The name could be generated automatically or asked from the UI.
         let new_id = self.create_room(world, "untitled", origin_in_pixels, size);
-
         new_id
     }
 
@@ -120,6 +116,7 @@ impl WorldEditor {
         horizontal_touch || vertical_touch
     }
 
+    /// Draws the coordinates of the grid square the mouse is over.
     pub fn draw_coordinates(&self, camera: &Camera2D) {
         let world_grid = coord::mouse_world_grid(camera);
 
@@ -129,6 +126,15 @@ impl WorldEditor {
         let x = margin;
         let y = screen_height() - margin; // baseline is at the bottom
         draw_text(&txt, x, y, 20.0, BLACK);
+    }
+
+    /// Returns the highest room id in this world + 1.
+    fn allocate_room_id(&self, world: &World) -> usize {
+        if let Some(max_id) = world.rooms.iter().map(|r| r.id).max() {
+            max_id + 1
+        } else {
+            1
+        }
     }
 }
 
