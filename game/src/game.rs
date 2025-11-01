@@ -1,7 +1,7 @@
 // game/src/game.rs
 use std::collections::HashMap;
 use engine_core::{
-    animation::animation_system::update_animation_sytem, camera::camera_manager::CameraManager, ecs::{component::{
+    animation::animation_system::update_animation_sytem, camera::camera_manager::CameraManager, constants::{FIXED_DT, MAX_ACCUM}, ecs::{component::{
         CurrentRoom, Position, Velocity
     }, entity::Entity}, game::game::Game, rendering::{render_room::{lerp, render_room}, render_system::RenderSystem}, storage::core_storage, world::{
         room::Room, transition_manager::TransitionManager
@@ -72,6 +72,40 @@ impl GameState {
             current_room: room,
             render_system: RenderSystem::new(),
             prev_positions: HashMap::new(),
+        }
+    }
+
+    pub async fn run_game_loop(&mut self) {
+        let mut accumulator: f32 = 0.0;
+        let mut current_window_size = (screen_width() as u32, screen_height() as u32);
+
+        // Main loop
+        loop {
+            // Update the render system if the window is resized
+            let cur_screen = (screen_width() as u32, screen_height() as u32);
+            if cur_screen != current_window_size {
+                self.render_system.resize(cur_screen.0, cur_screen.1);
+                current_window_size = cur_screen;
+            }
+
+            // Time elapsed since last frame
+            let frame_dt = get_frame_time();
+            accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
+
+            // Fixed‑step physics
+            while accumulator >= FIXED_DT {
+                self.fixed_update(FIXED_DT);
+                accumulator -= FIXED_DT;
+            }
+
+            // Per‑frame async work (input, animation, camera …)
+            self.update_async(frame_dt).await;
+
+            // Render with interpolation
+            let alpha = accumulator / FIXED_DT;
+            self.render(alpha);
+
+            next_frame().await;
         }
     }
 

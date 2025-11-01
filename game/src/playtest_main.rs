@@ -51,23 +51,6 @@ async fn main() {
     } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
     let mut game = GameState::for_room(room, game).await;
-    let mut accumulator = 0.0_f32;
-
-    loop {
-        let frame_dt = get_frame_time();
-        accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
-
-        let steps = (accumulator / FIXED_DT) as u32;
-        accumulator -= steps as f32 * FIXED_DT;
-
-        for _ in 0..steps {
-            game.fixed_update(FIXED_DT);
-        }
-
-        game.update_async(frame_dt).await;
-        
-        let alpha = accumulator / FIXED_DT;
-        game.render(alpha);
-        next_frame().await;
-    }
+    
+    game.run_game_loop().await;
 }

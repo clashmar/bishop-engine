@@ -9,19 +9,19 @@
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (3): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 1,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (1): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 0,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (4): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 2,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
+                        type_name: "Glow",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[1]*/ (
-                        type_name: "Animation",
+                        type_name: "Light",
                         data: "(\n    data: {},\n)",
                     ),
                     /*[2]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (3): (1),\n        (2): (0),\n        (4): (2),\n        (1): (0),\n    },\n)",
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (4): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 2,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (3): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 1,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (1): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 0,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
                     ),
                     /*[3]*/ (
-                        type_name: "CurrentFrame",
+                        type_name: "Animation",
                         data: "(\n    data: {},\n)",
                     ),
                     /*[4]*/ (
@@ -29,36 +29,36 @@
                         data: "(\n    data: {},\n)",
                     ),
                     /*[5]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {\n        (2): (\n            width: 24.0,\n            height: 24.0,\n        ),\n    },\n)",
-                    ),
-                    /*[6]*/ (
                         type_name: "Player",
                         data: "(\n    data: {\n        (2): (),\n    },\n)",
                     ),
-                    /*[7]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (2): (),\n    },\n)",
-                    ),
-                    /*[8]*/ (
+                    /*[6]*/ (
                         type_name: "Position",
-                        data: "(\n    data: {\n        (2): (\n            position: (44.0, 136.0),\n        ),\n        (4): (\n            position: (384.0, 80.0),\n        ),\n        (1): (\n            position: (0.0, 0.0),\n        ),\n        (3): (\n            position: (-128.0, 80.0),\n        ),\n    },\n)",
+                        data: "(\n    data: {\n        (1): (\n            position: (128.0, 80.0),\n        ),\n        (3): (\n            position: (-128.0, 80.0),\n        ),\n        (4): (\n            position: (384.0, 80.0),\n        ),\n        (2): (\n            position: (44.0, 136.0),\n        ),\n    },\n)",
                     ),
-                    /*[9]*/ (
-                        type_name: "Glow",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[10]*/ (
-                        type_name: "Velocity",
-                        data: "(\n    data: {\n        (2): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[11]*/ (
+                    /*[7]*/ (
                         type_name: "Sprite",
                         data: "(\n    data: {\n        (2): (\n            sprite_id: (1),\n        ),\n    },\n)",
                     ),
-                    /*[12]*/ (
-                        type_name: "Light",
+                    /*[8]*/ (
+                        type_name: "Collider",
+                        data: "(\n    data: {\n        (2): (\n            width: 24.0,\n            height: 24.0,\n        ),\n    },\n)",
+                    ),
+                    /*[9]*/ (
+                        type_name: "CurrentFrame",
                         data: "(\n    data: {},\n)",
+                    ),
+                    /*[10]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (2): (),\n    },\n)",
+                    ),
+                    /*[11]*/ (
+                        type_name: "Velocity",
+                        data: "(\n    data: {\n        (2): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
+                    ),
+                    /*[12]*/ (
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (3): (1),\n        (4): (2),\n        (2): (0),\n        (1): (0),\n    },\n)",
                     ),
                 ],
                 tile_defs: {},
