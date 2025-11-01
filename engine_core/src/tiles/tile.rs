@@ -1,34 +1,25 @@
-// engine_core/src/tiles/tile.rs
-use crate::{
-    assets::sprite::SpriteId, 
-    ecs::entity::Entity, 
-    ecs_component
-};
-use macroquad::prelude::*;
+// engine_core/src/tiles/tile_def.rs
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use crate::assets::sprite::SpriteId;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-pub struct Tile {
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_tile"
-    )]
-    pub entity: Option<Entity>,
-}
+/// Opaque identifier used by the editor and by the TileMap.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TileDefId(pub Uuid);
 
-fn deserialize_tile<'de, D>(deserializer: D) -> Result<Option<Entity>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    Ok(Option::deserialize(deserializer)?)
-}
-
-
-#[derive(Clone, Serialize, Deserialize, Default)]
-pub struct TileSprite {
+/// A list of component adding closures.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TileDef {
+    /// SpriteId for the tile.
     pub sprite_id: SpriteId,
+    /// The list of tile components that the tile has.
+    pub components: Vec<TileComponent>,
 }
 
-ecs_component!(TileSprite);
-
+/// Serialisable description of a component.
+#[derive(PartialEq, Clone, Serialize, Deserialize)]
+pub enum TileComponent {
+    Walkable(bool),
+    Solid(bool),
+    Damage(f32),
+}

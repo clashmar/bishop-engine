@@ -7,7 +7,7 @@ use crate::{
         component_registry::{ComponentRegistry, StoredComponent}, 
         entity::{Entity, EntityBuilder}, has_any::HasAny
     }, 
-    tiles::tile_def::{TileDef, TileDefId}
+    tiles::tile::{TileDef, TileDefId}
 }; 
 use serde::{Deserialize, Serialize};
 use serde::ser::{SerializeStruct, Serializer};

@@ -9,7 +9,7 @@ use engine_core::{
     assets::{asset_manager::AssetManager, sprite::SpriteId},
     ecs::world_ecs::WorldEcs,
     tiles::{
-        tile_def::{TileComponentSpec, TileDef, TileDefId}
+        tile::{TileComponent, TileDef, TileDefId}
     },
 };
 
@@ -50,8 +50,7 @@ pub struct TilePaletteUi {
     pub open: bool,
     pub mode: TilePaletteUiMode,
     pub edit_initialized: bool,
-    pub edit_index: usize, 
-    pub name: String,
+    pub edit_index: usize,
     pub sprite_path: String,
     pub walkable: bool,
     pub solid: bool,
@@ -192,21 +191,20 @@ impl TilePalette {
             return;
         }
 
-        if self.ui.edit_initialized && self.ui.name.is_empty() {
+        if self.ui.edit_initialized {
             let entry = &self.entries[self.ui.edit_index];
             
             let def = world_ecs.tile_defs
                 .get(&entry.def_id)
                 .expect("def must exist");
 
-            self.ui.name = def.name.clone();
             self.ui.sprite_path = entry.sprite_path.clone();
             // Walk through the component specs
             for spec in &def.components {
                 match spec {
-                    TileComponentSpec::Walkable(v) => self.ui.walkable = *v,
-                    TileComponentSpec::Solid(v)    => self.ui.solid    = *v,
-                    TileComponentSpec::Damage(d)  => self.ui.damage   = *d,
+                    TileComponent::Walkable(v) => self.ui.walkable = *v,
+                    TileComponent::Solid(v) => self.ui.solid = *v,
+                    TileComponent::Damage(d) => self.ui.damage = *d,
                 }
             }
             self.ui.edit_initialized = false;
@@ -275,7 +273,7 @@ impl TilePalette {
             // Add the request to the queue, it will be excecuted next frame
             let cmd = match self.ui.mode {
                 TilePaletteUiMode::Create => PaletteCmd::Create,
-                TilePaletteUiMode::Edit   => PaletteCmd::Edit,
+                TilePaletteUiMode::Edit => PaletteCmd::Edit,
             };
             self.command_queue.push_back(cmd);
             self.ui.open = false;
@@ -312,16 +310,16 @@ impl TilePalette {
 
         // Build TileDef
         let mut comps = vec![
-            TileComponentSpec::Walkable(self.ui.walkable),
-            TileComponentSpec::Solid(self.ui.solid),
+            TileComponent::Walkable(self.ui.walkable),
+            TileComponent::Solid(self.ui.solid),
         ];
         
         if self.ui.damage > 0.0 {
-            comps.push(TileComponentSpec::Damage(self.ui.damage));
+            comps.push(TileComponent::Damage(self.ui.damage));
         }
-        
+
         let def = TileDef {
-            name: self.ui.name.clone(),
+            sprite_id,
             components: comps,
         };
 
@@ -359,14 +357,14 @@ impl TilePalette {
 
         // Build TileDef
         let mut comps = vec![
-            TileComponentSpec::Walkable(self.ui.walkable),
-            TileComponentSpec::Solid(self.ui.solid),
+            TileComponent::Walkable(self.ui.walkable),
+            TileComponent::Solid(self.ui.solid),
         ];
         if self.ui.damage > 0.0 {
-            comps.push(TileComponentSpec::Damage(self.ui.damage));
+            comps.push(TileComponent::Damage(self.ui.damage));
         }
         let def = TileDef {
-            name: self.ui.name.clone(),
+            sprite_id,
             components: comps,
         };
 

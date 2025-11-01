@@ -10,7 +10,7 @@ use crate::{
     }, global::tile_size, lighting::{
         glow::Glow, 
         light::Light,
-    }, rendering::render_system::RenderSystem, tiles::tile::TileSprite, world::room::Room
+    }, rendering::render_system::RenderSystem, world::room::Room
 };
 use std::collections::{BTreeMap, HashMap};
 use macroquad::prelude::*;
@@ -228,15 +228,14 @@ fn collect_interpolated_layer_map<'a>(
     let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
     let pos_store = world_ecs.get_store::<Position>();
-    let tile_store = world_ecs.get_store::<TileSprite>();
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
     let layer_store = world_ecs.get_store::<Layer>();
     let glow_store = world_ecs.get_store::<Glow>();
 
     for (entity, pos) in &pos_store.data {
-        // Skip tiles & camera
-        if tile_store.get(*entity).is_some() || cam_store.get(*entity).is_some() {
+        // Skip camera
+        if cam_store.get(*entity).is_some() {
             continue;
         }
 

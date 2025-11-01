@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
 use crate::{
-    animation::animation_clip::Animation, assets::sprite::{Sprite, SpriteId}, tiles::tile::TileSprite, world::world::World
+    animation::animation_clip::Animation, assets::sprite::SpriteId, world::world::World
 };
 
 #[derive(Serialize, Deserialize, Default)]
@@ -79,7 +79,7 @@ impl AssetManager {
         return Ok(());
     }
 
-    /// Returns a texture from a sprite id. If the texture has not been loaded yet load it synchronously.
+    /// Returns a texture from a `SpriteId`. If the texture has not been loaded yet load it synchronously.
     pub fn get_texture_from_id(&mut self, id: SpriteId) -> &Texture2D {
         // Fast path
         if self.contains(id) {

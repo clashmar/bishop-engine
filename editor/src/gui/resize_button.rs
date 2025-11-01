@@ -89,7 +89,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         match self.action {
             ResizeAction::AddTop => {
                 map.height += 1;
-                shift_tiles(map, 0, 1, world_ecs);
+                shift_tiles(map, 0, 1);
                 for exit in &mut room.exits {
                     let exit_grid_y = room_size.y - exit.position.y; 
                     if (exit_grid_y - 0.0).abs() < f32::EPSILON {
@@ -108,7 +108,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                         map.remove_tile((x, 0), world_ecs);
                     }
                     map.height -= 1;
-                    shift_tiles(map, 0, -1, world_ecs);
+                    shift_tiles(map, 0, -1);
 
                     for exit in &mut room.exits {
                         let exit_grid_y = room_size.y - exit.position.y; // convert exit y to grid y
@@ -150,7 +150,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             }
             ResizeAction::AddLeft => {
                 map.width += 1;
-                shift_tiles(map, 1, 0, world_ecs);
+                shift_tiles(map, 1, 0);
                 room_size.x += 1.0;
                 room_position.x -= 1.0 * tile_size();
             }
@@ -160,7 +160,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                         map.remove_tile((0, y), world_ecs);
                     }
                     map.width -= 1;
-                    shift_tiles(map, -1, 0, world_ecs);
+                    shift_tiles(map, -1, 0);
                     room_size.x -= 1.0;
                     room_position.x += 1.0 * tile_size();
                 }
