@@ -45,10 +45,19 @@ pub fn most_recent_game_folder() -> Option<PathBuf> {
 }
 
 /// Load the game from disk.
-pub fn load_game_from_folder(folder: &Path) -> io::Result<Game> {
+pub async fn load_game_from_folder(folder: &Path) -> io::Result<Game> {
     let path = folder.join("game.ron");
     let ron_string = fs::read_to_string(path)?;
-    ron::from_str(&ron_string).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+
+    // Parse the RON
+    match ron::from_str::<Game>(&ron_string) {
+        Ok(mut game) => {
+            game.init_asset_manager().await;
+            Ok(game)
+        },
+        // Corrupt file
+        Err(e) => Err(io::Error::new(io::ErrorKind::Other, e))
+    }
 }
 
 /// Resolve a path that is relative to the Resources directory when the

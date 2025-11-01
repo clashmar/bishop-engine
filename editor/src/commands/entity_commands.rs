@@ -2,7 +2,7 @@
 use engine_core::ecs::{
     capture::capture_entity, 
     component::Position, 
-    component_registry::ComponentReg, 
+    component_registry::ComponentRegistry, 
     entity::Entity, 
     world_ecs::WorldEcs
 };
@@ -47,7 +47,7 @@ fn restore_entity(
 ) {
     for (type_name, ron) in bag {
         // Look up the registry entry for this component type.
-        let component_reg = inventory::iter::<ComponentReg>()
+        let component_reg = inventory::iter::<ComponentRegistry>()
             .find(|r| r.type_name == type_name)
             .expect("Component not registered");
 
@@ -117,7 +117,7 @@ impl Command for PasteEntityCmd {
             let world = &mut editor.game.current_world_mut().world_ecs;
             for (type_name, ron) in snapshot {
                 // Find the registry entry for this component type
-                let component_reg = inventory::iter::<ComponentReg>()
+                let component_reg = inventory::iter::<ComponentRegistry>()
                     .find(|r| r.type_name == type_name)
                     .expect("Component not registered");
 

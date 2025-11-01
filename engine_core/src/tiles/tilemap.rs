@@ -175,7 +175,7 @@ pub fn tile_to_world(grid_position: GridPos) -> Vec2 {
     )
 }
 
-/// Shift every tile in a tilemap by (dx, dy) and updats ECS positions.
+/// Shift every tile in a tilemap by (dx, dy) and updates ECS positions.
 pub fn shift_tiles(
     map: &mut TileMap,
     dx: isize,

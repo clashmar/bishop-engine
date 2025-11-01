@@ -2,7 +2,7 @@
 use macroquad::prelude::*;
 use uuid::Uuid;
 use engine_core::{
-    constants::DEFAULT_TILE_SIZE, ecs::{
+    assets::asset_manager::AssetManager, constants::DEFAULT_TILE_SIZE, ecs::{
         component::{CurrentRoom, Player, Position}, 
         world_ecs::WorldEcs
     }, game::game::Game, world::{
@@ -19,7 +19,7 @@ use crate::{
 };
 
 /// Create a brand‑new game with a single empty world.
-pub fn create_new_game(name: String) -> Game {
+pub async fn create_new_game(name: String) -> Game {
     // Ensure the folder structure exists.
     let assets = assets_folder(&name);
 
@@ -31,11 +31,15 @@ pub fn create_new_game(name: String) -> Game {
     // Build the game
     let world = create_new_world();
     let current_id = world.id;
+
+    let asset_manager = AssetManager::new().await;
+
     let game = Game {
         save_version: 1,
         id: Uuid::new_v4(),
         name,
         worlds: vec![world],
+        asset_manager,
         current_world_id: current_id,
         tile_size: DEFAULT_TILE_SIZE,
     };
@@ -63,24 +67,27 @@ pub fn save_game(game: &Game) -> io::Result<()> {
 }
 
 /// Load a `Game` from the folder that matches the supplied name.
-pub fn load_game_by_name(name: &str) -> io::Result<Game> {
+pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
     let path = game_folder(name).join("game.ron");
     // Try to read the file
     let ron_string = match fs::read_to_string(&path) {
         Ok(s) => s,
         // File not found
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            return Ok(create_new_game(name.to_string()));
+            return Ok(create_new_game(name.to_string()).await);
         }
         // Other I/O errors
         Err(e) => return Err(e),
     };
 
     // Parse the RON
-    match ron::from_str(&ron_string) {
-        Ok(game) => Ok(game),
+    match ron::from_str::<Game>(&ron_string) {
+        Ok(mut game) => {
+            game.init_asset_manager().await;
+            Ok(game)
+        },
         // Corrupt file
-        Err(_) => Ok(create_new_game(name.to_string())),
+        Err(_) => Ok(create_new_game(name.to_string()).await),
     }
 }
 

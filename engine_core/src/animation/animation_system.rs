@@ -93,8 +93,6 @@ pub async fn update_animation_sytem(
             frame_size: clip.frame_size,
         };
 
-        
-
         frames.push((*entity, frame));
     }
 

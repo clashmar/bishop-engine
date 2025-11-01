@@ -2,37 +2,35 @@
 use std::path::Path;
 use futures::executor::block_on;
 use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
 use crate::{
-    animation::animation_clip::Animation, 
-    assets::sprite::{Sprite, SpriteId}, 
-    ecs::world_ecs::WorldEcs, 
-    tiles::tile::TileSprite
+    animation::animation_clip::Animation, assets::sprite::{Sprite, SpriteId}, tiles::tile::TileSprite, world::world::World
 };
 
+#[derive(Serialize, Deserialize, Default)]
 pub struct AssetManager {
+    #[serde(skip)]
     textures: HashMap<SpriteId, Texture2D>,
-    pub path_to_id: HashMap<String, SpriteId>,
-    id_to_path: HashMap<SpriteId, String>,
+    #[serde(skip)]
+    pub path_to_sprite_id: HashMap<String, SpriteId>,
+    pub sprite_id_to_path: HashMap<SpriteId, String>,
 }
 
 impl AssetManager {
     /// Initializes a new asset manager with all sprite textures loaded.
-    pub async fn new(world_ecs: &mut WorldEcs) -> Self {
-        let mut asset_manager = Self {
+    pub async fn new() -> Self {
+        Self {
             textures: HashMap::new(),
-            path_to_id: HashMap::new(),
-            id_to_path: HashMap::new(),
-        };
-
-        asset_manager.sync_all_assets(world_ecs).await;
-        asset_manager
+            path_to_sprite_id: HashMap::new(),
+            sprite_id_to_path: HashMap::new(),
+        }
     }
 
-    /// Load a texture from the assets folder.
-    /// Returns the `SpriteId` that can later be used with `get`.
-    pub async fn load(&mut self, rel_path: impl AsRef<Path>) -> Result<SpriteId, String> {
+    /// Load a texture from the assets folder for the first time.
+    /// Returns the `SpriteId` for the texture.
+    pub async fn init_texture(&mut self, rel_path: impl AsRef<Path>) -> Result<SpriteId, String> {
         let key = rel_path.as_ref().to_string_lossy().to_string();
 
         if key.trim().is_empty() {
@@ -41,7 +39,7 @@ impl AssetManager {
         }
 
         // Already loaded, reuse the same id
-        if let Some(&id) = self.path_to_id.get(&key) {
+        if let Some(&id) = self.path_to_sprite_id.get(&key) {
             return Ok(id);
         }
 
@@ -58,15 +56,27 @@ impl AssetManager {
 
         // Store everything
         self.textures.insert(id, texture);
-        self.path_to_id.insert(key.clone(), id);
-        self.id_to_path.insert(id, key);
+        self.path_to_sprite_id.insert(key.clone(), id);
+        self.sprite_id_to_path.insert(id, key);
+
         return Ok(id);
     }
 
-    /// Returns true if the texture for `id` is already present.
-    #[inline]
-    pub fn contains(&self, id: SpriteId) -> bool {
-        self.textures.contains_key(&id)
+    /// Reloads a texture from its `SpriteId` and updates `path_to_sprite_id`.
+    pub async fn reload_texture(&mut self, id: &SpriteId, path: &String) -> Result<(), String> {
+        // Load the texture from disk.
+        let texture = load_texture(path)
+            .await
+            .map_err(|e| format!("Failed to load texture '{}': {}", path, e))?;
+
+        // Disable smoothing (needed for pixel art)
+        texture.set_filter(FilterMode::Nearest);
+
+        // Store everything and repopulate the reverse map
+        self.textures.insert(*id, texture);
+        self.path_to_sprite_id.insert(path.clone(), *id);
+
+        return Ok(());
     }
 
     /// Returns a texture from a sprite id. If the texture has not been loaded yet load it synchronously.
@@ -78,12 +88,12 @@ impl AssetManager {
 
         // Look up the original path and load it now.
         let path = self
-            .id_to_path
+            .sprite_id_to_path
             .get(&id)
             .expect("SpriteId out of range and no stored path")
             .clone();
 
-        let _ = block_on(self.load(path));
+        let _ = block_on(self.init_texture(path));
         self.textures.get(&id).unwrap()
     }
 
@@ -93,12 +103,12 @@ impl AssetManager {
             return None;
         }
 
-        if let Some(&id) = self.path_to_id.get(path) {
+        if let Some(&id) = self.path_to_sprite_id.get(path) {
             return Some(id);
         }
 
         // Blocking load
-        match block_on(self.load(path)) {
+        match block_on(self.init_texture(path)) {
             Ok(id) => Some(id),
             Err(err) => {
                 info!("{}", err);
@@ -113,42 +123,41 @@ impl AssetManager {
             return None;
         }
 
-        if let Some(&id) = self.path_to_id.get(path) {
+        if let Some(&id) = self.path_to_sprite_id.get(path) {
             return Some(id)
         }
 
         None
     }
- 
-    /// Syncs all the sprite assets for a world.
-    pub async fn sync_all_assets(&mut self, world_ecs: &mut WorldEcs) {
-        // Load all non‑tile sprites
-        for (_entity, sprite) in world_ecs.get_store_mut::<Sprite>().data.iter_mut() {
-            if !self.contains(sprite.sprite_id) {
-                let id = self.load(&sprite.path).await;
-                sprite.sprite_id = match id {
-                    Ok(id) => id,
-                    Err(_) => SpriteId(Uuid::nil()),
-                }
-            }
+
+    /// Initialize all assets for the game.
+    pub async fn init(&mut self, worlds: &mut Vec<World>) {
+        let sprites: Vec<(SpriteId, String)> = self
+            .sprite_id_to_path
+            .iter()
+            .map(|(id, path)| (*id, path.clone()))
+            .collect();
+
+        // Reload all textures
+        for (id, path) in sprites {
+            let _ = self.reload_texture(&id, &path).await;
         }
 
-        // Load all tile‑sprites
-        for (_entity, tile_sprite) in world_ecs.get_store_mut::<TileSprite>().data.iter_mut() {
-            if !self.contains(tile_sprite.sprite_id) {
-                let id = self.load(&tile_sprite.path).await;
-                tile_sprite.sprite_id = match id {
-                    Ok(id) => id,
-                    Err(_) => SpriteId(Uuid::nil()),
-                }
+        for world in worlds {
+            let world_ecs = &mut world.world_ecs;
+
+            // Load and initialize all animations
+            for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
+                animation.refresh_sprite_cache(self).await;
+                animation.init_runtime();
             }
         }
+    }
 
-        // Load and initialize all animations
-        for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
-            animation.refresh_sprite_cache(self).await;
-            animation.init_runtime();
-        }
+    /// Returns true if the texture for `id` is already present.
+    #[inline]
+    pub fn contains(&self, id: SpriteId) -> bool {
+        self.textures.contains_key(&id)
     }
 
     /// Return the pixel width and height of the texture that belongs to `id`

@@ -27,9 +27,7 @@ where
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TileSprite {
-    #[serde(skip)] 
     pub sprite_id: SpriteId,
-    pub path: String,
 }
 
 ecs_component!(TileSprite);

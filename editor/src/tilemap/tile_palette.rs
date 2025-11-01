@@ -113,7 +113,7 @@ impl TilePalette {
         self.sprite_ids.clear();
 
         for entry in &self.entries {
-            let tex_id = match asset_manager.load(&entry.sprite_path).await {
+            let tex_id = match asset_manager.init_texture(&entry.sprite_path).await {
                 Ok(id) => id,
                 Err(_) => SpriteId(Uuid::nil()),
             };
@@ -230,7 +230,7 @@ impl TilePalette {
         
         // Preview
         if !self.ui.sprite_path.is_empty() {
-            let preview_id = match asset_manager.load(&self.ui.sprite_path).await {
+            let preview_id = match asset_manager.init_texture(&self.ui.sprite_path).await {
                 Ok(id) => id,
                 Err(_) => SpriteId(Uuid::nil()),
             };
@@ -305,7 +305,7 @@ impl TilePalette {
         asset_manager: &mut AssetManager,
     ) {
         // Load sprite
-        let sprite_id = match asset_manager.load(&self.ui.sprite_path).await {
+        let sprite_id = match asset_manager.init_texture(&self.ui.sprite_path).await {
             Ok(id) => id,
             Err(_) => SpriteId(Uuid::nil()),
         };
@@ -319,6 +319,7 @@ impl TilePalette {
         if self.ui.damage > 0.0 {
             comps.push(TileComponentSpec::Damage(self.ui.damage));
         }
+        
         let def = TileDef {
             name: self.ui.name.clone(),
             components: comps,
@@ -351,7 +352,7 @@ impl TilePalette {
         asset_manager: &mut AssetManager,
     ) {
         // Load sprite
-        let sprite_id = match asset_manager.load(&self.ui.sprite_path).await {
+        let sprite_id = match asset_manager.init_texture(&self.ui.sprite_path).await {
             Ok(id) => id,
             Err(_) => SpriteId(Uuid::nil()),
         };

@@ -7,12 +7,12 @@ use macroquad::prelude::*;
 use crate::ecs::{entity::Entity, world_ecs::WorldEcs}; 
 
 /// Human‑readable names of all components that have been registered with `ecs_component!`.
-pub static COMPONENTS: Lazy<Vec<&'static ComponentReg>> = Lazy::new(|| {
-    inventory::iter::<ComponentReg>.into_iter().collect()
+pub static COMPONENTS: Lazy<Vec<&'static ComponentRegistry>> = Lazy::new(|| {
+    inventory::iter::<ComponentRegistry>.into_iter().collect()
 });
 
 /// One entry for a concrete component type.
-pub struct ComponentReg {
+pub struct ComponentRegistry {
     /// Human‑readable identifier that will appear in the save file.
     pub type_name: &'static str,
     /// The concrete `ComponentStore<T>`’s `TypeId`.
@@ -159,7 +159,7 @@ macro_rules! ecs_component {
 
         // Register the component (default path)
         inventory::submit! {
-            $crate::ecs::component_registry::ComponentReg {
+            $crate::ecs::component_registry::ComponentRegistry {
                 type_name: <$ty>::TYPE_NAME,
                 type_id: std::any::TypeId::of::<
                     $crate::ecs::component::ComponentStore<$ty>
@@ -261,7 +261,7 @@ macro_rules! ecs_component {
 
         // Register the component
         inventory::submit! {
-            $crate::ecs::component_registry::ComponentReg {
+            $crate::ecs::component_registry::ComponentRegistry {
                 type_name: <$ty>::TYPE_NAME,
                 type_id: std::any::TypeId::of::<
                     $crate::ecs::component::ComponentStore<$ty>
@@ -312,7 +312,7 @@ macro_rules! ecs_component {
 }
 
 // Collect all registrations into a slice that lives for the whole program.
-inventory::collect!(ComponentReg);
+inventory::collect!(ComponentRegistry);
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct StoredComponent {

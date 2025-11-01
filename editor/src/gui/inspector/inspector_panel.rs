@@ -7,7 +7,7 @@ use engine_core::ui::widgets::*;
 use engine_core::{
     assets::asset_manager::AssetManager,
     ecs::{
-        component_registry::{COMPONENTS, ComponentReg},
+        component_registry::{COMPONENTS, ComponentRegistry},
         entity::Entity,
         module::{CollapsibleModule, InspectorModule},
         module_factory::MODULES,
@@ -317,7 +317,7 @@ impl InspectorPanel {
             None => return,
         };
         // Collect the components that can be added
-        let mut shown: Vec<&ComponentReg> = Vec::new();
+        let mut shown: Vec<&ComponentRegistry> = Vec::new();
 
         for entry in MODULES.iter() {
             let type_name = entry.title;
@@ -503,7 +503,7 @@ impl InspectorPanel {
 fn entity_has_component(
     world_ecs: &WorldEcs,
     entity: Entity,
-    reg: &ComponentReg,
+    reg: &ComponentRegistry,
 ) -> bool {
     (reg.has)(world_ecs, entity)
 }

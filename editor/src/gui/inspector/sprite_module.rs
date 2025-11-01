@@ -61,11 +61,8 @@ impl InspectorModule for SpriteModule {
             {
                 let path_str = path.to_string_lossy().into_owned();
 
-                // Update the component
-                sprite.path = path_str.clone();
-
                 // Load (or reuse) the texture and store the new id
-                let new_id = block_on(assets.load(&path_str));
+                let new_id = block_on(assets.init_texture(&path_str));
                 sprite.sprite_id = match new_id {
                     Ok(id) => id,
                     Err(_) => SpriteId(Uuid::nil()),

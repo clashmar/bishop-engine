@@ -202,7 +202,7 @@ pub async fn resolve_sprite_id(
     let path = format!("{}/{}", variant_folder.0, filename);
 
     // Fast‑path if already cached in AssetManager
-    if let Some(&id) = asset_manager.path_to_id.get(&path) {
+    if let Some(&id) = asset_manager.path_to_sprite_id.get(&path) {
         return id;
     }
 
@@ -212,7 +212,7 @@ pub async fn resolve_sprite_id(
     }
 
     // Load the texture
-     match asset_manager.load(&path).await {
+     match asset_manager.init_texture(&path).await {
         Ok(id) => id,
         Err(_) => SpriteId(Uuid::nil())
      }

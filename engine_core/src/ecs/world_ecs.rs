@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use crate::{
     ecs::{
         component::*, 
-        component_registry::{ComponentReg, StoredComponent}, 
+        component_registry::{ComponentRegistry, StoredComponent}, 
         entity::{Entity, EntityBuilder}, has_any::HasAny
     }, 
     tiles::tile_def::{TileDef, TileDefId}
@@ -67,7 +67,7 @@ impl WorldEcs {
 
     /// Remove all component data that belongs to `entity`.
     pub fn remove_entity(&mut self, entity: Entity) {
-        for reg in inventory::iter::<ComponentReg> {
+        for reg in inventory::iter::<ComponentRegistry> {
             (reg.remove)(self, entity);
         }
     }
@@ -177,7 +177,7 @@ impl Serialize for WorldEcs {
                     continue;
                 }
             };
-            let reg = inventory::iter::<ComponentReg>()
+            let reg = inventory::iter::<ComponentRegistry>()
                 .into_iter()
                 .find(|r| r.type_name == *type_name)
                 .expect("registry entry missing");
@@ -216,7 +216,7 @@ impl<'de> Deserialize<'de> for WorldEcs {
         let mut stores = HashMap::new();
         for stored in &helper.components {
             // Try to find a registry entry
-            let reg_opt = inventory::iter::<ComponentReg>()
+            let reg_opt = inventory::iter::<ComponentRegistry>()
                 .find(|r| r.type_name == stored.type_name);
 
             let reg = match reg_opt {
@@ -246,7 +246,7 @@ impl<'de> Deserialize<'de> for WorldEcs {
 
 static TYPE_NAME_FOR_ID: Lazy<HashMap<TypeId, &'static str>> = Lazy::new(|| {
     let mut map = HashMap::new();
-    for reg in inventory::iter::<ComponentReg> {
+    for reg in inventory::iter::<ComponentRegistry> {
         map.insert(reg.type_id, reg.type_name);
     }
     map
