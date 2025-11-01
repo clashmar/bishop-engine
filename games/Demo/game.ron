@@ -1,91 +1,95 @@
 (
     save_version: 1,
-    id: "d67d1ec2-60bf-4b6a-a93e-f59f1b8b7fee",
+    id: "83e430f5-4b0a-4fdd-9921-e703bec6869b",
     name: "Demo",
     worlds: [
         /*[0]*/ (
-            id: "3ec463ed-d783-4615-b494-b61b2091c585",
+            id: "5acd54d8-0410-480b-acef-117dd116e5ad",
             name: "new",
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Velocity",
-                        data: "(\n    data: {\n        (\"50e09af8-f1c0-45fa-b56a-a14e78ab37c7\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[1]*/ (
-                        type_name: "Walkable",
-                        data: "(\n    data: {\n        (\"28067303-d3c1-43b1-9139-ecac16a557e8\"): (false),\n        (\"ccbbe27d-ef00-487a-bbfe-660a144ed377\"): (false),\n        (\"b55f149e-e041-4a33-82b1-ca345217a613\"): (false),\n        (\"eb30439f-4912-4e30-8b5b-ebe4a40579d8\"): (false),\n        (\"a1ff4914-052f-483c-a5e8-2f57cdf4e318\"): (false),\n        (\"39eddf9a-9b55-4e02-b900-d7f138f50400\"): (false),\n        (\"81fde5d3-30ed-4ac8-8221-d702c9e2e4a0\"): (false),\n        (\"02b5c03f-49f5-48f4-9667-659cdffd3b19\"): (false),\n        (\"4d54925e-4ff6-4f16-b42c-8b019fcdcf6d\"): (false),\n        (\"9d2a9f3e-a08b-495f-ad32-27a93eb43e22\"): (false),\n        (\"01a7aa12-458d-4e9c-a0aa-7356fcf9307a\"): (false),\n        (\"98acc1bd-2281-4ce4-9afd-4c753d8af029\"): (false),\n        (\"41515bff-fb33-43b7-ad2a-43259738724a\"): (false),\n        (\"8fddb78c-3bdd-47a2-ac9c-e5c700dbd3ac\"): (false),\n        (\"0dde151c-619a-4702-abce-4ad3ec4c831b\"): (false),\n        (\"18e6ac58-7858-4a69-b547-320277067552\"): (false),\n        (\"ac4d71a2-7b14-4221-8573-a77929e84abe\"): (false),\n        (\"7227061a-cec3-4f72-a914-e937976c6249\"): (false),\n        (\"7a82db73-a3bc-4897-8c6c-c0d7cfc15e63\"): (false),\n        (\"a4791948-938b-4aac-8bd4-5bc2c9f214dc\"): (false),\n        (\"7a55821c-47f7-41e2-9b13-53ef1a2bb963\"): (false),\n        (\"aeb6b8e3-d030-43b8-bc29-7593995f4d42\"): (false),\n        (\"41ba823a-e93d-44a9-ac77-563547860031\"): (false),\n        (\"062f19a8-dcad-4d59-9e7f-47995ad99a93\"): (false),\n        (\"73f41088-3346-447f-9ab1-c51a70062685\"): (false),\n        (\"8772c47a-0aa6-4b56-91b5-a6f144af17cf\"): (false),\n        (\"8efc469a-3d26-4ff8-8479-d659340df96b\"): (false),\n        (\"08735933-f574-4da0-b61b-08129f722b74\"): (false),\n        (\"774b32c3-8f76-4871-af12-250fe5e45288\"): (false),\n        (\"2e1e5379-ef40-4659-a269-02d2842297ec\"): (false),\n        (\"9f63e18c-1bb3-431c-8c7f-6fe8c1c96d41\"): (false),\n        (\"2ecdfe39-9d98-481c-8c20-28d74c0b0af9\"): (false),\n        (\"1d3929e3-63e4-4520-876c-3c8607927119\"): (false),\n        (\"f69594ad-43d6-4c15-bf87-e3af2fc7a77c\"): (false),\n        (\"f52fe6c6-f9c1-4b07-9118-524823806cbe\"): (false),\n        (\"6dcc0a80-740b-4cdd-b1d1-f8bd6a0db865\"): (false),\n        (\"78cd8593-48a3-4548-be72-2388f12389c7\"): (false),\n        (\"2fb601ae-cff4-467b-ac8c-bdcd9e995292\"): (false),\n        (\"aa5446c8-3355-4f55-9e06-328990589689\"): (false),\n        (\"7fb56f36-33f1-4da0-a818-94ad58c8276d\"): (false),\n        (\"b364300c-3369-4ffa-b7ee-1be35640b941\"): (false),\n        (\"f73c0d50-d76a-41ba-aaae-060fe3fe9d4b\"): (false),\n        (\"2f4f0a17-19de-41c6-9355-3a34cbc7637f\"): (false),\n        (\"738fca00-c716-4917-b490-4fb47d2cb3e4\"): (false),\n    },\n)",
-                    ),
-                    /*[2]*/ (
                         type_name: "Light",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[3]*/ (
-                        type_name: "CurrentFrame",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[4]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (\"50e09af8-f1c0-45fa-b56a-a14e78ab37c7\"): (),\n    },\n)",
-                    ),
-                    /*[5]*/ (
-                        type_name: "Solid",
-                        data: "(\n    data: {\n        (\"a1ff4914-052f-483c-a5e8-2f57cdf4e318\"): (false),\n        (\"a4791948-938b-4aac-8bd4-5bc2c9f214dc\"): (false),\n        (\"01a7aa12-458d-4e9c-a0aa-7356fcf9307a\"): (false),\n        (\"7fb56f36-33f1-4da0-a818-94ad58c8276d\"): (false),\n        (\"aa5446c8-3355-4f55-9e06-328990589689\"): (false),\n        (\"ac4d71a2-7b14-4221-8573-a77929e84abe\"): (false),\n        (\"73f41088-3346-447f-9ab1-c51a70062685\"): (false),\n        (\"8fddb78c-3bdd-47a2-ac9c-e5c700dbd3ac\"): (false),\n        (\"f69594ad-43d6-4c15-bf87-e3af2fc7a77c\"): (false),\n        (\"1d3929e3-63e4-4520-876c-3c8607927119\"): (false),\n        (\"2f4f0a17-19de-41c6-9355-3a34cbc7637f\"): (false),\n        (\"41ba823a-e93d-44a9-ac77-563547860031\"): (false),\n        (\"8772c47a-0aa6-4b56-91b5-a6f144af17cf\"): (false),\n        (\"738fca00-c716-4917-b490-4fb47d2cb3e4\"): (false),\n        (\"2fb601ae-cff4-467b-ac8c-bdcd9e995292\"): (false),\n        (\"4d54925e-4ff6-4f16-b42c-8b019fcdcf6d\"): (false),\n        (\"39eddf9a-9b55-4e02-b900-d7f138f50400\"): (false),\n        (\"aeb6b8e3-d030-43b8-bc29-7593995f4d42\"): (false),\n        (\"ccbbe27d-ef00-487a-bbfe-660a144ed377\"): (false),\n        (\"28067303-d3c1-43b1-9139-ecac16a557e8\"): (false),\n        (\"7a55821c-47f7-41e2-9b13-53ef1a2bb963\"): (false),\n        (\"18e6ac58-7858-4a69-b547-320277067552\"): (false),\n        (\"78cd8593-48a3-4548-be72-2388f12389c7\"): (false),\n        (\"41515bff-fb33-43b7-ad2a-43259738724a\"): (false),\n        (\"f52fe6c6-f9c1-4b07-9118-524823806cbe\"): (false),\n        (\"08735933-f574-4da0-b61b-08129f722b74\"): (false),\n        (\"81fde5d3-30ed-4ac8-8221-d702c9e2e4a0\"): (false),\n        (\"9d2a9f3e-a08b-495f-ad32-27a93eb43e22\"): (false),\n        (\"b364300c-3369-4ffa-b7ee-1be35640b941\"): (false),\n        (\"062f19a8-dcad-4d59-9e7f-47995ad99a93\"): (false),\n        (\"b55f149e-e041-4a33-82b1-ca345217a613\"): (false),\n        (\"7a82db73-a3bc-4897-8c6c-c0d7cfc15e63\"): (false),\n        (\"eb30439f-4912-4e30-8b5b-ebe4a40579d8\"): (false),\n        (\"98acc1bd-2281-4ce4-9afd-4c753d8af029\"): (false),\n        (\"2e1e5379-ef40-4659-a269-02d2842297ec\"): (false),\n        (\"2ecdfe39-9d98-481c-8c20-28d74c0b0af9\"): (false),\n        (\"8efc469a-3d26-4ff8-8479-d659340df96b\"): (false),\n        (\"7227061a-cec3-4f72-a914-e937976c6249\"): (false),\n        (\"9f63e18c-1bb3-431c-8c7f-6fe8c1c96d41\"): (false),\n        (\"774b32c3-8f76-4871-af12-250fe5e45288\"): (false),\n        (\"02b5c03f-49f5-48f4-9667-659cdffd3b19\"): (false),\n        (\"f73c0d50-d76a-41ba-aaae-060fe3fe9d4b\"): (false),\n        (\"0dde151c-619a-4702-abce-4ad3ec4c831b\"): (false),\n        (\"6dcc0a80-740b-4cdd-b1d1-f8bd6a0db865\"): (false),\n    },\n)",
-                    ),
-                    /*[6]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {\n        (\"50e09af8-f1c0-45fa-b56a-a14e78ab37c7\"): (\n            width: 0.0,\n            height: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "Layer",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[8]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (\"50e09af8-f1c0-45fa-b56a-a14e78ab37c7\"): (\"6866bc88-0675-4186-8da6-94b95349ebb4\"),\n        (\"8a422612-144a-4d86-8ef9-4e53a7618f47\"): (\"6866bc88-0675-4186-8da6-94b95349ebb4\"),\n    },\n)",
-                    ),
-                    /*[9]*/ (
+                    /*[1]*/ (
                         type_name: "Glow",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[10]*/ (
+                    /*[2]*/ (
+                        type_name: "Player",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (),\n    },\n)",
+                    ),
+                    /*[3]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (),\n    },\n)",
+                    ),
+                    /*[4]*/ (
+                        type_name: "Walkable",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[5]*/ (
                         type_name: "Sprite",
                         data: "(\n    data: {},\n)",
                     ),
+                    /*[6]*/ (
+                        type_name: "Solid",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[7]*/ (
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\"8c47836c-34e1-4604-8af6-2e5eb1bc8156\"),\n        (\"1fa07fe3-0e12-4e49-a7c2-2844cea95f55\"): (\"8c47836c-34e1-4604-8af6-2e5eb1bc8156\"),\n    },\n)",
+                    ),
+                    /*[8]*/ (
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (\"1fa07fe3-0e12-4e49-a7c2-2844cea95f55\"): (\n            zoom: (0.0078125, 0.0125),\n            room_id: \"8c47836c-34e1-4604-8af6-2e5eb1bc8156\",\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
+                    ),
+                    /*[9]*/ (
+                        type_name: "Damage",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[10]*/ (
+                        type_name: "Collider",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            width: 6.0,\n            height: 16.0,\n        ),\n    },\n)",
+                    ),
                     /*[11]*/ (
-                        type_name: "Player",
-                        data: "(\n    data: {\n        (\"50e09af8-f1c0-45fa-b56a-a14e78ab37c7\"): (),\n    },\n)",
+                        type_name: "Velocity",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
                     ),
                     /*[12]*/ (
-                        type_name: "TileSprite",
-                        data: "(\n    data: {\n        (\"eb30439f-4912-4e30-8b5b-ebe4a40579d8\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"aa5446c8-3355-4f55-9e06-328990589689\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"08735933-f574-4da0-b61b-08129f722b74\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"774b32c3-8f76-4871-af12-250fe5e45288\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"2ecdfe39-9d98-481c-8c20-28d74c0b0af9\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"8efc469a-3d26-4ff8-8479-d659340df96b\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"f52fe6c6-f9c1-4b07-9118-524823806cbe\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"a1ff4914-052f-483c-a5e8-2f57cdf4e318\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"01a7aa12-458d-4e9c-a0aa-7356fcf9307a\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"b55f149e-e041-4a33-82b1-ca345217a613\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"4d54925e-4ff6-4f16-b42c-8b019fcdcf6d\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"41515bff-fb33-43b7-ad2a-43259738724a\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"6dcc0a80-740b-4cdd-b1d1-f8bd6a0db865\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"78cd8593-48a3-4548-be72-2388f12389c7\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"7a82db73-a3bc-4897-8c6c-c0d7cfc15e63\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"41ba823a-e93d-44a9-ac77-563547860031\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"9f63e18c-1bb3-431c-8c7f-6fe8c1c96d41\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"f73c0d50-d76a-41ba-aaae-060fe3fe9d4b\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"73f41088-3346-447f-9ab1-c51a70062685\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"2f4f0a17-19de-41c6-9355-3a34cbc7637f\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"a4791948-938b-4aac-8bd4-5bc2c9f214dc\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"062f19a8-dcad-4d59-9e7f-47995ad99a93\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"7a55821c-47f7-41e2-9b13-53ef1a2bb963\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"9d2a9f3e-a08b-495f-ad32-27a93eb43e22\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"738fca00-c716-4917-b490-4fb47d2cb3e4\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"7227061a-cec3-4f72-a914-e937976c6249\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"28067303-d3c1-43b1-9139-ecac16a557e8\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"2fb601ae-cff4-467b-ac8c-bdcd9e995292\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"f69594ad-43d6-4c15-bf87-e3af2fc7a77c\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"1d3929e3-63e4-4520-876c-3c8607927119\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"02b5c03f-49f5-48f4-9667-659cdffd3b19\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"18e6ac58-7858-4a69-b547-320277067552\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"ccbbe27d-ef00-487a-bbfe-660a144ed377\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"7fb56f36-33f1-4da0-a818-94ad58c8276d\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"b364300c-3369-4ffa-b7ee-1be35640b941\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"0dde151c-619a-4702-abce-4ad3ec4c831b\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"39eddf9a-9b55-4e02-b900-d7f138f50400\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"2e1e5379-ef40-4659-a269-02d2842297ec\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"98acc1bd-2281-4ce4-9afd-4c753d8af029\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"8772c47a-0aa6-4b56-91b5-a6f144af17cf\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"ac4d71a2-7b14-4221-8573-a77929e84abe\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"8fddb78c-3bdd-47a2-ac9c-e5c700dbd3ac\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"81fde5d3-30ed-4ac8-8221-d702c9e2e4a0\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n        (\"aeb6b8e3-d030-43b8-bc29-7593995f4d42\"): (\n            sprite_id: (\"2f2ec326-5041-4345-a69f-4a18b48c2f53\"),\n        ),\n    },\n)",
+                        type_name: "Kinematic",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[13]*/ (
-                        type_name: "Position",
-                        data: "(\n    data: {\n        (\"aeb6b8e3-d030-43b8-bc29-7593995f4d42\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"a1ff4914-052f-483c-a5e8-2f57cdf4e318\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"062f19a8-dcad-4d59-9e7f-47995ad99a93\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"b55f149e-e041-4a33-82b1-ca345217a613\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"7a55821c-47f7-41e2-9b13-53ef1a2bb963\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"8a422612-144a-4d86-8ef9-4e53a7618f47\"): (\n            position: (0.0, 0.0),\n        ),\n        (\"8fddb78c-3bdd-47a2-ac9c-e5c700dbd3ac\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"39eddf9a-9b55-4e02-b900-d7f138f50400\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"28067303-d3c1-43b1-9139-ecac16a557e8\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"ac4d71a2-7b14-4221-8573-a77929e84abe\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"738fca00-c716-4917-b490-4fb47d2cb3e4\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"02b5c03f-49f5-48f4-9667-659cdffd3b19\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"8efc469a-3d26-4ff8-8479-d659340df96b\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"6dcc0a80-740b-4cdd-b1d1-f8bd6a0db865\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"f69594ad-43d6-4c15-bf87-e3af2fc7a77c\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"7a82db73-a3bc-4897-8c6c-c0d7cfc15e63\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"2e1e5379-ef40-4659-a269-02d2842297ec\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"ccbbe27d-ef00-487a-bbfe-660a144ed377\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"18e6ac58-7858-4a69-b547-320277067552\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"b364300c-3369-4ffa-b7ee-1be35640b941\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"2fb601ae-cff4-467b-ac8c-bdcd9e995292\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"50e09af8-f1c0-45fa-b56a-a14e78ab37c7\"): (\n            position: (1.0, 1.0),\n        ),\n        (\"aa5446c8-3355-4f55-9e06-328990589689\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"0dde151c-619a-4702-abce-4ad3ec4c831b\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"08735933-f574-4da0-b61b-08129f722b74\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"1d3929e3-63e4-4520-876c-3c8607927119\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"2f4f0a17-19de-41c6-9355-3a34cbc7637f\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"98acc1bd-2281-4ce4-9afd-4c753d8af029\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"7227061a-cec3-4f72-a914-e937976c6249\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"7fb56f36-33f1-4da0-a818-94ad58c8276d\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"41515bff-fb33-43b7-ad2a-43259738724a\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"8772c47a-0aa6-4b56-91b5-a6f144af17cf\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"2ecdfe39-9d98-481c-8c20-28d74c0b0af9\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"81fde5d3-30ed-4ac8-8221-d702c9e2e4a0\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"f52fe6c6-f9c1-4b07-9118-524823806cbe\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"f73c0d50-d76a-41ba-aaae-060fe3fe9d4b\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"78cd8593-48a3-4548-be72-2388f12389c7\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"01a7aa12-458d-4e9c-a0aa-7356fcf9307a\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"a4791948-938b-4aac-8bd4-5bc2c9f214dc\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"9d2a9f3e-a08b-495f-ad32-27a93eb43e22\"): (\n            position: (160.0, 96.0),\n        ),\n        (\"eb30439f-4912-4e30-8b5b-ebe4a40579d8\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"774b32c3-8f76-4871-af12-250fe5e45288\"): (\n            position: (64.0, 64.0),\n        ),\n        (\"4d54925e-4ff6-4f16-b42c-8b019fcdcf6d\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"73f41088-3346-447f-9ab1-c51a70062685\"): (\n            position: (0.0, 48.0),\n        ),\n        (\"9f63e18c-1bb3-431c-8c7f-6fe8c1c96d41\"): (\n            position: (128.0, 64.0),\n        ),\n        (\"41ba823a-e93d-44a9-ac77-563547860031\"): (\n            position: (64.0, 64.0),\n        ),\n    },\n)",
+                        type_name: "Layer",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[14]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (\"8a422612-144a-4d86-8ef9-4e53a7618f47\"): (\n            zoom: (0.0078125, 0.0125),\n            room_id: \"6866bc88-0675-4186-8da6-94b95349ebb4\",\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
+                        type_name: "Animation",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/Aseprite/animations/female\"),\n        ),\n    },\n)",
                     ),
                     /*[15]*/ (
-                        type_name: "Animation",
-                        data: "(\n    data: {},\n)",
+                        type_name: "CurrentFrame",
+                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (),\n    },\n)",
+                    ),
+                    /*[16]*/ (
+                        type_name: "Position",
+                        data: "(\n    data: {\n        (\"1fa07fe3-0e12-4e49-a7c2-2844cea95f55\"): (\n            position: (128.0, 80.0),\n        ),\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            position: (28.524323, 116.94444),\n        ),\n    },\n)",
                     ),
                 ],
                 tile_defs: {
-                    ("d33485f7-a6f8-4ee5-a472-58c11816a44e"): (
-                        name: "",
+                    ("58dc1679-960a-40e9-a4c3-95d46be433c3"): (
+                        sprite_id: ("21b71279-335f-4222-bdff-669283af6e53"),
                         components: [
                             /*[0]*/ Walkable(false),
-                            /*[1]*/ Solid(false),
+                            /*[1]*/ Solid(true),
                         ],
                     ),
                 },
             ),
             rooms: [
                 /*[0]*/ (
-                    id: "6866bc88-0675-4186-8da6-94b95349ebb4",
+                    id: "8c47836c-34e1-4604-8af6-2e5eb1bc8156",
                     name: "untitled",
                     position: (
                         0.0,
@@ -103,32 +107,6 @@
                             tilemap: (
                                 width: 16,
                                 height: 10,
-                                tiles: {
-                                    (
-                                        10,
-                                        6,
-                                    ): (
-                                        entity: Some(("9d2a9f3e-a08b-495f-ad32-27a93eb43e22")),
-                                    ),
-                                    (
-                                        4,
-                                        4,
-                                    ): (
-                                        entity: Some(("8772c47a-0aa6-4b56-91b5-a6f144af17cf")),
-                                    ),
-                                    (
-                                        8,
-                                        4,
-                                    ): (
-                                        entity: Some(("062f19a8-dcad-4d59-9e7f-47995ad99a93")),
-                                    ),
-                                    (
-                                        0,
-                                        3,
-                                    ): (
-                                        entity: Some(("2f4f0a17-19de-41c6-9355-3a34cbc7637f")),
-                                    ),
-                                },
                                 background: (
                                     0.78,
                                     0.78,
@@ -141,7 +119,7 @@
                     darkness: 0.0,
                 ),
             ],
-            starting_room: Some("6866bc88-0675-4186-8da6-94b95349ebb4"),
+            starting_room: Some("8c47836c-34e1-4604-8af6-2e5eb1bc8156"),
             starting_position: Some((
                 1.0,
                 1.0,
@@ -150,9 +128,10 @@
     ],
     asset_manager: (
         sprite_id_to_path: {
-            ("2f2ec326-5041-4345-a69f-4a18b48c2f53"): "/Users/charliesovn/Projects/Aseprite/Tile24.png",
+            ("21b71279-335f-4222-bdff-669283af6e53"): "/Users/charliesovn/Projects/Aseprite/Tile1.png",
+            ("9abbdfef-c132-479f-855e-dde05be522ac"): "/Users/charliesovn/Projects/Aseprite/animations/female/Idle.png",
         },
     ),
-    current_world_id: "3ec463ed-d783-4615-b494-b61b2091c585",
+    current_world_id: "5acd54d8-0410-480b-acef-117dd116e5ad",
     tile_size: 16.0,
 )

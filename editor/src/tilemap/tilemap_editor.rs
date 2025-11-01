@@ -7,13 +7,11 @@ use crate::{gui::{
 
 use engine_core::{
     assets::asset_manager::AssetManager,
-    ecs::{
-        component::Position,
-        world_ecs::{WorldEcs},
-    },
+    ecs::
+        world_ecs::{WorldEcs}
+    ,
     global::tile_size,
     tiles::{
-        tile::{Tile, TileSprite},
         tilemap::TileMap,
     },
     world::{
@@ -149,9 +147,7 @@ impl TileMapEditor  {
         // Remove
         if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
             if let Some(old_tile) = map.tiles.remove(&(x, y)) {
-                if let Some(entity) = old_tile.entity {
-                    world_ecs.remove_entity(entity);
-                }
+                // TODO: Handle ecs/ sprite
             }
             return;
         }
@@ -167,32 +163,7 @@ impl TileMapEditor  {
 
         // Place
         if is_mouse_button_down(MouseButton::Left) {
-            // Grab the definition from the world
-            let def = world_ecs
-                .tile_defs
-                .get(&def_id)
-                .expect("definition must exist")
-                .clone();
-
-            // Build the base entity
-            let mut builder = world_ecs
-                .create_entity()
-                .with(Position {
-                    position: vec2(
-                        x as f32 * tile_size(),
-                        y as f32 * tile_size(),
-                    ),
-                })
-                .with(TileSprite { 
-                    sprite_id,
-                });
-
-            // Apply the behaviour definition (walkable, solid, damage, …)
-            builder = def.apply(builder);
-
-            // Finish and store the entity id in the hashmap
-            let entity = builder.finish();
-            map.tiles.insert((x, y), Tile { entity: Some(entity) });
+            map.tiles.insert((x, y), def_id);
         }
     }
 

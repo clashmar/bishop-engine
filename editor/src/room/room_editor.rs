@@ -4,7 +4,7 @@ use engine_core::{
         component::{CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
+    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, ui::widgets::*, world::room::Room
 };
 use uuid::Uuid;
 use crate::{
@@ -449,11 +449,6 @@ pub fn can_select_entity_in_room(
     entity: Entity,
     room_id: Uuid,
 ) -> bool {
-    // Filter out map elements
-    if world_ecs.get_store::<TileSprite>().get(entity).is_some() {
-        return false;
-    }
-
     // Make sure the entity is in the requested room
     match world_ecs.get_store::<CurrentRoom>().get(entity) {
         Some(CurrentRoom(id)) => *id == room_id,

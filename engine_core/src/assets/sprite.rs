@@ -10,7 +10,7 @@ pub struct SpriteId(pub Uuid);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Sprite {
-    /// Reference to the texture that was loaded by the AssetManager.
+    /// Reference to the texture stored by the AssetManager.
     pub sprite_id: SpriteId,
 }
 

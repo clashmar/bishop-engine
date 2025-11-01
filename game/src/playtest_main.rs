@@ -43,7 +43,7 @@ async fn main() {
 
     let payload_path = &args[1];
     let payload_str = fs::read_to_string(payload_path)
-        .expect("could not read the temporary playtest file");
+        .expect("Could not read the temporary playtest file.");
 
     let PlaytestPayload {
         room,

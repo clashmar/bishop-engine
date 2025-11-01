@@ -6,7 +6,7 @@ use engine_core::{
         world_ecs::WorldEcs,
     }, 
     global::tile_size, 
-    tiles::tilemap::TileMap
+    tiles::{tile::TileComponent, tilemap::TileMap}
 };
 
 const OVERLAP_EPS: f32 = 0.0001; 
@@ -108,14 +108,13 @@ pub fn sweep_move(
 
     // Tiles
     // Only tiles that carry a Solid component are obstacles
-    for ((x, y), tile) in tilemap.tiles.iter() {
-        let Some(entity) = tile.entity else { continue };
-        if let Some(solid) = world_ecs.get::<Solid>(entity) {
-            if solid.0 {
-                let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
-                let tile_aabb = (tile_pos, tile_pos + vec2(tile_size(), tile_size()));
-                obstacles.push(tile_aabb);
-            }
+    for ((x, y), tile_def_id) in tilemap.tiles.iter() {
+        let Some(tile_def) = world_ecs.tile_defs.get(tile_def_id) else {continue};
+
+        if tile_def.components.contains(&TileComponent::Solid(true)) {
+            let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
+            let tile_aabb = (tile_pos, tile_pos + vec2(tile_size(), tile_size()));
+            obstacles.push(tile_aabb);
         }
     }
 
