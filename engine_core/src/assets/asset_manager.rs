@@ -3,7 +3,6 @@ use std::path::Path;
 use futures::executor::block_on;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
 use crate::{
     animation::animation_clip::Animation, assets::sprite::SpriteId, world::world::World
@@ -16,6 +15,9 @@ pub struct AssetManager {
     #[serde(skip)]
     pub path_to_sprite_id: HashMap<String, SpriteId>,
     pub sprite_id_to_path: HashMap<SpriteId, String>,
+    #[serde(skip)]
+    /// Counter for sprite ids. Starts from 1.
+    next_sprite_id: usize,
 }
 
 impl AssetManager {
@@ -25,10 +27,11 @@ impl AssetManager {
             textures: HashMap::new(),
             path_to_sprite_id: HashMap::new(),
             sprite_id_to_path: HashMap::new(),
+            next_sprite_id: 1,
         }
     }
 
-    /// Load a texture from the assets folder for the first time.
+    /// Load and initialize a texture from the assets folder.
     /// Returns the `SpriteId` for the texture.
     pub async fn init_texture(&mut self, rel_path: impl AsRef<Path>) -> Result<SpriteId, String> {
         let key = rel_path.as_ref().to_string_lossy().to_string();
@@ -51,8 +54,9 @@ impl AssetManager {
         // Disable smoothing (needed for pixel art)
         texture.set_filter(FilterMode::Nearest);
 
-        // Create a fresh UUID for this texture
-        let id = SpriteId(Uuid::new_v4());
+        // Set and increment the texture id
+        let id = SpriteId(self.next_sprite_id);
+        self.next_sprite_id += 1;
 
         // Store everything
         self.textures.insert(id, texture);
@@ -132,6 +136,9 @@ impl AssetManager {
 
     /// Initialize all assets for the game.
     pub async fn init(&mut self, worlds: &mut Vec<World>) {
+        // Calculate the next id from the existing map
+        self.restore_next_id();
+
         let sprites: Vec<(SpriteId, String)> = self
             .sprite_id_to_path
             .iter()
@@ -164,5 +171,13 @@ impl AssetManager {
     /// or None if the texture has not been loaded/set.
     pub fn texture_size(&self, id: SpriteId) -> Option<(f32, f32)> {
         self.textures.get(&id).map(|tex| (tex.width(), tex.height()))
+    }
+
+    fn restore_next_id(&mut self) {
+        if let Some(max_id) = self.sprite_id_to_path.keys().map(|id| id.0).max() {
+            self.next_sprite_id = max_id + 1;
+        } else {
+            self.next_sprite_id = 1;
+        }
     }
 }

@@ -111,7 +111,7 @@ async fn get_sprite_id(
 ) -> (SpriteId, bool) {
     // Try cache first
     if let Some(&cached) = animation.sprite_cache.get(current_id) {
-        if cached.0 != Uuid::nil() {
+        if cached.0 != 0 {
             return (cached, false);
         }
     }

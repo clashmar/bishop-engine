@@ -13,7 +13,6 @@ use engine_core::{
         world_ecs::WorldEcs
     }, ui::widgets::*
 };
-use uuid::Uuid;
 
 #[derive(Default)]
 pub struct SpriteModule {}
@@ -65,7 +64,7 @@ impl InspectorModule for SpriteModule {
                 let new_id = block_on(assets.init_texture(&path_str));
                 sprite.sprite_id = match new_id {
                     Ok(id) => id,
-                    Err(_) => SpriteId(Uuid::nil()),
+                    Err(_) => SpriteId(0),
                 }
             }
         }

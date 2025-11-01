@@ -1,95 +1,79 @@
 (
     save_version: 1,
-    id: "83e430f5-4b0a-4fdd-9921-e703bec6869b",
+    id: "7a4cee44-8229-4323-aa05-6a6a42e3ed52",
     name: "Demo",
     worlds: [
         /*[0]*/ (
-            id: "5acd54d8-0410-480b-acef-117dd116e5ad",
+            id: "0c5b7961-b573-4292-97ab-177f4cbc7895",
             name: "new",
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Light",
-                        data: "(\n    data: {},\n)",
+                        type_name: "Player",
+                        data: "(\n    data: {\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (),\n    },\n)",
                     ),
                     /*[1]*/ (
-                        type_name: "Glow",
-                        data: "(\n    data: {},\n)",
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (\"1265a38d-1a0b-4a5c-a548-b62620fe4667\"): (\"df54888e-453d-4b27-a98c-0ec68793c853\"),\n        (\"a64932fc-26a7-4f42-baf9-662e6f9a58d0\"): (\"df54888e-453d-4b27-a98c-0ec68793c853\"),\n        (\"3b1b473a-8531-4951-b8b2-1119699774cf\"): (\"df54888e-453d-4b27-a98c-0ec68793c853\"),\n        (\"6141a18b-f921-426e-afc6-80ae2821ae97\"): (\"df54888e-453d-4b27-a98c-0ec68793c853\"),\n        (\"247424fc-5882-4d5e-864d-bee169dcd166\"): (\"df54888e-453d-4b27-a98c-0ec68793c853\"),\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (\"df54888e-453d-4b27-a98c-0ec68793c853\"),\n    },\n)",
                     ),
                     /*[2]*/ (
-                        type_name: "Player",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (),\n    },\n)",
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (\"1265a38d-1a0b-4a5c-a548-b62620fe4667\"): (\n            zoom: (0.0078125, 0.0125),\n            room_id: \"df54888e-453d-4b27-a98c-0ec68793c853\",\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
                     ),
                     /*[3]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (),\n    },\n)",
-                    ),
-                    /*[4]*/ (
-                        type_name: "Walkable",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[5]*/ (
-                        type_name: "Sprite",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[6]*/ (
-                        type_name: "Solid",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\"8c47836c-34e1-4604-8af6-2e5eb1bc8156\"),\n        (\"1fa07fe3-0e12-4e49-a7c2-2844cea95f55\"): (\"8c47836c-34e1-4604-8af6-2e5eb1bc8156\"),\n    },\n)",
-                    ),
-                    /*[8]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (\"1fa07fe3-0e12-4e49-a7c2-2844cea95f55\"): (\n            zoom: (0.0078125, 0.0125),\n            room_id: \"8c47836c-34e1-4604-8af6-2e5eb1bc8156\",\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
-                    ),
-                    /*[9]*/ (
-                        type_name: "Damage",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[10]*/ (
-                        type_name: "Collider",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            width: 6.0,\n            height: 16.0,\n        ),\n    },\n)",
-                    ),
-                    /*[11]*/ (
-                        type_name: "Velocity",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
-                    ),
-                    /*[12]*/ (
-                        type_name: "Kinematic",
-                        data: "(\n    data: {},\n)",
-                    ),
-                    /*[13]*/ (
                         type_name: "Layer",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[14]*/ (
+                    /*[4]*/ (
                         type_name: "Animation",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            clips: {\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 4.0,\n                    looping: true,\n                    offset: (0.0, 0.0),\n                ),\n            },\n            variant: (\"/Users/charliesovn/Projects/Aseprite/animations/female\"),\n        ),\n    },\n)",
+                        data: "(\n    data: {},\n)",
                     ),
-                    /*[15]*/ (
-                        type_name: "CurrentFrame",
-                        data: "(\n    data: {\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (),\n    },\n)",
-                    ),
-                    /*[16]*/ (
+                    /*[5]*/ (
                         type_name: "Position",
-                        data: "(\n    data: {\n        (\"1fa07fe3-0e12-4e49-a7c2-2844cea95f55\"): (\n            position: (128.0, 80.0),\n        ),\n        (\"9e2f0875-b7bb-47e2-ab6b-70a0979272f8\"): (\n            position: (28.524323, 116.94444),\n        ),\n    },\n)",
+                        data: "(\n    data: {\n        (\"6141a18b-f921-426e-afc6-80ae2821ae97\"): (\n            position: (172.0, 136.0),\n        ),\n        (\"3b1b473a-8531-4951-b8b2-1119699774cf\"): (\n            position: (60.0, 136.0),\n        ),\n        (\"1265a38d-1a0b-4a5c-a548-b62620fe4667\"): (\n            position: (128.0, 80.0),\n        ),\n        (\"a64932fc-26a7-4f42-baf9-662e6f9a58d0\"): (\n            position: (31.0, 62.0),\n        ),\n        (\"247424fc-5882-4d5e-864d-bee169dcd166\"): (\n            position: (188.0, 56.0),\n        ),\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (\n            position: (88.0, 32.0),\n        ),\n    },\n)",
+                    ),
+                    /*[6]*/ (
+                        type_name: "Light",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[7]*/ (
+                        type_name: "CurrentFrame",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[8]*/ (
+                        type_name: "Glow",
+                        data: "(\n    data: {},\n)",
+                    ),
+                    /*[9]*/ (
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (),\n    },\n)",
+                    ),
+                    /*[10]*/ (
+                        type_name: "Collider",
+                        data: "(\n    data: {\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (\n            width: 32.0,\n            height: 32.0,\n        ),\n    },\n)",
+                    ),
+                    /*[11]*/ (
+                        type_name: "Sprite",
+                        data: "(\n    data: {\n        (\"3b1b473a-8531-4951-b8b2-1119699774cf\"): (\n            sprite_id: (3),\n        ),\n        (\"247424fc-5882-4d5e-864d-bee169dcd166\"): (\n            sprite_id: (2),\n        ),\n        (\"a64932fc-26a7-4f42-baf9-662e6f9a58d0\"): (\n            sprite_id: (4),\n        ),\n        (\"6141a18b-f921-426e-afc6-80ae2821ae97\"): (\n            sprite_id: (3),\n        ),\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (\n            sprite_id: (1),\n        ),\n    },\n)",
+                    ),
+                    /*[12]*/ (
+                        type_name: "Velocity",
+                        data: "(\n    data: {\n        (\"8939e4ca-1de3-42a9-803c-4551f0fbdc24\"): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
                     ),
                 ],
                 tile_defs: {
-                    ("58dc1679-960a-40e9-a4c3-95d46be433c3"): (
-                        sprite_id: ("21b71279-335f-4222-bdff-669283af6e53"),
+                    (1): (
+                        sprite_id: (5),
                         components: [
                             /*[0]*/ Walkable(false),
-                            /*[1]*/ Solid(true),
+                            /*[1]*/ Solid(false),
                         ],
                     ),
                 },
             ),
             rooms: [
                 /*[0]*/ (
-                    id: "8c47836c-34e1-4604-8af6-2e5eb1bc8156",
+                    id: "df54888e-453d-4b27-a98c-0ec68793c853",
                     name: "untitled",
                     position: (
                         0.0,
@@ -107,6 +91,32 @@
                             tilemap: (
                                 width: 16,
                                 height: 10,
+                                tiles: {
+                                    (
+                                        8,
+                                        9,
+                                    ): (1),
+                                    (
+                                        6,
+                                        9,
+                                    ): (1),
+                                    (
+                                        4,
+                                        9,
+                                    ): (1),
+                                    (
+                                        9,
+                                        9,
+                                    ): (1),
+                                    (
+                                        7,
+                                        9,
+                                    ): (1),
+                                    (
+                                        5,
+                                        9,
+                                    ): (1),
+                                },
                                 background: (
                                     0.78,
                                     0.78,
@@ -119,7 +129,7 @@
                     darkness: 0.0,
                 ),
             ],
-            starting_room: Some("8c47836c-34e1-4604-8af6-2e5eb1bc8156"),
+            starting_room: Some("df54888e-453d-4b27-a98c-0ec68793c853"),
             starting_position: Some((
                 1.0,
                 1.0,
@@ -128,10 +138,13 @@
     ],
     asset_manager: (
         sprite_id_to_path: {
-            ("21b71279-335f-4222-bdff-669283af6e53"): "/Users/charliesovn/Projects/Aseprite/Tile1.png",
-            ("9abbdfef-c132-479f-855e-dde05be522ac"): "/Users/charliesovn/Projects/Aseprite/animations/female/Idle.png",
+            (3): "/Users/charliesovn/Projects/Aseprite/cat.png",
+            (2): "/Users/charliesovn/Projects/Aseprite/Entity2.png",
+            (1): "/Users/charliesovn/Projects/Aseprite/Entity1.png",
+            (4): "/Users/charliesovn/Projects/Aseprite/Entity3.png",
+            (5): "/Users/charliesovn/Projects/Aseprite/Tile24.png",
         },
     ),
-    current_world_id: "5acd54d8-0410-480b-acef-117dd116e5ad",
+    current_world_id: "0c5b7961-b573-4292-97ab-177f4cbc7895",
     tile_size: 16.0,
 )

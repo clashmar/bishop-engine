@@ -2,11 +2,10 @@
 use crate::ecs_component;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-/// Opaque handle that the asset manager gives out.
+/// Opaque handle that the asset manager gives out. Default/Unset is 0.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
-pub struct SpriteId(pub Uuid);
+pub struct SpriteId(pub usize);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Sprite {
@@ -17,7 +16,7 @@ pub struct Sprite {
 impl Default for Sprite {
     fn default() -> Self {
         Self {
-            sprite_id: SpriteId(Uuid::new_v4()),
+            sprite_id: SpriteId(0),
         }
     }
 }

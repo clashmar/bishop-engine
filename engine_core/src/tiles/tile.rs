@@ -1,11 +1,10 @@
 // engine_core/src/tiles/tile_def.rs
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use crate::assets::sprite::SpriteId;
 
 /// Opaque identifier used by the editor and by the TileMap.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct TileDefId(pub Uuid);
+pub struct TileDefId(pub usize);
 
 /// A list of component adding closures.
 #[derive(Clone, Serialize, Deserialize)]

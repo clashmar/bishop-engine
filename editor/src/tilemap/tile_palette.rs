@@ -2,7 +2,6 @@
 use std::collections::VecDeque;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use engine_core::{global::tile_size, ui::widgets::*};
 use serde_with::serde_as;
 use engine_core::{
@@ -114,7 +113,7 @@ impl TilePalette {
         for entry in &self.entries {
             let tex_id = match asset_manager.init_texture(&entry.sprite_path).await {
                 Ok(id) => id,
-                Err(_) => SpriteId(Uuid::nil()),
+                Err(_) => SpriteId(0),
             };
             self.sprite_ids.push(tex_id);
         }
@@ -230,7 +229,7 @@ impl TilePalette {
         if !self.ui.sprite_path.is_empty() {
             let preview_id = match asset_manager.init_texture(&self.ui.sprite_path).await {
                 Ok(id) => id,
-                Err(_) => SpriteId(Uuid::nil()),
+                Err(_) => SpriteId(0),
             };
 
             let tex = asset_manager.get_texture_from_id(preview_id);
@@ -305,7 +304,7 @@ impl TilePalette {
         // Load sprite
         let sprite_id = match asset_manager.init_texture(&self.ui.sprite_path).await {
             Ok(id) => id,
-            Err(_) => SpriteId(Uuid::nil()),
+            Err(_) => SpriteId(0),
         };
 
         // Build TileDef
@@ -318,14 +317,13 @@ impl TilePalette {
             comps.push(TileComponent::Damage(self.ui.damage));
         }
 
-        let def = TileDef {
+        let tile_def = TileDef {
             sprite_id,
             components: comps,
         };
 
-        // Insert the definition into the world map.
-        let def_id = TileDefId(Uuid::new_v4());
-        world_ecs.tile_defs.insert(def_id, def);
+        // Insert the definition into the world ecs tile_def map
+        let def_id = world_ecs.insert_tile_def(tile_def);
 
         // Persist the palette entry
         self.entries.push(PaletteEntry {
@@ -352,7 +350,7 @@ impl TilePalette {
         // Load sprite
         let sprite_id = match asset_manager.init_texture(&self.ui.sprite_path).await {
             Ok(id) => id,
-            Err(_) => SpriteId(Uuid::nil()),
+            Err(_) => SpriteId(0),
         };
 
         // Build TileDef
