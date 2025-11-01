@@ -19,6 +19,7 @@ use macroquad::prelude::*;
 pub struct WorldEcs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
     pub tile_defs: HashMap<TileDefId, TileDef>,
+    next_tile_def_id: usize,
 }
 
 impl WorldEcs {
@@ -132,6 +133,14 @@ impl WorldEcs {
         self.get_store_mut::<T>().insert(entity, component);
     }
 
+    /// Inserts a TileDef and returns its id.
+    pub fn insert_tile_def(&mut self, def: TileDef) -> TileDefId {
+        let id = TileDefId(self.next_tile_def_id);
+        self.next_tile_def_id += 1;
+        self.tile_defs.insert(id, def);
+        id
+    }
+
     /// Returns the player Entity.
     pub fn get_player_entity(&self) -> Entity {
         // There should only ever be one player
@@ -151,6 +160,15 @@ impl WorldEcs {
             .get(player_entity)
             .cloned()
             .expect("Player should always have a Position component.")
+    }
+
+    /// Restores runtime state for the ECS (next ids etc).
+    pub fn restore_runtime(&mut self) {
+        if let Some(max_id) = self.tile_defs.keys().map(|id| id.0).max() {
+            self.next_tile_def_id = max_id + 1;
+        } else {
+            self.next_tile_def_id = 1;
+        }
     }
 }
 
@@ -235,11 +253,16 @@ impl<'de> Deserialize<'de> for WorldEcs {
             stores.insert(type_id, any_box);
         }
 
-        // Assemble the final world
-        Ok(WorldEcs {
+        let mut world_ecs = WorldEcs {
             stores,
             tile_defs: helper.tile_defs,
-        })
+            next_tile_def_id: 0, // Set in restore runtime
+        };
+
+        // Restore the runtime state
+        world_ecs.restore_runtime();
+
+        Ok(world_ecs)
     }
 }
 

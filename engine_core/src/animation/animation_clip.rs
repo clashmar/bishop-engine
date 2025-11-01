@@ -2,7 +2,6 @@
 use strum_macros::{EnumIter, EnumString};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::{collections::HashMap, path::Path};
 use serde_with::{FromInto, serde_as};
 use std::fmt;
@@ -83,7 +82,7 @@ impl Animation {
         current_id: &ClipId,
         sprite_id: SpriteId,
     ) {
-        if sprite_id.0 != Uuid::nil() {
+        if sprite_id.0 != 0 {
             self.sprite_cache
                 .insert(current_id.clone(), sprite_id);
         }
@@ -207,14 +206,14 @@ pub async fn resolve_sprite_id(
     }
 
     if !Path::new(&path).exists() {
-        // Return an empty Uuid to prevent panics
-        return SpriteId(Uuid::nil());
+        // Set 0 as a sentinal to prevent panics
+        return SpriteId(0);
     }
 
     // Load the texture
      match asset_manager.init_texture(&path).await {
         Ok(id) => id,
-        Err(_) => SpriteId(Uuid::nil())
+        Err(_) => SpriteId(0)
      }
 }
 
