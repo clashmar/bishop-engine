@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use uuid::Uuid;
-use crate::
-    world::world::World
+use crate::{assets::asset_manager::AssetManager, 
+    world::world::World}
 ;
 
 #[serde_as]
@@ -17,6 +17,8 @@ pub struct Game {
     pub name: String,
     /// All worlds belonging to this game instance.
     pub worlds: Vec<World>,
+    /// Asset manager for the game.
+    pub asset_manager: AssetManager,
     /// Id of the currently active world.
     pub current_world_id: Uuid,
     /// Tile size of the game that the world scales to.
@@ -24,7 +26,7 @@ pub struct Game {
 }
 
 impl Game {
-    /// Mutable reference to the world the editor is currently editing.
+    /// Mutable reference to the current world.
     pub fn current_world_mut(&mut self) -> &mut World {
         self.worlds
             .iter_mut()
@@ -46,10 +48,16 @@ impl Game {
         self.worlds.push(world);
     }
 
-    /// Switch the editor to a different world by its UUID.
+    /// Switch the editor to a different world by its id.
     pub fn select_world(&mut self, id: Uuid) {
         if self.worlds.iter().any(|w| w.id == id) {
             self.current_world_id = id;
         }
+    }
+
+    /// Syncs all assets that belong to this game.
+    pub async fn init_asset_manager(&mut self) {
+        let (asset_manager, worlds) = (&mut self.asset_manager, &mut self.worlds);
+        asset_manager.init(worlds).await;
     }
 }

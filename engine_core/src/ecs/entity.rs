@@ -5,7 +5,7 @@ use inventory::iter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::ecs::component::{Component, ComponentStore, CurrentRoom};
-use crate::ecs::component_registry::ComponentReg;
+use crate::ecs::component_registry::ComponentRegistry;
 use crate::ecs::world_ecs::WorldEcs;  
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
@@ -35,7 +35,7 @@ impl<'a> EntityBuilder<'a> {
         T: Component + Default + 'static,
     {
         // Find the registration entry for `T`.
-        let reg = iter::<ComponentReg>()
+        let reg = iter::<ComponentRegistry>()
             .find(|r| r.type_id == TypeId::of::<ComponentStore<T>>())
             .expect("Component not registered.");
 

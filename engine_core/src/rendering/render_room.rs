@@ -135,6 +135,7 @@ fn draw_entity(
     } else if let Some(sprite) = sprite_store.get(entity) {
         // No animation
         if asset_manager.contains(sprite.sprite_id) {
+            
             let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
             draw_texture_ex(
                 tex,

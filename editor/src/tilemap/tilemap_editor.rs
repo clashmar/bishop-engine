@@ -185,7 +185,6 @@ impl TileMapEditor  {
                 })
                 .with(TileSprite { 
                     sprite_id,
-                    path: sprite_path.to_string(),
                 });
 
             // Apply the behaviour definition (walkable, solid, damage, …)

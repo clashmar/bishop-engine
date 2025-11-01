@@ -1,10 +1,10 @@
 // game/src/game.rs
 use std::collections::HashMap;
 use engine_core::{
-    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::camera_manager::CameraManager, ecs::{component::{
+    animation::animation_system::update_animation_sytem, camera::camera_manager::CameraManager, ecs::{component::{
         CurrentRoom, Position, Velocity
     }, entity::Entity}, game::game::Game, rendering::{render_room::{lerp, render_room}, render_system::RenderSystem}, storage::core_storage, world::{
-        room::Room, transition_manager::{TransitionManager, TransitionState}, world::World
+        room::Room, transition_manager::TransitionManager
     }
 };
 use crate::{
@@ -22,8 +22,6 @@ pub struct GameState {
     transition_manager: TransitionManager,
     /// Current room
     current_room: Room,
-    /// Asset Manager.
-    asset_manager: AssetManager,
     /// Rendering system for the game.
     pub render_system: RenderSystem,
     /// Holds the Position of every entity rendered in the previous frame.
@@ -35,7 +33,7 @@ impl GameState {
         let game_folder = core_storage::most_recent_game_folder()
             .expect("No valid game folder found in games/");
 
-        let mut game = core_storage::load_game_from_folder(&game_folder)
+        let game = core_storage::load_game_from_folder(&game_folder).await
             .expect("Failed to deserialize game.ron");
 
         let start_room_id = game.current_world().starting_room
@@ -50,14 +48,12 @@ impl GameState {
 
         let player_pos = game.current_world().world_ecs.get_player_position().position;
         let camera_manager = CameraManager::new(&game.current_world().world_ecs, current_room.id, player_pos);
-        let asset_manager = AssetManager::new(&mut game.current_world_mut().world_ecs).await;
 
         Self {
             game,
             camera_manager,
             transition_manager: TransitionManager::new(),
             current_room,
-            asset_manager,
             render_system: RenderSystem::new(),
             prev_positions: HashMap::new(),
         }
@@ -68,7 +64,6 @@ impl GameState {
 
         let player_pos = world_ecs.get_player_position().position;
 
-        let asset_manager = AssetManager::new(world_ecs).await;
         let camera_manager = CameraManager::new(world_ecs, room.id, player_pos);
 
         Self {
@@ -76,7 +71,6 @@ impl GameState {
             camera_manager,
             transition_manager: TransitionManager::new(),
             current_room: room,
-            asset_manager,
             render_system: RenderSystem::new(),
             prev_positions: HashMap::new(),
         }
@@ -117,12 +111,15 @@ impl GameState {
     }
 
     pub async fn update_async(&mut self, dt: f32) {
-        let current_world = self.game.current_world_mut();
+        let world = &mut self.game.worlds
+            .iter_mut()
+            .find(|w| w.id == self.game.current_world_id)
+            .expect("Current world id not present in game.");
 
-        let player = current_world.world_ecs.get_player_entity();
-        let player_pos = current_world.world_ecs.get_player_position().position;
+        let player = world.world_ecs.get_player_entity();
+        let player_pos = world.world_ecs.get_player_position().position;
 
-        let player_vel = current_world.world_ecs
+        let player_vel = world.world_ecs
             .get_store_mut::<Velocity>()
             .get_mut(player)
             .expect("Player must have a Velocity component");
@@ -131,14 +128,14 @@ impl GameState {
 
         // Update the camera
         self.camera_manager.update_active(
-            &current_world.world_ecs,
+            &world.world_ecs,
             &self.current_room,
             player_pos,
         );
 
         update_animation_sytem(
-            &mut current_world.world_ecs,
-            &mut self.asset_manager,
+            &mut world.world_ecs,
+            &mut self.game.asset_manager,
             dt, 
             self.current_room.id,
         ).await;
@@ -147,7 +144,10 @@ impl GameState {
     pub fn render(&mut self, alpha: f32) {
         clear_background(BLUE);
 
-        let current_world = self.game.current_world_mut();
+        let world = &mut self.game.worlds
+            .iter_mut()
+            .find(|w| w.id == self.game.current_world_id)
+            .expect("Current world id not present in game.");
 
         let interpolated_target = lerp(
             self.camera_manager.previous_position.unwrap_or_default(),
@@ -163,9 +163,9 @@ impl GameState {
         };
 
         render_room(
-            &current_world.world_ecs, 
+            &world.world_ecs, 
             &self.current_room, 
-            &mut self.asset_manager,
+            &mut self.game.asset_manager,
             &mut self.render_system,
             &render_cam,
             alpha,
