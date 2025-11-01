@@ -12,9 +12,9 @@ use crate::{
 pub struct AssetManager {
     #[serde(skip)]
     textures: HashMap<SpriteId, Texture2D>,
+    pub sprite_id_to_path: HashMap<SpriteId, String>,
     #[serde(skip)]
     pub path_to_sprite_id: HashMap<String, SpriteId>,
-    pub sprite_id_to_path: HashMap<SpriteId, String>,
     #[serde(skip)]
     /// Counter for sprite ids. Starts from 1.
     next_sprite_id: usize,
@@ -181,6 +181,7 @@ impl AssetManager {
         self.textures.get(&id).map(|tex| (tex.width(), tex.height()))
     }
 
+    /// Calculates the next sprite id 
     fn restore_next_id(&mut self) {
         if let Some(max_id) = self.sprite_id_to_path.keys().map(|id| id.0).max() {
             self.next_sprite_id = max_id + 1;
