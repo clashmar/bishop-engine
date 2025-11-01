@@ -1,5 +1,5 @@
 // engine_core/src/assets/asset_manager.rs
-use std::path::Path;
+use std::{path::Path, sync::LazyLock};
 use futures::executor::block_on;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,9 @@ pub struct AssetManager {
     /// Counter for sprite ids. Starts from 1.
     next_sprite_id: usize,
 }
+
+/// Owned empty texture which guards against crashes.
+static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty());
 
 impl AssetManager {
     /// Initializes a new asset manager with all sprite textures loaded.
@@ -85,6 +88,11 @@ impl AssetManager {
 
     /// Returns a texture from a `SpriteId`. If the texture has not been loaded yet load it synchronously.
     pub fn get_texture_from_id(&mut self, id: SpriteId) -> &Texture2D {
+        // If SpriteId = 0 it is unset
+        if id.0 == 0 {
+            return &*EMPTY_TEXTURE;
+        }
+
         // Fast path
         if self.contains(id) {
             return self.textures.get(&id).unwrap();

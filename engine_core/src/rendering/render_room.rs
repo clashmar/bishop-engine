@@ -190,15 +190,14 @@ pub fn entity_dimensions(
         world_ecs
             .get_store::<Sprite>()
             .get(entity)
-            .and_then(|spr| asset_manager.texture_size(spr.sprite_id))
+            .and_then(|sprite| asset_manager.texture_size(sprite.sprite_id))
     };
 
     let from_glow = || {
         world_ecs
             .get_store::<Glow>()
             .get(entity)
-            .and_then(|glow| asset_manager.get_or_none(&glow.sprite_path))
-            .and_then(|sprite_id| asset_manager.texture_size(sprite_id))
+            .and_then(|glow| asset_manager.texture_size(glow.sprite_id))
     };
 
     from_anim

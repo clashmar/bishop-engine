@@ -19,14 +19,17 @@ use macroquad::prelude::*;
 pub struct WorldEcs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
     pub tile_defs: HashMap<TileDefId, TileDef>,
+    next_entity_id: usize,
     next_tile_def_id: usize,
 }
 
 impl WorldEcs {
-    /// Allocate a fresh UUID and return a builder.
+    /// Allocate a fresh id and return a builder.
     pub fn create_entity(&mut self) -> EntityBuilder {
+        // This ensures id will always start from 1 
+        self.next_entity_id += 1;
         EntityBuilder {
-            id: Entity::new(),
+            id: Entity(self.next_entity_id),
             world_ecs: self,
         }
     }
@@ -212,6 +215,7 @@ impl Serialize for WorldEcs {
         let mut state = serializer.serialize_struct("WorldEcs", 2)?;
         state.serialize_field("components", &components)?;
         state.serialize_field("tile_defs", &self.tile_defs)?;
+        state.serialize_field("next_entity_id", &self.next_entity_id)?;
         state.end()
     }
 }
@@ -226,6 +230,7 @@ impl<'de> Deserialize<'de> for WorldEcs {
         struct Helper {
             pub components: Vec<StoredComponent>,
             pub tile_defs: HashMap<TileDefId, TileDef>,
+            pub next_entity_id: usize,
         }
 
         let helper = Helper::deserialize(deserializer)?;
@@ -253,10 +258,12 @@ impl<'de> Deserialize<'de> for WorldEcs {
             stores.insert(type_id, any_box);
         }
 
+         // Next tile id is reset in restore runtime
         let mut world_ecs = WorldEcs {
             stores,
             tile_defs: helper.tile_defs,
-            next_tile_def_id: 0, // Set in restore runtime
+            next_entity_id: helper.next_entity_id,
+            next_tile_def_id: 0,
         };
 
         // Restore the runtime state

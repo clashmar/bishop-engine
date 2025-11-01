@@ -213,6 +213,7 @@ impl InspectorPanel {
                 // Outline 
                 draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
             }
+            
             // Draw buttons at the top after the covers
             if gui_button(add_rect, add_label) {
                 if self.can_show_any_component(world_ecs) {
@@ -221,7 +222,7 @@ impl InspectorPanel {
             }
 
             // Remove button
-            // Don't show remove for player entity or camera
+            // Don't show remove for player entity
             if !(world_ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 

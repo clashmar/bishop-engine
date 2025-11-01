@@ -60,7 +60,7 @@ impl GameState {
     }
 
     pub async fn for_room(room: Room, mut game: Game) -> Self {
-        game.init_asset_manager().await;
+        game.initialize().await;
         let world_ecs = &mut game.current_world_mut().world_ecs;
         let player_pos = world_ecs.get_player_position().position;
         let camera_manager = CameraManager::new(world_ecs, room.id, player_pos);

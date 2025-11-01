@@ -4,14 +4,13 @@ use engine_core::{
     world::room::{ExitDirection, Room}
 };
 use macroquad::prelude::*;
-use uuid::Uuid;
 
 pub fn crossed_exit(
     entity_position: Vec2,
     delta: Vec2,               
     collider: &Collider,
     room: &Room,
-) -> Option<Uuid> {
+) -> Option<usize> {
     // Position after the movement
     let new_pos = entity_position + delta;
     let entity_rect = Rect::new(new_pos.x, new_pos.y, collider.width, collider.height);

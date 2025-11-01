@@ -1,6 +1,5 @@
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use crate::{
     animation::animation_clip::{
         Animation, 
@@ -35,7 +34,7 @@ pub async fn update_animation_sytem(
     world_ecs: &mut WorldEcs,
     asset_manager: &mut AssetManager,
     dt: f32,
-    room_id: Uuid,
+    room_id: usize,
 ) {
     // Gather the ids of all entities that are in the current room
     let entities = entities_in_room(world_ecs, room_id);

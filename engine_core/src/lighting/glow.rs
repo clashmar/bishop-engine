@@ -4,8 +4,7 @@ use reflect_derive::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use crate::{
-    ecs_component, 
-    inspector_module
+    assets::sprite::SpriteId, ecs_component, inspector_module
 };
 
 ecs_component!(Glow);
@@ -22,7 +21,7 @@ pub struct Glow {
     pub brightness: f32,
     pub emission: f32,
     #[widget("png")]          
-    pub sprite_path: String,
+    pub sprite_id: SpriteId,
 }
 
 impl Default for Glow {
@@ -32,7 +31,7 @@ impl Default for Glow {
             intensity: 0.1,
             brightness: 0.5,
             emission: 0.0,
-            sprite_path: String::new(),
+            sprite_id: SpriteId(0),
         }
     }
 }
