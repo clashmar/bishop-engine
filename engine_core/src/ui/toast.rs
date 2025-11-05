@@ -5,7 +5,7 @@ use macroquad::prelude::*;
 const PADDING: f32 = 20.0;
 
 /// A simple toast that disappears after a short delay.
-pub struct WarningToast {
+pub struct Toast {
     /// Text that will be shown.
     pub msg: String,
     /// When the toast was created.
@@ -16,7 +16,7 @@ pub struct WarningToast {
     pub active: bool,
 }
 
-impl WarningToast {
+impl Toast {
     /// Create a new toast that lives for `duration` seconds.
     pub fn new<S: Into<String>>(msg: S, duration: f32) -> Self {
         Self {

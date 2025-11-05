@@ -1,7 +1,7 @@
 // editor/src/world/world_editor.rs
 use engine_core::{
     game::game::Game, global::{self, tile_size}, ui::widgets::*, world::{
-        room::{ExitDirection, Room}, world::World
+        room::{ExitDirection, Room, RoomId}, world::{World, WorldId}
     }
 };
 use macroquad::prelude::*;
@@ -46,7 +46,7 @@ impl WorldEditor {
     }
 
     /// Returns `Some(room_id)` if a room is clicked on.
-    pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<usize> {
+    pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<RoomId> {
         world.link_all_exits();
         self.handle_ui_clicks(world).await;
 
@@ -80,7 +80,7 @@ impl WorldEditor {
         }
     }
 
-    fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<usize> {
+    fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
         if is_mouse_button_pressed(MouseButton::Left) {
             let world_mouse = coord::mouse_world_pos(camera);
             for room in &world.rooms {
@@ -93,7 +93,7 @@ impl WorldEditor {
         None
     }
 
-    fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<usize> {
+    fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
         if is_mouse_button_pressed(MouseButton::Left) {
             let world_mouse = coord::mouse_world_pos(camera);
             for room in &world.rooms {
@@ -107,7 +107,7 @@ impl WorldEditor {
         None
     }
 
-    fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<usize> {
+    fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
         let mouse_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
 
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -169,11 +169,16 @@ impl WorldEditor {
         };
     }
 
-    pub fn draw(&mut self, camera: &Camera2D, game: &mut Game) {
+    pub fn draw(
+        &mut self, 
+        world_id: WorldId,
+        camera: &Camera2D, 
+        game: &mut Game
+    ) {
         set_camera(camera);
         clear_background(LIGHTGRAY);
 
-        let world = game.current_world();
+        let world = game.get_world(world_id);
 
         let rooms = &world.rooms;
 

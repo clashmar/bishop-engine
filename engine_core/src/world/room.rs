@@ -5,25 +5,28 @@ use crate::{
         world_ecs::WorldEcs
     }, global::tile_size, tiles::tilemap::TileMap
 };
-use std::{io, path::PathBuf};
 use serde_with::FromInto;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use crate::{constants::*};
 
+/// Identifier for a room.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct RoomId(pub usize);
+
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(default)]
 pub struct Room {
-    pub id: usize, 
+    pub id: RoomId, 
     pub name: String,
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2, // Top-left origin in pixels
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub size: Vec2,
     pub exits: Vec<Exit>,
-    pub adjacent_rooms: Vec<usize>,
+    pub adjacent_rooms: Vec<RoomId>,
     pub variants: Vec<RoomVariant>,
     pub darkness: f32,
 }
@@ -35,7 +38,7 @@ impl Room {
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
         };
 
-        let id = 0;
+        let id = RoomId(0);
 
         let room = Room {
         id,
@@ -53,14 +56,15 @@ impl Room {
         room
     }
 
-    pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
-        let path = PathBuf::from(GAME_SAVE_ROOT)
-            .join(world_name)
-            .join("rooms")
-            .join(format!("{}.ron", self.id));
-        let data = std::fs::read_to_string(path)?;
-        ron::de::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-    }
+    // pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
+    //     let path = PathBuf::from(GAME_SAVE_ROOT)
+    //         .join(world_name)
+    //         .join("rooms")
+    //         .join(format!("{}.ron", self.id));
+
+    //     let data = std::fs::read_to_string(path)?;
+    //     ron::de::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    // }
 
     pub fn link_exits(&mut self, other_rooms: &[&Room]) {
         let epsilon = 0.01; // tolerance for floating-point comparisons
@@ -114,7 +118,7 @@ impl Room {
         }).collect()
     }
 
-    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: usize) {
+    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: RoomId) {
         let _camera = world_ecs.create_entity()
             .with(Position { position: self.position })
             .with(RoomCamera::new(room_id))
@@ -168,5 +172,5 @@ pub struct Exit {
     // Local grid coordinate
     pub position: Vec2,                 
     pub direction: ExitDirection,      
-    pub target_room_id: Option<usize>, 
+    pub target_room_id: Option<RoomId>, 
 }

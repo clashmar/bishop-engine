@@ -11,7 +11,8 @@ use crate::{
         world_ecs::WorldEcs
     },
     ecs_component, 
-    inspector_module
+    inspector_module, 
+    world::room::RoomId
 }; 
 
 /// Marker trait for components.
@@ -107,7 +108,7 @@ inspector_module!(Layer);
 /// Component that stores the room identifier an entity belongs to.
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
-pub struct CurrentRoom(pub usize);
+pub struct CurrentRoom(pub RoomId);
 ecs_component!(CurrentRoom);
 
 /// Marker component for the player entity.

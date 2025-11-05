@@ -1,31 +1,39 @@
+use engine_core::ui::toast::Toast;
 // editor/src/editor.rs
-use engine_core::{
-    constants::*, game::game::Game, global::set_global_tile_size, physics::collider_system, rendering::render_system::RenderSystem, world::room::Room
-};
+use engine_core::world::world::WorldId;
+use engine_core::world::room::{Room, RoomId};
+use engine_core::physics::collider_system;
+use engine_core::constants::*;
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::global::set_global_tile_size;
 use std::io;
 use macroquad::prelude::*;
-use crate::{
-    editor_camera_controller::EditorCameraController,
-    controls::controls::Controls,
-    room::room_editor::RoomEditor,
-    storage::editor_storage,
-    tilemap::tile_palette::TilePalette,
-    world::world_editor::WorldEditor,
-    playtest::room_playtest,
-};
+use engine_core::game::game::Game;
+use crate::controls::controls::Controls;
+use crate::playtest::room_playtest;
+use crate::tilemap::tile_palette::TilePalette;
+use crate::editor_camera_controller::EditorCameraController;
+use crate::storage::editor_storage;
+use crate::Camera2D;
+use crate::room::room_editor::RoomEditor;
+use crate::world::world_editor::WorldEditor;
+use crate::game::game_editor::GameEditor;
 
 pub enum EditorMode {
-    World,
-    Room(usize),
+    Game,
+    World(WorldId),
+    Room(RoomId),
 }
 
 pub struct Editor {
     pub game: Game,
     pub mode: EditorMode,
+    pub game_editor: GameEditor,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
     pub camera: Camera2D,
-    pub current_room_id: Option<usize>,
+    pub current_world_id: Option<WorldId>,
+    pub current_room_id: Option<RoomId>,
     pub render_system: RenderSystem,
 }
 
@@ -59,10 +67,12 @@ impl Editor {
 
         let mut editor = Self {
             game,
-            mode: EditorMode::World,
+            mode: EditorMode::Game,
+            game_editor: GameEditor::new(),
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
             camera,
+            current_world_id: None,
             current_room_id: None,
             render_system: RenderSystem::new(),
         };
@@ -79,11 +89,20 @@ impl Editor {
         }
         
         match self.mode {
-            EditorMode::World => {
+            EditorMode::Game => {
+                // Update returns the id of the world being edited
+                if let Some(world_id) = self.game_editor.update(
+                    &mut self.game
+                ).await {
+                    self.current_world_id = Some(world_id);
+                    self.mode = EditorMode::World(world_id);
+                }
+            }
+            EditorMode::World(world_id) => {
                 // Update returns the id of the room being edited
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
-                    &mut self.game.current_world_mut()
+                    &mut self.game.get_world(world_id)
                 ).await {
                     self.current_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
@@ -134,14 +153,14 @@ impl Editor {
                             self.world_editor.center_on_room(&mut self.camera, room);
                         }
 
-                        // Save everything
-                        editor_storage::save_game(&self.game)
-                            .expect("Could not save game.");
-
                         // Clean up the temporary cache
                         self.current_room_id = None;
                         self.room_editor.reset();
-                        self.mode = EditorMode::World;
+                        self.mode = EditorMode::World(current_world.id);
+
+                        // Save everything
+                        editor_storage::save_game(&self.game)
+                            .expect("Could not save game.");
                     }
                 }
 
@@ -177,6 +196,7 @@ impl Editor {
         if Controls::save() {
             editor_storage::save_game(&self.game)
                 .expect("Could not save game.");
+            Toast::new("Saved", 2.5);
         }
 
         if Controls::undo() {
@@ -190,14 +210,25 @@ impl Editor {
 
     pub async fn draw(&mut self) {
         match self.mode {
-            EditorMode::World => {
+            EditorMode::Game => {
+                self.game_editor.draw(
+                    &mut self.game
+                );
+            },
+            EditorMode::World(world_id) => {
+                // World id should already be set
+                if self.current_world_id.is_none() {
+                    self.current_world_id = Some(world_id);
+                }
+
                 self.world_editor.draw(
+                    world_id,
                     &self.camera, 
                     &mut self.game,
                 );
-            }
+            },
             EditorMode::Room(room_id) => {
-                // The room id should already be set
+                // Room id should already be set
                 if self.current_room_id.is_none() {
                     self.current_room_id = Some(room_id);
                 }
@@ -223,7 +254,7 @@ impl Editor {
         }
     }
 
-    fn get_room_from_id(&self, room_id: &usize) -> &Room {
+    fn get_room_from_id(&self, room_id: &RoomId) -> &Room {
         self.game
             .current_world().rooms
             .iter()

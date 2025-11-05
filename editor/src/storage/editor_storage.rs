@@ -5,9 +5,9 @@ use engine_core::{
     assets::asset_manager::AssetManager, constants::DEFAULT_TILE_SIZE, ecs::{
         component::{CurrentRoom, Player, Position}, 
         world_ecs::WorldEcs
-    }, game::game::Game, storage::path_utils::*, world::{
+    }, game::{game::Game, game_map::GameMap}, storage::path_utils::*, world::{
         room::Room,
-        world::World,
+        world::{World, WorldId},
     }
 };
 use std::{
@@ -42,6 +42,7 @@ pub async fn create_new_game(name: String) -> Game {
         asset_manager,
         current_world_id: current_id,
         tile_size: DEFAULT_TILE_SIZE,
+        game_map: GameMap::default(),
     };
 
     // Save the game.
@@ -135,7 +136,7 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
 
 /// Create a fresh world with a single default room.
 pub fn create_new_world() -> World {
-    let id = Uuid::new_v4();
+    let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
     let mut world_ecs = WorldEcs::default();
     let first_room = Room::default(&mut world_ecs);
@@ -149,6 +150,7 @@ pub fn create_new_world() -> World {
         rooms: vec![first_room],
         starting_room: Some(room_id),
         starting_position: Some(starting_position),
+        map_position: Vec2::ZERO,
     };
 
     let _player = world.world_ecs

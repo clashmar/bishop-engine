@@ -1,4 +1,5 @@
 // engine_core/src/world/world.rs
+use crate::world::room::RoomId;
 use crate::global::tile_size;
 use crate::tiles::tilemap::TileMap;
 use crate::ecs::{world_ecs::WorldEcs};
@@ -9,17 +10,23 @@ use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
+/// Identifier for a world.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct WorldId(pub Uuid);
+
 #[serde_as]
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct World {
-    pub id: Uuid,
+    pub id: WorldId,
     pub name: String,
     pub world_ecs: WorldEcs,
     pub rooms: Vec<Room>,
-    pub starting_room: Option<usize>,
+    pub starting_room: Option<RoomId>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
+    #[serde_as(as = "FromInto<[f32; 2]>")]
+    pub map_position: Vec2,
 }
 
 impl World {

@@ -17,7 +17,7 @@ use engine_core::{
         module_factory::ModuleFactoryEntry, 
         world_ecs::WorldEcs
     }, 
-    ui::{toast::WarningToast, widgets::*}
+    ui::{toast::Toast, widgets::*}
 };
 use macroquad::prelude::*;
 use crate::gui::gui_constants::*;
@@ -33,7 +33,7 @@ const FIELD_GAP: f32 = 20.0;
 pub struct AnimationModule {
     pending_rename: bool,
     rename_initial_value: String,
-    warning: Option<WarningToast>,
+    warning: Option<Toast>,
     select_dropdown_id: WidgetId,
     set_dropdown_id: WidgetId,
     rename_field_id: WidgetId,
@@ -255,7 +255,7 @@ pub fn draw_current_clip_dropdowns(
             other => {
                 // Prevent duplicate concrete types on the same entity
                 if animation.clips.contains_key(&other) && Some(&other) != animation.current.as_ref() {
-                    module.warning = Some(WarningToast::new(
+                    module.warning = Some(Toast::new(
                         format!("Enity already has this animation."),
                         2.0, // seconds
                     ));

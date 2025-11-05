@@ -7,7 +7,7 @@ use engine_core::{
         component::{Collider, CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
+    }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::{Room, RoomId}
 };
 use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
 use macroquad::prelude::*;
@@ -130,7 +130,7 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: usize) {
+pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: RoomId) {
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let pos_store = world_ecs.get_store::<Position>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
@@ -188,7 +188,7 @@ pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: usize) {
 /// Draw an icon for a `Light` that has no other visual component.
 pub fn draw_light_placeholders(
     world_ecs: &WorldEcs,
-    room_id: usize,
+    room_id: RoomId,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, _light) in world_ecs.get_store::<Light>().data.iter() {
@@ -241,7 +241,7 @@ pub fn draw_light_placeholders(
 pub fn draw_glow_placeholders(
     world_ecs: &WorldEcs, 
     asset_manager: &mut AssetManager,
-    room_id: usize,
+    room_id: RoomId,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, glow) in world_ecs.get_store::<Glow>().data.iter() {
