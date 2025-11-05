@@ -46,7 +46,7 @@ impl InspectorModule for RoomCameraModule {
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
         let label_width = measure_text(mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, WHITE);
+        draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
 
         let mode_rect = Rect::new(rect.x + label_width + SPACING, y, rect.w - label_width - SPACING, 30.0);
         let current_mode = cam.zoom_mode;
@@ -105,7 +105,7 @@ impl InspectorModule for RoomCameraModule {
             rect.x,
             y + 20.0,
             FIELD_TEXT_SIZE,
-            WHITE,
+            FIELD_TEXT_COLOR,
         );
 
         let cam_mode_rect = Rect::new(
@@ -126,7 +126,7 @@ impl InspectorModule for RoomCameraModule {
         ];
 
         // Advance y for the next position
-        y += cam_mode_rect.h + SPACING;
+        // y += cam_mode_rect.h + SPACING;
 
         // Render the dropdowns in reverse order
         if let Some(new_cam_mode) = gui_dropdown(
@@ -172,7 +172,7 @@ impl RoomCameraModule {
         let label = "Scale: ";
         let label_width = measure_text(label, None, FIELD_TEXT_SIZE as u16, 1.0).width + 1.0;
         let num_width = measure_text("0.00", None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE, WHITE);
+        draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
 
         // Numeric field 
         let num_rect = Rect::new(

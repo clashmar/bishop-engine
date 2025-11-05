@@ -2,8 +2,7 @@
 use strum_macros::{EnumIter, EnumString};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::{Path, PathBuf}};
 use serde_with::{FromInto, serde_as};
 use std::fmt;
 use crate::{
@@ -83,7 +82,7 @@ impl Animation {
         current_id: &ClipId,
         sprite_id: SpriteId,
     ) {
-        if sprite_id.0 != Uuid::nil() {
+        if sprite_id.0 != 0 {
             self.sprite_cache
                 .insert(current_id.clone(), sprite_id);
         }
@@ -166,7 +165,7 @@ pub struct AnimationDef {
 
 /// A variant is a folder that contains the spritesheets for an entity variant.
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct VariantFolder(pub String);
+pub struct VariantFolder(pub PathBuf);
 
 /// Runtime state for a single clip.
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -197,24 +196,18 @@ pub async fn resolve_sprite_id(
         ClipId::Custom(name) => &format!("{}.png", name),
         ClipId::New => unreachable!(),
     };
-
-    // Append with the specific animation
-    let path = format!("{}/{}", variant_folder.0, filename);
-
+      
+    // Build the path
+    let path: PathBuf = Path::new(&variant_folder.0).join(filename);
+    
     // Fast‑path if already cached in AssetManager
-    if let Some(&id) = asset_manager.path_to_id.get(&path) {
+    if let Some(&id) = asset_manager.path_to_sprite_id.get(&path) {
         return id;
     }
 
-    if !Path::new(&path).exists() {
-        // Return an empty Uuid to prevent panics
-        return SpriteId(Uuid::nil());
-    }
-
-    // Load the texture
-     match asset_manager.load(&path).await {
+     match asset_manager.init_texture(&path).await {
         Ok(id) => id,
-        Err(_) => SpriteId(Uuid::nil())
+        Err(_) => SpriteId(0) // Sentinal
      }
 }
 

@@ -7,13 +7,11 @@ use crate::{gui::{
 
 use engine_core::{
     assets::asset_manager::AssetManager,
-    ecs::{
-        component::Position,
-        world_ecs::{WorldEcs},
-    },
+    ecs::
+        world_ecs::{WorldEcs}
+    ,
     global::tile_size,
     tiles::{
-        tile::{Tile, TileSprite},
         tilemap::TileMap,
     },
     world::{
@@ -55,7 +53,6 @@ impl TileMapEditor  {
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
         world_ecs: &mut WorldEcs,
-        asset_manager: &mut AssetManager,
     ) 
         {
         if !self.initialized {
@@ -63,7 +60,7 @@ impl TileMapEditor  {
             self.initialized = true;
         }
 
-        self.panel.update(world_ecs, asset_manager).await;
+        self.panel.update(world_ecs).await;
 
         self.dynamic_ui.clear();
 
@@ -149,51 +146,19 @@ impl TileMapEditor  {
         // Remove
         if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
             if let Some(old_tile) = map.tiles.remove(&(x, y)) {
-                if let Some(entity) = old_tile.entity {
-                    world_ecs.remove_entity(entity);
-                }
+                // TODO: Handle ecs/ sprite
             }
             return;
         }
 
-        let (def_id, sprite_id, sprite_path) = match (
-            self.panel.palette.selected_def_opt(),
-            self.panel.palette.selected_sprite_opt(),
-            self.panel.palette.selected_path_opt(),
-        ) {
-            (Some(d), Some(s), Some(p)) => (d, s, p),
+        let def_id = match self.panel.palette.selected_def_opt() {
+            Some(d) => d,
             _ => return, // There is no tile to place
         };
 
         // Place
         if is_mouse_button_down(MouseButton::Left) {
-            // Grab the definition from the world
-            let def = world_ecs
-                .tile_defs
-                .get(&def_id)
-                .expect("definition must exist")
-                .clone();
-
-            // Build the base entity
-            let mut builder = world_ecs
-                .create_entity()
-                .with(Position {
-                    position: vec2(
-                        x as f32 * tile_size(),
-                        y as f32 * tile_size(),
-                    ),
-                })
-                .with(TileSprite { 
-                    sprite_id,
-                    path: sprite_path.to_string(),
-                });
-
-            // Apply the behaviour definition (walkable, solid, damage, …)
-            builder = def.apply(builder);
-
-            // Finish and store the entity id in the hashmap
-            let entity = builder.finish();
-            map.tiles.insert((x, y), Tile { entity: Some(entity) });
+            map.tiles.insert((x, y), def_id);
         }
     }
 
@@ -222,7 +187,7 @@ impl TileMapEditor  {
         }
     }
 
-    pub fn draw(
+    pub async fn draw(
         &mut self, 
         camera: &Camera2D, 
         map: &mut TileMap, 
@@ -235,7 +200,7 @@ impl TileMapEditor  {
         set_camera(camera);
         map.draw(exits, world_ecs, asset_manager, room_position);
         self.draw_hover_highlight(camera, map, room_position);
-        self.draw_ui(camera, asset_manager, world_ecs, map);
+        self.draw_ui(camera, asset_manager, world_ecs, map).await;
     }
 
     fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) {
@@ -266,7 +231,7 @@ impl TileMapEditor  {
         }
     }
 
-    fn draw_ui(
+    async fn draw_ui(
         &mut self, 
         camera: &Camera2D, 
         asset_manager: &mut AssetManager,
@@ -282,7 +247,7 @@ impl TileMapEditor  {
         set_default_camera();
 
         // Draw panel
-        self.panel.draw(asset_manager, world_ecs, map);
+        self.panel.draw(asset_manager, world_ecs, map).await;
     }
 
     fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) -> Option<GridPos> {

@@ -4,7 +4,7 @@ use engine_core::{
         component::{CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, tiles::tile::TileSprite, ui::widgets::*, world::room::Room
+    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, ui::widgets::*, world::room::Room
 };
 use crate::{
     canvas::grid, 
@@ -108,8 +108,7 @@ impl RoomEditor {
                     camera,
                     room, 
                     &other_bounds, 
-                    world_ecs, 
-                    asset_manager
+                    world_ecs,
                 ).await;
             }
             RoomEditorMode::Scene => {
@@ -117,7 +116,8 @@ impl RoomEditor {
                     ui_was_clicked = true;
                 }
 
-                let drag_handled = self.handle_dragging(
+                let drag_handled = self.handle_selection(
+                    room.id,
                     camera,
                     world_ecs,
                     asset_manager,
@@ -126,7 +126,7 @@ impl RoomEditor {
                 );
 
                 if !drag_handled {
-                    self.handle_keyboard_move(world_ecs);
+                    self.handle_keyboard_move(world_ecs, room.id);
                 }
 
                 // Create a new entity if create was pressed
@@ -168,7 +168,7 @@ impl RoomEditor {
         false
     }
 
-    pub fn draw(
+    pub async fn draw(
         &mut self, 
         camera: &Camera2D,
         room: &mut Room,
@@ -199,7 +199,7 @@ impl RoomEditor {
                     world_ecs,
                     asset_manager,
                     room.position,
-                );
+                ).await;
 
                 if self.show_grid { 
                     set_camera(camera);
@@ -207,9 +207,9 @@ impl RoomEditor {
                 }
             }
             RoomEditorMode::Scene => {
-                // !This is the camera I'm referring to!
+                // TODO: Pick best camera for preview from room cameras
                 let room_camera = get_room_camera(world_ecs, room.id)
-                    .expect("This room should have a camera.");
+                    .expect("This room should have at least one camera.");
 
                 let render_cam = if self.view_preview {
                     &room_camera.camera
@@ -226,6 +226,8 @@ impl RoomEditor {
                     asset_manager,
                     render_system,
                     render_cam,
+                    0.0,
+                    None,
                 );
 
                 // Present room depending on view mode
@@ -246,9 +248,9 @@ impl RoomEditor {
                         grid::draw_grid(camera);
                     }
                     
-                    draw_camera_placeholder(room_camera.position);
-                    draw_light_placeholders(world_ecs);
-                    draw_glow_placeholders(world_ecs, asset_manager);
+                    draw_camera_placeholders(&world_ecs, room.id);
+                    draw_light_placeholders(world_ecs, room.id);
+                    draw_glow_placeholders(world_ecs, asset_manager, room.id);
 
                     if let Some(selected_entity) = self.selected_entity {
                         if !world_ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
@@ -299,16 +301,16 @@ impl RoomEditor {
         self.draw_coordinates(camera, room);
     }
 
-    /// Handles mouse‑drag selection / movement.
-    fn handle_dragging(
+    /// Handles mouse selection / movement.
+    fn handle_selection(
         &mut self,
+        room_id: usize,
         camera: &Camera2D,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
         mouse_screen: Vec2,
         ui_was_clicked: bool,
     ) -> bool {
-        // Detect start of a drag
         if !ui_was_clicked
             && is_mouse_button_pressed(MouseButton::Left)
             && !self.dragging
@@ -316,7 +318,7 @@ impl RoomEditor {
             self.selected_entity = None;
             for (entity, pos) in world_ecs.get_store::<Position>().data.iter() {
                 // Skip tiles, UI etc
-                if !can_move_entity(world_ecs, *entity) {
+                if !can_select_entity_in_room(world_ecs, *entity, room_id) {
                     continue;
                 }
                 let hitbox = entity_hitbox(
@@ -389,6 +391,7 @@ impl RoomEditor {
     fn handle_keyboard_move(
         &mut self,
         world_ecs: &mut WorldEcs,
+        room_id: usize,
     ) {
         // Only act when an entity is selected and no drag is in progress
         if self.dragging || self.selected_entity.is_none() {
@@ -405,7 +408,7 @@ impl RoomEditor {
         let entity = self.selected_entity.unwrap();
 
         // Make sure the entity is moveable
-        if !can_move_entity(world_ecs, entity) {
+        if !can_select_entity_in_room(world_ecs, entity, room_id) {
             return;
         }
 
@@ -439,9 +442,14 @@ impl RoomEditor {
     }
 }
 
-pub fn can_move_entity(world_ecs: &WorldEcs, entity: Entity) -> bool {
-    if world_ecs.get_store::<TileSprite>().get(entity).is_some() {
-        return false;
+pub fn can_select_entity_in_room(
+    world_ecs: &WorldEcs,
+    entity: Entity,
+    room_id: usize,
+) -> bool {
+    // Make sure the entity is in the requested room
+    match world_ecs.get_store::<CurrentRoom>().get(entity) {
+        Some(CurrentRoom(id)) => *id == room_id,
+        None => false,
     }
-    true
 }

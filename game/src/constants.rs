@@ -1,2 +1,2 @@
 // game/src/constants.rs
-pub const GRAVITY: f32 = 4000.0;
+pub const GRAVITY: f32 = 900.0;

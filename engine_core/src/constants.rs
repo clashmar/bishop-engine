@@ -2,6 +2,11 @@
 use macroquad::prelude::*;
 use crate::global::tile_size;
 
+/// 60Hz pysics.
+pub const FIXED_DT: f32 = 1.0 / 60.0;
+/// Protects against long freezes.
+pub const MAX_ACCUM: f32 = 0.5; 
+
 /// Default tile size that the world scales to.
 pub const DEFAULT_TILE_SIZE: f32 = 16.0;
 pub const MINIMUM_TILE_SIZE: f32 = 9.0;

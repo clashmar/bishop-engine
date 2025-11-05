@@ -6,8 +6,10 @@ use engine_core::{
         world_ecs::WorldEcs,
     }, 
     global::tile_size, 
-    tiles::tilemap::TileMap
+    tiles::{tile::TileComponent, tilemap::TileMap}
 };
+
+const OVERLAP_EPS: f32 = 0.0001; 
 
 /// Information returned by the sweep test.
 pub struct SweepResult {
@@ -34,47 +36,43 @@ fn resolve_axis(
     this_size: Vec2,
     obstacles: &[(Vec2, Vec2)],
 ) -> (f32, bool) {
-    // No movement 
     if delta == 0.0 {
         return (0.0, false);
     }
 
-    // Desired new coordinate on this axis
     let mut allowed = delta;
     let mut blocked = false;
 
-    // Current min/max on the moving axis
     let (my_min, my_max) = if axis == 0 {
         (position.x, position.x + this_size.x)
     } else {
         (position.y, position.y + this_size.y)
     };
 
-    // Scan every obstacle and shrink the allowed movement if this would hit it
     for (obs_min, obs_max) in obstacles.iter() {
-        // Get the obstacle’s interval on the same axis
         let (obs_min_axis, obs_max_axis) = if axis == 0 {
             (obs_min.x, obs_max.x)
         } else {
             (obs_min.y, obs_max.y)
         };
 
-        // Only care about obstacles that overlap on the other axis
+        // Overlap on the other axis
         let overlap_other = if axis == 0 {
-            // Y‑intervals must intersect
-            !(position.y + this_size.y <= obs_min.y || position.y >= obs_max.y)
+            !(position.y + this_size.y <= obs_min.y + OVERLAP_EPS
+                || position.y >= obs_max.y - OVERLAP_EPS)
         } else {
-            // X‑intervals must intersect
-            !(position.x + this_size.x <= obs_min.x || position.x >= obs_max.x)
+            !(position.x + this_size.x <= obs_min.x + OVERLAP_EPS
+                || position.x >= obs_max.x - OVERLAP_EPS)
         };
 
         if !overlap_other {
             continue;
         }
 
+        // Apply directional epsilon for movement axis
         if delta > 0.0 {
-            // Moving positive direction – this will hit the obstacle’s left side
-            if my_max <= obs_min_axis && my_max + delta > obs_min_axis {
+            // Moving positive (right or down)
+            if my_max <= obs_min_axis + OVERLAP_EPS && my_max + delta > obs_min_axis {
                 let dist = obs_min_axis - my_max;
                 if dist < allowed {
                     allowed = dist;
@@ -82,8 +80,8 @@ fn resolve_axis(
                 }
             }
         } else {
-            // Moving negative direction – we will hit the obstacle’s right side
-            if my_min >= obs_max_axis && my_min + delta < obs_max_axis {
+            // Moving negative (left or up)
+            if my_min >= obs_max_axis - OVERLAP_EPS && my_min + delta < obs_max_axis {
                 let dist = obs_max_axis - my_min;
                 if dist > allowed {
                     allowed = dist;
@@ -92,6 +90,7 @@ fn resolve_axis(
             }
         }
     }
+
     (allowed, blocked)
 }
 
@@ -104,19 +103,18 @@ pub fn sweep_move(
     desired_delta: Vec2,
     collider: Collider,
 ) -> SweepResult {
-    // Gather every solid AABB we have to test against
+    // Gather every solid AABB to test against
     let mut obstacles: Vec<(Vec2, Vec2)> = Vec::new();
 
     // Tiles
     // Only tiles that carry a Solid component are obstacles
-    for ((x, y), tile) in tilemap.tiles.iter() {
-        let Some(entity) = tile.entity else { continue };
-        if let Some(solid) = world_ecs.get::<Solid>(entity) {
-            if solid.0 {
-                let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
-                let tile_aabb = (tile_pos, tile_pos + vec2(tile_size(), tile_size()));
-                obstacles.push(tile_aabb);
-            }
+    for ((x, y), tile_def_id) in tilemap.tiles.iter() {
+        let Some(tile_def) = world_ecs.tile_defs.get(tile_def_id) else {continue};
+
+        if tile_def.components.contains(&TileComponent::Solid(true)) {
+            let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
+            let tile_aabb = (tile_pos, tile_pos + vec2(tile_size(), tile_size()));
+            obstacles.push(tile_aabb);
         }
     }
 
@@ -146,6 +144,10 @@ pub fn sweep_move(
         }
     }
 
+    obstacles.extend(
+        room_bounds_aabbs(room_origin, tilemap.width, tilemap.height)
+    );
+
     // Sweep X axis, then Y axis
     let (allowed_x, blocked_x) = resolve_axis(
         entity_position,
@@ -170,4 +172,25 @@ pub fn sweep_move(
         blocked_x,
         blocked_y,
     }
+}
+
+/// Returns four AABBs that represent the four borders of a rectangular room.
+fn room_bounds_aabbs(origin: Vec2, map_width: usize, map_height: usize) -> Vec<(Vec2, Vec2)> {
+    let width = map_width as f32 * tile_size();
+    let height = map_height as f32 * tile_size();
+
+    let thickness = 0.1_f32;
+
+    // Left wall
+    let left = (origin - vec2(thickness, 0.0), origin + vec2(0.0, height));
+
+    // Right wall
+    let right = (origin + vec2(width, 0.0), origin + vec2(width + thickness, height));
+
+    // Ignore top wall (we don't need to jump of it... yet)
+
+    // Bottom wall
+    let bottom = (origin + vec2(0.0, height), origin + vec2(width, height + thickness));
+
+    vec![left, right, bottom]
 }

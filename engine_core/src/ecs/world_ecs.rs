@@ -4,10 +4,10 @@ use once_cell::sync::Lazy;
 use crate::{
     ecs::{
         component::*, 
-        component_registry::{ComponentReg, StoredComponent}, 
+        component_registry::{ComponentRegistry, StoredComponent}, 
         entity::{Entity, EntityBuilder}, has_any::HasAny
     }, 
-    tiles::tile_def::{TileDef, TileDefId}
+    tiles::tile::{TileDef, TileDefId}
 }; 
 use serde::{Deserialize, Serialize};
 use serde::ser::{SerializeStruct, Serializer};
@@ -19,13 +19,17 @@ use macroquad::prelude::*;
 pub struct WorldEcs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
     pub tile_defs: HashMap<TileDefId, TileDef>,
+    next_entity_id: usize,
+    next_tile_def_id: usize,
 }
 
 impl WorldEcs {
-    /// Allocate a fresh UUID and return a builder.
+    /// Allocate a fresh id and return a builder.
     pub fn create_entity(&mut self) -> EntityBuilder {
+        // This ensures id will always start from 1 
+        self.next_entity_id += 1;
         EntityBuilder {
-            id: Entity::new(),
+            id: Entity(self.next_entity_id),
             world_ecs: self,
         }
     }
@@ -67,7 +71,7 @@ impl WorldEcs {
 
     /// Remove all component data that belongs to `entity`.
     pub fn remove_entity(&mut self, entity: Entity) {
-        for reg in inventory::iter::<ComponentReg> {
+        for reg in inventory::iter::<ComponentRegistry> {
             (reg.remove)(self, entity);
         }
     }
@@ -132,6 +136,14 @@ impl WorldEcs {
         self.get_store_mut::<T>().insert(entity, component);
     }
 
+    /// Inserts a TileDef and returns its id.
+    pub fn insert_tile_def(&mut self, def: TileDef) -> TileDefId {
+        let id = TileDefId(self.next_tile_def_id);
+        self.next_tile_def_id += 1;
+        self.tile_defs.insert(id, def);
+        id
+    }
+
     /// Returns the player Entity.
     pub fn get_player_entity(&self) -> Entity {
         // There should only ever be one player
@@ -141,6 +153,25 @@ impl WorldEcs {
             .expect("There should always be a player entity.");
 
         *player
+    }
+
+    /// Returns the player Position.
+    pub fn get_player_position(&self) -> Position {
+        let player_entity = self.get_player_entity();
+
+        self.get_store::<Position>()
+            .get(player_entity)
+            .cloned()
+            .expect("Player should always have a Position component.")
+    }
+
+    /// Restores runtime state for the ECS (next ids etc).
+    pub fn restore_runtime(&mut self) {
+        if let Some(max_id) = self.tile_defs.keys().map(|id| id.0).max() {
+            self.next_tile_def_id = max_id + 1;
+        } else {
+            self.next_tile_def_id = 1;
+        }
     }
 }
 
@@ -167,7 +198,7 @@ impl Serialize for WorldEcs {
                     continue;
                 }
             };
-            let reg = inventory::iter::<ComponentReg>()
+            let reg = inventory::iter::<ComponentRegistry>()
                 .into_iter()
                 .find(|r| r.type_name == *type_name)
                 .expect("registry entry missing");
@@ -184,6 +215,7 @@ impl Serialize for WorldEcs {
         let mut state = serializer.serialize_struct("WorldEcs", 2)?;
         state.serialize_field("components", &components)?;
         state.serialize_field("tile_defs", &self.tile_defs)?;
+        state.serialize_field("next_entity_id", &self.next_entity_id)?;
         state.end()
     }
 }
@@ -198,6 +230,7 @@ impl<'de> Deserialize<'de> for WorldEcs {
         struct Helper {
             pub components: Vec<StoredComponent>,
             pub tile_defs: HashMap<TileDefId, TileDef>,
+            pub next_entity_id: usize,
         }
 
         let helper = Helper::deserialize(deserializer)?;
@@ -206,7 +239,7 @@ impl<'de> Deserialize<'de> for WorldEcs {
         let mut stores = HashMap::new();
         for stored in &helper.components {
             // Try to find a registry entry
-            let reg_opt = inventory::iter::<ComponentReg>()
+            let reg_opt = inventory::iter::<ComponentRegistry>()
                 .find(|r| r.type_name == stored.type_name);
 
             let reg = match reg_opt {
@@ -225,18 +258,25 @@ impl<'de> Deserialize<'de> for WorldEcs {
             stores.insert(type_id, any_box);
         }
 
-        // Assemble the final world
-        Ok(WorldEcs {
+         // Next tile id is reset in restore runtime
+        let mut world_ecs = WorldEcs {
             stores,
             tile_defs: helper.tile_defs,
-        })
+            next_entity_id: helper.next_entity_id,
+            next_tile_def_id: 0,
+        };
+
+        // Restore the runtime state
+        world_ecs.restore_runtime();
+
+        Ok(world_ecs)
     }
 }
 
 
 static TYPE_NAME_FOR_ID: Lazy<HashMap<TypeId, &'static str>> = Lazy::new(|| {
     let mut map = HashMap::new();
-    for reg in inventory::iter::<ComponentReg> {
+    for reg in inventory::iter::<ComponentRegistry> {
         map.insert(reg.type_id, reg.type_name);
     }
     map

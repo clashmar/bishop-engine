@@ -10,6 +10,9 @@ serde = { version = "1.0", features = ["derive"] }
 ron = "0.9"
 uuid = { version = "1.18", features = ["serde", "v4"] }
 
+[dev-dependencies]
+cargo-bundle = "0.6"
+
 [lib]
 name = "game_lib"
 path = "src/lib.rs"
@@ -21,3 +24,11 @@ path = "src/main.rs"
 [[bin]]
 name = "game-playtest"
 path = "src/playtest_main.rs"
+
+[package.metadata.bundle]
+name = "DemoGame"
+identifier = "com.bishop.demogame"
+version = "0.1.0"
+resources = ["games/Demo"] 
+category = "Game"
+short_description = "A demo game for the bishop engine."

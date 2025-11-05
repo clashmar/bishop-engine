@@ -1,6 +1,5 @@
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use crate::{
     animation::animation_clip::{
         Animation, 
@@ -34,8 +33,8 @@ ecs_component!(CurrentFrame);
 pub async fn update_animation_sytem(
     world_ecs: &mut WorldEcs,
     asset_manager: &mut AssetManager,
-    delta_time: f32,
-    room_id: Uuid,
+    dt: f32,
+    room_id: usize,
 ) {
     // Gather the ids of all entities that are in the current room
     let entities = entities_in_room(world_ecs, room_id);
@@ -63,7 +62,7 @@ pub async fn update_animation_sytem(
         let clip_state = animation.states.get_mut(current_id).unwrap();
 
         // Advance the timer
-        clip_state.timer += delta_time;
+        clip_state.timer += dt;
         let frame_time = 1.0 / clip.fps.max(0.001);
         while clip_state.timer >= frame_time {
             clip_state.timer -= frame_time;
@@ -93,8 +92,6 @@ pub async fn update_animation_sytem(
             frame_size: clip.frame_size,
         };
 
-        
-
         frames.push((*entity, frame));
     }
 
@@ -113,7 +110,7 @@ async fn get_sprite_id(
 ) -> (SpriteId, bool) {
     // Try cache first
     if let Some(&cached) = animation.sprite_cache.get(current_id) {
-        if cached.0 != Uuid::nil() {
+        if cached.0 != 0 {
             return (cached, false);
         }
     }

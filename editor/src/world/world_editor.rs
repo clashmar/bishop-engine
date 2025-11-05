@@ -5,7 +5,6 @@ use engine_core::{
     }
 };
 use macroquad::prelude::*;
-use uuid::Uuid;
 use crate::{editor_camera_controller::{EditorCameraController}, canvas::grid};
 use crate::{gui::{ui_element::WorldUiElement, world_ui::WorldNameUi}};
 use crate::world::coord;
@@ -47,7 +46,7 @@ impl WorldEditor {
     }
 
     /// Returns `Some(room_id)` if a room is clicked on.
-    pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<Uuid> {
+    pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<usize> {
         world.link_all_exits();
         self.handle_ui_clicks(world).await;
 
@@ -81,7 +80,7 @@ impl WorldEditor {
         }
     }
 
-    fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<Uuid> {
+    fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<usize> {
         if is_mouse_button_pressed(MouseButton::Left) {
             let world_mouse = coord::mouse_world_pos(camera);
             for room in &world.rooms {
@@ -94,7 +93,7 @@ impl WorldEditor {
         None
     }
 
-    fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<Uuid> {
+    fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<usize> {
         if is_mouse_button_pressed(MouseButton::Left) {
             let world_mouse = coord::mouse_world_pos(camera);
             for room in &world.rooms {
@@ -108,7 +107,7 @@ impl WorldEditor {
         None
     }
 
-    fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<Uuid> {
+    fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<usize> {
         let mouse_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
 
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -124,7 +123,7 @@ impl WorldEditor {
             if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
                 let (top_left, size) = rect_from_points(start, end);
                 if !self.intersects_existing_room(&world.rooms, top_left, size) {
-                    // Create the room and get its UUID back.
+                    // Create the room and get its id back.
                     let new_id = self.place_room_from_drag(world, top_left, size);
                     self.reset_placing();
                     self.mode = WorldEditorMode::Selecting;

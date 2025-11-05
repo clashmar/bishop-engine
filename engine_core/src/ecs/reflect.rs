@@ -1,6 +1,8 @@
 // engine_core/src/ecs/reflect.rs
 use macroquad::math::{Vec2, Vec3};
 
+use crate::assets::sprite::SpriteId;
+
 /// One mutable field value.
 pub enum FieldValue<'a> {
     Text(&'a mut String),
@@ -9,6 +11,7 @@ pub enum FieldValue<'a> {
     Bool(&'a mut bool),
     Vec2(&'a mut Vec2),
     Vec3(&'a mut Vec3),
+    SpriteId(&'a mut SpriteId),
 }
 
 /// Metadata that the inspector consumes.
@@ -88,11 +91,22 @@ impl ReflectField for Vec2 {
         }
     }
 }
+
 impl ReflectField for Vec3 {
     fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
         FieldInfo { 
             name, 
             value: FieldValue::Vec3(field),
+            widget_hint: None, 
+        }
+    }
+}
+
+impl ReflectField for SpriteId {
+    fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
+        FieldInfo { 
+            name, 
+            value: FieldValue::SpriteId(field),
             widget_hint: None, 
         }
     }
