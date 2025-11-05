@@ -130,8 +130,8 @@ impl InspectorModule for AnimationModule {
                 if let Some(path) = rfd::FileDialog::new()
                     .pick_folder()
                 {
-                    let path_str = path.to_string_lossy().into_owned();
-                    animation.variant = VariantFolder(path_str);
+                    let normalized_path = asset_manager.normalise_path(path);
+                    animation.variant = VariantFolder(normalized_path);
                     variant_changed = true;
                 }
             }

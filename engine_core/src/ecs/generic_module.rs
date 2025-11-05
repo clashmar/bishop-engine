@@ -1,5 +1,5 @@
-use crate::assets::sprite::SpriteId;
 // engine_core/src/ecs/generic_module.rs
+use crate::assets::sprite::SpriteId;
 use crate::ecs::module::InspectorModule;
 use crate::ui::widgets::*;
 use crate::{
@@ -14,6 +14,7 @@ use crate::{
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::{borrow::Cow, marker::PhantomData};
+
 
 const TOP_PADDING: f32 = 10.0;
 const FIELD_HEIGHT: f32 = 30.0;
@@ -110,9 +111,10 @@ where
                                 .add_filter("PNG images", &["png"])
                                 .pick_file()
                             {
-                                let path_str = path.to_string_lossy().into_owned();
+                                let normalized_path = asset_manager.normalise_path(path);
 
-                                *id = asset_manager.get_or_load(&path_str)
+                                *id = asset_manager
+                                    .get_or_load(&normalized_path)
                                     .expect("Could not find id for sprite path.");
                             }
                         }

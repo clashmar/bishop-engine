@@ -2,7 +2,7 @@
 use strum_macros::{EnumIter, EnumString};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 use serde_with::{FromInto, serde_as};
 use std::fmt;
 use crate::{
@@ -196,24 +196,18 @@ pub async fn resolve_sprite_id(
         ClipId::Custom(name) => &format!("{}.png", name),
         ClipId::New => unreachable!(),
     };
-
+      
     // Append with the specific animation
     let path = format!("{}/{}", variant_folder.0, filename);
-
+    
     // Fast‑path if already cached in AssetManager
     if let Some(&id) = asset_manager.path_to_sprite_id.get(&path) {
         return id;
     }
 
-    if !Path::new(&path).exists() {
-        // Set 0 as a sentinal to prevent panics
-        return SpriteId(0);
-    }
-
-    // Load the texture
      match asset_manager.init_texture(&path).await {
         Ok(id) => id,
-        Err(_) => SpriteId(0)
+        Err(_) => SpriteId(0) // Sentinal
      }
 }
 

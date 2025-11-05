@@ -1,10 +1,9 @@
 // editor/src/main.rs
 use crate::{
     editor::Editor, 
-    global::*, 
-    storage::path_utils::absolute_save_root
+    global::*,
 };
-use engine_core::constants::*;
+use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::prelude::*;
 
 mod global;

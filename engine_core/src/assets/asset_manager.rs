@@ -1,11 +1,11 @@
 // engine_core/src/assets/asset_manager.rs
-use std::{path::Path, sync::LazyLock};
+use std::{path::{Path, PathBuf}, sync::LazyLock};
 use futures::executor::block_on;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::{
-    animation::animation_clip::Animation, assets::sprite::SpriteId, world::world::World
+    animation::animation_clip::Animation, assets::sprite::SpriteId, storage::path_utils::assets_folder, world::world::World
 };
 
 #[derive(Serialize, Deserialize, Default)]
@@ -18,41 +18,42 @@ pub struct AssetManager {
     #[serde(skip)]
     /// Counter for sprite ids. Starts from 1.
     next_sprite_id: usize,
+    /// Name of the game for the file system to use.
+    pub game_name: String,
 }
 
 /// Owned empty texture which guards against crashes.
 static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty());
 
 impl AssetManager {
-    /// Initializes a new asset manager with all sprite textures loaded.
-    pub async fn new() -> Self {
+    /// Initializes a new asset manager.
+    pub async fn new(game_name: String) -> Self {
         Self {
             textures: HashMap::new(),
             path_to_sprite_id: HashMap::new(),
             sprite_id_to_path: HashMap::new(),
             next_sprite_id: 1,
+            game_name,
         }
     }
 
     /// Load and initialize a texture from the assets folder.
     /// Returns the `SpriteId` for the texture.
     pub async fn init_texture(&mut self, rel_path: impl AsRef<Path>) -> Result<SpriteId, String> {
-        let key = rel_path.as_ref().to_string_lossy().to_string();
+        let path = rel_path.as_ref().to_string_lossy().to_string();
 
-        if key.trim().is_empty() {
+        if path.trim().is_empty() {
             // Guard against path being empty
             return Err("Empty texture path".into());
         }
 
         // Already loaded, reuse the same id
-        if let Some(&id) = self.path_to_sprite_id.get(&key) {
+        if let Some(&id) = self.path_to_sprite_id.get(&path) {
             return Ok(id);
         }
 
-        // Load the texture from disk.
-        let texture = load_texture(&key)
-            .await
-            .map_err(|e| format!("Failed to load texture '{}': {}", key, e))?;
+        // Load the texture from the assets folder.
+        let texture = self.load_texture_from_game(&path).await?;
 
         // Disable smoothing (needed for pixel art)
         texture.set_filter(FilterMode::Nearest);
@@ -63,8 +64,8 @@ impl AssetManager {
 
         // Store everything
         self.textures.insert(id, texture);
-        self.path_to_sprite_id.insert(key.clone(), id);
-        self.sprite_id_to_path.insert(id, key);
+        self.path_to_sprite_id.insert(path.clone(), id);
+        self.sprite_id_to_path.insert(id, path);
 
         return Ok(id);
     }
@@ -72,9 +73,7 @@ impl AssetManager {
     /// Reloads a texture from its `SpriteId` and updates `path_to_sprite_id`.
     pub async fn reload_texture(&mut self, id: &SpriteId, path: &String) -> Result<(), String> {
         // Load the texture from disk.
-        let texture = load_texture(path)
-            .await
-            .map_err(|e| format!("Failed to load texture '{}': {}", path, e))?;
+        let texture = self.load_texture_from_game(&path).await?;
 
         // Disable smoothing (needed for pixel art)
         texture.set_filter(FilterMode::Nearest);
@@ -143,7 +142,7 @@ impl AssetManager {
     }
 
     /// Initialize all assets for the game.
-    pub async fn init(&mut self, worlds: &mut Vec<World>) {
+    pub async fn init_manager(&mut self, worlds: &mut Vec<World>) {
         // Calculate the next id from the existing map
         self.restore_next_id();
 
@@ -169,6 +168,22 @@ impl AssetManager {
         }
     }
 
+    /// Returns a path normalized relative to the game's assets folder.
+    pub fn normalise_path(&self, path: PathBuf) -> String {
+        let abs_path = path.to_string_lossy().into_owned();
+
+        let rel_path = {
+            let assets_dir = assets_folder(&self.game_name);
+            path.strip_prefix(&assets_dir)
+                .unwrap_or_else(|_| Path::new(&abs_path))
+                .to_string_lossy()
+                .to_string()
+        };
+
+        // Normalise path separators
+        rel_path.replace('\\', "/")
+    }
+
     /// Returns true if the texture for `id` is already present.
     #[inline]
     pub fn contains(&self, id: SpriteId) -> bool {
@@ -179,6 +194,14 @@ impl AssetManager {
     /// or None if the texture has not been loaded/set.
     pub fn texture_size(&self, id: SpriteId) -> Option<(f32, f32)> {
         self.textures.get(&id).map(|tex| (tex.width(), tex.height()))
+    }
+
+    /// Loads a texture from the assets folder.
+    async fn load_texture_from_game(&self, rel_path: &str) -> Result<Texture2D, String> {
+        let full_path = assets_folder(&self.game_name).join(rel_path);
+        load_texture(full_path.to_string_lossy().as_ref())
+            .await
+            .map_err(|e| format!("Failed to load texture '{}': {}", rel_path, e))
     }
 
     /// Calculates the next sprite id 

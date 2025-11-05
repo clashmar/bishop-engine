@@ -221,7 +221,7 @@ impl TilePalette {
                 .add_filter("PNG images", &["png"])
                 .pick_file()
             {
-                self.ui.sprite_path = path.to_string_lossy().into_owned();
+                self.ui.sprite_path = asset_manager.normalise_path(path);
             }
         }
         
