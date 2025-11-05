@@ -108,8 +108,7 @@ impl RoomEditor {
                     camera,
                     room, 
                     &other_bounds, 
-                    world_ecs, 
-                    asset_manager
+                    world_ecs,
                 ).await;
             }
             RoomEditorMode::Scene => {
@@ -169,7 +168,7 @@ impl RoomEditor {
         false
     }
 
-    pub fn draw(
+    pub async fn draw(
         &mut self, 
         camera: &Camera2D,
         room: &mut Room,
@@ -200,7 +199,7 @@ impl RoomEditor {
                     world_ecs,
                     asset_manager,
                     room.position,
-                );
+                ).await;
 
                 if self.show_grid { 
                     set_camera(camera);

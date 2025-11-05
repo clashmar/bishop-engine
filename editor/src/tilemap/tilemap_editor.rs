@@ -53,7 +53,6 @@ impl TileMapEditor  {
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
         world_ecs: &mut WorldEcs,
-        asset_manager: &mut AssetManager,
     ) 
         {
         if !self.initialized {
@@ -61,7 +60,7 @@ impl TileMapEditor  {
             self.initialized = true;
         }
 
-        self.panel.update(world_ecs, asset_manager).await;
+        self.panel.update(world_ecs).await;
 
         self.dynamic_ui.clear();
 
@@ -152,12 +151,8 @@ impl TileMapEditor  {
             return;
         }
 
-        let (def_id, sprite_id, sprite_path) = match (
-            self.panel.palette.selected_def_opt(),
-            self.panel.palette.selected_sprite_opt(),
-            self.panel.palette.selected_path_opt(),
-        ) {
-            (Some(d), Some(s), Some(p)) => (d, s, p),
+        let def_id = match self.panel.palette.selected_def_opt() {
+            Some(d) => d,
             _ => return, // There is no tile to place
         };
 
@@ -192,7 +187,7 @@ impl TileMapEditor  {
         }
     }
 
-    pub fn draw(
+    pub async fn draw(
         &mut self, 
         camera: &Camera2D, 
         map: &mut TileMap, 
@@ -205,7 +200,7 @@ impl TileMapEditor  {
         set_camera(camera);
         map.draw(exits, world_ecs, asset_manager, room_position);
         self.draw_hover_highlight(camera, map, room_position);
-        self.draw_ui(camera, asset_manager, world_ecs, map);
+        self.draw_ui(camera, asset_manager, world_ecs, map).await;
     }
 
     fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) {
@@ -236,7 +231,7 @@ impl TileMapEditor  {
         }
     }
 
-    fn draw_ui(
+    async fn draw_ui(
         &mut self, 
         camera: &Camera2D, 
         asset_manager: &mut AssetManager,
@@ -252,7 +247,7 @@ impl TileMapEditor  {
         set_default_camera();
 
         // Draw panel
-        self.panel.draw(asset_manager, world_ecs, map);
+        self.panel.draw(asset_manager, world_ecs, map).await;
     }
 
     fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) -> Option<GridPos> {
