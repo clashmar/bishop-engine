@@ -4,7 +4,7 @@ use engine_core::{
         component::{CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, ui::widgets::*, world::room::Room
+    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, ui::widgets::*, world::room::{Room, RoomId}
 };
 use crate::{
     canvas::grid, 
@@ -304,7 +304,7 @@ impl RoomEditor {
     /// Handles mouse selection / movement.
     fn handle_selection(
         &mut self,
-        room_id: usize,
+        room_id: RoomId,
         camera: &Camera2D,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
@@ -391,7 +391,7 @@ impl RoomEditor {
     fn handle_keyboard_move(
         &mut self,
         world_ecs: &mut WorldEcs,
-        room_id: usize,
+        room_id: RoomId,
     ) {
         // Only act when an entity is selected and no drag is in progress
         if self.dragging || self.selected_entity.is_none() {
@@ -445,7 +445,7 @@ impl RoomEditor {
 pub fn can_select_entity_in_room(
     world_ecs: &WorldEcs,
     entity: Entity,
-    room_id: usize,
+    room_id: RoomId,
 ) -> bool {
     // Make sure the entity is in the requested room
     match world_ecs.get_store::<CurrentRoom>().get(entity) {

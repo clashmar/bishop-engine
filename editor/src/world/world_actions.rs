@@ -1,3 +1,4 @@
+use engine_core::world::room::RoomId;
 // editor/src/world/world_actions.rs
 use engine_core::{ 
     global::tile_size, 
@@ -16,7 +17,7 @@ impl WorldEditor {
         name: &str,
         position: Vec2,
         size: Vec2,
-    ) -> usize {
+    ) -> RoomId {
         let new_id = {
             let tilemap = TileMap::new(size.x as usize, size.y as usize);
 
@@ -61,7 +62,7 @@ impl WorldEditor {
     }
 
     /// Delete a room by its UUID.
-    pub fn delete_room(&mut self, world: &mut World, room_id: usize) {
+    pub fn delete_room(&mut self, world: &mut World, room_id: RoomId) {
         // Find the index of the room we want to remove
         let idx = match world.rooms.iter().position(|m| m.id == room_id) {
             Some(i) => i,
@@ -97,7 +98,7 @@ impl WorldEditor {
         world: &mut World,
         top_left: Vec2,
         size: Vec2,
-    ) -> usize {
+    ) -> RoomId {
         let origin_in_pixels = top_left * tile_size();
         let new_id = self.create_room(world, "untitled", origin_in_pixels, size);
         new_id
@@ -129,11 +130,11 @@ impl WorldEditor {
     }
 
     /// Returns the highest room id in this world + 1.
-    fn allocate_room_id(&self, world: &World) -> usize {
-        if let Some(max_id) = world.rooms.iter().map(|r| r.id).max() {
-            max_id + 1
+    fn allocate_room_id(&self, world: &World) -> RoomId {
+        if let Some(max_id) = world.rooms.iter().map(|r| r.id.0).max() {
+            RoomId(max_id + 1)
         } else {
-            1
+            RoomId(1)
         }
     }
 }

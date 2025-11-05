@@ -18,6 +18,7 @@ mod editor_camera_controller;
 mod canvas;
 mod playtest;
 mod commands;
+mod game;
 
 fn window_conf() -> Conf {
     let width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);

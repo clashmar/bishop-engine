@@ -1,5 +1,6 @@
 // engine_core/src/camera/camera_manager.rs
 use crate::ecs::entity::Entity;
+use crate::world::room::RoomId;
 use crate::{camera::game_camera::*, ecs::world_ecs::WorldEcs, world::room::Room};
 use macroquad::prelude::*;
 
@@ -9,14 +10,14 @@ pub struct CameraManager {
     /// A Vec<(Entity, RoomCamera) for the currently active room.
     room_cameras: Vec<(Entity, RoomCamera)>,
     /// The id of the room we are currently tracking or `None`.
-    current_room: Option<usize>,
+    current_room: Option<RoomId>,
     /// The stored previous position of the active game camera.
     pub previous_position: Option<Vec2>,
 }
 
 impl CameraManager {
     /// Initialise with the player’s starting room.
-    pub fn new(world_ecs: &WorldEcs, room_id: usize, player_pos: Vec2) -> Self {
+    pub fn new(world_ecs: &WorldEcs, room_id: RoomId, player_pos: Vec2) -> Self {
         let room_cameras = get_room_cameras(world_ecs, room_id);
         let (active_camera, _) = Self::find_best_camera_for_room(world_ecs, &room_cameras, player_pos)
             .expect("room must contain at least one camera");

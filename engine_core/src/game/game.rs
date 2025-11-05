@@ -1,9 +1,10 @@
 // engine_core/src/game/game.rs
+use crate::game::game_map::GameMap;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use uuid::Uuid;
 use crate::{assets::asset_manager::AssetManager, 
-    world::world::World}
+    world::world::{World, WorldId}}
 ;
 
 #[serde_as]
@@ -20,9 +21,11 @@ pub struct Game {
     /// Asset manager for the game.
     pub asset_manager: AssetManager,
     /// Id of the currently active world.
-    pub current_world_id: Uuid,
+    pub current_world_id: WorldId,
     /// Tile size of the game that the world scales to.
     pub tile_size: f32,
+    /// Top level map of the whole game.
+    pub game_map: GameMap,
 }
 
 impl Game {
@@ -31,7 +34,7 @@ impl Game {
         self.worlds
             .iter_mut()
             .find(|w| w.id == self.current_world_id)
-            .expect("Current world UUID not present in game.")
+            .expect("Current world id not present in game.")
     }
 
     /// Immutable reference to the current world.
@@ -39,7 +42,15 @@ impl Game {
         self.worlds
             .iter()
             .find(|w| w.id == self.current_world_id)
-            .expect("Current world UUID not present in game.")
+            .expect("Current world id not present in game.")
+    }
+
+    /// Mutable reference to the current world.
+    pub fn get_world(&mut self, world_id: WorldId) -> &mut World {
+        self.worlds
+            .iter_mut()
+            .find(|w| w.id == world_id)
+            .expect("World id not present in game.")
     }
 
     /// Add a new world and make it the active one.
@@ -49,7 +60,7 @@ impl Game {
     }
 
     /// Switch the editor to a different world by its id.
-    pub fn select_world(&mut self, id: Uuid) {
+    pub fn select_world(&mut self, id: WorldId) {
         if self.worlds.iter().any(|w| w.id == id) {
             self.current_world_id = id;
         }
