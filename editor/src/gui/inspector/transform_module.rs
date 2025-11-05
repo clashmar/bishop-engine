@@ -37,7 +37,7 @@ impl TransformModule {
 
         // X
         let x_label = Rect::new(rect.x, rect.y, label_w, field_h);
-        draw_text("X:", x_label.x + 2.0, x_label.y + 22.0, 18.0, WHITE);
+        draw_text("X:", x_label.x + 2.0, x_label.y + 22.0, 18.0, FIELD_TEXT_COLOR);
         let x_field = Rect::new(
             x_label.x + label_w + spacing,
             rect.y,
@@ -53,7 +53,7 @@ impl TransformModule {
             label_w,
             field_h,
         );
-        draw_text("Y:", y_label.x + 2.0, y_label.y + 22.0, 18.0, WHITE);
+        draw_text("Y:", y_label.x + 2.0, y_label.y + 22.0, 18.0, FIELD_TEXT_COLOR);
         let y_field = Rect::new(
             y_label.x + label_w + spacing,
             rect.y,
@@ -87,7 +87,7 @@ impl InspectorModule for TransformModule {
         // Show the current world position
         if let Some(_pos) = world_ecs.get::<Position>(entity) {
             let readout = format!("World position:");
-            draw_text(&readout, rect.x, rect.y + 20.0, 18.0, LIGHTGRAY);
+            draw_text(&readout, rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
 
         // Editable numeric fields (X / Y)

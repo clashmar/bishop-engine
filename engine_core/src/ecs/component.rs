@@ -1,6 +1,5 @@
 // engine_core/src/ecs/component.rs
 use reflect_derive::Reflect;
-use uuid::Uuid;
 use std::{any::Any, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
@@ -108,7 +107,7 @@ inspector_module!(Layer);
 /// Component that stores the room identifier an entity belongs to.
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
-pub struct CurrentRoom(pub Uuid);
+pub struct CurrentRoom(pub usize);
 ecs_component!(CurrentRoom);
 
 /// Marker component for the player entity.
@@ -170,13 +169,5 @@ pub struct Damage {
     pub amount: f32,
 }
 ecs_component!(Damage);
-
-
-#[derive(Clone, Serialize, Deserialize, Default, Reflect)]
-pub struct Name {
-    pub amount: String,
-}
-ecs_component!(Name);
-inspector_module!(Name);
 
 

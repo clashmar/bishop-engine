@@ -7,7 +7,7 @@ macro_rules! impl_capture_entity {
     () => {
         use $crate::ecs::world_ecs::WorldEcs;
         use $crate::ecs::entity::Entity;
-        use $crate::ecs::component_registry::ComponentReg;
+        use $crate::ecs::component_registry::ComponentRegistry;
 
         /// Walks the component registry and extracts every component the entity owns
         pub fn capture_entity(
@@ -17,7 +17,7 @@ macro_rules! impl_capture_entity {
             let mut bag = Vec::new();
 
             // Iterate over all component registrations
-            for component_reg in inventory::iter::<ComponentReg> {
+            for component_reg in inventory::iter::<ComponentRegistry> {
                 // Does the entity own the component
                 if (component_reg.has)(world_ecs, entity) {
                     // Serialize the *component* (not the whole store) to a RON string.

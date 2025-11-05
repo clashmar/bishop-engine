@@ -1,14 +1,10 @@
 // game/src/playtest_main.rs
 use std::{env, fs};
 use engine_core::{
-    constants::{
-        world_virtual_height, 
-        world_virtual_width
-    }, 
-    world::{
-        room::Room, 
-        world::World
-    }
+    constants::*, 
+    game::game::Game, 
+    world::room::Room
+    
 };
 use game_lib::game::GameState;
 use macroquad::prelude::*;
@@ -18,16 +14,19 @@ use ron::de::from_str;
 #[derive(serde::Deserialize)]
 struct PlaytestPayload {
     room: Room,
-    world: World,
+    game: Game,
 }
 
 fn window_conf() -> Conf {
+    let width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
+    let height = FIXED_WINDOW_HEIGHT.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+    
     Conf {
         window_title: "Playtest".to_owned(),
-        window_width: world_virtual_width() as i32,
-        window_height: world_virtual_height() as i32,
-        fullscreen: true,
-        window_resizable: false,
+        window_width: width,
+        window_height: height,
+        fullscreen: false,
+        window_resizable: true,
         ..Default::default()
     }
 }
@@ -44,18 +43,14 @@ async fn main() {
 
     let payload_path = &args[1];
     let payload_str = fs::read_to_string(payload_path)
-        .expect("could not read the temporary play‑test file");
+        .expect("Could not read the temporary playtest file.");
 
     let PlaytestPayload {
         room,
-        world,
-    } = from_str(&payload_str).expect("Failed to deserialize play‑test payload.");
+        game,
+    } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
-    let mut game = GameState::for_room(room, world).await;
-
-    loop {
-        game.update();
-        game.draw();
-        next_frame().await;
-    }
+    let mut game = GameState::for_room(room, game).await;
+    
+    game.run_game_loop().await;
 }

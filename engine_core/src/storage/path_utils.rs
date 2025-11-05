@@ -1,16 +1,21 @@
-// editor/src/storage/path_utils.rs
+// engine_core/src/storage/path_utils.rs
 use std::path::PathBuf;
-use engine_core::constants::*;
+use crate::constants::GAME_SAVE_ROOT;
 
-// TODO: Make this OS agnostic future proof
 /// Returns the absolute path to the folder that stores all games.
 pub fn absolute_save_root() -> PathBuf {
-    let root_dir = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."));
+    // Bundled binary
+    if let Ok(res_dir) = std::env::var("CARGO_BUNDLE_RESOURCES") {
+        return PathBuf::from(res_dir).join(GAME_SAVE_ROOT);
+    }
 
-    let mut dir = root_dir;
-    dir.push(GAME_SAVE_ROOT);
-    dir
+    // Dev mode
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir
+        .parent() // editor
+        .expect("Cannot locate workspace root.");
+
+    workspace_root.join(GAME_SAVE_ROOT)
 }
 
 /// Turns a game name into a safe folder name.
@@ -43,3 +48,4 @@ pub fn game_folder(name: &str) -> PathBuf {
 pub fn assets_folder(name: &str) -> PathBuf {
     game_folder(name).join("assets")
 }
+

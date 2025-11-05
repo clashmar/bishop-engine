@@ -1,10 +1,9 @@
 // editor/src/main.rs
 use crate::{
     editor::Editor, 
-    global::*, 
-    storage::path_utils::absolute_save_root
+    global::*,
 };
-use engine_core::constants::*;
+use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::prelude::*;
 
 mod global;
@@ -28,7 +27,7 @@ fn window_conf() -> Conf {
         window_title: "Bishop Engine".to_owned(),
         window_height: height,
         window_width: width,
-        fullscreen: true,
+        fullscreen: false,
         window_resizable: true,
         ..Default::default()
     }
@@ -52,17 +51,15 @@ async fn main() -> std::io::Result<()> {
         let cur_screen = (screen_width() as u32, screen_height() as u32);
         if cur_screen != current_window_size {
             with_editor(|editor| 
-                Box::pin(editor.light_system.resize(cur_screen.0, cur_screen.1))
+                Box::pin(editor.render_system.resize(cur_screen.0, cur_screen.1))
             );
             current_window_size = cur_screen;
         }
 
         with_editor_async(|editor| Box::pin(editor.update())).await;
     
-        with_editor(|editor| {
-            editor.draw();
-        });
-
+        with_editor_async(|editor| Box::pin(editor.draw())).await;
+        
         apply_pending_commands();
         
         next_frame().await

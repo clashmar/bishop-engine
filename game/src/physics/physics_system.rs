@@ -5,25 +5,21 @@ use engine_core::{
         component::{Collider, PhysicsBody, Position, Velocity}, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, 
-    world::room::Room
+    }, world::room::Room
 };
-use uuid::Uuid;
 use crate::{
     constants::*, 
     physics::collision::sweep_move, 
     world::world_helpers::*
 };
 
-/// Fixed time‑step (seconds).
-const DT: f32 = 1.0 / 60.0;
-
 /// Applies physics to all entities with a `PhysicsBody` component.
 /// Returns `Some((entity, exit_id, position))` when an entity crosses an exit, otherwise `None`.
 pub fn update_physics(
     world_ecs: &mut WorldEcs,
     room: &Room,
-) -> Option<(Entity, Uuid, Vec2)> {
+    dt: f32,
+) -> Option<(Entity, usize, Vec2)> {
     let tilemap = &room.variants[0].tilemap;
     let entities: Vec<_> = world_ecs
         .get_store::<PhysicsBody>()
@@ -43,8 +39,9 @@ pub fn update_physics(
             (p.position, *v, c)
         };
 
-        vel_cur.y += GRAVITY * DT;
-        let delta = Vec2::new(vel_cur.x * DT, vel_cur.y * DT);
+        vel_cur.y += GRAVITY * dt;
+
+        let delta = Vec2::new(vel_cur.x * dt, vel_cur.y * dt);
 
         let sweep = sweep_move(
             world_ecs,
@@ -66,7 +63,7 @@ pub fn update_physics(
         }
 
         // Exit check
-        if let Some(target_id) = crossed_exit(new_pos, sweep.allowed_delta, &collider, room) {
+        if let Some(target_id) = crossed_exit(new_pos, delta, &collider, room) {
             {
                 let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
                 pos_mut.position = new_pos;

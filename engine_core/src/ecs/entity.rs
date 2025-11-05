@@ -3,23 +3,17 @@ use std::any::TypeId;
 use std::collections::HashSet;
 use inventory::iter;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use crate::ecs::component::{Component, ComponentStore, CurrentRoom};
-use crate::ecs::component_registry::ComponentReg;
+use crate::ecs::component_registry::ComponentRegistry;
 use crate::ecs::world_ecs::WorldEcs;  
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
-pub struct Entity(pub Uuid);
+pub struct Entity(pub usize);
 
 impl Entity {
-    /// Create a new UUID.
-    pub fn new() -> Self {
-        Entity(Uuid::new_v4())
-    }
-
-    /// A null value that can be used for optionals.
+    /// A sentinal value that can be used for optionals.
     pub fn null() -> Self {
-        Entity(Uuid::nil())
+        Entity(0)
     }
 }
 
@@ -35,7 +29,7 @@ impl<'a> EntityBuilder<'a> {
         T: Component + Default + 'static,
     {
         // Find the registration entry for `T`.
-        let reg = iter::<ComponentReg>()
+        let reg = iter::<ComponentRegistry>()
             .find(|r| r.type_id == TypeId::of::<ComponentStore<T>>())
             .expect("Component not registered.");
 
@@ -54,7 +48,8 @@ impl<'a> EntityBuilder<'a> {
     }
 }
 
-pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: Uuid) -> HashSet<Entity> {
+// Returns a HashSet of all entities in the current room.
+pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: usize) -> HashSet<Entity> {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     room_store
         .data

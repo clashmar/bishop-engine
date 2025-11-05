@@ -4,7 +4,7 @@ use engine_core::{
         asset_manager::AssetManager, 
         sprite::Sprite
     }, camera::game_camera::RoomCamera, ecs::{
-        component::{Collider, Position}, 
+        component::{Collider, CurrentRoom, Position}, 
         entity::Entity, 
         world_ecs::WorldEcs
     }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
@@ -130,45 +130,74 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholder(pos: Vec2) {
-    // Offset the camera placeholder 
-    let half_tile = tile_size() * 0.5;
-    let body = Rect::new(
-        pos.x - half_tile,   
-        pos.y - half_tile,
-        tile_size(),
-        tile_size(),
-    );
+pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: usize) {
+    let cam_store = world_ecs.get_store::<RoomCamera>();
+    let pos_store = world_ecs.get_store::<Position>();
+    let room_store = world_ecs.get_store::<CurrentRoom>();
 
-    let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
-    let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
-    let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
+    let positions: Vec<Vec2> = cam_store
+        .data
+        .iter()
+        .filter_map(|(entity, _room_cam)| {
+            let cur_room = room_store.get(*entity)?;
+            if cur_room.0 != room_id {
+                return None;
+            }
+            let pos = pos_store.get(*entity)?;
+            Some(pos.position)
+        })
+        .collect();
+    
+    for pos in positions {
+        // Offset the camera placeholder 
+        let half_tile = tile_size() * 0.5;
+        let body = Rect::new(
+            pos.x - half_tile,   
+            pos.y - half_tile,
+            tile_size(),
+            tile_size(),
+        );
 
-    draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
+        let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
+        let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
+        let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
 
-    let finder_w = tile_size() * 0.3;
-    let finder_h = tile_size() * 0.6;
-    let finder = Rect::new(
-        body.x + thickness(),                     
-        body.y + (body.h - finder_h) / 2.0,
-        finder_w,
-        finder_h,
-    );
-    draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
-                         thickness() * 0.75, blue);
+        draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
 
-    let lens_radius = tile_size() * 0.1;
-    let lens_center = vec2(
-        body.x + body.w - lens_radius * 2.0 - thickness(),
-        body.y + body.h / 2.0,
-    );
-    draw_circle_lines(lens_center.x, lens_center.y,
-                      lens_radius, thickness() * 0.75, red);
+        let finder_w = tile_size() * 0.3;
+        let finder_h = tile_size() * 0.6;
+        let finder = Rect::new(
+            body.x + thickness(),                     
+            body.y + (body.h - finder_h) / 2.0,
+            finder_w,
+            finder_h,
+        );
+        draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
+                            thickness() * 0.75, blue);
+
+        let lens_radius = tile_size() * 0.1;
+        let lens_center = vec2(
+            body.x + body.w - lens_radius * 2.0 - thickness(),
+            body.y + body.h / 2.0,
+        );
+        draw_circle_lines(lens_center.x, lens_center.y,
+                        lens_radius, thickness() * 0.75, red);
+        }
 }
 
 /// Draw an icon for a `Light` that has no other visual component.
-pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
+pub fn draw_light_placeholders(
+    world_ecs: &WorldEcs,
+    room_id: usize,
+) {
+    let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, _light) in world_ecs.get_store::<Light>().data.iter() {
+        // Only draw placeholders in this room
+        if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+            if *id != room_id { continue; }
+        }
+
+        // Don't draw if there is a Sprite or Animation component
         if world_ecs.has_any::<(Sprite, Animation)>(*entity) {
             continue;
         }
@@ -209,8 +238,19 @@ pub fn draw_light_placeholders(world_ecs: &WorldEcs) {
 }
 
 /// Draw a placeholder for a `Glow` that has no other visual component.
-pub fn draw_glow_placeholders(world_ecs: &WorldEcs, asset_manager: &mut AssetManager) {
+pub fn draw_glow_placeholders(
+    world_ecs: &WorldEcs, 
+    asset_manager: &mut AssetManager,
+    room_id: usize,
+) {
+    let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, glow) in world_ecs.get_store::<Glow>().data.iter() {
+        // Only draw placeholders in this room
+        if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+            if *id != room_id { continue; }
+        }
+
+        // Don't draw if there is a Sprite or Animation component
         if world_ecs.has_any::<(Sprite, Animation)>(*entity) {
             continue;
         }
@@ -218,10 +258,8 @@ pub fn draw_glow_placeholders(world_ecs: &WorldEcs, asset_manager: &mut AssetMan
         if let Some(position) = world_ecs.get_store::<Position>().get(*entity) {
             let mut pos = position.position;
 
-            if let Some(sprite_id) = asset_manager.get_or_load(&glow.sprite_path) {
-                if let Some((w, h)) = asset_manager.texture_size(sprite_id) {
-                    pos = pos + vec2((w / 2.) - tile_size() / 2., (h / 2.) - tile_size() / 2.);
-                }
+            if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
+                pos = pos + vec2((w / 2.) - tile_size() / 2., (h / 2.) - tile_size() / 2.);
             }
 
             let body = Rect::new(

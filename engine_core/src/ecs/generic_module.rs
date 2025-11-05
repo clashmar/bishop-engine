@@ -1,4 +1,5 @@
 // engine_core/src/ecs/generic_module.rs
+use crate::assets::sprite::SpriteId;
 use crate::ecs::module::InspectorModule;
 use crate::ui::widgets::*;
 use crate::{
@@ -13,6 +14,7 @@ use crate::{
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::{borrow::Cow, marker::PhantomData};
+
 
 const TOP_PADDING: f32 = 10.0;
 const FIELD_HEIGHT: f32 = 30.0;
@@ -76,7 +78,7 @@ where
             let label_w = measure_text(&label, None, FONT_SIZE as u16, 1.0).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
-            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, WHITE);
+            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
 
             // Widget rectangle
             let widget_x = if widget_x > rect.x + rect.w - MIN_WIDGET_WIDTH {
@@ -91,8 +93,8 @@ where
 
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
-                (FieldValue::Text(txt), Some("png")) => {
-                    let btn_label = if txt.is_empty() {
+                (FieldValue::SpriteId(id), _) => {
+                    let btn_label = if id.0 == 0 {
                         "[Pick File]".to_string()
                     } else {
                         "[Change File]".to_string()
@@ -109,16 +111,17 @@ where
                                 .add_filter("PNG images", &["png"])
                                 .pick_file()
                             {
-                                *txt = path.to_string_lossy().into_owned();
+                                let normalized_path = asset_manager.normalize_path(path);
 
-                                // Load the texure in the asset manager
-                                asset_manager.get_or_load(&txt);
+                                *id = asset_manager
+                                    .get_or_load(&normalized_path)
+                                    .expect("Could not get id for sprite path.");
                             }
                         }
                     }
 
                     if gui_button(remove_rect, "x") {
-                        *txt = "".to_string()
+                        *id = SpriteId(0);
                     }
                 }
                 (FieldValue::Text(txt), _) => {
