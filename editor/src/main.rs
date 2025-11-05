@@ -58,10 +58,8 @@ async fn main() -> std::io::Result<()> {
 
         with_editor_async(|editor| Box::pin(editor.update())).await;
     
-        with_editor(|editor| {
-            editor.draw();
-        });
-
+        with_editor_async(|editor| Box::pin(editor.draw())).await;
+        
         apply_pending_commands();
         
         next_frame().await

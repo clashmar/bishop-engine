@@ -111,11 +111,11 @@ where
                                 .add_filter("PNG images", &["png"])
                                 .pick_file()
                             {
-                                let normalized_path = asset_manager.normalise_path(path);
+                                let normalized_path = asset_manager.normalize_path(path);
 
                                 *id = asset_manager
                                     .get_or_load(&normalized_path)
-                                    .expect("Could not find id for sprite path.");
+                                    .expect("Could not get id for sprite path.");
                             }
                         }
                     }

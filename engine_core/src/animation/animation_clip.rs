@@ -2,7 +2,7 @@
 use strum_macros::{EnumIter, EnumString};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, path::{Path, PathBuf}};
 use serde_with::{FromInto, serde_as};
 use std::fmt;
 use crate::{
@@ -165,7 +165,7 @@ pub struct AnimationDef {
 
 /// A variant is a folder that contains the spritesheets for an entity variant.
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct VariantFolder(pub String);
+pub struct VariantFolder(pub PathBuf);
 
 /// Runtime state for a single clip.
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -197,8 +197,8 @@ pub async fn resolve_sprite_id(
         ClipId::New => unreachable!(),
     };
       
-    // Append with the specific animation
-    let path = format!("{}/{}", variant_folder.0, filename);
+    // Build the path
+    let path: PathBuf = Path::new(&variant_folder.0).join(filename);
     
     // Fast‑path if already cached in AssetManager
     if let Some(&id) = asset_manager.path_to_sprite_id.get(&path) {

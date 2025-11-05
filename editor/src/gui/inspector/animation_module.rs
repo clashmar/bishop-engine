@@ -121,7 +121,7 @@ impl InspectorModule for AnimationModule {
         // Edit the currently selected clip
         if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
             // Variant picker
-            let has_variant = !animation.variant.0.is_empty();
+            let has_variant = !animation.variant.0.as_os_str().is_empty();
 
             let sprite_btn = Rect::new(rect.x + PADDING, y, full_w / 2., MARGIN);
 
@@ -130,7 +130,7 @@ impl InspectorModule for AnimationModule {
                 if let Some(path) = rfd::FileDialog::new()
                     .pick_folder()
                 {
-                    let normalized_path = asset_manager.normalise_path(path);
+                    let normalized_path = asset_manager.normalize_path(path);
                     animation.variant = VariantFolder(normalized_path);
                     variant_changed = true;
                 }

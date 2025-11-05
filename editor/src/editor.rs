@@ -31,7 +31,7 @@ pub struct Editor {
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
-        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
+        let game = if let Some(name) = editor_storage::most_recent_game_name() {
             editor_storage::load_game_by_name(&name).await?
         } else if let Some(name) = editor_storage::prompt_user_input().await {
             editor_storage::create_new_game(name).await
@@ -48,7 +48,7 @@ impl Editor {
             DEFAULT_ROOM_POSITION,
         );
 
-        let mut palette = match editor_storage::load_palette(&game.name) {
+        let palette = match editor_storage::load_palette(&game.name) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Failed to load palette: {e}");
@@ -56,9 +56,6 @@ impl Editor {
                 TilePalette::new()
             }
         };
-
-        // Re‑load all sprite textures that belong to the palette.
-        palette.rebuild_runtime(&mut game.asset_manager).await;
 
         let mut editor = Self {
             game,
@@ -191,7 +188,7 @@ impl Editor {
         }
     }
 
-    pub fn draw(&mut self) {
+    pub async fn draw(&mut self) {
         match self.mode {
             EditorMode::World => {
                 self.world_editor.draw(
@@ -221,7 +218,7 @@ impl Editor {
                     &mut world.world_ecs,
                     &mut self.game.asset_manager,
                     &mut self.render_system,
-                );
+                ).await;
             }
         }
     }

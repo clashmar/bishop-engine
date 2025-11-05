@@ -43,10 +43,9 @@ impl TilemapPanel {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut WorldEcs,
-        asset_manager: &mut AssetManager,
+        world_ecs: &mut WorldEcs
     ) {
-        self.palette.update(world_ecs, asset_manager).await;
+        self.palette.update(world_ecs).await;
     }
 
     /// Called by the editor each frame to place the panel
@@ -55,7 +54,7 @@ impl TilemapPanel {
     }
 
     /// Render the panel and any visible sub‑modules
-    pub fn draw(
+    pub async fn draw(
         &mut self,
         asset_manager: &mut AssetManager,
         world_ecs: &WorldEcs,
@@ -127,7 +126,7 @@ impl TilemapPanel {
         self.palette.set_columns_for_width(inner.w - 20.0);
         let height = self.palette.height();
         let palette_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.palette.draw(palette_rect, asset_manager, world_ecs);
+        self.palette.draw(palette_rect, asset_manager, world_ecs).await;
 
         y += height + 20.0; // Create gap for next module
 
