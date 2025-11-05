@@ -5,7 +5,7 @@ use engine_core::{
     assets::asset_manager::AssetManager, constants::DEFAULT_TILE_SIZE, ecs::{
         component::{CurrentRoom, Player, Position}, 
         world_ecs::WorldEcs
-    }, game::game::Game, world::{
+    }, game::game::Game, storage::path_utils::*, world::{
         room::Room,
         world::World,
     }
@@ -14,7 +14,7 @@ use std::{
     fs, io, time::SystemTime
 };
 use crate::{
-    storage::{editor_storage, path_utils::*}, 
+    storage::{editor_storage}, 
     tilemap::tile_palette::TilePalette
 };
 
@@ -32,7 +32,7 @@ pub async fn create_new_game(name: String) -> Game {
     let world = create_new_world();
     let current_id = world.id;
 
-    let asset_manager = AssetManager::new().await;
+    let asset_manager = AssetManager::new(name.clone()).await;
 
     let game = Game {
         save_version: 1,

@@ -464,7 +464,6 @@ impl InspectorPanel {
             inner.y - self.rect.y,
             COVER_COLOUR,
         );
-        
 
         // Bottom cover
         let inner_bottom = inner.y + inner.h;

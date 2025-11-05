@@ -1,68 +1,68 @@
 (
     save_version: 1,
-    id: "2ca2d195-53e8-4897-b7fc-7c3c8fa04066",
+    id: "fb8feb46-4ceb-4c3a-8f08-a43adca90d2d",
     name: "Demo",
     worlds: [
         /*[0]*/ (
-            id: "1ba95999-e616-490a-ad6f-813397e007c4",
+            id: "85ce904c-5175-49b2-a9de-c7cee666869c",
             name: "new",
             world_ecs: (
                 components: [
                     /*[0]*/ (
-                        type_name: "Glow",
-                        data: "(\n    data: {},\n)",
+                        type_name: "PhysicsBody",
+                        data: "(\n    data: {\n        (2): (),\n    },\n)",
                     ),
                     /*[1]*/ (
-                        type_name: "Light",
-                        data: "(\n    data: {},\n)",
+                        type_name: "Position",
+                        data: "(\n    data: {\n        (2): (\n            position: (76.0, 136.0),\n        ),\n        (1): (\n            position: (0.0, 0.0),\n        ),\n    },\n)",
                     ),
                     /*[2]*/ (
-                        type_name: "RoomCamera",
-                        data: "(\n    data: {\n        (4): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 2,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (3): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 1,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (1): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 0,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
-                    ),
-                    /*[3]*/ (
                         type_name: "Animation",
                         data: "(\n    data: {},\n)",
                     ),
-                    /*[4]*/ (
-                        type_name: "Layer",
-                        data: "(\n    data: {},\n)",
+                    /*[3]*/ (
+                        type_name: "RoomCamera",
+                        data: "(\n    data: {\n        (1): (\n            zoom: (0.0078125, 0.0125),\n            room_id: 0,\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
                     ),
-                    /*[5]*/ (
+                    /*[4]*/ (
                         type_name: "Player",
                         data: "(\n    data: {\n        (2): (),\n    },\n)",
                     ),
+                    /*[5]*/ (
+                        type_name: "CurrentRoom",
+                        data: "(\n    data: {\n        (1): (0),\n        (2): (0),\n    },\n)",
+                    ),
                     /*[6]*/ (
-                        type_name: "Position",
-                        data: "(\n    data: {\n        (1): (\n            position: (128.0, 80.0),\n        ),\n        (3): (\n            position: (-128.0, 80.0),\n        ),\n        (4): (\n            position: (384.0, 80.0),\n        ),\n        (2): (\n            position: (44.0, 136.0),\n        ),\n    },\n)",
-                    ),
-                    /*[7]*/ (
-                        type_name: "Sprite",
-                        data: "(\n    data: {\n        (2): (\n            sprite_id: (1),\n        ),\n    },\n)",
-                    ),
-                    /*[8]*/ (
                         type_name: "Collider",
                         data: "(\n    data: {\n        (2): (\n            width: 24.0,\n            height: 24.0,\n        ),\n    },\n)",
                     ),
-                    /*[9]*/ (
+                    /*[7]*/ (
+                        type_name: "Sprite",
+                        data: "(\n    data: {\n        (2): (\n            sprite_id: (2),\n        ),\n    },\n)",
+                    ),
+                    /*[8]*/ (
                         type_name: "CurrentFrame",
                         data: "(\n    data: {},\n)",
                     ),
+                    /*[9]*/ (
+                        type_name: "Layer",
+                        data: "(\n    data: {},\n)",
+                    ),
                     /*[10]*/ (
-                        type_name: "PhysicsBody",
-                        data: "(\n    data: {\n        (2): (),\n    },\n)",
+                        type_name: "Light",
+                        data: "(\n    data: {},\n)",
                     ),
                     /*[11]*/ (
                         type_name: "Velocity",
                         data: "(\n    data: {\n        (2): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
                     ),
                     /*[12]*/ (
-                        type_name: "CurrentRoom",
-                        data: "(\n    data: {\n        (3): (1),\n        (4): (2),\n        (2): (0),\n        (1): (0),\n    },\n)",
+                        type_name: "Glow",
+                        data: "(\n    data: {},\n)",
                     ),
                 ],
                 tile_defs: {},
-                next_entity_id: 4,
+                next_entity_id: 2,
             ),
             rooms: [
                 /*[0]*/ (
@@ -76,91 +76,13 @@
                         16.0,
                         10.0,
                     ),
-                    exits: [
-                        /*[0]*/ (
-                            position: (
-                                16.0,
-                                9.0,
-                            ),
-                            direction: Right,
-                            target_room_id: Some(2),
-                        ),
-                    ],
-                    adjacent_rooms: [],
-                    variants: [
-                        /*[0]*/ (
-                            id: "default",
-                            tilemap: (
-                                width: 16,
-                                height: 10,
-                                background: (
-                                    0.78,
-                                    0.78,
-                                    0.78,
-                                    1.0,
-                                ),
-                            ),
-                        ),
-                    ],
-                    darkness: 0.0,
-                ),
-                /*[1]*/ (
-                    id: 1,
-                    name: "untitled",
-                    position: (
-                        -224.0,
-                        0.0,
-                    ),
-                    size: (
-                        14.0,
-                        10.0,
-                    ),
                     exits: [],
                     adjacent_rooms: [],
                     variants: [
                         /*[0]*/ (
                             id: "default",
                             tilemap: (
-                                width: 14,
-                                height: 10,
-                                background: (
-                                    0.78,
-                                    0.78,
-                                    0.78,
-                                    1.0,
-                                ),
-                            ),
-                        ),
-                    ],
-                    darkness: 0.0,
-                ),
-                /*[2]*/ (
-                    id: 2,
-                    name: "untitled",
-                    position: (
-                        256.0,
-                        0.0,
-                    ),
-                    size: (
-                        15.0,
-                        10.0,
-                    ),
-                    exits: [
-                        /*[0]*/ (
-                            position: (
-                                -1.0,
-                                9.0,
-                            ),
-                            direction: Left,
-                            target_room_id: Some(0),
-                        ),
-                    ],
-                    adjacent_rooms: [],
-                    variants: [
-                        /*[0]*/ (
-                            id: "default",
-                            tilemap: (
-                                width: 15,
+                                width: 16,
                                 height: 10,
                                 background: (
                                     0.78,
@@ -183,9 +105,11 @@
     ],
     asset_manager: (
         sprite_id_to_path: {
-            (1): "/Users/charliesovn/Projects/Aseprite/cat.png",
+            (2): "sprites/cat.png",
+            (1): "tile_sprites/Tile1.png",
         },
+        game_name: "Demo",
     ),
-    current_world_id: "1ba95999-e616-490a-ad6f-813397e007c4",
+    current_world_id: "85ce904c-5175-49b2-a9de-c7cee666869c",
     tile_size: 16.0,
 )

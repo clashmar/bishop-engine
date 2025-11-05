@@ -58,6 +58,6 @@ impl Game {
     /// Syncs all assets that belong to this game.
     pub async fn initialize(&mut self) {
         let (asset_manager, worlds) = (&mut self.asset_manager, &mut self.worlds);
-        asset_manager.init(worlds).await;
+        asset_manager.init_manager(worlds).await;
     }
 }
