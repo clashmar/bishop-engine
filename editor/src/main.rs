@@ -19,6 +19,7 @@ mod canvas;
 mod playtest;
 mod commands;
 mod game;
+mod editor_assets;
 
 fn window_conf() -> Conf {
     let width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);

@@ -1,34 +1,66 @@
 // editor/src/room/room_editor.rs
-use engine_core::{
-    animation::animation_system::update_animation_sytem, assets::asset_manager::AssetManager, camera::game_camera::{RoomCamera, get_room_camera}, ecs::{
-        component::{CurrentRoom, Position}, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, global::tile_size, input::get_omni_input_pressed, lighting::light::Light, rendering::{render_room::*, render_system::RenderSystem}, ui::widgets::*, world::room::{Room, RoomId}
-};
-use crate::{
-    canvas::grid, 
-    commands::entity_commands::{MoveEntityCmd, PasteEntityCmd}, 
-    controls::controls::Controls, 
-    editor_camera_controller::*, 
-    global::push_command, 
-    gui::{
-        gui_constants::*, 
-        inspector::inspector_panel::InspectorPanel
-    }, 
-    room::room_editor_rendering::*, 
-    tilemap::tilemap_editor::TileMapEditor, 
-    world::coord
-};
+use crate::gui::mode_selector::ModeSelector;
+use crate::editor_assets::editor_assets::*;
+use crate::room::room_editor_rendering::*;
+use crate::commands::entity_commands::*;
+use crate::gui::gui_constants::*;
+use crate::global::*;
+use crate::gui::inspector::inspector_panel::InspectorPanel;
+use crate::tilemap::tilemap_editor::TileMapEditor;
+use crate::gui::mode_selector::ModeInfo;
+use crate::world::coord;
+use crate::canvas::grid;
+use crate::controls::controls::Controls;
+use crate::editor_camera_controller::EditorCameraController;
+use engine_core::ui::widgets::*;
+use engine_core::animation::animation_system::*;
+use engine_core::rendering::render_room::*;
+use engine_core::world::room::*;
+use engine_core::input::*;
+use engine_core::global::*;
+use engine_core::camera::game_camera::*;
 use macroquad::prelude::*;
+use engine_core::assets::asset_manager::AssetManager;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::ecs::entity::Entity;
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::ecs::component::CurrentRoom;
+use engine_core::ecs::component::Position;
+use engine_core::lighting::light::Light;
+use once_cell::sync::Lazy;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
+#[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum RoomEditorMode {
-    Tilemap,
     Scene,
+    Tilemap,
+}
+
+impl ModeInfo for RoomEditorMode {
+    fn label(&self) -> &'static str {
+        match self {
+            RoomEditorMode::Scene => "Scene",
+            RoomEditorMode::Tilemap => "Tilemap",
+        }
+    }
+    fn icon(&self) -> &'static Texture2D {
+        match self {
+            RoomEditorMode::Scene => &ENTITY_ICON,
+            RoomEditorMode::Tilemap => &TILE_ICON,
+        }
+    }
+    fn shortcut(self) -> Option<fn() -> bool> {
+        match self {
+            RoomEditorMode::Scene => Some(Controls::s),
+            RoomEditorMode::Tilemap => Some(Controls::t),
+        }
+    }
 }
 
 pub struct RoomEditor {
     pub mode: RoomEditorMode,
+    mode_selector: ModeSelector<RoomEditorMode>,
     pub tilemap_editor: TileMapEditor,
     pub inspector: InspectorPanel,
     pub selected_entity: Option<Entity>,
@@ -44,8 +76,13 @@ pub struct RoomEditor {
 
 impl RoomEditor {
     pub fn new() -> Self {
+        let mode = RoomEditorMode::Scene;
         Self {
             mode: RoomEditorMode::Scene,
+            mode_selector: ModeSelector {
+                current: mode,
+                options: *ALL_MODES,
+            },
             tilemap_editor: TileMapEditor::new(),
             inspector: InspectorPanel::new(),
             selected_entity: None,
@@ -68,15 +105,9 @@ impl RoomEditor {
         other_bounds: &Vec<(Vec2, Vec2)>,
         world_ecs: &mut WorldEcs,
         asset_manager: &mut AssetManager,
-    ) -> bool {
+    ) {
         if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
             clear_all_input_focus(); // TODO: Find a way to clear focus even when over ui
-        }
-
-        if is_key_pressed(KeyCode::Escape) && !input_is_focused() {
-            self.tilemap_editor.reset();
-            self.reset();
-            return true;
         }
 
         if !self.initialized {
@@ -150,22 +181,11 @@ impl RoomEditor {
             }
         }
 
-        if is_key_pressed(KeyCode::Tab) && !input_is_focused() {
-            self.mode = match self.mode {
-                RoomEditorMode::Tilemap => RoomEditorMode::Scene,
-                RoomEditorMode::Scene => RoomEditorMode::Tilemap,
-            };
-        }
+        self.handle_shortcuts();
 
-        if is_key_pressed(KeyCode::G) && !input_is_focused() {
-            self.show_grid = !self.show_grid;
-        }
-
-        if is_key_pressed(KeyCode::R) && !input_is_focused() {
+        if Controls::r() && !input_is_focused() {
             EditorCameraController::reset_editor_camera(camera, room);
         }
-
-        false
     }
 
     pub async fn draw(
@@ -433,7 +453,24 @@ impl RoomEditor {
         self.inspector.set_target(entity);
     }
 
+    fn handle_shortcuts(&mut self) {
+        for mode in RoomEditorMode::iter() {
+            if let Some(is_pressed) = mode.shortcut() {
+                if is_pressed() && !input_is_focused() {
+                    self.mode = mode;
+                    self.mode_selector.current = mode;
+                    break;
+                }
+            }
+        }
+
+        if Controls::g() && !input_is_focused() {
+            self.show_grid = !self.show_grid;
+        }
+    }
+
     pub fn reset(&mut self) {
+        self.tilemap_editor.reset();
         self.mode = RoomEditorMode::Scene;
         self.selected_entity = None;
         self.initialized = false;
@@ -453,3 +490,10 @@ pub fn can_select_entity_in_room(
         None => false,
     }
 }
+
+/// A slice of all the modes.
+static ALL_MODES: Lazy<&'static [RoomEditorMode]> = Lazy::new(|| {
+    Box::leak(Box::new(
+        RoomEditorMode::iter().collect::<Vec<_>>()
+    ))
+});

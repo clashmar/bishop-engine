@@ -20,7 +20,6 @@ impl RoomEditor {
     /// Draw the cursor coordinates in world space.
     pub fn draw_coordinates(&self, camera: &Camera2D, room: &Room) {
         let local_grid = coord::mouse_world_grid(camera);
-
         let world_grid = local_grid + room.position;
         
         let txt = format!(
@@ -28,8 +27,13 @@ impl RoomEditor {
             world_grid.x, world_grid.y,
         );
 
+        let txt_metrics = measure_text(&txt, None, 20, 1.0);
         let margin = 10.0;
-        draw_text(&txt, margin, screen_height() - margin, 20.0, BLUE);
+
+        let x = (screen_width() - txt_metrics.width) / 2.0;
+        let y = screen_height() - margin;
+
+        draw_text(&txt, x, y, 20.0, BLUE);
     }
 
     /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.

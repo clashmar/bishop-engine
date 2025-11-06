@@ -121,11 +121,17 @@ impl WorldEditor {
     pub fn draw_coordinates(&self, camera: &Camera2D) {
         let world_grid = coord::mouse_world_grid(camera);
 
-        let txt = format!("({:.0}, {:.0})", world_grid.x, world_grid.y);
+        let txt = format!(
+            "({:.0}, {:.0})",
+            world_grid.x, world_grid.y,
+        );
 
+        let txt_metrics = measure_text(&txt, None, 20, 1.0);
         let margin = 10.0;
-        let x = margin;
-        let y = screen_height() - margin; // baseline is at the bottom
+
+        let x = (screen_width() - txt_metrics.width) / 2.0;
+        let y = screen_height() - margin;
+
         draw_text(&txt, x, y, 20.0, BLACK);
     }
 

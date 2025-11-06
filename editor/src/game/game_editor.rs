@@ -1,5 +1,13 @@
 // editor/src/game/game_editor.rs
+use once_cell::sync::Lazy;
+use crate::controls::controls::Controls;
+use crate::gui::menu_panel::*;
+use crate::gui::mode_selector::ModeSelector;
+use crate::editor_assets::editor_assets::*;
+use crate::gui::mode_selector::ModeInfo;
 use engine_core::ui::widgets::*;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use std::collections::HashMap;
 use macroquad::prelude::*;
 use engine_core::world::world::WorldId;
@@ -7,12 +15,36 @@ use engine_core::game::game::Game;
 
 const WORLD_RADIUS: f32 = 60.0;
 
+#[derive(Copy, Clone, PartialEq, EnumIter)]
 pub enum GameEditorMode {
-    Default,
+    Select,
     Edit,
 }
+
+impl ModeInfo for GameEditorMode {
+    fn label(&self) -> &'static str {
+        match self {
+            GameEditorMode::Select => "Select: S",
+            GameEditorMode::Edit => "Edit: E",
+        }
+    }
+    fn icon(&self) -> &'static Texture2D {
+        match self {
+            GameEditorMode::Select => &SELECT_ICON,
+            GameEditorMode::Edit => &EDIT_ICON,
+        }
+    }
+    fn shortcut(self) -> Option<fn() -> bool> {
+        match self {
+            GameEditorMode::Select => Some(Controls::s),
+            GameEditorMode::Edit => Some(Controls::e),
+        }
+    }
+}
+
 pub struct GameEditor {
     mode: GameEditorMode,
+    mode_selector: ModeSelector<GameEditorMode>,
     dragged_world: Option<WorldId>,
     drag_offset: Vec2,
     world_widget_ids: HashMap<WorldId, WidgetId>,
@@ -20,8 +52,13 @@ pub struct GameEditor {
 
 impl GameEditor {
     pub fn new() -> Self {
+        let mode = GameEditorMode::Select;
         Self { 
-            mode: GameEditorMode::Default,
+            mode,
+            mode_selector: ModeSelector {
+                current: mode,
+                options: *ALL_MODES,
+            },
             dragged_world: None,
             drag_offset: Vec2::ZERO,
             world_widget_ids: HashMap::new(),
@@ -29,10 +66,8 @@ impl GameEditor {
     }
 
     pub async fn update(&mut self, game: &mut Game) -> Option<WorldId> {
-        
-
         match self.mode {
-            GameEditorMode::Default => {
+            GameEditorMode::Select => {
                 // Select world
                 if is_mouse_button_pressed(MouseButton::Left) {
                     let mouse: Vec2 = mouse_position().into();
@@ -51,12 +86,15 @@ impl GameEditor {
             }
         }
 
+        self.handle_shortcuts();
+
         None
     }
 
     pub fn draw(&mut self, game: &mut Game) {
         clear_background(BLACK);
         self.draw_worlds(game);
+        self.draw_ui();
     }
 
     fn draw_worlds(&mut self, game: &mut Game) {
@@ -121,7 +159,34 @@ impl GameEditor {
         }
     }
 
+    fn draw_ui(&mut self) {
+        draw_panel_background();
+
+        if self.mode_selector.draw() {
+            self.mode = self.mode_selector.current;
+        }
+    }
+
+    fn handle_shortcuts(&mut self) {
+        for mode in GameEditorMode::iter() {
+            if let Some(is_pressed) = mode.shortcut() {
+                if is_pressed() && !input_is_focused() {
+                    self.mode = mode;
+                    self.mode_selector.current = mode;
+                    break;
+                }
+            }
+        }
+    }
+
     fn widget_id_for_world(&mut self, world_id: WorldId) -> WidgetId {
         *self.world_widget_ids.entry(world_id).or_insert_with(WidgetId::default)
     }
 }
+
+/// A slice of all the modes.
+static ALL_MODES: Lazy<&'static [GameEditorMode]> = Lazy::new(|| {
+    Box::leak(Box::new(
+        GameEditorMode::iter().collect::<Vec<_>>()
+    ))
+});
