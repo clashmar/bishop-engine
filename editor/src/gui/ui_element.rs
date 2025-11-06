@@ -1,15 +1,7 @@
-use engine_core::{ecs::world_ecs::WorldEcs, world::{
-    room::Room, 
-    world::World
-}};
-use std::{future::Future, pin::Pin};
+use engine_core::{ecs::world_ecs::WorldEcs, world::
+    room::Room
+};
 use macroquad::prelude::*;
-
-pub trait WorldUiElement {
-    fn draw(&self, world: &World);
-    fn on_click<'a>(&'a self, world: &'a mut World) -> Pin<Box<dyn Future<Output=()> + Send + 'a>>;
-    fn rect(&self, _world: &World) -> Option<Rect> { None } // default None
-}
 
 pub trait DynamicTilemapUiElement {
     fn draw(&self, camera: &Camera2D);

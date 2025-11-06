@@ -454,15 +454,13 @@ impl InspectorPanel {
     /// Draw the four solid‑grey mask rectangles which hide anything 
     /// that scrolls outside the visible inspector area.
     fn draw_overflow_covers(&self, inner: Rect) {
-        const COVER_COLOUR: Color = GRAY;
-
         // Top cover
         draw_rectangle(
             self.rect.x,
             self.rect.y,
             self.rect.w,
             inner.y - self.rect.y,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
 
         // Bottom cover
@@ -474,7 +472,7 @@ impl InspectorPanel {
             inner_bottom,
             self.rect.w,
             panel_bottom - inner_bottom,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
         
         // Left strip
@@ -483,7 +481,7 @@ impl InspectorPanel {
             self.rect.y,
             INSET,
             self.rect.h,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
         
         // Right strip
@@ -494,7 +492,7 @@ impl InspectorPanel {
             self.rect.y,
             panel_right - inner_right,
             self.rect.h,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
     }
 }

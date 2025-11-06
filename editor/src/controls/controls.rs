@@ -35,6 +35,38 @@ impl Controls {
         is_key_pressed(KeyCode::V)
     }
 
+    pub fn escape() -> bool {
+        is_key_pressed(KeyCode::Escape) && modifier_not_pressed()
+    }
+
+    pub fn c() -> bool {
+        is_key_pressed(KeyCode::C) && modifier_not_pressed()
+    }
+
+    pub fn d() -> bool {
+        is_key_pressed(KeyCode::D) && modifier_not_pressed()
+    }
+
+    pub fn e() -> bool {
+        is_key_pressed(KeyCode::E) && modifier_not_pressed()
+    }
+
+    pub fn g() -> bool {
+        is_key_pressed(KeyCode::G) && modifier_not_pressed()
+    }
+
+    pub fn r() -> bool {
+        is_key_pressed(KeyCode::R) && modifier_not_pressed()
+    }
+
+    pub fn s() -> bool {
+        is_key_pressed(KeyCode::S) && modifier_not_pressed()
+    }
+
+    pub fn t() -> bool {
+        is_key_pressed(KeyCode::T) && modifier_not_pressed()
+    }
+
     pub fn v() -> bool {
         is_key_pressed(KeyCode::V) && modifier_not_pressed()
     }

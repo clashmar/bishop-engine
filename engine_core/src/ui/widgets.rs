@@ -223,6 +223,7 @@ fn gui_input_text(
 
         // Escape 
         if is_key_pressed(KeyCode::Escape) || is_key_down(KeyCode::Enter) {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
             focused = false;
         }
     }
@@ -379,6 +380,7 @@ where
         }
 
         if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter) {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
             focused = false;
         }
     } 

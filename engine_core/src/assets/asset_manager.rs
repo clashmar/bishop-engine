@@ -56,9 +56,6 @@ impl AssetManager {
         // Load the texture from the assets folder.
         let texture = self.load_texture_from_game(&path).await?;
 
-        // Disable smoothing (needed for pixel art)
-        texture.set_filter(FilterMode::Nearest);
-
         // Set and increment the texture id
         let id = SpriteId(self.next_sprite_id);
         self.next_sprite_id += 1;
@@ -75,9 +72,6 @@ impl AssetManager {
     pub async fn reload_texture(&mut self, id: &SpriteId, path: &Path) -> Result<(), String> {
         // Load the texture from disk.
         let texture = self.load_texture_from_game(&path).await?;
-
-        // Disable smoothing (needed for pixel art)
-        texture.set_filter(FilterMode::Nearest);
 
         // Store everything and repopulate the reverse map
         self.textures.insert(*id, texture);
@@ -195,8 +189,14 @@ impl AssetManager {
         rel_path: P,
     ) -> Result<Texture2D, String> {
         let full_path = assets_folder(&self.game_name).join(rel_path);
+
         load_texture(full_path.to_string_lossy().as_ref())
             .await
+            .map(|texture| {
+                // Disable smoothing (needed for pixel art)
+                texture.set_filter(FilterMode::Nearest);
+                texture
+            })
             .map_err(|e| {
                 format!(
                     "Failed to load texture '{}': {}",

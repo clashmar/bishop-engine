@@ -42,10 +42,10 @@ impl Toast {
 
         // Top left
         let bg_rect = Rect::new(
-            PADDING,                         
-            PADDING,                        
-            txt.width + PADDING * 2.0,       
-            txt.height + PADDING * 2.0,      
+            PADDING,                                          
+            screen_height() - PADDING - (txt.height + PADDING),
+            txt.width + PADDING * 2.0,
+            txt.height + PADDING,
         );
 
         // Background

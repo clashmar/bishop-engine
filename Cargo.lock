@@ -673,12 +673,14 @@ dependencies = [
  "futures",
  "inventory",
  "macroquad",
+ "once_cell",
  "reflect_derive",
  "rfd",
  "ron",
  "serde 1.0.228",
  "serde_with",
  "strum",
+ "strum_macros",
  "uuid",
 ]
 

@@ -1,5 +1,6 @@
-use engine_core::ui::toast::Toast;
 // editor/src/editor.rs
+use engine_core::ui::toast::Toast;
+use engine_core::ui::widgets::input_is_focused;
 use engine_core::world::world::WorldId;
 use engine_core::world::room::{Room, RoomId};
 use engine_core::physics::collider_system;
@@ -35,6 +36,7 @@ pub struct Editor {
     pub current_world_id: Option<WorldId>,
     pub current_room_id: Option<RoomId>,
     pub render_system: RenderSystem,
+    pub toast: Option<Toast>,
 }
 
 impl Editor {
@@ -75,6 +77,7 @@ impl Editor {
             current_world_id: None,
             current_room_id: None,
             render_system: RenderSystem::new(),
+            toast: None,
         };
 
         // Give the palette to the tilemap editor
@@ -90,7 +93,7 @@ impl Editor {
         
         match self.mode {
             EditorMode::Game => {
-                // Update returns the id of the world being edited
+                // Returns the id of the world that was clicked on or None
                 if let Some(world_id) = self.game_editor.update(
                     &mut self.game
                 ).await {
@@ -99,13 +102,26 @@ impl Editor {
                 }
             }
             EditorMode::World(world_id) => {
-                // Update returns the id of the room being edited
+                // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
                     &mut self.game.get_world(world_id)
                 ).await {
                     self.current_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
+                }
+
+                // Handle escape
+                if Controls::escape() && !input_is_focused() {
+                    // TODO: Handle camera
+
+                    // Clean up
+                    self.current_world_id = None;
+                    self.world_editor.reset();
+                    self.mode = EditorMode::Game;
+
+                    // Save everything
+                    self.save();
                 }
             }
             EditorMode::Room(room_id) => {
@@ -126,23 +142,21 @@ impl Editor {
                         .find(|r| r.id == room_id)
                         .expect("Could not find room in world.");
 
-                    let done = {
-                        // Returns true if escaped
-                        self.room_editor.update(
-                            &mut self.camera, 
-                            room,
-                            &other_bounds,
-                            &mut current_world.world_ecs,
-                            &mut self.game.asset_manager,
-                        ).await
-                    };
+                    // Returns true if escaped
+                    self.room_editor.update(
+                        &mut self.camera, 
+                        room,
+                        &other_bounds,
+                        &mut current_world.world_ecs,
+                        &mut self.game.asset_manager,
+                    ).await;
 
                     collider_system::update_colliders_from_sprites(
                         &mut current_world.world_ecs,
                         &mut self.game.asset_manager,
                     );
 
-                    if done {
+                    if Controls::escape() && !input_is_focused() {
                         let palette = &mut self.room_editor.tilemap_editor.panel.palette;
                         editor_storage::save_palette(palette, &self.game.name)
                             .expect("Could not save tile palette");
@@ -153,14 +167,13 @@ impl Editor {
                             self.world_editor.center_on_room(&mut self.camera, room);
                         }
 
-                        // Clean up the temporary cache
+                        // Clean up
                         self.current_room_id = None;
                         self.room_editor.reset();
                         self.mode = EditorMode::World(current_world.id);
 
                         // Save everything
-                        editor_storage::save_game(&self.game)
-                            .expect("Could not save game.");
+                        self.save();
                     }
                 }
 
@@ -194,9 +207,7 @@ impl Editor {
         }
 
         if Controls::save() {
-            editor_storage::save_game(&self.game)
-                .expect("Could not save game.");
-            Toast::new("Saved", 2.5);
+            self.save();
         }
 
         if Controls::undo() {
@@ -252,6 +263,20 @@ impl Editor {
                 ).await;
             }
         }
+
+        // Draw toast notifications
+        if let Some(toast) = &mut self.toast {
+            toast.update();
+            if !toast.active {
+                self.toast = None;
+            }
+        }
+    }
+
+    fn save(&mut self) {
+        editor_storage::save_game(&self.game)
+                .expect("Could not save game.");
+        self.toast = Some(Toast::new("Saved", 2.5));
     }
 
     fn get_room_from_id(&self, room_id: &RoomId) -> &Room {
