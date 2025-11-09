@@ -1,22 +1,77 @@
 // editor/src/room/room_editor_actions.rs
-use engine_core::{
-    animation::animation_clip::Animation, assets::{
-        asset_manager::AssetManager, 
-        sprite::Sprite
-    }, camera::game_camera::RoomCamera, ecs::{
-        component::{Collider, CurrentRoom, Position}, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::{Room, RoomId}
-};
-use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
+use engine_core::animation::animation_clip::Animation;
+use engine_core::lighting::glow::Glow;
+use engine_core::lighting::light::Light;
+use engine_core::assets::sprite::Sprite;
+use engine_core::ecs::component::CurrentRoom;
+use engine_core::ecs::component::Position;
+use engine_core::ecs::component::Collider;
+use engine_core::rendering::render_room::*;
+use engine_core::camera::game_camera::RoomCamera;
+use engine_core::ecs::entity::Entity;
+use engine_core::world::room::*;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::assets::asset_manager::AssetManager;
+use engine_core::global::*;
 use macroquad::prelude::*;
+use engine_core::ui::widgets::*;
+use crate::gui::gui_constants::*;
+use crate::gui::menu_panel::*;
+use crate::editor_camera_controller::*;
+use crate::room::room_editor::*;
 use crate::world::coord;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
 fn thickness() -> f32 { (tile_size() * 0.175).max(1.0) }
 
 impl RoomEditor {
+    /// Draw static UI for the scene editor
+    pub fn draw_ui(
+        &mut self, 
+        asset_manager: &mut AssetManager,
+        world_ecs: &mut WorldEcs,
+        room: &mut Room
+    ) {
+        // Reset to static camera
+        set_default_camera();
+
+        match self.mode {
+            RoomEditorMode::Tilemap => {
+                // Mode selector
+                if self.mode_selector.draw().1 {
+                    self.mode = self.mode_selector.current;
+                }
+            }
+            RoomEditorMode::Scene => {
+                // Top menu background
+                self.register_rect(draw_top_panel_full());
+                
+                // Draw inspector
+                self.create_entity_requested = self.inspector.draw(
+                    asset_manager, 
+                    world_ecs,
+                    room,
+                );
+
+                // Mode selector
+                let (mode_rect, changed) = self.mode_selector.draw();
+                if changed {
+                    self.mode = self.mode_selector.current;
+                }
+
+                // Play‑test button
+                let play_label = "Play";
+                let play_width = measure_text(play_label, None, 20, 1.0).width + PADDING;
+                let play_x = mode_rect.x + mode_rect.w + SPACING;
+                let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
+
+                if gui_button(play_rect, play_label) {
+                    self.request_play = true;
+                }
+            }
+        }
+    }
+
     /// Draw the cursor coordinates in world space.
     pub fn draw_coordinates(&self, camera: &Camera2D, room: &Room) {
         let local_grid = coord::mouse_world_grid(camera);

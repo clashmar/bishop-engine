@@ -21,6 +21,9 @@ impl Default for WidgetId {
 const HOLD_INITIAL_DELAY: f64 = 0.50;
 const HOLD_REPEAT_RATE: f64 = 0.05;
 const SPACING: f32 = 10.0;  
+const PADDING: f32 = 10.0;  
+const PLACEHOLDER_TEXT: &'static str = "<type here>";  
+pub const DEFAULT_FONT_SIZE: u16 = 20;
 pub const FIELD_TEXT_SIZE: f32 = 20.0; 
 pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const OUTLINE_COLOR: Color = WHITE;
@@ -130,18 +133,9 @@ fn gui_input_text(
     // Draw background & current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
-    let placeholder = "<type here>";
-    let display = if text.is_empty() { placeholder } else { &text };
-    draw_text_ex(
-        display,
-        rect.x + 5.,
-        rect.y + rect.h * 0.7,
-        TextParams {
-            font_size: 20,
-            color: FIELD_TEXT_COLOR,
-            ..Default::default()
-        },
-    );
+    let display = if text.is_empty() { PLACEHOLDER_TEXT } else { &text };
+
+    draw_input_field_text(display, rect);
 
     // Focus handling
     let mouse = mouse_position();
@@ -152,6 +146,10 @@ fn gui_input_text(
             just_gained_focus = true;
         }
         focused = mouse_over;
+
+        if !focused {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+        }
     }
 
     if just_gained_focus {
@@ -311,16 +309,8 @@ where
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
     let placeholder = "<#>";
     let display = if text.is_empty() { placeholder } else { &text };
-    draw_text_ex(
-        display,
-        rect.x + 5.,
-        rect.y + rect.h * 0.7,
-        TextParams {
-            font_size: 20,
-            color: FIELD_TEXT_COLOR,
-            ..Default::default()
-        },
-    );
+
+    draw_input_field_text(display, rect);
 
     // Abort input handling if a dropdown blocks interaction
     if dropdown_is_open() {
@@ -902,4 +892,28 @@ pub fn gui_stepper(
 
     steps[idx]
 }
+
+/// Draws the text for an input widget. Can be called by non-widgets.
+pub fn draw_input_field_text(text: &str, rect: Rect) {
+    draw_text_ex(
+        text,
+        rect.x + PADDING / 2.,
+        rect.y + rect.h * 0.7,
+        TextParams {
+            font_size: DEFAULT_FONT_SIZE,
+            color: FIELD_TEXT_COLOR,
+            ..Default::default()
+        },
+    );
+}
+
+/// Returns the x position and width for text to be centered around a given x position.
+pub fn center_text(x: f32, text: &str) -> (f32, f32) {
+    let text_to_measure = if text.is_empty() { PLACEHOLDER_TEXT } else { text };
+    let text_size = measure_text(text_to_measure, None, DEFAULT_FONT_SIZE, 1.0);
+    let new_x = x - (text_size.width / 2.);
+    (new_x - PADDING / 2., text_size.width + PADDING)
+}
+
+
 

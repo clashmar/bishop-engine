@@ -1,4 +1,7 @@
 // editor/src/game/game_editor.rs
+use crate::gui::gui_constants::*;
+use crate::miniquad::CursorIcon;
+use macroquad::miniquad::window::set_mouse_cursor;
 use once_cell::sync::Lazy;
 use crate::controls::controls::Controls;
 use crate::gui::menu_panel::*;
@@ -45,6 +48,7 @@ impl ModeInfo for GameEditorMode {
 pub struct GameEditor {
     mode: GameEditorMode,
     mode_selector: ModeSelector<GameEditorMode>,
+    active_rects: Vec<Rect>,
     dragged_world: Option<WorldId>,
     drag_offset: Vec2,
     world_widget_ids: HashMap<WorldId, WidgetId>,
@@ -59,6 +63,7 @@ impl GameEditor {
                 current: mode,
                 options: *ALL_MODES,
             },
+            active_rects: Vec::new(),
             dragged_world: None,
             drag_offset: Vec2::ZERO,
             world_widget_ids: HashMap::new(),
@@ -66,6 +71,8 @@ impl GameEditor {
     }
 
     pub async fn update(&mut self, game: &mut Game) -> Option<WorldId> {
+        self.handle_mouse_cursor();
+
         match self.mode {
             GameEditorMode::Select => {
                 // Select world
@@ -92,6 +99,7 @@ impl GameEditor {
     }
 
     pub fn draw(&mut self, game: &mut Game) {
+        self.active_rects.clear();
         clear_background(BLACK);
         self.draw_worlds(game);
         self.draw_ui();
@@ -108,25 +116,34 @@ impl GameEditor {
             );
         }
 
-        // Name widget
+        // Display name
         for world in &mut game.worlds {
-            let rect = Rect::new(
-                world.map_position.x - WORLD_RADIUS,
-                world.map_position.y - 12.0,
-                WORLD_RADIUS * 2.0,
-                24.0,
+            const NAME_HEIGHT: f32 = 24.0;
+            let (x, width) = center_text(world.map_position.x, &world.name);
+
+            let name_rect = Rect::new(
+                x,
+                world.map_position.y - WORLD_RADIUS - SPACING - NAME_HEIGHT,
+                width,
+                NAME_HEIGHT,
             );
 
-            let widget_id = self.widget_id_for_world(world.id);
+            if self.mode == GameEditorMode::Edit {
+                // Show text input widget
+                let widget_id = self.widget_id_for_world(world.id);
 
-            let (new_name, _focused) = gui_input_text_default(
-                widget_id,
-                rect,
-                &world.name,
-            );
+                let (new_name, _focused) = gui_input_text_default(
+                    widget_id,
+                    name_rect,
+                    &world.name,
+                );
 
-            if new_name != world.name {
-                world.name = new_name;
+                if new_name != world.name {
+                    world.name = new_name;
+                }
+            } else {
+                // Just display the name
+                draw_input_field_text(&world.name, name_rect);
             }
         }
     }
@@ -160,9 +177,9 @@ impl GameEditor {
     }
 
     fn draw_ui(&mut self) {
-        draw_panel_background();
+        self.register_rect(draw_top_panel_full());
 
-        if self.mode_selector.draw() {
+        if self.mode_selector.draw().1 {
             self.mode = self.mode_selector.current;
         }
     }
@@ -181,6 +198,32 @@ impl GameEditor {
 
     fn widget_id_for_world(&mut self, world_id: WorldId) -> WidgetId {
         *self.world_widget_ids.entry(world_id).or_insert_with(WidgetId::default)
+    }
+
+    #[inline]
+    fn register_rect(&mut self, rect: Rect) -> Rect {
+        self.active_rects.push(rect);
+        rect
+    }
+
+    fn is_mouse_over_ui(&self) -> bool {
+        let mouse_screen: Vec2 = mouse_position().into();
+        self.active_rects.iter().any(|r| r.contains(mouse_screen))
+    }
+
+    fn handle_mouse_cursor(&self) {
+        if self.is_mouse_over_ui() {
+            set_mouse_cursor(CursorIcon::Default);
+        } else {
+            match self.mode {
+                GameEditorMode::Select => {
+                    set_mouse_cursor(CursorIcon::Pointer);
+                }
+                GameEditorMode::Edit => {
+                    set_mouse_cursor(CursorIcon::Crosshair);
+                }
+            }
+        }
     }
 }
 

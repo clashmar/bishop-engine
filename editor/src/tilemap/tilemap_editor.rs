@@ -1,8 +1,7 @@
 // editor/src/tilemap/tilemap_editor.rs
 use macroquad::prelude::*;
 use crate::{gui::{
-    resize_button::ResizeButton,
-    ui_element::{DynamicTilemapUiElement},
+    menu_panel::draw_top_panel_full, resize_button::ResizeButton, ui_element::DynamicTilemapUiElement
 }, tilemap::tilemap_panel::TilemapPanel};
 
 use engine_core::{
@@ -28,7 +27,7 @@ pub enum TilemapEditorMode {
 pub struct TileMapEditor {
     mode: TilemapEditorMode,
     dynamic_ui: Vec<Box<dyn DynamicTilemapUiElement>>,
-    pub panel: TilemapPanel, 
+    pub tilemap_panel: TilemapPanel, 
     ui_was_clicked: bool,
     initialized: bool, 
 }
@@ -38,7 +37,7 @@ impl TileMapEditor  {
         let editor = Self {
             mode: TilemapEditorMode::Tiles,
             dynamic_ui: Vec::new(),
-            panel: TilemapPanel::new(),
+            tilemap_panel: TilemapPanel::new(),
             ui_was_clicked: false,
             initialized: false,
         };
@@ -46,7 +45,6 @@ impl TileMapEditor  {
         editor
     }
 
-    /// Update the editor with a mutable reference to the map
     pub async fn update(
         &mut self, 
         camera: &mut Camera2D,
@@ -60,7 +58,7 @@ impl TileMapEditor  {
             self.initialized = true;
         }
 
-        self.panel.update(world_ecs).await;
+        self.tilemap_panel.update(world_ecs).await;
 
         self.dynamic_ui.clear();
 
@@ -109,7 +107,7 @@ impl TileMapEditor  {
     ) {
         if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
 
-            if self.panel.handle_click(mouse_pos, self.panel.rect) {
+            if self.tilemap_panel.handle_click(mouse_pos, self.tilemap_panel.rect) {
                 self.ui_was_clicked = true;
                 return;
             }
@@ -151,7 +149,7 @@ impl TileMapEditor  {
             return;
         }
 
-        let def_id = match self.panel.palette.selected_def_opt() {
+        let def_id = match self.tilemap_panel.palette.selected_def_opt() {
             Some(d) => d,
             _ => return, // There is no tile to place
         };
@@ -243,11 +241,14 @@ impl TileMapEditor  {
             element.draw(camera);
         }
         
-        // Reset to default camera for static UI drawing
+        // Static UI cam
         set_default_camera();
 
-        // Draw panel
-        self.panel.draw(asset_manager, world_ecs, map).await;
+        // Top menu background
+        draw_top_panel_full();
+
+        // Draw inspector panel
+        self.tilemap_panel.draw(asset_manager, world_ecs, map).await;
     }
 
     fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) -> Option<GridPos> {
@@ -281,7 +282,7 @@ impl TileMapEditor  {
     }
 
     fn is_mouse_over_ui(&self, camera: &Camera2D, mouse_pos: Vec2) -> bool {
-        self.panel.is_mouse_over(mouse_pos)
+        self.tilemap_panel.is_mouse_over(mouse_pos)
         || self.dynamic_ui
             .iter()
             .any(|element| element.is_mouse_over(mouse_pos, camera))

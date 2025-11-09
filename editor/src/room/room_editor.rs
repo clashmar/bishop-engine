@@ -1,17 +1,17 @@
 // editor/src/room/room_editor.rs
-use crate::gui::mode_selector::ModeSelector;
+use crate::gui::mode_selector::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
 use crate::commands::entity_commands::*;
-use crate::gui::gui_constants::*;
 use crate::global::*;
 use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::tilemap::tilemap_editor::TileMapEditor;
-use crate::gui::mode_selector::ModeInfo;
 use crate::world::coord;
 use crate::canvas::grid;
 use crate::controls::controls::Controls;
 use crate::editor_camera_controller::EditorCameraController;
+use macroquad::miniquad::CursorIcon;
+use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::ui::widgets::*;
 use engine_core::animation::animation_system::*;
 use engine_core::rendering::render_room::*;
@@ -40,8 +40,8 @@ pub enum RoomEditorMode {
 impl ModeInfo for RoomEditorMode {
     fn label(&self) -> &'static str {
         match self {
-            RoomEditorMode::Scene => "Scene",
-            RoomEditorMode::Tilemap => "Tilemap",
+            RoomEditorMode::Scene => "Scene Editor: S",
+            RoomEditorMode::Tilemap => "Tilemap Editor: T",
         }
     }
     fn icon(&self) -> &'static Texture2D {
@@ -60,16 +60,17 @@ impl ModeInfo for RoomEditorMode {
 
 pub struct RoomEditor {
     pub mode: RoomEditorMode,
-    mode_selector: ModeSelector<RoomEditorMode>,
+    pub mode_selector: ModeSelector<RoomEditorMode>,
     pub tilemap_editor: TileMapEditor,
     pub inspector: InspectorPanel,
     pub selected_entity: Option<Entity>,
+    active_rects: Vec<Rect>,
     show_grid: bool,
     drag_offset: Vec2,
     dragging: bool,
     drag_start_position: Option<Vec2>,
     initialized: bool, 
-    create_entity_requested: bool,
+    pub create_entity_requested: bool,
     pub request_play: bool,
     pub view_preview: bool,
 }
@@ -86,6 +87,7 @@ impl RoomEditor {
             tilemap_editor: TileMapEditor::new(),
             inspector: InspectorPanel::new(),
             selected_entity: None,
+            active_rects: Vec::new(),
             show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
@@ -97,7 +99,6 @@ impl RoomEditor {
         }
     }
 
-    /// Returns `true` if user wants to exit back to world view.  
     pub async fn update(
         &mut self, 
         camera: &mut Camera2D,
@@ -107,17 +108,15 @@ impl RoomEditor {
         asset_manager: &mut AssetManager,
     ) {
         if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
-            clear_all_input_focus(); // TODO: Find a way to clear focus even when over ui
+            clear_all_input_focus();
         }
 
         if !self.initialized {
             EditorCameraController::reset_editor_camera(camera, room);
             self.initialized = true;
         }
-        
-        if Controls::paste() {
-            push_command(Box::new(PasteEntityCmd::new()));
-        }
+
+        self.handle_mouse_cursor();
 
         // Click‑selection
         let mouse_screen: Vec2 = mouse_position().into();
@@ -143,7 +142,7 @@ impl RoomEditor {
                 ).await;
             }
             RoomEditorMode::Scene => {
-                if self.inspector.was_clicked() {
+                if self.ui_was_clicked() {
                     ui_was_clicked = true;
                 }
 
@@ -171,21 +170,23 @@ impl RoomEditor {
 
                     // Immediately select it so the inspector shows the newly‑created entity
                     self.selected_entity = Some(entity);
-                    self.inspector.set_target(Some(entity));
                     self.create_entity_requested = false;
                 }
 
-                if Controls::v() && !input_is_focused() {
-                    self.view_preview = !self.view_preview;
+                // If an entity is selected, forward it to the inspector
+                if let Some(entity) = self.selected_entity {
+                    self.inspector.set_target(Some(entity));
+                } else {
+                    self.inspector.set_target(None); // Clears the panel
+                }
+
+                if self.inspector.target.is_none() {
+                    self.selected_entity = None;
                 }
             }
         }
 
-        self.handle_shortcuts();
-
-        if Controls::r() && !input_is_focused() {
-            EditorCameraController::reset_editor_camera(camera, room);
-        }
+        self.handle_shortcuts(camera, room);
     }
 
     pub async fn draw(
@@ -197,6 +198,7 @@ impl RoomEditor {
         render_system: &mut RenderSystem,
     ) {
         self.request_play = false; // This is very important
+        self.active_rects.clear();
 
         let tilemap = &mut room.variants[0].tilemap;
         let exits = &room.exits;
@@ -211,7 +213,7 @@ impl RoomEditor {
 
         match self.mode {
             RoomEditorMode::Tilemap => {
-                self.tilemap_editor.panel.set_rect(inspector_rect);
+                self.tilemap_editor.tilemap_panel.set_rect(inspector_rect);
                 self.tilemap_editor.draw(
                     camera, 
                     tilemap, 
@@ -280,43 +282,12 @@ impl RoomEditor {
                         draw_collider(world_ecs, selected_entity);
                         self.draw_camera_viewport(camera, world_ecs, selected_entity);
                     }
-
-                    set_default_camera();
-                
-                    // If an entity is selected, forward it to the inspector.
-                    if let Some(entity) = self.selected_entity {
-                        self.inspector.set_target(Some(entity));
-                    } else {
-                        self.inspector.set_target(None); // clears the panel
-                    }
-                    
-                    self.create_entity_requested = self.inspector.draw(
-                        asset_manager, 
-                        world_ecs,
-                        room,
-                    );
-
-                    if self.inspector.target.is_none() {
-                        self.selected_entity = None;
-                    }
                 }
             }
         }
 
-        set_default_camera();
-
-        // Play‑test button
-        if matches!(self.mode, RoomEditorMode::Scene) {
-            // Build button
-            let play_label = "Play";
-            let play_width = measure_text(play_label, None, 20, 1.0).width + PADDING;
-            let play_x = (screen_width() - play_width) / 2.0;
-            let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
-
-            if gui_button(play_rect, play_label) {
-                self.request_play = true;
-            }
-        }
+        // Scene UI
+        self.draw_ui(asset_manager, world_ecs, room);
         
         self.draw_coordinates(camera, room);
     }
@@ -402,9 +373,9 @@ impl RoomEditor {
                 }
                 self.dragging = false;
             }
-            return true; // drag handled this frame
+            return true; // Drag handled this frame
         }
-        false // no active drag
+        false // No active drag
     }
 
     /// Moves the currently selected entity by one pixel.
@@ -444,16 +415,21 @@ impl RoomEditor {
         }
     }
 
-    pub fn is_mouse_over_ui(&self) -> bool {
-        self.inspector.is_mouse_over()
-    }
-
     pub fn set_selected_entity(&mut self, entity: Option<Entity>) {
         self.selected_entity = entity;
         self.inspector.set_target(entity);
     }
 
-    fn handle_shortcuts(&mut self) {
+    fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &mut Room) {
+        // Shortcuts for both tilemap and scene
+        if Controls::g() && !input_is_focused() {
+            self.show_grid = !self.show_grid;
+        }
+
+        if Controls::r() && !input_is_focused() {
+            EditorCameraController::reset_editor_camera(camera, room);
+        }
+
         for mode in RoomEditorMode::iter() {
             if let Some(is_pressed) = mode.shortcut() {
                 if is_pressed() && !input_is_focused() {
@@ -464,8 +440,50 @@ impl RoomEditor {
             }
         }
 
-        if Controls::g() && !input_is_focused() {
-            self.show_grid = !self.show_grid;
+        match self.mode {
+            RoomEditorMode::Tilemap => {
+
+            }
+            RoomEditorMode::Scene => {
+                if Controls::v() && !input_is_focused() {
+                    self.view_preview = !self.view_preview;
+                }
+
+                if Controls::paste() {
+                    push_command(Box::new(PasteEntityCmd::new()));
+                }
+            }
+        }
+    }
+
+    #[inline]
+    pub fn register_rect(&mut self, rect: Rect) -> Rect {
+        self.active_rects.push(rect);
+        rect
+    }
+
+    pub fn is_mouse_over_ui(&self) -> bool {
+        let mouse_screen: Vec2 = mouse_position().into();
+        self.active_rects.iter().any(|r| r.contains(mouse_screen))
+        || self.inspector.is_mouse_over() // Inspector has its own check
+    }
+
+    fn ui_was_clicked(&self) -> bool {
+        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over_ui()
+    }
+
+    fn handle_mouse_cursor(&self) {
+        if self.is_mouse_over_ui() {
+            set_mouse_cursor(CursorIcon::Default);
+        } else {
+            match self.mode {
+                RoomEditorMode::Scene => {
+                    set_mouse_cursor(CursorIcon::Pointer);
+                }
+                RoomEditorMode::Tilemap => {
+                    set_mouse_cursor(CursorIcon::Crosshair);
+                }
+            }
         }
     }
 

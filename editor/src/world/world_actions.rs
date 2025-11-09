@@ -1,5 +1,6 @@
-use engine_core::world::room::RoomId;
 // editor/src/world/world_actions.rs
+use engine_core::ecs::component::CurrentRoom;
+use engine_core::world::room::RoomId;
 use engine_core::{ 
     global::tile_size, 
     tiles::tilemap::TileMap
@@ -61,7 +62,7 @@ impl WorldEditor {
         new_id
     }
 
-    /// Delete a room by its UUID.
+    /// Delete a room by its RoomId.
     pub fn delete_room(&mut self, world: &mut World, room_id: RoomId) {
         // Find the index of the room we want to remove
         let idx = match world.rooms.iter().position(|m| m.id == room_id) {
@@ -89,6 +90,22 @@ impl WorldEditor {
                     room_i.adjacent_rooms.push(other.id);
                 }
             }
+        }
+
+        // Gather all entities from the current room.
+        let mut entities_to_remove = Vec::new();
+        {
+            let current_room_store = world.world_ecs.get_store::<CurrentRoom>();
+            for (&entity, &CurrentRoom(room)) in current_room_store.data.iter() {
+                if room == room_id {
+                    entities_to_remove.push(entity);
+                }
+            }
+        }
+
+        // Delete the entities
+        for entity in entities_to_remove {
+            world.world_ecs.remove_entity(entity);
         }
     }
 

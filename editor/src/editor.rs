@@ -81,7 +81,7 @@ impl Editor {
         };
 
         // Give the palette to the tilemap editor
-        editor.room_editor.tilemap_editor.panel.palette = palette;
+        editor.room_editor.tilemap_editor.tilemap_panel.palette = palette;
 
         Ok(editor)
     }
@@ -157,7 +157,7 @@ impl Editor {
                     );
 
                     if Controls::escape() && !input_is_focused() {
-                        let palette = &mut self.room_editor.tilemap_editor.panel.palette;
+                        let palette = &mut self.room_editor.tilemap_editor.tilemap_panel.palette;
                         editor_storage::save_palette(palette, &self.game.name)
                             .expect("Could not save tile palette");
 
