@@ -2,8 +2,9 @@
 use macroquad::prelude::*;
 use crate::gui::gui_constants::*;
 
-
-
-pub fn draw_panel_background() {
-    draw_rectangle(0.0, 0.0, screen_width(), MENU_PANEL_HEIGHT, PANEL_COLOR);
+/// Draws a the panel background for the top menu across the whole width of the screen and returns its `Rect`.
+pub fn draw_top_panel_full() -> Rect {
+    let rect = Rect::new(0.0, 0.0, screen_width(), MENU_PANEL_HEIGHT);
+    draw_rectangle(rect.x, rect.y, rect.w, rect.h, PANEL_COLOR);
+    rect
 }

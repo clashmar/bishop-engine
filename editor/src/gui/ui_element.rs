@@ -15,5 +15,3 @@ pub trait DynamicTilemapUiElement {
         world_ecs: &mut WorldEcs,
     );
 }
-
-

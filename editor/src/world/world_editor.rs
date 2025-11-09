@@ -1,4 +1,6 @@
 // editor/src/world/world_editor.rs
+use crate::miniquad::CursorIcon;
+use macroquad::miniquad::window::set_mouse_cursor;
 use crate::gui::menu_panel::*;
 use crate::gui::mode_selector::*;
 use crate::controls::controls::Controls;
@@ -84,12 +86,8 @@ impl WorldEditor {
     /// Returns `Some(room_id)` if a room is clicked on.
     pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<RoomId> {
         world.link_all_exits();
-        self.handle_ui_clicks().await;
 
-        if is_key_pressed(KeyCode::G) {
-            self.show_grid = !self.show_grid;
-        }
-
+        self.handle_mouse_cursor();
         self.handle_shortcuts();
 
         match self.mode {
@@ -99,19 +97,8 @@ impl WorldEditor {
         }
     }
 
-    async fn handle_ui_clicks(&mut self) {
-        if is_mouse_button_pressed(MouseButton::Left) {
-            for rect in &self.active_rects {
-                if mouse_over_rect(rect) {
-
-                    break; // only handle one click
-                }
-            }
-        }
-    }
-
     fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
             let world_mouse = coord::mouse_world_pos(camera);
             for room in &world.rooms {
                 let rect = scaled_room_rect(room);
@@ -124,7 +111,7 @@ impl WorldEditor {
     }
 
     fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
             let world_mouse = coord::mouse_world_pos(camera);
             for room in &world.rooms {
                 let rect = scaled_room_rect(room);
@@ -138,6 +125,10 @@ impl WorldEditor {
     }
 
     fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
+        if self.is_mouse_over_ui() {
+            return None;
+        }
+        
         let mouse_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
 
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -195,7 +186,6 @@ impl WorldEditor {
         clear_background(LIGHTGRAY);
 
         let world = game.get_world(world_id);
-
         let rooms = &world.rooms;
 
         grid::draw_grid(camera);
@@ -203,20 +193,28 @@ impl WorldEditor {
         self.draw_rooms(camera, rooms);
         self.draw_exits(rooms);
 
-        // Highlight hovered room in select or delete mode
         match self.mode {
-            WorldEditorMode::SelectRoom | 
-            WorldEditorMode::DeleteRoom => self.draw_hovered_room(camera, rooms),
-            _ => {},
-        }
-
-        if let WorldEditorMode::CreateRoom = self.mode {
-            self.draw_placing_preview(camera, rooms);
+            WorldEditorMode::SelectRoom => {
+                if !self.is_mouse_over_ui() {
+                    self.draw_hovered_room(camera, rooms);
+                }
+            }
+            WorldEditorMode::DeleteRoom => {
+                if !self.is_mouse_over_ui() {
+                    self.draw_hovered_room(camera, rooms);
+                }
+            }
+            WorldEditorMode::CreateRoom => {
+                if !self.is_mouse_over_ui() {
+                    self.draw_placing_preview(camera, rooms);
+                }
+            }
         }
 
         self.draw_room_names(camera, rooms); 
         self.draw_ui(camera, game);
         
+        // Static UI camera
         set_default_camera();
         self.draw_coordinates(camera);
     }
@@ -395,28 +393,34 @@ impl WorldEditor {
     }
 
     fn draw_ui(&mut self, camera: &Camera2D, game: &mut Game) {
-        set_default_camera();
-        draw_panel_background();
+        self.active_rects.clear();
 
-        if self.mode_selector.draw() {
+        // Static camera
+        set_default_camera();
+
+        // Top menu panel
+        self.register_rect(draw_top_panel_full());
+
+        // Mode selector
+        if self.mode_selector.draw().1 {
             self.mode = self.mode_selector.current;
         }
 
+        // Tile size field
         let tile_size_rect = Rect::new(
-            screen_width() - 150.0,
+            screen_width() - 50.0,
             10.0,                  
-            140.0,                 
+            40.0,                 
             30.0,                 
         );
-
-        // Tile size field
+        
         let new_size = gui_input_number_f32(self.tile_size_id, tile_size_rect, game.tile_size);
         if new_size != game.tile_size {
             let old_size = game.tile_size;
             global::update_tile_size(game, old_size, new_size);
         }
 
-        set_camera(camera); // back to world camera
+        set_camera(camera); // Back to world camera
     }
 
     pub fn center_on_room(&mut self, camera: &mut Camera2D, room: &Room) {
@@ -424,12 +428,45 @@ impl WorldEditor {
     }
 
     fn handle_shortcuts(&mut self) {
+        if Controls::g() {
+            self.show_grid = !self.show_grid;
+        }
+
         for mode in WorldEditorMode::iter() {
             if let Some(is_pressed) = mode.shortcut() {
                 if is_pressed() && !input_is_focused() {
                     self.mode = mode;
                     self.mode_selector.current = mode;
                     break;
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn register_rect(&mut self, rect: Rect) -> Rect {
+        self.active_rects.push(rect);
+        rect
+    }
+
+    fn is_mouse_over_ui(&self) -> bool {
+        let mouse_screen: Vec2 = mouse_position().into();
+        self.active_rects.iter().any(|r| r.contains(mouse_screen))
+    }
+
+    fn handle_mouse_cursor(&self) {
+        if self.is_mouse_over_ui() {
+            set_mouse_cursor(CursorIcon::Default);
+        } else {
+            match self.mode {
+                WorldEditorMode::SelectRoom => {
+                    set_mouse_cursor(CursorIcon::Pointer);
+                }
+                WorldEditorMode::CreateRoom => {
+                    set_mouse_cursor(CursorIcon::Crosshair);
+                }
+                WorldEditorMode::DeleteRoom => {
+                    set_mouse_cursor(CursorIcon::Crosshair);
                 }
             }
         }
@@ -442,11 +479,6 @@ impl WorldEditor {
         self.active_rects.clear();
         self.show_grid = true;
     }
-}
-
-pub fn mouse_over_rect(rect: &Rect) -> bool {
-    let mouse_pos = mouse_position();
-    rect.contains(vec2(mouse_pos.0, mouse_pos.1))
 }
 
 /// Returns rect scaled for drawing

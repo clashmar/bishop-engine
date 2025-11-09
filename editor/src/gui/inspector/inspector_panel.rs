@@ -273,7 +273,7 @@ impl InspectorPanel {
             let slider_width = 150.0;
             let slider_rect = self.register_rect(Rect::new(
                 create_btn.x + create_btn.w - slider_width,
-                create_btn.y + BTN_HEIGHT + 5.0,
+                create_btn.y + BTN_HEIGHT + 20.0,
                 slider_width,
                 BTN_HEIGHT,
             ));
@@ -345,7 +345,7 @@ impl InspectorPanel {
         const DEFAULT_MENU_W: f32 = 200.0;
         const MIN_INSET: f32 = 10.0;
 
-        // Determine width (widest entry + padding)
+        // Determine width
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
             let txt = measure_text(reg.type_name, None, 20, 1.0);
@@ -362,7 +362,7 @@ impl InspectorPanel {
         // Height depends on number of entries
         let menu_h = (shown.len() as f32) * ENTRY_H + 10.0;
 
-        // Horizontal position: shift left if it would overflow the right edge
+        // Horizontal position
         let mut menu_x = button_rect.x;
         if menu_x + menu_w > screen_width() - MIN_INSET {
             menu_x = screen_width() - MIN_INSET - menu_w;
@@ -370,7 +370,7 @@ impl InspectorPanel {
         if menu_x < MIN_INSET {
             menu_x = MIN_INSET;
         }
-        // Vertical position: just directly below the button
+        // Vertical position
         let menu_y = button_rect.y + button_rect.h + MIN_INSET;
         let menu_rect = self.register_rect(Rect::new(menu_x, menu_y, menu_w, menu_h));
 
@@ -427,11 +427,6 @@ impl InspectorPanel {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || (self.rect.contains(mouse_screen) && self.target.is_some())
-    }
-
-    /// Checks whether the inspector was clicked during this frame.
-    pub fn was_clicked(&self) -> bool {
-        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over()
     }
 
     fn total_content_height(&self, world_ecs: &WorldEcs, entity: Entity) -> f32 {

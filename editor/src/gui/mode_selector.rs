@@ -21,14 +21,17 @@ pub struct ModeSelector <M: ModeInfo + Copy + PartialEq + 'static> {
 }
 
 impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
-    /// Returns `true` if the mode changed.
-    pub fn draw(&mut self) -> bool {
+    /// Returns the total Rect drawn by the module and `true` if the mode changed.
+    pub fn draw(&mut self) -> (Rect, bool) {
         let mut changed = false;
         const PADDING: f32 = 8.0;
         let icon_size = MENU_PANEL_HEIGHT - 2.0 * PADDING;
 
         let total_width = self.options.len() as f32 * (icon_size + PADDING) - PADDING;
         let start_x = (screen_width() - total_width) / 2.0;
+
+        // The rect to return to callers
+        let total_rect = Rect::new(start_x, PADDING - 2.0, total_width, MENU_PANEL_HEIGHT);
 
         // Layout the icons left to right
         for (i, mode) in self.options.iter().enumerate() {
@@ -70,12 +73,12 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
             // Tooltip
             if rect.contains(mouse_position().into()) {
                 let tip = mode.label();
-                let tip_sz = measure_text(tip, None, 16, 1.0);
+                let tip_size = measure_text(tip, None, 16, 1.0);
 
                 let tip_rect = Rect::new(
                     rect.x,
                     rect.y + rect.h + 4.0,
-                    tip_sz.width + 8.0,
+                    tip_size.width + 8.0,
                     20.0,
                 );
 
@@ -96,6 +99,6 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                 );
             }
         }
-        changed
+        (total_rect, changed)
     }
 }
