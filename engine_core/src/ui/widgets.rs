@@ -1,4 +1,6 @@
 // engine_core/src/ui/widgets.rs
+use crate::assets::asset_manager::AssetManager;
+use crate::assets::sprite::SpriteId;
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
@@ -891,6 +893,56 @@ pub fn gui_stepper(
     }
 
     steps[idx]
+}
+
+/// UI widget that can choose a PNG from disk to update a SriteId, or remove it.
+/// Returns true if the sprite was updated.
+pub fn gui_sprite_picker(
+    rect: Rect,
+    id: &mut SpriteId,
+    asset_manager: &mut AssetManager,
+) -> bool {
+    let btn_label = if id.0 == 0 {
+        "[Pick File]"
+    } else {
+        "[Change File]"
+    };
+
+    let remove_w = rect.h; // square button
+    let picker_w = rect.w - remove_w - SPACING;
+
+    let picker_rect = Rect::new(rect.x, rect.y, picker_w, rect.h);
+    let remove_rect = Rect::new(
+        rect.x + rect.w - remove_w,
+        rect.y,
+        remove_w,
+        rect.h,
+    );
+
+    let mut changed = false;
+
+    if gui_button(picker_rect, btn_label) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("PNG images", &["png"])
+                .pick_file()
+            {
+                let normalized = asset_manager.normalize_path(path);
+                *id = asset_manager
+                    .get_or_load(&normalized)
+                    .expect("Could not get id for sprite path.");
+                changed = true;
+            }
+        }
+    }
+
+    if gui_button(remove_rect, "x") && id.0 != 0 {
+        *id = SpriteId(0);
+        changed = true;
+    }
+
+    changed
 }
 
 /// Draws the text for an input widget. Can be called by non-widgets.

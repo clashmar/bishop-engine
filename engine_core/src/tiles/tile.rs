@@ -1,4 +1,4 @@
-// engine_core/src/tiles/tile_def.rs
+// engine_core/src/tiles/tile.rs
 use serde::{Deserialize, Serialize};
 use crate::assets::sprite::SpriteId;
 

@@ -7,7 +7,7 @@ use engine_core::{
         world_ecs::WorldEcs
     }, game::{game::Game, game_map::GameMap}, storage::path_utils::*, world::{
         room::Room,
-        world::{World, WorldId},
+        world::{World, WorldId, WorldMeta},
     }
 };
 use std::{
@@ -150,7 +150,7 @@ pub fn create_new_world() -> World {
         rooms: vec![first_room],
         starting_room: Some(room_id),
         starting_position: Some(starting_position),
-        map_position: Vec2::ZERO,
+        meta: WorldMeta::default()
     };
 
     let _player = world.world_ecs
