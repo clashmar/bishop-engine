@@ -37,6 +37,10 @@ pub static ENTITY_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
     load_texture_from_bytes(include_bytes!("icons/entity.png"))
 });
 
+pub static CIRCLE_120PX: LazyLock<Texture2D> = LazyLock::new(|| {
+    load_texture_from_bytes(include_bytes!("textures/circle120px.png"))
+});
+
 /// Helper that turns the embedded PNG data into a `Texture2D`.
 fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
     let mut tmp_path: PathBuf = env::temp_dir();

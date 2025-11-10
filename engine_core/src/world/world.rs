@@ -1,3 +1,4 @@
+use crate::assets::sprite::SpriteId;
 // engine_core/src/world/world.rs
 use crate::world::room::RoomId;
 use crate::global::tile_size;
@@ -16,7 +17,6 @@ pub struct WorldId(pub Uuid);
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Default)]
-#[serde(default)]
 pub struct World {
     pub id: WorldId,
     pub name: String,
@@ -25,8 +25,19 @@ pub struct World {
     pub starting_room: Option<RoomId>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
+    /// Meta information about the world.
+    pub meta: WorldMeta,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Default)]
+pub struct WorldMeta {
+    /// Position on the map.
     #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub map_position: Vec2,
+    pub position: Vec2,
+    /// Sprite of the world or None. 
+    pub sprite_id: Option<SpriteId>,
+
 }
 
 impl World {
