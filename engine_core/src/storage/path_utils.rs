@@ -1,4 +1,5 @@
 // engine_core/src/storage/path_utils.rs
+use std::path::Path;
 use std::path::PathBuf;
 use crate::constants::GAME_SAVE_ROOT;
 
@@ -49,3 +50,22 @@ pub fn assets_folder(name: &str) -> PathBuf {
     game_folder(name).join("assets")
 }
 
+/// Returns `Ok(())` if `candidate` is inside `absolute_save_root()`.
+pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
+    let root = absolute_save_root()
+        .canonicalize()
+        .map_err(|e| format!("Cannot canonicalize save root: {e}"))?;
+    let candidate = path
+        .canonicalize()
+        .map_err(|e| format!("Cannot canonicalize selected folder: {e}"))?;
+
+    if candidate.starts_with(&root) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Selected folder '{}' is not in the 'games' directory '{}'.",
+            candidate.display(),
+            root.display()
+        ))
+    }
+}

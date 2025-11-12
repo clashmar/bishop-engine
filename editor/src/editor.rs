@@ -1,15 +1,17 @@
 // editor/src/editor.rs
+use crate::editor_actions::PROMPT_RESULT;
+use crate::gui::inspector::modal::Modal;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::input_is_focused;
 use engine_core::world::world::WorldId;
-use engine_core::world::room::{Room, RoomId};
+use engine_core::world::room::RoomId;
 use engine_core::physics::collider_system;
 use engine_core::constants::*;
 use engine_core::rendering::render_system::RenderSystem;
-use engine_core::global::set_global_tile_size;
 use std::io;
 use macroquad::prelude::*;
 use engine_core::game::game::Game;
+use crate::gui::menu_bar::MenuBar;
 use crate::controls::controls::Controls;
 use crate::playtest::room_playtest;
 use crate::tilemap::tile_palette::TilePalette;
@@ -36,11 +38,15 @@ pub struct Editor {
     pub current_world_id: Option<WorldId>,
     pub current_room_id: Option<RoomId>,
     pub render_system: RenderSystem,
+    pub menu_bar: MenuBar,
+    pub modal: Modal,
     pub toast: Option<Toast>,
 }
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
+        let mut editor = Editor::default();
+
         let game = if let Some(name) = editor_storage::most_recent_game_name() {
             editor_storage::load_game_by_name(&name).await?
         } else if let Some(name) = editor_storage::prompt_user_input().await {
@@ -50,15 +56,7 @@ impl Editor {
             editor_storage::create_new_game("untitled".to_string()).await
         };
 
-        // Set global tile size that the game scales to
-        set_global_tile_size(game.tile_size);
-
-        let camera = EditorCameraController::camera_for_room(
-            DEFAULT_ROOM_SIZE,
-            DEFAULT_ROOM_POSITION,
-        );
-
-        let palette = match editor_storage::load_palette(&game.name) {
+        let palette = match editor_storage::load_palette(&game.name.clone()) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Failed to load palette: {e}");
@@ -67,18 +65,13 @@ impl Editor {
             }
         };
 
-        let mut editor = Self {
-            game,
-            mode: EditorMode::Game,
-            game_editor: GameEditor::new(),
-            world_editor: WorldEditor::new(),
-            room_editor: RoomEditor::new(),
-            camera,
-            current_world_id: None,
-            current_room_id: None,
-            render_system: RenderSystem::new(),
-            toast: None,
-        };
+        // TODO set camera for game editor 
+        editor.camera = EditorCameraController::camera_for_room(
+            DEFAULT_ROOM_SIZE,
+            DEFAULT_ROOM_POSITION,
+        );
+
+        editor.game = game;
 
         // Give the palette to the tilemap editor
         editor.room_editor.tilemap_editor.tilemap_panel.palette = palette;
@@ -206,17 +199,7 @@ impl Editor {
             }
         }
 
-        if Controls::save() {
-            self.save();
-        }
-
-        if Controls::undo() {
-            crate::global::request_undo();
-        }
-
-        if Controls::redo() {
-            crate::global::request_redo();
-        }
+        self.handle_user_input().await;
     }
 
     pub async fn draw(&mut self) {
@@ -264,6 +247,23 @@ impl Editor {
             }
         }
 
+        // Draw global UI here
+        self.draw_ui().await;
+    }
+
+    async fn draw_ui(&mut self) {
+        // Modal
+        if self.modal.is_open() {
+            let clicked_outside = self.modal.draw(&mut self.game.asset_manager);
+            if clicked_outside {
+                self.modal.close();
+                PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
+            }
+        }
+
+        // Global menu options
+        self.draw_menu_bar().await;
+
         // Draw toast notifications
         if let Some(toast) = &mut self.toast {
             toast.update();
@@ -271,19 +271,5 @@ impl Editor {
                 self.toast = None;
             }
         }
-    }
-
-    fn save(&mut self) {
-        editor_storage::save_game(&self.game)
-                .expect("Could not save game.");
-        self.toast = Some(Toast::new("Saved", 2.5));
-    }
-
-    fn get_room_from_id(&self, room_id: &RoomId) -> &Room {
-        self.game
-            .current_world().rooms
-            .iter()
-            .find(|m| m.id == *room_id)
-            .expect("Could not find room from id.")
     }
 }

@@ -23,7 +23,7 @@ pub struct AssetManager {
     pub game_name: String,
 }
 
-/// Owned empty texture which guards against crashes.
+/// Empty texture which guards against crashes.
 static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty());
 
 impl AssetManager {

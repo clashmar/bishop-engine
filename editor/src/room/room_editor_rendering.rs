@@ -16,7 +16,7 @@ use engine_core::global::*;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use crate::gui::gui_constants::*;
-use crate::gui::menu_panel::*;
+use crate::gui::menu_bar::*;
 use crate::editor_camera_controller::*;
 use crate::room::room_editor::*;
 use crate::world::coord;

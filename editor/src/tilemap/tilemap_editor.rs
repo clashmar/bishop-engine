@@ -1,7 +1,7 @@
 // editor/src/tilemap/tilemap_editor.rs
 use macroquad::prelude::*;
 use crate::{gui::{
-    menu_panel::draw_top_panel_full, resize_button::ResizeButton, ui_element::DynamicTilemapUiElement
+    menu_bar::draw_top_panel_full, resize_button::ResizeButton, ui_element::DynamicTilemapUiElement
 }, tilemap::tilemap_panel::TilemapPanel};
 
 use engine_core::{

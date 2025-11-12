@@ -1,5 +1,5 @@
-use crate::assets::sprite::SpriteId;
 // engine_core/src/world/world.rs
+use crate::assets::sprite::SpriteId;
 use crate::world::room::RoomId;
 use crate::global::tile_size;
 use crate::tiles::tilemap::TileMap;
@@ -32,7 +32,7 @@ pub struct World {
 #[serde_as]
 #[derive(Serialize, Deserialize, Default)]
 pub struct WorldMeta {
-    /// Position on the map.
+    /// Position on the game map.
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
     /// Sprite of the world or None. 

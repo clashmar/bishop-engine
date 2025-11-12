@@ -1,4 +1,5 @@
 // engine_core/src/game/game.rs
+use crate::global::set_global_tile_size;
 use crate::game::game_map::GameMap;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -68,6 +69,7 @@ impl Game {
 
     /// Syncs all assets that belong to this game.
     pub async fn initialize(&mut self) {
+        set_global_tile_size(self.tile_size);
         let (asset_manager, worlds) = (&mut self.asset_manager, &mut self.worlds);
         asset_manager.init_manager(worlds).await;
     }

@@ -1,4 +1,4 @@
-// editor/src/world/world_actions.rs
+// editor/src/world/world_editor_actions.rs
 use engine_core::ecs::component::CurrentRoom;
 use engine_core::world::room::RoomId;
 use engine_core::{ 
@@ -128,6 +128,7 @@ impl WorldEditor {
         // Rooms are adjacent if they share an edge
         let horizontal_touch = a_rect.x < b_rect.x + b_rect.w && a_rect.x + a_rect.w > b_rect.x &&
                             (a_rect.y + a_rect.h == b_rect.y || b_rect.y + b_rect.h == a_rect.y);
+
         let vertical_touch = a_rect.y < b_rect.y + b_rect.h && a_rect.y + a_rect.h > b_rect.y &&
                             (a_rect.x + a_rect.w == b_rect.x || b_rect.x + b_rect.w == a_rect.x);
 

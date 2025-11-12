@@ -465,29 +465,74 @@ pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
     }
 }
 
-/// Rectangular button with a centered label. Returns `true` on click.
+/// Possible styles for a button.
+pub enum ButtonStyle {
+    Default,
+    Plain,
+}
+
+/// Rectangular button with background and outline. Returns `true` on click.
 pub fn gui_button(rect: Rect, label: &str) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR)
+}
+
+/// Rectangular button with no background or outline. Returns `true` on click.
+pub fn gui_button_plain(rect: Rect, label: &str, text_color: Color) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color)
+}
+
+fn gui_button_impl(
+    rect: Rect, 
+    label: &str, 
+    style: ButtonStyle, 
+    text_color: Color,
+) -> bool {
     let mouse = mouse_position();
-    let hovered = rect.contains(vec2(mouse.0, mouse.1));
+    let mut hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    // Don't highlight if a dropdown is open
-    let bg = if hovered && !dropdown_is_open() {
-        Color::new(0.2, 0.2, 0.2, 0.8)
-    } else {
-        FIELD_BACKGROUND_COLOR
-    };
-
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, bg);
-    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
-
-    let txt_dims = measure_text(label, None, 20, 1.0);
-    let txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
+    // Common text layout
+    let txt_dims = measure_text(label, None, DEFAULT_FONT_SIZE, 1.0);
     let txt_y = rect.y + rect.h * 0.7;
-    draw_text(label, txt_x, txt_y, 20., FIELD_TEXT_COLOR);
+    let mut txt_x = rect.x;
 
-    is_mouse_button_pressed(MouseButton::Left) && 
-    hovered && 
-    !dropdown_is_open()
+    match style {
+        ButtonStyle::Default => {
+            // Background, Outline & Hover
+            let hovered = rect.contains(vec2(mouse.0, mouse.1));
+            let background = if hovered && !dropdown_is_open() {
+                Color::new(0.2, 0.2, 0.2, 0.8)
+            } else {
+                FIELD_BACKGROUND_COLOR
+            };
+            draw_rectangle(rect.x, rect.y, rect.w, rect.h, background);
+            draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
+            txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
+        }
+        ButtonStyle::Plain => {
+            // Hover only
+            let width = txt_dims.width + PADDING * 2.0;
+            txt_x = txt_x + PADDING;
+
+            hovered = Rect::new(rect.x, rect.y, width, rect.h)
+                .contains(vec2(mouse.0, mouse.1));
+
+            if hovered && !dropdown_is_open() {
+                draw_rectangle(
+                    rect.x,
+                    rect.y,
+                    width,
+                    rect.h,
+                    Color::new(0.0, 0.0, 0.0, 0.5),
+                );
+            }
+        }
+    }
+    
+    draw_text(label, txt_x, txt_y, FIELD_TEXT_SIZE, text_color);
+
+    is_mouse_button_pressed(MouseButton::Left) 
+    && hovered 
+    && !dropdown_is_open()
 }
 
 /// Returns the byte offset of the `char_idx`‑th character in `s`.
@@ -590,6 +635,12 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     (new_value, changed)
 }
 
+/// Possible styles for a dropdown menu.
+pub enum DropDownStyle {
+    Default,
+    Blend,
+}
+
 /// A simple dropdown that shows `options` when the button is pressed.
 /// Returns `Some(selected)` when the user picks a different entry,
 /// otherwise `None`.
@@ -600,17 +651,85 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     options: &[T],
     to_string: impl Fn(&T) -> String,
 ) -> Option<T> {
+    gui_dropdown_impl(
+        id, 
+        rect, 
+        label, 
+        options, 
+        to_string, 
+        DropDownStyle::Default, 
+        WHITE,
+        0.0,
+    )
+}
+
+/// Same as gui_dropdown but uses a plain button. Text color sets the color 
+/// of the button text and y_offset moves the options.
+pub fn gui_dropdown_blend<T: Clone + PartialEq + Display>(
+    id: WidgetId,
+    rect: Rect,
+    label: &str,
+    options: &[T],
+    to_string: impl Fn(&T) -> String,
+    text_color: Color,
+    y_offset: f32,
+) -> Option<T> {
+    gui_dropdown_impl(
+        id, 
+        rect, 
+        label, 
+        options, 
+        to_string, 
+        DropDownStyle::Blend, 
+        text_color,
+        y_offset
+    )
+}
+
+fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
+    id: WidgetId,
+    rect: Rect,
+    label: &str,
+    options: &[T],
+    to_string: impl Fn(&T) -> String,
+    style: DropDownStyle,
+    text_color: Color,
+    y_offset: f32,
+) -> Option<T> {
     const MAX_VISIBLE_ROWS: usize = 8;
     const SCROLL_SPEED: f32 = 5.0;
-
-    // Button
-    let button_clicked = gui_button(rect, label);
+    const W_PADDING: f32 = 8.0;
+    const SCROLLBAR_WIDTH: f32 = 6.0;
 
     // Load previous state
     let mut state = dropdown_state::get(id);
 
+    // Temporarily set dropdown open to false so the button is still interactable
+    let prev_state = state.open;
+    state.open = false;
+    dropdown_state::set(id, state);
+    update_global_dropdown_flag();
+
+    let button_clicked = match style {
+        DropDownStyle::Default => {
+            gui_button(rect, label)
+        }
+        DropDownStyle::Blend => {
+            gui_button_plain(rect, label, text_color)
+        }
+    };
+
+    // Set it back to the previous state
+    state.open = prev_state;
+    dropdown_state::set(id, state);
+    update_global_dropdown_flag();
+
+    if button_clicked {
+        state.open = !state.open;
+    }
+
     // Decide whether the list should be open this frame
-    let list_is_open = button_clicked || state.open;
+    let list_is_open = state.open; 
     state.open = list_is_open; // Remember for next frame   
 
     // Let the editor know a dropdown is open
@@ -621,12 +740,25 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
         any_open = *f.borrow();
     });     
 
+    // Compute the widest option
+    let mut max_opt_width = 0.0_f32;
+    for opt in options.iter() {
+        let txt = to_string(opt);
+        let w = measure_text(&txt, None, 20, 1.0).width;
+        if w > max_opt_width {
+            max_opt_width = w;
+        }
+    }
+
+    let list_width = rect.w
+        .max(max_opt_width + 2.0 * W_PADDING + SCROLLBAR_WIDTH);
+
     // Compute the list rectangle
     let visible_rows = MAX_VISIBLE_ROWS.min(options.len());
     let list_rect = Rect::new(
         rect.x,
-        rect.y + rect.h,
-        rect.w,
+        rect.y + rect.h + y_offset,
+        list_width,
         rect.h * visible_rows as f32,
     );
 
@@ -965,6 +1097,11 @@ pub fn center_text(x: f32, text: &str) -> (f32, f32) {
     let text_size = measure_text(text_to_measure, None, DEFAULT_FONT_SIZE, 1.0);
     let new_x = x - (text_size.width / 2.);
     (new_x - PADDING / 2., text_size.width + PADDING)
+}
+
+/// Returns the x position and width for text to be centered around a given x position.
+pub fn rect_width_for_text(text: &str) -> f32 {
+    measure_text(text, None, DEFAULT_FONT_SIZE, 1.0).width + PADDING * 2.0
 }
 
 

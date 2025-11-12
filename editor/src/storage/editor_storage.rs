@@ -206,3 +206,13 @@ pub async fn prompt_user_input() -> Option<String> {
         next_frame().await;
     }
 }
+
+pub fn list_game_names() -> Vec<String> {
+    std::fs::read_dir(absolute_save_root())
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_dir())
+        .filter_map(|e| e.file_name().into_string().ok())
+        .collect()
+}
