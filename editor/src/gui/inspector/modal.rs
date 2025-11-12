@@ -2,6 +2,7 @@
 use engine_core::assets::asset_manager::AssetManager;
 use macroquad::prelude::*;
 
+#[derive(Default)]
 pub struct Modal {
     /// Position & size of the modal window.
     pub rect: Rect,
@@ -16,14 +17,13 @@ type DrawCallback = Option<BoxedDraw>;
 impl Modal {
     /// Creates a new modal of the given size. It is automatically centered.
     pub fn new(width: f32, height: f32) -> Self {
-        let screen_w = screen_width();
-        let screen_h = screen_height();
         let rect = Rect::new(
-            (screen_w - width) / 2.0,
-            (screen_h - height) / 2.0,
+            (screen_width() - width) / 2.0,
+            (screen_height() - height) / 2.0,
             width,
             height,
         );
+
         Self {
             rect,
             open: false,

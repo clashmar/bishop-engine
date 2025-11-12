@@ -10,7 +10,7 @@ use crate::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
 use once_cell::sync::Lazy;
 use crate::controls::controls::Controls;
-use crate::gui::menu_panel::*;
+use crate::gui::menu_bar::*;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::ModeInfo;
@@ -86,7 +86,7 @@ impl GameEditor {
         match self.mode {
             GameEditorMode::Select => {
                 // Select world
-                if is_mouse_button_pressed(MouseButton::Left) {
+                if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(world, texture) {
@@ -99,7 +99,7 @@ impl GameEditor {
                 // Edit modal, handles its own UI and closing
                 if self.modal.is_open() {
                     // Do nothing
-                } else if is_mouse_button_pressed(MouseButton::Left) {
+                } else if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
                     for world in &mut game.worlds {
                         let tex = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(world, tex) {
@@ -122,7 +122,7 @@ impl GameEditor {
                                     MODAL_RESULT.with(|c| *c.borrow_mut() = Some((world_id, chosen)));
                                 }
 
-                                // TODO: add more widgets
+                                // TODO: Add more fields for edit game
                             });
                             break;
                         }
@@ -130,9 +130,11 @@ impl GameEditor {
                 }
             }
             GameEditorMode::Move => {
-                // Drag world
-                self.handle_drag_start(game);
-                self.handle_drag_move(game);
+                if !self.is_mouse_over_ui() {
+                    // Drag world
+                    self.handle_drag_start(game);
+                    self.handle_drag_move(game);
+                }
             }
         }
 
@@ -145,9 +147,11 @@ impl GameEditor {
         &mut self, 
         game: &mut Game
     ) {
-        self.active_rects.clear();
         clear_background(BLACK);
-        self.draw_worlds(game);
+
+        if self.modal.is_open() {
+            self.active_rects.push(self.modal.rect)
+        }
 
         MODAL_RESULT.with(|c| {
             if let Some((world_id, new_sprite)) = c.borrow_mut().take() {
@@ -161,6 +165,7 @@ impl GameEditor {
             }
         });
 
+        self.draw_worlds(game);
         self.draw_ui(game);
     }
 
@@ -173,7 +178,7 @@ impl GameEditor {
             let texture = self.resolve_world_texture(world, &mut game.asset_manager);
 
             // Hover tint
-            let tint = if self.is_mouse_over_world(world, texture) {
+            let tint = if self.is_mouse_over_world(world, texture) && !self.is_mouse_over_ui() {
                 HIGHLIGHT_GREEN
             } else {
                 WHITE
@@ -250,6 +255,7 @@ impl GameEditor {
     }
 
     fn draw_ui(&mut self, game: &mut Game) {
+        self.active_rects.clear();
         self.register_rect(draw_top_panel_full());
 
         if self.mode_selector.draw().1 {
@@ -290,6 +296,7 @@ impl GameEditor {
     fn is_mouse_over_ui(&self) -> bool {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
+        || dropdown_is_open()
     }
 
     fn handle_mouse_cursor(&self) {
@@ -324,7 +331,10 @@ impl GameEditor {
         )
     }
 
-    fn resolve_world_texture<'a>(&self, world: &World, asset_manager: &'a mut AssetManager) -> &'a Texture2D {
+    fn resolve_world_texture<'a>(
+        &self, world: &World, 
+        asset_manager: &'a mut AssetManager
+    ) -> &'a Texture2D {
         let texture = if let Some(id) = world.meta.sprite_id {
             asset_manager.get_texture_from_id(id)
         } else {

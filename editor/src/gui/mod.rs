@@ -5,4 +5,4 @@ pub mod ui_element;
 pub mod inspector;
 pub mod gui_constants;
 pub mod mode_selector;
-pub mod menu_panel;
+pub mod menu_bar;

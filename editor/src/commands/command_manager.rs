@@ -1,5 +1,4 @@
 // editor/src/controls/command_manager.rs
-
 use std::fmt::Debug;
 
 /// Trait for every undoable command.

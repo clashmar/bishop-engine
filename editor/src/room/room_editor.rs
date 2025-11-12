@@ -466,6 +466,7 @@ impl RoomEditor {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || self.inspector.is_mouse_over() // Inspector has its own check
+        || dropdown_is_open()
     }
 
     fn ui_was_clicked(&self) -> bool {
@@ -478,7 +479,7 @@ impl RoomEditor {
         } else {
             match self.mode {
                 RoomEditorMode::Scene => {
-                    set_mouse_cursor(CursorIcon::Pointer);
+                    set_mouse_cursor(CursorIcon::Default);
                 }
                 RoomEditorMode::Tilemap => {
                     set_mouse_cursor(CursorIcon::Crosshair);

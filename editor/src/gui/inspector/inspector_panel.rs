@@ -215,7 +215,8 @@ impl InspectorPanel {
             }
             
             // Draw buttons at the top after the covers
-            if gui_button(add_rect, add_label) {
+            // Add entity
+            if gui_button_plain(add_rect, add_label, BLACK) {
                 if self.can_show_any_component(world_ecs) {
                     self.add_mode = !self.add_mode;
                 }
@@ -226,7 +227,7 @@ impl InspectorPanel {
             if !(world_ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                if gui_button(remove_rect, remove_label) || Controls::delete() && !input_is_focused() {
+                if gui_button_plain(remove_rect, remove_label, BLACK) || Controls::delete() && !input_is_focused() {
                     let command = DeleteEntityCmd {
                         entity,
                         saved: None,
@@ -259,7 +260,7 @@ impl InspectorPanel {
                 BTN_HEIGHT,
             ));
 
-            if gui_button(cam_btn, add_cam_label) {
+            if gui_button_plain(cam_btn, add_cam_label, BLACK) {
                 // Create a new RoomCamera entity that belongs to the current room
                 let _ = world_ecs
                     .create_entity()
@@ -297,7 +298,7 @@ impl InspectorPanel {
             let txt_y = slider_rect.y + 20.;
             draw_text(&txt_val, txt_x, txt_y, 20.0, WHITE);
 
-            return gui_button(create_btn, create_label);
+            return gui_button_plain(create_btn, create_label, BLACK);
         }
 
         // Process pending component addition
