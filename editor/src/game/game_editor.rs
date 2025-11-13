@@ -5,11 +5,11 @@ use engine_core::assets::asset_manager::AssetManager;
 use engine_core::ui::colors::HIGHLIGHT_GREEN;
 use engine_core::world::world::World;
 use crate::gui::gui_constants::*;
-use crate::gui::inspector::modal::Modal;
+use crate::gui::inspector::modal::*;
 use crate::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
 use once_cell::sync::Lazy;
-use crate::controls::controls::Controls;
+use engine_core::controls::controls::Controls;
 use crate::gui::menu_bar::*;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
@@ -109,21 +109,24 @@ impl GameEditor {
 
                             // Open the modal
                             let modal_rect = self.modal.rect;
-                            self.modal.open(move |asset_manager| {
-                                let picker_rect = Rect::new(
-                                    modal_rect.x + 20.0,
-                                    modal_rect.y + 50.0,
-                                    modal_rect.w - 40.0,
-                                    40.0,
-                                );
-                                let mut chosen = current_sprite;
-                                if gui_sprite_picker(picker_rect, &mut chosen, asset_manager) {
-                                    // Store the result for the main draw loop
-                                    MODAL_RESULT.with(|c| *c.borrow_mut() = Some((world_id, chosen)));
-                                }
 
-                                // TODO: Add more fields for edit game
-                            });
+                            let widgets: Vec<BoxedWidget> = vec![ 
+                                Box::new(move |asset_manager| {
+                                    let picker_rect = Rect::new(
+                                        modal_rect.x + 20.0,
+                                        modal_rect.y + 50.0,
+                                        modal_rect.w - 40.0,
+                                        40.0,
+                                    );
+                                    let mut chosen = current_sprite;
+                                    if gui_sprite_picker(picker_rect, &mut chosen, asset_manager) {
+                                        // Store the result for the main draw loop
+                                        MODAL_RESULT.with(|c| *c.borrow_mut() = Some((world_id, chosen)));
+                                    }
+                                })
+                            ];
+                            
+                            self.modal.open(widgets);
                             break;
                         }
                     }
@@ -197,7 +200,7 @@ impl GameEditor {
         for world in &mut game.worlds {
             const NAME_HEIGHT: f32 = 24.0;
             let center = world.meta.position.x + (CIRCLE_120PX.width() / 2.);
-            let (x, width) = center_text(center, &world.name);
+            let (x, width) = center_text_field(center, &world.name);
 
             let name_rect = Rect::new(
                 x,
@@ -263,7 +266,7 @@ impl GameEditor {
         }
 
         if self.modal.is_open() {
-            // Pass the asset manager so any widget that needs textures can use it.
+            // Pass the asset manager so any widget that needs assets can use it
             let clicked_outside = self.modal.draw(&mut game.asset_manager);
             if clicked_outside {
                 self.modal.close();
@@ -296,7 +299,8 @@ impl GameEditor {
     fn is_mouse_over_ui(&self) -> bool {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || dropdown_is_open()
+        || is_dropdown_open()
+        || is_modal_open()
     }
 
     fn handle_mouse_cursor(&self) {

@@ -1,9 +1,10 @@
+use crate::gui::inspector::modal::is_modal_open;
 // editor/src/world/world_editor.rs
 use crate::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
 use crate::gui::menu_bar::*;
 use crate::gui::mode_selector::*;
-use crate::controls::controls::Controls;
+use engine_core::controls::controls::Controls;
 use crate::editor_assets::editor_assets::*;
 use crate::{editor_camera_controller::{EditorCameraController}, canvas::grid};
 use crate::world::coord;
@@ -452,7 +453,8 @@ impl WorldEditor {
     fn is_mouse_over_ui(&self) -> bool {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || dropdown_is_open()
+        || is_dropdown_open()
+        || is_modal_open()
     }
 
     fn handle_mouse_cursor(&self) {

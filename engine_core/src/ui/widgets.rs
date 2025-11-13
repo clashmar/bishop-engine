@@ -1,6 +1,7 @@
 // engine_core/src/ui/widgets.rs
 use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
+use crate::ui::text::*;
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
@@ -25,8 +26,8 @@ const HOLD_REPEAT_RATE: f64 = 0.05;
 const SPACING: f32 = 10.0;  
 const PADDING: f32 = 10.0;  
 const PLACEHOLDER_TEXT: &'static str = "<type here>";  
-pub const DEFAULT_FONT_SIZE: u16 = 20;
-pub const FIELD_TEXT_SIZE: f32 = 20.0; 
+pub const DEFAULT_FONT_SIZE: f32 = 16.0;
+pub const FIELD_TEXT_SIZE: f32 = 16.0; 
 pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
@@ -57,12 +58,12 @@ pub fn input_is_focused() -> bool {
 }
 
 thread_local! {
-    static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
+    pub static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
 }
 
 /// Global flag that tells the rest of the editor whether a dropdown
 /// is currently open.
-pub fn dropdown_is_open() -> bool {
+pub fn is_dropdown_open() -> bool {
     DROPDOWN_OPEN.with(|f| *f.borrow())
 }
 
@@ -111,9 +112,9 @@ fn gui_input_text(
 
         if let Some((saved_text, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&id) {
             text = saved_text.clone();
-            cursor_char = if start_focused { text.chars().count() } else { *saved_cur };
             focused = if start_focused { true } else { *saved_foc };
             just_gained_focus = start_focused && !*saved_foc;
+            cursor_char = if start_focused && just_gained_focus { text.chars().count() } else { *saved_cur };
             last_backspace = *saved_time;
             repeat_started = *saved_repeat;
         } else {
@@ -160,7 +161,7 @@ fn gui_input_text(
     }
 
     // Don't update the field if a dropdown is open
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return (text, false)
     }
 
@@ -210,7 +211,7 @@ fn gui_input_text(
 
         // Typed characters
         while let Some(chr) = get_char_pressed() {
-            if chr.is_ascii_graphic() {
+            if chr.is_ascii_graphic() || chr == ' ' {
                 // Enforce the length limit
                 let cur_len = text.chars().count();
                 if max_len.map_or(true, |limit| cur_len < limit) {
@@ -233,7 +234,7 @@ fn gui_input_text(
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let byte_pos = byte_offset(&text, cursor_char);
         let prefix = &text[..byte_pos];
-        let cursor_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
+        let cursor_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE, 1.0).width;
         draw_line(
             cursor_x,
             rect.y + rect.h * 0.3,
@@ -315,7 +316,7 @@ where
     draw_input_field_text(display, rect);
 
     // Abort input handling if a dropdown blocks interaction
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return current;
     }
 
@@ -380,7 +381,7 @@ where
     let now = get_time();
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let prefix = &text[..cursor_char];
-        let caret_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
+        let caret_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE, 1.0).width;
         draw_line(
             caret_x,
             rect.y + rect.h * 0.3,
@@ -452,7 +453,7 @@ pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
     }
 
     // Don't update the field if a dropdown is open
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return *value
     }
 
@@ -473,12 +474,17 @@ pub enum ButtonStyle {
 
 /// Rectangular button with background and outline. Returns `true` on click.
 pub fn gui_button(rect: Rect, label: &str) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR)
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO)
 }
 
 /// Rectangular button with no background or outline. Returns `true` on click.
 pub fn gui_button_plain(rect: Rect, label: &str, text_color: Color) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Plain, text_color)
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO)
+}
+
+/// Default button with text offset. Returns `true` on click.
+pub fn gui_button_y_offset(rect: Rect, label: &str, text_offset: Vec2) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset)
 }
 
 fn gui_button_impl(
@@ -486,12 +492,13 @@ fn gui_button_impl(
     label: &str, 
     style: ButtonStyle, 
     text_color: Color,
+    text_offset: Vec2,
 ) -> bool {
     let mouse = mouse_position();
     let mut hovered = rect.contains(vec2(mouse.0, mouse.1));
 
     // Common text layout
-    let txt_dims = measure_text(label, None, DEFAULT_FONT_SIZE, 1.0);
+    let txt_dims = measure_text_ui(label, FIELD_TEXT_SIZE, 1.0);
     let txt_y = rect.y + rect.h * 0.7;
     let mut txt_x = rect.x;
 
@@ -499,7 +506,7 @@ fn gui_button_impl(
         ButtonStyle::Default => {
             // Background, Outline & Hover
             let hovered = rect.contains(vec2(mouse.0, mouse.1));
-            let background = if hovered && !dropdown_is_open() {
+            let background = if hovered && !is_dropdown_open() {
                 Color::new(0.2, 0.2, 0.2, 0.8)
             } else {
                 FIELD_BACKGROUND_COLOR
@@ -516,7 +523,7 @@ fn gui_button_impl(
             hovered = Rect::new(rect.x, rect.y, width, rect.h)
                 .contains(vec2(mouse.0, mouse.1));
 
-            if hovered && !dropdown_is_open() {
+            if hovered && !is_dropdown_open() {
                 draw_rectangle(
                     rect.x,
                     rect.y,
@@ -528,11 +535,11 @@ fn gui_button_impl(
         }
     }
     
-    draw_text(label, txt_x, txt_y, FIELD_TEXT_SIZE, text_color);
+    draw_text_ui(label, txt_x + text_offset.x, txt_y + text_offset.y, FIELD_TEXT_SIZE, text_color);
 
     is_mouse_button_pressed(MouseButton::Left) 
     && hovered 
-    && !dropdown_is_open()
+    && !is_dropdown_open()
 }
 
 /// Returns the byte offset of the `char_idx`‑th character in `s`.
@@ -576,7 +583,7 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     draw_rectangle(rect.x, track_y, rect.w, track_h, Color::new(0.2, 0.2, 0.2, 0.8));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
 
-    let handle_col = if dragging && !dropdown_is_open() {
+    let handle_col = if dragging && !is_dropdown_open() {
         Color::new(0.6, 0.6, 0.9, 1.0)
     } else {
         Color::new(0.4, 0.4, 0.8, 1.0)
@@ -584,7 +591,7 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     draw_rectangle(handle_x, rect.y, handle_sz, rect.h, handle_col);
     draw_rectangle_lines(handle_x, rect.y, handle_sz, rect.h, 2., WHITE);
 
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return (value, false)
     }
 
@@ -637,8 +644,10 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
 
 /// Possible styles for a dropdown menu.
 pub enum DropDownStyle {
+    /// Uses default button to open dropdown.
     Default,
-    Blend,
+    /// Uses plain button to open dropdown.
+    Plain,
 }
 
 /// A simple dropdown that shows `options` when the button is pressed.
@@ -665,7 +674,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
 
 /// Same as gui_dropdown but uses a plain button. Text color sets the color 
 /// of the button text and y_offset moves the options.
-pub fn gui_dropdown_blend<T: Clone + PartialEq + Display>(
+pub fn gui_dropdown_plain<T: Clone + PartialEq + Display>(
     id: WidgetId,
     rect: Rect,
     label: &str,
@@ -680,7 +689,7 @@ pub fn gui_dropdown_blend<T: Clone + PartialEq + Display>(
         label, 
         options, 
         to_string, 
-        DropDownStyle::Blend, 
+        DropDownStyle::Plain, 
         text_color,
         y_offset
     )
@@ -714,7 +723,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
         DropDownStyle::Default => {
             gui_button(rect, label)
         }
-        DropDownStyle::Blend => {
+        DropDownStyle::Plain => {
             gui_button_plain(rect, label, text_color)
         }
     };
@@ -734,19 +743,19 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
 
     // Let the editor know a dropdown is open
     let mut any_open = false;
-    DROPDOWN_OPEN.with(|f| {
-        let was = *f.borrow();
-        *f.borrow_mut() = was || list_is_open;
-        any_open = *f.borrow();
+    DROPDOWN_OPEN.with(|r| {
+        let was = *r.borrow();
+        *r.borrow_mut() = was || list_is_open;
+        any_open = *r.borrow();
     });     
 
     // Compute the widest option
     let mut max_opt_width = 0.0_f32;
     for opt in options.iter() {
         let txt = to_string(opt);
-        let w = measure_text(&txt, None, 20, 1.0).width;
-        if w > max_opt_width {
-            max_opt_width = w;
+        let width = measure_text_ui(&txt, DEFAULT_FONT_SIZE, 1.0).width;
+        if width > max_opt_width {
+            max_opt_width = width;
         }
     }
 
@@ -831,11 +840,11 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
                 );
             }
             
-            draw_text(
+            draw_text_ui(
                 &to_string(opt),
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
-                20.,
+                DEFAULT_FONT_SIZE,
                 FIELD_TEXT_COLOR,
             );
 
@@ -893,7 +902,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
 }
 
 /// Helper module that stores the temporary dropdown state.
-mod dropdown_state {
+pub mod dropdown_state {
     use macroquad::prelude::*;
     use std::cell::RefCell;
     use std::collections::HashMap;
@@ -938,7 +947,7 @@ mod dropdown_state {
 }
 
 // Helper, called at the end of gui_dropdown
-fn update_global_dropdown_flag() {
+pub fn update_global_dropdown_flag() {
     dropdown_state::STATE.with(|s| {
         let any = s.borrow().values().any(|st| st.open);
         DROPDOWN_OPEN.with(|f| *f.borrow_mut() = any);
@@ -966,13 +975,13 @@ pub fn gui_stepper(
     const Y_OFFSET: f32 = 15.0;
 
     let label = format!("{}:", label);
-    let label_width = measure_text(&label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
+    let label_width = measure_text_ui(&label, FIELD_TEXT_SIZE, 1.0).width;
 
     let btn_w = FIELD_TEXT_SIZE * 1.2;
-    let val_w = measure_text("3.0", None, FIELD_TEXT_SIZE as u16, 1.0).width + SPACING + 5.0;
+    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE, 1.0).width + SPACING + 5.0;
 
     // Label
-    draw_text(&label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(&label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
 
     // Display value
     let val_rect = Rect::new(
@@ -993,7 +1002,7 @@ pub fn gui_stepper(
     );
 
     let txt = format!("{:.1}", steps[idx]);
-    draw_text(
+    draw_text_ui(
         &txt,
         val_rect.x + 7.5,
         val_rect.y + 17.5,
@@ -1079,30 +1088,29 @@ pub fn gui_sprite_picker(
 
 /// Draws the text for an input widget. Can be called by non-widgets.
 pub fn draw_input_field_text(text: &str, rect: Rect) {
-    draw_text_ex(
+    draw_text_ui(
         text,
         rect.x + PADDING / 2.,
         rect.y + rect.h * 0.7,
-        TextParams {
-            font_size: DEFAULT_FONT_SIZE,
-            color: FIELD_TEXT_COLOR,
-            ..Default::default()
-        },
+        DEFAULT_FONT_SIZE,
+        FIELD_TEXT_COLOR,
     );
 }
 
 /// Returns the x position and width for text to be centered around a given x position.
-pub fn center_text(x: f32, text: &str) -> (f32, f32) {
+pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
     let text_to_measure = if text.is_empty() { PLACEHOLDER_TEXT } else { text };
-    let text_size = measure_text(text_to_measure, None, DEFAULT_FONT_SIZE, 1.0);
+    let text_size = measure_text_ui(text_to_measure, DEFAULT_FONT_SIZE, 1.0);
     let new_x = x - (text_size.width / 2.);
     (new_x - PADDING / 2., text_size.width + PADDING)
 }
 
 /// Returns the x position and width for text to be centered around a given x position.
-pub fn rect_width_for_text(text: &str) -> f32 {
-    measure_text(text, None, DEFAULT_FONT_SIZE, 1.0).width + PADDING * 2.0
+pub fn rect_width_for_text(text: &str, font_size: f32) -> f32 {
+    measure_text_ui(text, font_size, 1.0).width + PADDING * 2.0
 }
+
+
 
 
 

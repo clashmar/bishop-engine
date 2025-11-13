@@ -39,6 +39,10 @@ impl Controls {
         is_key_pressed(KeyCode::Escape) && modifier_not_pressed()
     }
 
+    pub fn enter() -> bool {
+        is_key_pressed(KeyCode::Enter) && modifier_not_pressed()
+    }
+
     pub fn c() -> bool {
         is_key_pressed(KeyCode::C) && modifier_not_pressed()
     }

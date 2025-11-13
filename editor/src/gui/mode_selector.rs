@@ -1,4 +1,5 @@
 // editor/src/gui/mode_selector.rs
+use engine_core::ui::text::*;
 use macroquad::prelude::*;
 use crate::gui::gui_constants::MENU_PANEL_HEIGHT;
 
@@ -73,7 +74,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
             // Tooltip
             if rect.contains(mouse_position().into()) {
                 let tip = mode.label();
-                let tip_size = measure_text(tip, None, 16, 1.0);
+                let tip_size = measure_text_ui(tip, 16.0, 1.0);
 
                 let tip_rect = Rect::new(
                     rect.x,
@@ -90,7 +91,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                     Color::new(0.0, 0.0, 0.0, 0.8)
                 );
 
-                draw_text(
+                draw_text_ui(
                     tip, 
                     tip_rect.x + 4.0, 
                     tip_rect.y + 15.0, 

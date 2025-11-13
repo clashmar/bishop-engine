@@ -163,50 +163,6 @@ pub fn create_new_world() -> World {
     world
 }
 
-/// Prompt the user for a string input using Macroquad’s UI loop.
-pub async fn prompt_user_input() -> Option<String> {
-    // Consume any remaining chars in the input queue.
-    while get_char_pressed().is_some() {}
-
-    let mut input = String::new();
-
-    loop {
-        clear_background(BLACK);
-
-        // Gather newly pressed characters.
-        while let Some(c) = get_char_pressed() {
-            if c.is_alphanumeric()
-                || c.is_ascii_whitespace()
-                || c.is_ascii_punctuation()
-            {
-                input.push(c);
-            }
-        }
-
-        // Backspace handling.
-        if is_key_pressed(KeyCode::Backspace) {
-            input.pop();
-        }
-
-        // Escape cancels the prompt.
-        if is_key_pressed(KeyCode::Escape) {
-            return None;
-        }
-
-        // Enter confirms the input (if not empty).
-        if is_key_pressed(KeyCode::Enter) && !input.trim().is_empty() {
-            return Some(input);
-        }
-
-        // Draw the prompt box.
-        let text = format!("Enter game name: {}", input);
-        draw_rectangle(100., 100., 600., 100., DARKGRAY);
-        draw_text(&text, 120., 160., 30., WHITE);
-
-        next_frame().await;
-    }
-}
-
 pub fn list_game_names() -> Vec<String> {
     std::fs::read_dir(absolute_save_root())
         .into_iter()

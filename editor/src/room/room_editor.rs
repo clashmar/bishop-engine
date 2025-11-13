@@ -1,3 +1,4 @@
+use crate::gui::inspector::modal::is_modal_open;
 // editor/src/room/room_editor.rs
 use crate::gui::mode_selector::*;
 use crate::editor_assets::editor_assets::*;
@@ -8,7 +9,7 @@ use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::world::coord;
 use crate::canvas::grid;
-use crate::controls::controls::Controls;
+use engine_core::controls::controls::Controls;
 use crate::editor_camera_controller::EditorCameraController;
 use macroquad::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
@@ -466,7 +467,8 @@ impl RoomEditor {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || self.inspector.is_mouse_over() // Inspector has its own check
-        || dropdown_is_open()
+        || is_dropdown_open()
+        || is_modal_open()
     }
 
     fn ui_was_clicked(&self) -> bool {

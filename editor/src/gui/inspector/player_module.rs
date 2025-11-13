@@ -1,5 +1,5 @@
 // editor/src/gui/inspector/player_module.rs
-use engine_core::{ecs::component::Player, ui::widgets::*};
+use engine_core::{ecs::component::Player, ui::{text::*, widgets::*}};
 use macroquad::prelude::*;
 use engine_core::{
     assets::asset_manager::AssetManager, 
@@ -26,12 +26,12 @@ impl InspectorModule for PlayerModule {
         entity: Entity,
     ) {
         if let Some(_player) = world_ecs.get::<Player>(entity) {
-            draw_text("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
+            draw_text_ui("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
     }
 
     fn height(&self) -> f32 {
-        20.0
+        25.0
     }
 
     fn title(&self) -> &str {

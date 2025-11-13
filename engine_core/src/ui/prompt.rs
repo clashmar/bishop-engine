@@ -1,5 +1,7 @@
 // engine_core/src/ui/prompt.rs
+use crate::controls::controls::Controls;
 use crate::ui::widgets::*;
+use crate::ui::text::*;
 use macroquad::prelude::*;
 use crate::ui::widgets::WidgetId;
 
@@ -21,8 +23,6 @@ pub struct StringPromptWidget {
     message: String,
     /// Current contents of the text field.
     current: String,
-    /// Whether a result has been produced.
-    finished: bool,
 }
 
 impl StringPromptWidget {
@@ -45,24 +45,19 @@ impl StringPromptWidget {
             rect,
             message: message.into(),
             current: String::new(),
-            finished: false,
         }
     }
 
     /// Draws the widget and, return the result if confirmed/cancelled or None.
     pub fn draw(&mut self) -> Option<StringPromptResult> {
-        if self.finished {
-            return None;
-        }
-
         // Message
         let message_pos = vec2(self.rect.x, self.rect.y + 10.0);
 
-        draw_text(
+        draw_text_ui(
             &self.message,
             message_pos.x,
             message_pos.y,
-            20.0,
+            DEFAULT_FONT_SIZE,
             WHITE,
         );
 
@@ -101,13 +96,11 @@ impl StringPromptWidget {
         let cancel_clicked = gui_button(cancel_rect, "Cancel");
 
         // Handle result
-        if confirm_clicked {
-            self.finished = true;
+        if confirm_clicked || Controls::enter() {
             return Some(StringPromptResult::Confirmed(self.current.clone()));
         }
 
         if cancel_clicked {
-            self.finished = true;
             return Some(StringPromptResult::Cancelled);
         }
 

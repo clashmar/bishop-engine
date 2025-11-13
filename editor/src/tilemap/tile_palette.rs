@@ -2,7 +2,7 @@
 use std::collections::VecDeque;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use engine_core::{global::tile_size, ui::widgets::*};
+use engine_core::{global::tile_size, ui::{text::draw_text_ui, widgets::*}};
 use serde_with::serde_as;
 use engine_core::{
     assets::{asset_manager::AssetManager, sprite::SpriteId},
@@ -219,13 +219,13 @@ impl TilePalette {
         if gui_checkbox(cb_walk, &mut walk) {
             self.ui.walkable = walk;
         }
-        draw_text("Walkable", cb_walk.x + 30., cb_walk.y + 15., 18., WHITE);
+        draw_text_ui("Walkable", cb_walk.x + 30., cb_walk.y + 15., 18., WHITE);
 
         let cb_solid = Rect::new(panel.x + 10., panel.y + 140., 20., 20.);
         if gui_checkbox(cb_solid, &mut solid) {
             self.ui.solid = solid;
         }
-        draw_text("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., WHITE);
+        draw_text_ui("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., WHITE);
 
         let btn_label = match self.ui.mode {
             TilePaletteUiMode::Create => { "Create" },

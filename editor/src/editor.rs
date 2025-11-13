@@ -1,5 +1,4 @@
 // editor/src/editor.rs
-use crate::editor_actions::PROMPT_RESULT;
 use crate::gui::inspector::modal::Modal;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::input_is_focused;
@@ -12,7 +11,7 @@ use std::io;
 use macroquad::prelude::*;
 use engine_core::game::game::Game;
 use crate::gui::menu_bar::MenuBar;
-use crate::controls::controls::Controls;
+use engine_core::controls::controls::Controls;
 use crate::playtest::room_playtest;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::editor_camera_controller::EditorCameraController;
@@ -49,11 +48,12 @@ impl Editor {
 
         let game = if let Some(name) = editor_storage::most_recent_game_name() {
             editor_storage::load_game_by_name(&name).await?
-        } else if let Some(name) = editor_storage::prompt_user_input().await {
+        } else if let Some(name) = editor.prompt_new_game().await {
             editor_storage::create_new_game(name).await
         } else {
-            // User pressed Escape
-            editor_storage::create_new_game("untitled".to_string()).await
+            // User pressed Cancel
+            println!("User cancelled the new game dialogue.");
+            std::process::exit(0);
         };
 
         let palette = match editor_storage::load_palette(&game.name.clone()) {
@@ -252,24 +252,12 @@ impl Editor {
     }
 
     async fn draw_ui(&mut self) {
-        // Modal
-        if self.modal.is_open() {
-            let clicked_outside = self.modal.draw(&mut self.game.asset_manager);
-            if clicked_outside {
-                self.modal.close();
-                PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
-            }
-        }
+        // Draws and handles result
+        self.handle_modal().await;
 
         // Global menu options
         self.draw_menu_bar().await;
 
-        // Draw toast notifications
-        if let Some(toast) = &mut self.toast {
-            toast.update();
-            if !toast.active {
-                self.toast = None;
-            }
-        }
+        self.draw_toast();
     }
 }
