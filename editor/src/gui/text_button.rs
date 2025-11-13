@@ -1,3 +1,4 @@
+use engine_core::ui::text::draw_text_ui;
 use macroquad::prelude::*;
 
 pub struct TextButton {
@@ -28,7 +29,7 @@ impl TextButton {
         - text_dims.offset_y
         + manual_offset;
 
-    draw_text(
+    draw_text_ui(
         &self.label,
         text_x,
         text_y,

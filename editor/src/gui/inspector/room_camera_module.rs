@@ -1,6 +1,6 @@
 // editor/src/gui/inspector/camera_module.rs
 use strum::IntoEnumIterator;
-use engine_core::camera::game_camera::*;
+use engine_core::{camera::game_camera::*, ui::text::*};
 use engine_core::ecs::module::CollapsibleModule;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use macroquad::prelude::*;
@@ -45,8 +45,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
-        let label_width = measure_text(mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE, 1.0).width;
+        draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
 
         let mode_rect = Rect::new(rect.x + label_width + SPACING, y, rect.w - label_width - SPACING, 30.0);
         let current_mode = cam.zoom_mode;
@@ -99,8 +99,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Camera mode
         let cam_mode_label = "Camera Mode: ";
-        let cam_label_width = measure_text(cam_mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(
+        let cam_label_width = measure_text_ui(cam_mode_label, FIELD_TEXT_SIZE, 1.0).width;
+        draw_text_ui(
             cam_mode_label,
             rect.x,
             y + 20.0,
@@ -170,9 +170,9 @@ impl RoomCameraModule {
 
         // Label
         let label = "Scale: ";
-        let label_width = measure_text(label, None, FIELD_TEXT_SIZE as u16, 1.0).width + 1.0;
-        let num_width = measure_text("0.00", None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(label, FIELD_TEXT_SIZE, 1.0).width + 1.0;
+        let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE, 1.0).width;
+        draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
 
         // Numeric field 
         let num_rect = Rect::new(

@@ -1,4 +1,5 @@
 // editor/src/gui/inspector/modal.rs
+use std::cell::RefCell;
 use engine_core::assets::asset_manager::AssetManager;
 use macroquad::prelude::*;
 
@@ -7,12 +8,22 @@ pub struct Modal {
     /// Position & size of the modal window.
     pub rect: Rect,
     pub open: bool,
-    draw_callback: DrawCallback,
+    widgets: BoxedWidgets,
     just_opened: bool,
 }
 
-type BoxedDraw = Box<dyn FnMut(&mut AssetManager) + 'static>;
-type DrawCallback = Option<BoxedDraw>;
+thread_local! {
+    pub static MODAL_OPEN: RefCell<bool> = RefCell::new(false);
+}
+
+/// Global flag that tells the rest of the editor whether a dropdown
+/// is currently open.
+pub fn is_modal_open() -> bool {
+    MODAL_OPEN.with(|f| *f.borrow())
+}
+
+pub type BoxedWidget = Box<dyn FnMut(&mut AssetManager) + 'static>;
+type BoxedWidgets = Vec<BoxedWidget>;
 
 impl Modal {
     /// Creates a new modal of the given size. It is automatically centered.
@@ -27,25 +38,32 @@ impl Modal {
         Self {
             rect,
             open: false,
-            draw_callback: None,
+            widgets: Vec::new(),
             just_opened: false,
         }
     }
 
     /// Open the modal and set draw callbacks.
-    pub fn open<F>(&mut self, draw_content: F)
-    where
-        F: FnMut(&mut AssetManager) + 'static,
-    {
+    pub fn open(&mut self, callbacks: Vec<BoxedWidget>) {
         self.open = true;
-        self.draw_callback = Some(Box::new(draw_content));
+        self.widgets = callbacks;
         self.just_opened = true; 
+
+        // Let the editor know a modal is open
+        MODAL_OPEN.with(|r| {
+            *r.borrow_mut() = true;
+        });    
     }
 
     /// Close the modal.
     pub fn close(&mut self) {
         self.open = false;
-        self.draw_callback = None;
+        self.widgets = Vec::new();
+
+        // Let the editor know the modal is close
+        MODAL_OPEN.with(|r| {
+            *r.borrow_mut() = false;
+        });  
     }
 
     /// Returns `true` if the modal is currently open.
@@ -54,6 +72,7 @@ impl Modal {
     }
 
     /// Render the modal. Returns `true`` when the user clicked outside the window.
+    /// Needs asset manager for widgets that need to access assets.
     pub fn draw(&mut self, asset_manager: &mut AssetManager) -> bool {
         if !self.open {
             return false;
@@ -86,11 +105,9 @@ impl Modal {
             WHITE
         );
 
-        // Optional title?
-
-        // Run the callbacks
-        if let Some(callback) = self.draw_callback.as_mut() {
-            callback.as_mut()(asset_manager);
+        // Run all widgets
+        for widget in self.widgets.iter_mut() {
+            widget.as_mut()(asset_manager);
         }
 
         // Skip the outside click check if just opened
@@ -110,3 +127,4 @@ impl Modal {
         false
     }
 }
+

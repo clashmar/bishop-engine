@@ -670,6 +670,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "engine_core",
+ "fontdue",
  "futures",
  "inventory",
  "macroquad",

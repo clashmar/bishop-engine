@@ -14,3 +14,4 @@ pub mod storage;
 pub mod tiles;
 pub mod world;
 pub mod ui;
+pub mod controls;

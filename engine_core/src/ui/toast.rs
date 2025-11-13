@@ -2,6 +2,8 @@
 use std::time::Instant;
 use macroquad::prelude::*;
 
+use crate::ui::{text::{draw_text_ui, measure_text_ui}, widgets::DEFAULT_FONT_SIZE};
+
 const PADDING: f32 = 20.0;
 
 /// A simple toast that disappears after a short delay.
@@ -38,7 +40,7 @@ impl Toast {
             return;
         }
         
-        let txt = measure_text(&self.msg, None, 18, 1.0);
+        let txt = measure_text_ui(&self.msg, DEFAULT_FONT_SIZE, 1.0);
 
         // Top left
         let bg_rect = Rect::new(
@@ -58,11 +60,11 @@ impl Toast {
         );
 
         // Text
-        draw_text(
+        draw_text_ui(
             &self.msg,
             bg_rect.x + PADDING,
             bg_rect.y + txt.height + PADDING / 2.0,
-            18.0,
+            DEFAULT_FONT_SIZE,
             WHITE,
         );
     }

@@ -1,5 +1,6 @@
 // engine_core/src/ecs/generic_module.rs
 use crate::ecs::module::InspectorModule;
+use crate::ui::text::*;
 use crate::ui::widgets::*;
 use crate::{
     assets::asset_manager::AssetManager, 
@@ -21,7 +22,7 @@ const SPACING: f32 = 5.0;
 const LABEL_PADDING: f32 = 10.0;
 const MIN_WIDGET_WIDTH: f32 = 80.0;
 const MIN_LABEL_WIDTH: f32 = 80.0;
-const FONT_SIZE: f32 = 18.0;
+const FONT_SIZE: f32 = DEFAULT_FONT_SIZE;
 
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
@@ -74,10 +75,10 @@ where
 
             // Prepare the field label
             let label = parse_field_name(field.name);
-            let label_w = measure_text(&label, None, FONT_SIZE as u16, 1.0).width.max(MIN_LABEL_WIDTH);
+            let label_w = measure_text_ui(&label, FONT_SIZE, 1.0).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
-            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
+            draw_text_ui(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
 
             // Widget rectangle
             let widget_x = if widget_x > rect.x + rect.w - MIN_WIDGET_WIDTH {

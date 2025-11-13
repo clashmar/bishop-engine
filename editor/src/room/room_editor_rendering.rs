@@ -9,6 +9,7 @@ use engine_core::ecs::component::Collider;
 use engine_core::rendering::render_room::*;
 use engine_core::camera::game_camera::RoomCamera;
 use engine_core::ecs::entity::Entity;
+use engine_core::ui::text::*;
 use engine_core::world::room::*;
 use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::assets::asset_manager::AssetManager;
@@ -82,13 +83,13 @@ impl RoomEditor {
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text(&txt, None, 20, 1.0);
+        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE, 1.0);
         let margin = 10.0;
 
         let x = (screen_width() - txt_metrics.width) / 2.0;
         let y = screen_height() - margin;
 
-        draw_text(&txt, x, y, 20.0, BLUE);
+        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE, BLUE);
     }
 
     /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.

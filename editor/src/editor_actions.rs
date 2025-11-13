@@ -1,5 +1,5 @@
 // editor/src/editor_actions.rs
-use crate::controls::controls::Controls;
+use engine_core::controls::controls::Controls;
 use engine_core::ui::prompt::StringPromptResult;
 use std::cell::RefCell;
 use engine_core::ui::prompt::StringPromptWidget;
@@ -10,7 +10,7 @@ use engine_core::rendering::render_system::RenderSystem;
 use engine_core::storage::path_utils::*;
 use engine_core::ui::toast::Toast;
 use crate::game::game_editor::GameEditor;
-use crate::gui::inspector::modal::Modal;
+use crate::gui::inspector::modal::*;
 use crate::room::room_editor::RoomEditor;
 use crate::world::world_editor::WorldEditor;
 use crate::editor::*;
@@ -38,6 +38,30 @@ impl Default for Editor {
 }
 
 impl Editor {
+    /// Returns `Some(name)` when the user confirms, `None` on cancel.
+    pub async fn prompt_new_game(&mut self) -> Option<String> {
+        self.open_new_game_modal();
+
+        // Wait until the user has responded
+        loop {
+            // Draws and handles result
+            if let Some(name) = self.handle_modal().await {
+                return Some(name);
+            }
+
+            // Guard against modal not being open for some reason
+            if !self.modal.is_open() {
+                return None;
+            }
+
+            // Toasts can be created by the prompt
+            self.draw_toast();
+
+            next_frame().await;
+        }
+    }
+
+
     pub async fn draw_menu_bar(&mut self) {
         let menu_title = match self.mode {
             EditorMode::Game => {
@@ -60,17 +84,7 @@ impl Editor {
                 MenuAction::NewGame => {
                     // Save current
                     self.save();
-
-                    let prompt_message = "Enter game name:";
-                    self.modal = Modal::new(400.0, 180.0);
-                    let mut prompt = StringPromptWidget::new(self.modal.rect, prompt_message);
-
-                    self.modal.open(move |_asset_manager| {
-                        if let Some(result) = prompt.draw() {
-                            // Write the result to the static thread local
-                            PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
-                        }
-                    });
+                    self.open_new_game_modal();
                 }
                 MenuAction::Open => {
                     // Open a folder picker rooted at the absolute save folder
@@ -129,48 +143,6 @@ impl Editor {
     }
 
     pub async fn handle_user_input(&mut self) {
-        // Modal
-        if self.modal.is_open() {
-            let prompt_result_opt = PROMPT_RESULT.with(|c| c.borrow_mut().take());
-
-            if let Some(result) = prompt_result_opt {
-                self.modal.close();
-
-                match result {
-                    StringPromptResult::Confirmed(name) => {
-                        // Validation
-                        if name.trim().is_empty() {
-                            self.toast = Some(Toast::new("Name cannot be empty", 2.0));
-                        } else {
-                            // Duplicate check (case‑sensitive)
-                            let duplicate = editor_storage::list_game_names()
-                                .iter()
-                                .any(|existing| existing == &name);
-
-                            if duplicate {
-                                self.toast = Some(Toast::new(
-                                    &format!("\"{name}\" already exists."),
-                                    2.5,
-                                ));
-                            } else {
-                                // Create the new game
-                                let new_game = editor_storage::create_new_game(name).await;
-                                self.reset(new_game);
-                            }
-                        }
-                    }
-                    StringPromptResult::Cancelled => { }
-                }
-            }
-
-            // Outside‑click handling
-            if self.modal.draw(&mut self.game.asset_manager) {
-                self.modal.close();
-                // Clear any pending result
-                PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
-            }
-        }
-
         if Controls::save() {
             self.save();
         }
@@ -196,6 +168,82 @@ impl Editor {
             .iter()
             .find(|m| m.id == *room_id)
             .expect("Could not find room from id.")
+    }
+
+    fn open_new_game_modal(&mut self) {
+        let prompt_message = "Enter game name:";
+        self.modal = Modal::new(400.0, 180.0);
+        let mut prompt = StringPromptWidget::new(self.modal.rect, prompt_message);
+
+        let widgets: Vec<BoxedWidget> = vec![ 
+            Box::new(move |_| {
+                if let Some(result) = prompt.draw() {
+                    // Write the result to the static thread local
+                    PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
+                }
+            })
+        ];
+
+        self.modal.open(widgets);
+    }
+
+    pub async fn handle_modal(&mut self) -> Option<String> {
+        if self.modal.is_open() {
+            let prompt_result_opt = PROMPT_RESULT.with(|c| c.borrow_mut().take());
+
+            if let Some(result) = prompt_result_opt {
+                match result {
+                    StringPromptResult::Confirmed(name) => {
+                        // Validation
+                        if name.trim().is_empty() {
+                            self.toast = Some(Toast::new("Name cannot be empty", 2.0));
+                            return None;
+                        } else {
+                            // Duplicate check (case‑sensitive)
+                            let duplicate = editor_storage::list_game_names()
+                                .iter()
+                                .any(|existing| existing == &name);
+
+                            if duplicate {
+                                self.toast = Some(Toast::new(
+                                    &format!("\"{name}\" already exists."),
+                                    2.5,
+                                ));
+                                return None;
+                            } else {
+                                // Create the new game
+                                let new_game = editor_storage::create_new_game(name.clone()).await;
+                                self.reset(new_game);
+                                self.modal.close();
+                                return Some(name);
+                            }
+                        }
+                    }
+                    StringPromptResult::Cancelled => { 
+                        self.modal.close();
+                        return None
+                    }
+                }
+            }
+
+            // Outside‑click handling
+            if self.modal.draw(&mut self.game.asset_manager) {
+                self.modal.close();
+                // Clear any pending result
+                PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
+                return None;
+            }
+        }
+        None
+    }
+
+    pub fn draw_toast(&mut self) {
+        if let Some(toast) = &mut self.toast {
+            toast.update();
+            if !toast.active {
+                self.toast = None;
+            }
+        }
     }
 
     pub fn reset(&mut self, game: Game) {
