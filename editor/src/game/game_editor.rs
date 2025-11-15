@@ -121,7 +121,7 @@ impl GameEditor {
                                     let mut chosen = current_sprite;
                                     if gui_sprite_picker(picker_rect, &mut chosen, asset_manager) {
                                         // Store the result for the main draw loop
-                                        MODAL_RESULT.with(|c| *c.borrow_mut() = Some((world_id, chosen)));
+                                        WORLD_SPRITE_RESULT.with(|c| *c.borrow_mut() = Some((world_id, chosen)));
                                     }
                                 })
                             ];
@@ -155,18 +155,6 @@ impl GameEditor {
         if self.modal.is_open() {
             self.active_rects.push(self.modal.rect)
         }
-
-        MODAL_RESULT.with(|c| {
-            if let Some((world_id, new_sprite)) = c.borrow_mut().take() {
-                if let Some(world) = game.worlds.iter_mut().find(|w| w.id == world_id) {
-                    world.meta.sprite_id = if new_sprite.0 == 0 {
-                        None
-                    } else {
-                        Some(new_sprite)
-                    };
-                }
-            }
-        });
 
         self.draw_worlds(game);
         self.draw_ui(game);
@@ -271,6 +259,20 @@ impl GameEditor {
             if clicked_outside {
                 self.modal.close();
             }
+
+            // Handle results
+            WORLD_SPRITE_RESULT.with(|c| {
+                if let Some((world_id, new_sprite)) = c.borrow_mut().take() {
+                    if let Some(world) = game.worlds.iter_mut().find(|w| w.id == world_id) {
+                        world.meta.sprite_id = if new_sprite.0 == 0 {
+                            None
+                        } else {
+                            Some(new_sprite)
+                        };
+                    }
+                    self.modal.close();
+                }
+            });
         }
     }
 
@@ -357,5 +359,5 @@ static ALL_MODES: Lazy<&'static [GameEditorMode]> = Lazy::new(|| {
 });
 
 thread_local! {
-    static MODAL_RESULT: RefCell<Option<(WorldId, SpriteId)>> = RefCell::new(None);
+    static WORLD_SPRITE_RESULT: RefCell<Option<(WorldId, SpriteId)>> = RefCell::new(None);
 }

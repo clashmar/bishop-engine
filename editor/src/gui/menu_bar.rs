@@ -18,6 +18,8 @@ pub struct MenuBar {
 
 #[derive(EnumIter, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MenuAction {
+    // Rename Game/World/Room
+    Rename,
     // File actions
     NewGame,
     Open,
@@ -97,15 +99,24 @@ impl MenuBar {
         let mut x = panel_rect.x + PADDING;
         let y = panel_rect.y + PADDING / 2.0;
 
-        let title_dims = draw_text_ui(
-            title, 
-            panel_rect.x + PADDING, 
-            panel_rect.y + 31.0,
-            22.0,
-            BLACK,
+        let title_width = measure_text_ui(title, FIELD_TEXT_SIZE, 1.0).width;
+        let title_rect = Rect::new(
+            x,
+            y,
+            title_width + PADDING * 2.0,
+            HEIGHT,
         );
 
-        x += title_dims.width + SPACING * 3.0;
+        // Title (rename button)
+        if gui_button_plain(
+            title_rect, 
+            title,
+            BLACK,
+        ) {
+            self.pending = Some(MenuAction::Rename)
+        }
+
+        x += title_width + SPACING * 3.0;
 
         // File dropdown
         let file_label = "File";

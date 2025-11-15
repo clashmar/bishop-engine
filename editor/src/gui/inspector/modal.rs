@@ -16,7 +16,7 @@ thread_local! {
     pub static MODAL_OPEN: RefCell<bool> = RefCell::new(false);
 }
 
-/// Global flag that tells the rest of the editor whether a dropdown
+/// Global flag that tells the rest of the editor whether a modal
 /// is currently open.
 pub fn is_modal_open() -> bool {
     MODAL_OPEN.with(|f| *f.borrow())
@@ -24,6 +24,14 @@ pub fn is_modal_open() -> bool {
 
 pub type BoxedWidget = Box<dyn FnMut(&mut AssetManager) + 'static>;
 type BoxedWidgets = Vec<BoxedWidget>;
+
+/// Used by callers of a a modal to decide what should happen if 
+/// the user clicks outside the modal. 
+#[derive(Clone, PartialEq)]
+pub enum ModalResult {
+    String(String),
+    ClickedOutside,
+}
 
 impl Modal {
     /// Creates a new modal of the given size. It is automatically centered.
