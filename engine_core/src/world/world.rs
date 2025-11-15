@@ -55,6 +55,12 @@ impl World {
             room.link_exits(&other_rooms);
         }
     }
+
+    pub fn get_room_mut(&mut self, id: RoomId) -> Option<&mut Room> {
+        self.rooms
+            .iter_mut()
+            .find(|r| r.id == id)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

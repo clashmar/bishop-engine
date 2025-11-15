@@ -45,8 +45,12 @@ impl Editor {
         // Wait until the user has responded
         loop {
             // Draws and handles result
-            if let Some(name) = self.handle_modal().await {
-                return Some(name);
+            if let Some(modal_result) = self.handle_modal().await {
+                if let ModalResult::String(name) = modal_result {
+                    // Only close modal if a name is returned
+                    self.modal.close();
+                    return Some(name);
+                }
             }
 
             // Guard against modal not being open for some reason
@@ -81,6 +85,9 @@ impl Editor {
 
         if let Some(action) = self.menu_bar.draw(&menu_title) {
             match action {
+                MenuAction::Rename => {
+                    self.open_rename_modal();
+                }
                 MenuAction::NewGame => {
                     // Save current
                     self.save();
@@ -179,7 +186,7 @@ impl Editor {
             Box::new(move |_| {
                 if let Some(result) = prompt.draw() {
                     // Write the result to the static thread local
-                    PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
+                    NEW_GAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
                 }
             })
         ];
@@ -187,11 +194,41 @@ impl Editor {
         self.modal.open(widgets);
     }
 
-    pub async fn handle_modal(&mut self) -> Option<String> {
-        if self.modal.is_open() {
-            let prompt_result_opt = PROMPT_RESULT.with(|c| c.borrow_mut().take());
+    fn open_rename_modal(&mut self) {
+        let prompt_message = match self.mode {
+            EditorMode::Game => "Rename game: ",
+            EditorMode::World(_) => "Rename world: ",
+            EditorMode::Room(_) => "Rename room: ",
+        };
 
-            if let Some(result) = prompt_result_opt {
+        self.modal = Modal::new(400.0, 180.0);
+        let mut prompt = StringPromptWidget::new(self.modal.rect, prompt_message);
+
+        let widgets: Vec<BoxedWidget> = vec![ 
+            Box::new(move |_| {
+                if let Some(result) = prompt.draw() {
+                    // Write the result to the static thread local
+                    RENAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
+                }
+            })
+        ];
+
+        self.modal.open(widgets);
+    }
+
+    pub async fn handle_modal(&mut self) -> Option<ModalResult> {
+        if self.modal.is_open() {
+            // Outside‑click handling
+            if self.modal.draw(&mut self.game.asset_manager) {
+                // Clear any pending results
+                NEW_GAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
+                return Some(ModalResult::ClickedOutside);
+            }
+
+            // New game name prompt
+            let new_game_prompt_opt = NEW_GAME_PROMPT_RESULT.with(|c| c.borrow_mut().take());
+
+            if let Some(result) = new_game_prompt_opt {
                 match result {
                     StringPromptResult::Confirmed(name) => {
                         // Validation
@@ -215,7 +252,7 @@ impl Editor {
                                 let new_game = editor_storage::create_new_game(name.clone()).await;
                                 self.reset(new_game);
                                 self.modal.close();
-                                return Some(name);
+                                return Some(ModalResult::String(name));
                             }
                         }
                     }
@@ -226,12 +263,32 @@ impl Editor {
                 }
             }
 
-            // Outside‑click handling
-            if self.modal.draw(&mut self.game.asset_manager) {
-                self.modal.close();
-                // Clear any pending result
-                PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
-                return None;
+            // New game name prompt
+            let rename_prompt_opt = RENAME_PROMPT_RESULT.with(|c| c.borrow_mut().take());
+
+            if let Some(result) = rename_prompt_opt {
+                match result {
+                    StringPromptResult::Confirmed(name) => {
+                        match self.mode {
+                            EditorMode::Game => {
+                                self.game.name = name
+                            } 
+                            EditorMode::World(_) => {
+                                self.game.current_world_mut().name = name
+                            },
+                            EditorMode::Room(id) => {
+                                if let Some(room) = self.game.current_world_mut().get_room_mut(id) {
+                                    room.name = name;
+                                }
+                            }
+                        }
+                        self.modal.close();
+                    }
+                    StringPromptResult::Cancelled => { 
+                        self.modal.close();
+                        return None
+                    }
+                }
             }
         }
         None
@@ -256,5 +313,9 @@ impl Editor {
 }
 
 thread_local! {
-    pub static PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
+    pub static NEW_GAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
+}
+
+thread_local! {
+    pub static RENAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
 }
