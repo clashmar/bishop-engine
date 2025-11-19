@@ -253,6 +253,7 @@ impl GameEditor {
             self.mode = self.mode_selector.current;
         }
 
+        // Draw modal last
         if self.modal.is_open() {
             // Pass the asset manager so any widget that needs assets can use it
             let clicked_outside = self.modal.draw(&mut game.asset_manager);

@@ -163,6 +163,74 @@ pub fn create_new_world() -> World {
     world
 }
 
+/// Rename a game folder and assets. 
+/// Returns `Ok(())` on success or an `io::Error` on failure.
+pub fn rename_game(
+    game: &mut Game,
+    new_name: &str,
+) -> std::io::Result<()> {
+    let old_game_dir = game_folder(&game.name);
+    let new_game_dir = game_folder(&new_name);
+    std::fs::rename(&old_game_dir, &new_game_dir)?;
+
+    // Asset manager uses the game name to find the assets folder
+    game.asset_manager.game_name = new_name.to_owned();
+    game.name = new_name.to_owned();
+    Ok(())
+}
+
+/// Save a copy of the current game in a newly named folder. 
+/// Returns `Ok(())` on success or an `io::Error` on failure.
+pub fn save_as(
+    game: &mut Game,
+    new_name: &str,
+) -> std::io::Result<()> {
+    use std::path::Path;
+
+    // Determine paths
+    let old_game_dir = game_folder(&game.name);
+    let new_game_dir = game_folder(new_name);
+    let old_assets_dir = assets_folder(&game.name);
+    let new_assets_dir = assets_folder(new_name);
+
+    // Guard against overwriting an existing game
+    if new_game_dir.exists() || new_assets_dir.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!("A game called \"{new_name}\" already exists"),
+        ));
+    }
+
+    // Recursively copy the directory
+    fn copy_dir_recursive(src: &Path, dest: &Path) -> io::Result<()> {
+        // Create the target directory
+        fs::create_dir_all(dest)?;
+
+        for entry in fs::read_dir(src)? {
+            let entry = entry?;
+            let src_path = entry.path();
+            let dst_path = dest.join(entry.file_name());
+
+            if src_path.is_dir() {
+                copy_dir_recursive(&src_path, &dst_path)?;
+            } else {
+                fs::copy(&src_path, &dst_path)?;
+            }
+        }
+        Ok(())
+    }
+
+    // Copy the game and assets folder
+    copy_dir_recursive(&old_game_dir, &new_game_dir)?;
+    copy_dir_recursive(&old_assets_dir, &new_assets_dir)?;
+
+    // Update the game and assets manager
+    game.name = new_name.to_owned();
+    game.asset_manager.game_name = new_name.to_owned();
+
+    Ok(())
+}
+
 pub fn list_game_names() -> Vec<String> {
     std::fs::read_dir(absolute_save_root())
         .into_iter()

@@ -1,6 +1,6 @@
 // editor/src/gui/inspector/inspector_panel.rs
 use engine_core::camera::game_camera::RoomCamera;
-use engine_core::ecs::component::{CurrentRoom, Player, Position};
+use engine_core::ecs::component::*;
 use engine_core::ui::text::*;
 use engine_core::world::room::Room;
 use macroquad::prelude::*;
@@ -8,20 +8,21 @@ use engine_core::ui::widgets::*;
 use engine_core::{
     assets::asset_manager::AssetManager,
     ecs::{
-        component_registry::{COMPONENTS, ComponentRegistry},
+        component_registry::*,
         entity::Entity,
-        module::{CollapsibleModule, InspectorModule},
+        module::*,
         module_factory::MODULES,
         world_ecs::WorldEcs,
     },
 };
-use crate::commands::entity_commands::{DeleteEntityCmd, copy_entity};
 use engine_core::controls::controls::Controls;
+use crate::commands::entity_commands::*;
 use crate::global::push_command;
 use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::inspector::transform_module::TransformModule;
+use crate::gui::menu_bar::menu_button;
 
 const SCROLL_SPEED: f32 = 5.0; 
 
@@ -99,7 +100,7 @@ impl InspectorPanel {
     }
 
     /// Render the panel and any visible sub‑modules
-    /// Returns true if 'Create' was pressed
+    /// Returns true if 'Create' was pressed.
     pub fn draw(
         &mut self,
         asset_manager: &mut AssetManager,
@@ -121,8 +122,8 @@ impl InspectorPanel {
             let add_label = "Add Component";
 
             // Measure text to obtain proper button widths
-            let txt_remove = measure_text_ui(remove_label, DEFAULT_FONT_SIZE, 1.0);
-            let txt_add = measure_text_ui(add_label, DEFAULT_FONT_SIZE, 1.0);
+            let txt_remove = measure_text_ui(remove_label, HEADER_FONT_SIZE_20, 1.0);
+            let txt_add = measure_text_ui(add_label, HEADER_FONT_SIZE_20, 1.0);
             let btn_w_remove = txt_remove.width + PADDING;
             let btn_w_add = txt_add.width + PADDING;
 
@@ -217,7 +218,7 @@ impl InspectorPanel {
             
             // Draw buttons at the top after the covers
             // Add entity
-            if gui_button_plain(add_rect, add_label, BLACK) {
+            if menu_button(add_rect, add_label, false) {
                 if self.can_show_any_component(world_ecs) {
                     self.add_mode = !self.add_mode;
                 }
@@ -228,7 +229,7 @@ impl InspectorPanel {
             if !(world_ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                if gui_button_plain(remove_rect, remove_label, BLACK) || Controls::delete() && !input_is_focused() {
+                if menu_button(remove_rect, remove_label, false) || Controls::delete() && !input_is_focused() {
                     let command = DeleteEntityCmd {
                         entity,
                         saved: None,
@@ -242,8 +243,8 @@ impl InspectorPanel {
             }
         } else {
             // No entity selected
-            let create_label = "Create";
-            let txt_create = measure_text_ui(create_label, DEFAULT_FONT_SIZE, 1.0);
+            let create_label = "Create Entity";
+            let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
             let create_btn = self.register_rect(Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - PADDING,
                 self.rect.y + BTN_MARGIN,
@@ -252,7 +253,7 @@ impl InspectorPanel {
             ));
 
             let add_cam_label = "Add Camera";
-            let txt_cam = measure_text_ui(add_cam_label, DEFAULT_FONT_SIZE, 1.0);
+            let txt_cam = measure_text_ui(add_cam_label, HEADER_FONT_SIZE_20, 1.0);
             let cam_btn_w = txt_cam.width + PADDING;
             let cam_btn = self.register_rect(Rect::new(
                 create_btn.x - SPACING - cam_btn_w,
@@ -261,7 +262,7 @@ impl InspectorPanel {
                 BTN_HEIGHT,
             ));
 
-            if gui_button_plain(cam_btn, add_cam_label, BLACK) {
+            if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
                 let _ = world_ecs
                     .create_entity()
@@ -294,12 +295,12 @@ impl InspectorPanel {
             }
 
             let txt_val = format!("{:.2}", room.darkness);
-            let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE, 1.0);
+            let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
             let txt_x = slider_rect.x - txt_measure.width - SPACING;
             let txt_y = slider_rect.y + 20.;
             draw_text_ui(&txt_val, txt_x, txt_y, 20.0, WHITE);
 
-            return gui_button_plain(create_btn, create_label, BLACK);
+            return menu_button(create_btn, create_label, false);
         }
 
         // Process pending component addition
@@ -350,7 +351,7 @@ impl InspectorPanel {
         // Determine width
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
-            let txt = measure_text_ui(reg.type_name, DEFAULT_FONT_SIZE, 1.0);
+            let txt = measure_text_ui(reg.type_name, DEFAULT_FONT_SIZE_16, 1.0);
             let w = txt.width + 20.0;
             if w > needed_w {
                 needed_w = w;

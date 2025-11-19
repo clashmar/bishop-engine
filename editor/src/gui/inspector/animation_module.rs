@@ -25,7 +25,7 @@ use crate::gui::gui_constants::*;
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;
 const LABEL_Y_OFFSET: f32 = 20.0;
-const LABEL_FONT_SIZE: f32 = DEFAULT_FONT_SIZE;
+const LABEL_FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 const COLON_GAP: f32 = 10.0;
 const FIELD_GAP: f32 = 20.0;
 
@@ -78,7 +78,7 @@ impl InspectorModule for AnimationModule {
 
         // Add-clip button
         const ADD_LABEL: &str = "Add Clip";
-        let txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE, 1.0);
+        let txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
         let btn_w = txt.width + 12.0;   
         let btn_h = txt.height + 8.0;
 
@@ -151,7 +151,7 @@ impl InspectorModule for AnimationModule {
                 &variant_label, 
                 rect.x + sprite_btn.w + SPACING + PADDING, 
                 y + LABEL_Y_OFFSET, 
-                DEFAULT_FONT_SIZE, 
+                DEFAULT_FONT_SIZE_16, 
                 FIELD_TEXT_COLOR
             );
 

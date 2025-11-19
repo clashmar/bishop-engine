@@ -54,19 +54,19 @@ impl RoomEditor {
                     room,
                 );
 
-                // Mode selector
+                // Mode selector (menu bar)
                 let (mode_rect, changed) = self.mode_selector.draw();
                 if changed {
                     self.mode = self.mode_selector.current;
                 }
 
-                // Play‑test button
+                // Play‑test button (menu bar)
                 let play_label = "Play";
-                let play_width = measure_text(play_label, None, 20, 1.0).width + PADDING;
+                let play_width = measure_text_ui(play_label, 20.0, 1.0).width + PADDING;
                 let play_x = mode_rect.x + mode_rect.w + SPACING;
                 let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
 
-                if gui_button(play_rect, play_label) {
+                if menu_button(play_rect, play_label, false) {
                     self.request_play = true;
                 }
             }
@@ -83,13 +83,13 @@ impl RoomEditor {
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE, 1.0);
+        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0);
         let margin = 10.0;
 
         let x = (screen_width() - txt_metrics.width) / 2.0;
         let y = screen_height() - margin;
 
-        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE, BLUE);
+        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLUE);
     }
 
     /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.

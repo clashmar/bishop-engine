@@ -22,7 +22,7 @@ const SPACING: f32 = 5.0;
 const LABEL_PADDING: f32 = 10.0;
 const MIN_WIDGET_WIDTH: f32 = 80.0;
 const MIN_LABEL_WIDTH: f32 = 80.0;
-const FONT_SIZE: f32 = DEFAULT_FONT_SIZE;
+const FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
