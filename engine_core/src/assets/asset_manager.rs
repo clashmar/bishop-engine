@@ -1,12 +1,13 @@
 // engine_core/src/assets/asset_manager.rs
-use std::{path::{Path, PathBuf}, sync::LazyLock};
+use crate::{assets::sprite::Sprite, game::game::Game, lighting::glow::Glow};
+use std::{collections::HashSet, path::{Path, PathBuf}, sync::LazyLock};
 use futures::executor::block_on;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::{
-    animation::animation_clip::Animation, assets::sprite::SpriteId, storage::path_utils::assets_folder, world::world::World
-};
+use crate::animation::animation_clip::Animation;
+use crate::assets::sprite::SpriteId;
+use crate::storage::path_utils::assets_folder;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct AssetManager {
@@ -137,11 +138,13 @@ impl AssetManager {
     }
 
     /// Initialize all assets for the game.
-    pub async fn init_manager(&mut self, worlds: &mut Vec<World>) {
+    pub async fn init_manager(game: &mut Game) {
         // Calculate the next id from the existing map
-        self.restore_next_id();
+        game.asset_manager.restore_next_id();
 
-        let sprites: Vec<(SpriteId, PathBuf)> = self
+        let _purged = Self::purge_unused_assets(game);
+
+        let sprites: Vec<(SpriteId, PathBuf)> = game.asset_manager
             .sprite_id_to_path
             .iter()
             .map(|(id, path)| (*id, path.clone()))
@@ -149,15 +152,15 @@ impl AssetManager {
 
         // Reload all textures
         for (id, path) in sprites {
-            let _ = self.reload_texture(&id, &path).await;
+            let _ = game.asset_manager.reload_texture(&id, &path).await;
         }
 
-        for world in worlds {
+        for world in &mut game.worlds {
             let world_ecs = &mut world.world_ecs;
 
             // Load and initialize all animations
             for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
-                animation.refresh_sprite_cache(self).await;
+                animation.refresh_sprite_cache(&mut game.asset_manager).await;
                 animation.init_runtime();
             }
         }
@@ -207,11 +210,88 @@ impl AssetManager {
     }
 
     /// Calculates the next sprite id 
-    fn restore_next_id(&mut self) {
-        if let Some(max_id) = self.sprite_id_to_path.keys().map(|id| id.0).max() {
-            self.next_sprite_id = max_id + 1;
-        } else {
-            self.next_sprite_id = 1;
+    pub fn restore_next_id(&mut self) {
+        let used: HashSet<_> = self.sprite_id_to_path
+            .keys()
+            .map(|sid| sid.0)
+            .collect();
+
+        let mut candidate = 1usize;
+
+        // Scan through until an unused id is found
+        while used.contains(&candidate) {
+            candidate += 1;
         }
+
+        self.next_sprite_id = candidate;
+    }
+
+    /// Removes all sprite ids that are no longer referenced by any loaded world.
+    /// Returns the number of ids that were purged.
+    pub fn purge_unused_assets(game: &mut Game) -> usize {
+        // Collect every SpriteId that is still in use
+        let mut used_ids: HashSet<SpriteId> = HashSet::new();
+
+        // TODO purge all other assets from the game when they exist
+
+        for world in &game.worlds {
+            if let Some(id) = world.meta.sprite_id {
+                used_ids.insert(id);
+            }
+
+            // Tiles
+            for tile_def in world.world_ecs.tile_defs.values() {
+                if tile_def.sprite_id.0 != 0 {
+                    used_ids.insert(tile_def.sprite_id);
+                }
+            }
+
+            // Sprite components
+            let sprite_store = world.world_ecs.get_store::<Sprite>();
+            for sprite in sprite_store.data.values() {
+                if sprite.sprite.0 != 0 {
+                    used_ids.insert(sprite.sprite);
+                }
+            }
+
+            // Glow components
+            let glow_store = world.world_ecs.get_store::<Glow>();
+            for glow in glow_store.data.values() {
+                if glow.sprite_id.0 != 0 {
+                    used_ids.insert(glow.sprite_id);
+                }
+            }
+
+            // Animation component caches (should be full after initialization)
+            let anim_store = world.world_ecs.get_store::<Animation>();
+            for anim in anim_store.data.values() {
+                for &id in anim.sprite_cache.values() {
+                    if id.0 != 0 {
+                        used_ids.insert(id);
+                    }
+                }
+            }
+        }
+
+        // Capture the current number of sprite ids
+        let previous = game.asset_manager.sprite_id_to_path.len();
+
+        // Closure which keeps entries that are still in use
+        let keep = |id: &SpriteId| used_ids.contains(id);
+
+        // Remove stale textures
+        game.asset_manager.textures.retain(|id, _| keep(id));
+
+        // Remove stale paths
+        game.asset_manager.path_to_sprite_id.retain(|_, id| keep(id));
+
+        // Remove stale ids
+        game.asset_manager.sprite_id_to_path.retain(|id, _| keep(id));
+
+        // Calculate the next free id
+        game.asset_manager.restore_next_id();
+
+        // Return the amount of purged ids
+        previous - game.asset_manager.sprite_id_to_path.len()
     }
 }

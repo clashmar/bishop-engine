@@ -1,3 +1,4 @@
+use engine_core::assets::asset_manager::AssetManager;
 // editor/src/editor_actions.rs
 use engine_core::controls::controls::Controls;
 use engine_core::ui::prompt::StringPromptResult;
@@ -168,6 +169,7 @@ impl Editor {
     }
 
     pub fn save(&mut self) {
+        AssetManager::purge_unused_assets(&mut self.game);
         save_game(&self.game)
             .expect("Could not save game.");
         self.toast = Some(Toast::new("Saved", 2.5));
