@@ -41,21 +41,21 @@ impl InspectorModule for RoomCameraModule {
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
 
-        let mut y = rect.y + SPACING;
+        let mut y = rect.y + WIDGET_SPACING;
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
         let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
         draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
-        let mode_rect = Rect::new(rect.x + label_width + SPACING, y, rect.w - label_width - SPACING, 30.0);
+        let mode_rect = Rect::new(rect.x + label_width + WIDGET_SPACING, y, rect.w - label_width - WIDGET_SPACING, 30.0);
         let current_mode = cam.zoom_mode;
         let current_label = format!("{current_mode}");
         let zoom_options: Vec<ZoomMode> = ZoomMode::iter()
             .collect();
 
         // Advance y for the next position
-        y += mode_rect.h + mode_rect.h + SPACING;
+        y += mode_rect.h + mode_rect.h + WIDGET_SPACING;
 
         match cam.zoom_mode   {
             ZoomMode::Step => {
@@ -109,9 +109,9 @@ impl InspectorModule for RoomCameraModule {
         );
 
         let cam_mode_rect = Rect::new(
-            rect.x + cam_label_width + SPACING,
+            rect.x + cam_label_width + WIDGET_SPACING,
             y,
-            rect.w - cam_label_width - SPACING,
+            rect.w - cam_label_width - WIDGET_SPACING,
             30.0,
         );
 
@@ -178,15 +178,15 @@ impl RoomCameraModule {
         let num_rect = Rect::new(
             rect.x + label_width,
             rect.y - FIELD_TEXT_SIZE_16,
-            num_width + SPACING,
+            num_width + WIDGET_SPACING,
             rect.h,
         );
 
         // Slider
         let slider_rect = Rect::new(
-            rect.x + label_width + num_width + 2.0 * SPACING,
+            rect.x + label_width + num_width + 2.0 * WIDGET_SPACING,
             rect.y - FIELD_TEXT_SIZE_16,
-            rect.w - (label_width + num_width + 2.0 * SPACING),
+            rect.w - (label_width + num_width + 2.0 * WIDGET_SPACING),
             rect.h,
         );
 

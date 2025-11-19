@@ -22,7 +22,7 @@ pub struct World {
     pub name: String,
     pub world_ecs: WorldEcs,
     pub rooms: Vec<Room>,
-    pub starting_room: Option<RoomId>,
+    pub starting_room_id: Option<RoomId>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
     /// Meta information about the world.

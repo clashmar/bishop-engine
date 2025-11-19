@@ -36,8 +36,8 @@ impl GameState {
         let game = core_storage::load_game_from_folder(&game_folder).await
             .expect("Failed to deserialize game.ron");
 
-        let start_room_id = game.current_world().starting_room
-            .or_else(|| game.worlds.first().map(|m| m.starting_room.expect("Game has no starting room.")))
+        let start_room_id = game.current_world().starting_room_id
+            .or_else(|| game.worlds.first().map(|m| m.starting_room_id.expect("Game has no starting room.")))
             .expect("Game has no starting room nor any rooms");
 
         let current_room = game.current_world().rooms

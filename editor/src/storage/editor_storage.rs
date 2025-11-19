@@ -148,7 +148,7 @@ pub fn create_new_world() -> World {
         name: name.clone(),
         world_ecs,
         rooms: vec![first_room],
-        starting_room: Some(room_id),
+        starting_room_id: Some(room_id),
         starting_position: Some(starting_position),
         meta: WorldMeta::default()
     };

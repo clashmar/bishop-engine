@@ -5,7 +5,6 @@ use engine_core::ui::widgets::input_is_focused;
 use engine_core::world::world::WorldId;
 use engine_core::world::room::RoomId;
 use engine_core::physics::collider_system;
-use engine_core::constants::*;
 use engine_core::rendering::render_system::RenderSystem;
 use std::io;
 use macroquad::prelude::*;
@@ -46,7 +45,7 @@ impl Editor {
     pub async fn new() -> io::Result<Self> {
         let mut editor = Editor::default();
 
-        let game = if let Some(name) = editor_storage::most_recent_game_name() {
+        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
             editor_storage::load_game_by_name(&name).await?
         } else if let Some(name) = editor.prompt_new_game().await {
             editor_storage::create_new_game(name).await
@@ -65,12 +64,7 @@ impl Editor {
             }
         };
 
-        // TODO set camera for game editor 
-        editor.camera = EditorCameraController::camera_for_room(
-            DEFAULT_ROOM_SIZE,
-            DEFAULT_ROOM_POSITION,
-        );
-
+        editor.game_editor.init_camera(&mut editor.camera, &mut game);
         editor.game = game;
 
         // Give the palette to the tilemap editor
@@ -88,8 +82,14 @@ impl Editor {
             EditorMode::Game => {
                 // Returns the id of the world that was clicked on or None
                 if let Some(world_id) = self.game_editor.update(
+                    &self.camera,
                     &mut self.game
                 ).await {
+                    self.world_editor.init_camera(
+                        &mut self.camera, 
+                        self.game.get_world_mut(world_id)
+                    );
+                    self.game.current_world_id = world_id;
                     self.current_world_id = Some(world_id);
                     self.mode = EditorMode::World(world_id);
                 }
@@ -98,7 +98,7 @@ impl Editor {
                 // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
-                    &mut self.game.get_world(world_id)
+                    &mut self.game.get_world_mut(world_id)
                 ).await {
                     self.current_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
@@ -106,7 +106,10 @@ impl Editor {
 
                 // Handle escape
                 if Controls::escape() && !input_is_focused() {
-                    // TODO: Handle camera
+                    self.game_editor.init_camera(
+                        &mut self.camera,
+                        &mut self.game
+                    );
 
                     // Clean up
                     self.current_world_id = None;
@@ -206,6 +209,7 @@ impl Editor {
         match self.mode {
             EditorMode::Game => {
                 self.game_editor.draw(
+                    &self.camera,
                     &mut self.game
                 );
             },
@@ -252,6 +256,8 @@ impl Editor {
     }
 
     async fn draw_ui(&mut self) {
+        set_default_camera();
+
         // Global menu options
         self.draw_menu_bar().await;
 

@@ -186,7 +186,7 @@ impl WorldEditor {
         set_camera(camera);
         clear_background(LIGHTGRAY);
 
-        let world = game.get_world(world_id);
+        let world = game.get_world_mut(world_id);
         let rooms = &world.rooms;
 
         grid::draw_grid(camera);
@@ -422,6 +422,17 @@ impl WorldEditor {
         }
 
         set_camera(camera); // Back to world camera
+    }
+
+    pub fn init_camera(&mut self, camera: &mut Camera2D, world: &World) {
+        let target_room = world
+            .starting_room_id
+            .and_then(|id| world.get_room(id))
+            .or_else(|| world.rooms.first());
+
+        if let Some(room) = target_room {
+            self.center_on_room(camera, room);
+        }
     }
 
     pub fn center_on_room(&mut self, camera: &mut Camera2D, room: &Room) {
