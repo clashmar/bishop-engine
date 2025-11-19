@@ -1,7 +1,7 @@
 // editor/src/gui/mode_selector.rs
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
-use crate::gui::gui_constants::MENU_PANEL_HEIGHT;
+use crate::gui::{gui_constants::MENU_PANEL_HEIGHT, inspector::modal::is_modal_open};
 
 /// A trait that each editor’s mode enum must implement.
 pub trait ModeInfo {
@@ -52,6 +52,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
             // Click handling
             if is_mouse_button_pressed(MouseButton::Left) 
                 && rect.contains(mouse_position().into()) 
+                && !is_modal_open()
             {
                 if *mode != self.current {
                     self.current = *mode;
@@ -72,7 +73,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
             );
 
             // Tooltip
-            if rect.contains(mouse_position().into()) {
+            if rect.contains(mouse_position().into()) && !is_modal_open() {
                 let tip = mode.label();
                 let tip_size = measure_text_ui(tip, 16.0, 1.0);
 

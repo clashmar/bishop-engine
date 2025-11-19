@@ -26,7 +26,7 @@ impl BackgroundModule {
 
     pub fn draw(&mut self, rect: Rect, map: &mut TileMap) {
         // Title
-        draw_text_ui("Background", rect.x, rect.y + 18.0, DEFAULT_FONT_SIZE, WHITE);
+        draw_text_ui("Background", rect.x, rect.y + 18.0, DEFAULT_FONT_SIZE_16, WHITE);
 
         let mut r = map.background.r * 255.0;
         let mut g = map.background.g * 255.0;
@@ -36,7 +36,7 @@ impl BackgroundModule {
         // Determine the width of a three‑digit number.
         // 255 is the widest possible value for an 8‑bit channel
         let sample = "255";
-        let num_width = measure_text_ui(sample, DEFAULT_FONT_SIZE, 1.0).width;
+        let num_width = measure_text_ui(sample, DEFAULT_FONT_SIZE_16, 1.0).width;
 
         // Add padding so the cursor isn’t glued to the edge.
         let field_w = num_width + 13.0;

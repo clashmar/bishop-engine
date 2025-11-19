@@ -1,5 +1,5 @@
-use crate::gui::inspector::modal::is_modal_open;
 // editor/src/room/room_editor.rs
+use crate::gui::inspector::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
@@ -9,8 +9,8 @@ use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::world::coord;
 use crate::canvas::grid;
-use engine_core::controls::controls::Controls;
 use crate::editor_camera_controller::EditorCameraController;
+use engine_core::controls::controls::Controls;
 use macroquad::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::ui::widgets::*;
@@ -25,8 +25,7 @@ use engine_core::assets::asset_manager::AssetManager;
 use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::entity::Entity;
 use engine_core::rendering::render_system::RenderSystem;
-use engine_core::ecs::component::CurrentRoom;
-use engine_core::ecs::component::Position;
+use engine_core::ecs::component::*;
 use engine_core::lighting::light::Light;
 use once_cell::sync::Lazy;
 use strum::IntoEnumIterator;
@@ -386,7 +385,9 @@ impl RoomEditor {
         room_id: RoomId,
     ) {
         // Only act when an entity is selected and no drag is in progress
-        if self.dragging || self.selected_entity.is_none() {
+        if self.dragging 
+        || self.selected_entity.is_none()
+        || input_is_focused() {
             return;
         }
 

@@ -7,6 +7,13 @@ impl Controls {
     pub fn save() -> bool {
         is_key_pressed(KeyCode::S) && 
         (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl))
+        && !(is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift))
+    }
+
+    pub fn save_as() -> bool {
+        is_key_pressed(KeyCode::S) && 
+        (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl))
+        && (is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift))
     }
 
     pub fn undo() -> bool {

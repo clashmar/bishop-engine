@@ -1,7 +1,7 @@
 // editor/src/world/world_editor_actions.rs
 use engine_core::ecs::component::CurrentRoom;
 use engine_core::ui::text::*;
-use engine_core::ui::widgets::DEFAULT_FONT_SIZE;
+use engine_core::ui::widgets::DEFAULT_FONT_SIZE_16;
 use engine_core::world::room::RoomId;
 use engine_core::{ 
     global::tile_size, 
@@ -146,13 +146,13 @@ impl WorldEditor {
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE, 1.0);
+        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0);
         let margin = 10.0;
 
         let x = (screen_width() - txt_metrics.width) / 2.0;
         let y = screen_height() - margin;
 
-        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE, BLACK);
+        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLACK);
     }
 
     /// Returns the highest room id in this world + 1.

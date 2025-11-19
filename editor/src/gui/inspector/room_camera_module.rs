@@ -45,8 +45,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
-        let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE, 1.0).width;
-        draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
+        draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         let mode_rect = Rect::new(rect.x + label_width + SPACING, y, rect.w - label_width - SPACING, 30.0);
         let current_mode = cam.zoom_mode;
@@ -99,12 +99,12 @@ impl InspectorModule for RoomCameraModule {
 
         // Camera mode
         let cam_mode_label = "Camera Mode: ";
-        let cam_label_width = measure_text_ui(cam_mode_label, FIELD_TEXT_SIZE, 1.0).width;
+        let cam_label_width = measure_text_ui(cam_mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
         draw_text_ui(
             cam_mode_label,
             rect.x,
             y + 20.0,
-            FIELD_TEXT_SIZE,
+            FIELD_TEXT_SIZE_16,
             FIELD_TEXT_COLOR,
         );
 
@@ -170,14 +170,14 @@ impl RoomCameraModule {
 
         // Label
         let label = "Scale: ";
-        let label_width = measure_text_ui(label, FIELD_TEXT_SIZE, 1.0).width + 1.0;
-        let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE, 1.0).width;
-        draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0).width + 1.0;
+        let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE_16, 1.0).width;
+        draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         // Numeric field 
         let num_rect = Rect::new(
             rect.x + label_width,
-            rect.y - FIELD_TEXT_SIZE,
+            rect.y - FIELD_TEXT_SIZE_16,
             num_width + SPACING,
             rect.h,
         );
@@ -185,7 +185,7 @@ impl RoomCameraModule {
         // Slider
         let slider_rect = Rect::new(
             rect.x + label_width + num_width + 2.0 * SPACING,
-            rect.y - FIELD_TEXT_SIZE,
+            rect.y - FIELD_TEXT_SIZE_16,
             rect.w - (label_width + num_width + 2.0 * SPACING),
             rect.h,
         );

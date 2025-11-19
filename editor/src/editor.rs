@@ -252,13 +252,13 @@ impl Editor {
     }
 
     async fn draw_ui(&mut self) {
-        // Draws and handles result
+        // Global menu options
+        self.draw_menu_bar().await;
+
+        // Draws and handles result of modal
         if let Some(_) = self.handle_modal().await {
             self.modal.close();
         }
-
-        // Global menu options
-        self.draw_menu_bar().await;
 
         self.draw_toast();
     }

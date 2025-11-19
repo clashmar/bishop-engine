@@ -56,6 +56,14 @@ impl World {
         }
     }
 
+    /// Returns an immutable reference to a room given its id.
+    pub fn get_room(&self, id: RoomId) -> Option<&Room> {
+        self.rooms
+            .iter()
+            .find(|r| r.id == id)
+    }
+
+    /// Returns a mutable reference to a room given its id.
     pub fn get_room_mut(&mut self, id: RoomId) -> Option<&mut Room> {
         self.rooms
             .iter_mut()

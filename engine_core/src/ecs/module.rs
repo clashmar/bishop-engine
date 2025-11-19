@@ -99,7 +99,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
             self.title(),
             rect.x + 28.0,
             rect.y + 18.0,
-            DEFAULT_FONT_SIZE,
+            DEFAULT_FONT_SIZE_16,
             WHITE,
         );
 

@@ -1,5 +1,6 @@
 // editor/src/gui/menu_bar.rs
 use crate::gui::gui_constants::*;
+use crate::gui::inspector::modal::is_modal_open;
 use std::cell::RefCell;
 use std::fmt::{self, Display};
 use engine_core::ui::text::*;
@@ -7,12 +8,11 @@ use engine_core::ui::widgets::*;
 use macroquad::prelude::*;
 use strum_macros::EnumIter;
 
-const HEADER_FONT_SIZE: f32 = 20.0;
-
 /// Holds the state of the top‑level menu bar.
 pub struct MenuBar {
     file_id: WidgetId,
     edit_id: WidgetId,
+    title_id: WidgetId,
     pub pending: Option<MenuAction>,
 }
 
@@ -24,6 +24,7 @@ pub enum MenuAction {
     NewGame,
     Open,
     Save,
+    SaveAs,
     // Edit actions
     Undo,
     Redo,
@@ -35,6 +36,7 @@ impl MenuAction {
         match self {
             MenuAction::NewGame => "New Game".to_string(),
             MenuAction::Save => "Save".to_string(),
+            MenuAction::SaveAs => "Save As".to_string(),
             MenuAction::Undo => "Undo".to_string(),
             MenuAction::Redo => "Redo".to_string(),
             _ => format!("{self:?}"),
@@ -48,6 +50,7 @@ impl MenuAction {
         {
             match self {
                 MenuAction::Save => Some("^ S"),
+                MenuAction::SaveAs => Some("⇧ ^ S"),
                 MenuAction::Undo => Some("^ Z"),
                 MenuAction::Redo => Some("⇧ ^ Z"),       
                 _ => None,
@@ -59,6 +62,7 @@ impl MenuAction {
         {
             match self {
                 MenuAction::Save => Some("^ S"),
+                MenuAction::SaveAs => Some("⇧ ^ S"),
                 MenuAction::Undo => Some("^ Z"),
                 MenuAction::Redo => Some("⇧ ^ Z"),
                 _ => None,
@@ -82,6 +86,7 @@ impl fmt::Display for MenuAction {
 impl MenuBar {
     pub fn new() -> Self {
         Self {
+            title_id: WidgetId::default(),
             file_id: WidgetId::default(),
             edit_id: WidgetId::default(),
             pending: None,
@@ -99,24 +104,29 @@ impl MenuBar {
         let mut x = panel_rect.x + PADDING;
         let y = panel_rect.y + PADDING / 2.0;
 
-        let title_width = measure_text_ui(title, FIELD_TEXT_SIZE, 1.0).width;
         let title_rect = Rect::new(
             x,
             y,
-            title_width + PADDING * 2.0,
+            rect_width_for_text(title, HEADER_FONT_SIZE_20),
             HEIGHT,
         );
 
-        // Title (rename button)
-        if gui_button_plain(
-            title_rect, 
+        let title_actions: Vec<MenuAction> = vec![
+            MenuAction::Rename,
+        ];
+
+        if let Some(selected) = menu_dropdown(
+            self.title_id,
+            title_rect,
             title,
-            BLACK,
+            &title_actions,
+            |a| a.ui_label(),
+            |a| a.shortcut(),
         ) {
-            self.pending = Some(MenuAction::Rename)
+            self.pending = Some(selected);
         }
 
-        x += title_width + SPACING * 3.0;
+        x += title_rect.w + SPACING;
 
         // File dropdown
         let file_label = "File";
@@ -124,7 +134,7 @@ impl MenuBar {
         let file_rect = Rect::new(
             x, 
             y, 
-            rect_width_for_text(file_label, HEADER_FONT_SIZE), 
+            rect_width_for_text(file_label, HEADER_FONT_SIZE_20), 
             HEIGHT
         );
 
@@ -132,6 +142,7 @@ impl MenuBar {
             MenuAction::NewGame,
             MenuAction::Open,
             MenuAction::Save,
+            MenuAction::SaveAs,
         ];
 
         if let Some(selected) = menu_dropdown(
@@ -153,7 +164,7 @@ impl MenuBar {
         let edit_rect = Rect::new(
             x, 
             y, 
-            rect_width_for_text(edit_label, HEADER_FONT_SIZE), 
+            rect_width_for_text(edit_label, HEADER_FONT_SIZE_20), 
             HEIGHT
         );
 
@@ -258,10 +269,10 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     let mut max_opt_width = 0.0_f32;
     for opt in options.iter() {
         // label width
-        let label_w = measure_text_ui(&to_string(opt), DEFAULT_FONT_SIZE, 1.0).width;
+        let label_w = measure_text_ui(&to_string(opt), DEFAULT_FONT_SIZE_16, 1.0).width;
         // optional shortcut width
         let shortcut_w = shortcut(opt)
-            .map(|s| measure_text_ui(s, DEFAULT_FONT_SIZE, 1.0).width + SPACING)
+            .map(|s| measure_text_ui(s, DEFAULT_FONT_SIZE_16, 1.0).width + SPACING)
             .unwrap_or(0.0);
         let total_w = label_w + shortcut_w;
         if total_w > max_opt_width {
@@ -335,19 +346,19 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
                 &to_string(opt),
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
-                DEFAULT_FONT_SIZE,
+                DEFAULT_FONT_SIZE_16,
                 BLACK
             );
 
             // Optional shortcut display
             if let Some(shortcut) = shortcut(opt) {
-                let sc_width = measure_text_ui(shortcut, DEFAULT_FONT_SIZE, 1.0).width;
+                let sc_width = measure_text_ui(shortcut, DEFAULT_FONT_SIZE_16, 1.0).width;
                 let sc_x = entry_rect.x + entry_rect.w - sc_width - 5.0;
                 draw_text_ui(
                     shortcut,
                     sc_x,
                     entry_rect.y + entry_rect.h * 0.7,
-                    DEFAULT_FONT_SIZE,
+                    DEFAULT_FONT_SIZE_16,
                     WHITE,
                 );
             }
@@ -380,7 +391,8 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     None
 }
 
-fn menu_button(
+/// Returns true if clicked
+pub fn menu_button(
     rect: Rect, 
     label: &str,
     is_dropdown_open: bool,
@@ -392,7 +404,7 @@ fn menu_button(
     let mouse = mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    if hovered || is_dropdown_open {
+    if (hovered || is_dropdown_open) && !is_modal_open() {
         draw_rectangle(
             rect.x,
             rect.y,
@@ -406,12 +418,13 @@ fn menu_button(
         label, 
         txt_x, 
         txt_y,
-        HEADER_FONT_SIZE,
+        HEADER_FONT_SIZE_20,
         BLACK
     );
 
     is_mouse_button_pressed(MouseButton::Left) 
     && hovered
+    && !is_modal_open()
 }
 
 thread_local! {

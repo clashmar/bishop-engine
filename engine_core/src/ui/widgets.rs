@@ -26,8 +26,9 @@ const HOLD_REPEAT_RATE: f64 = 0.05;
 const SPACING: f32 = 10.0;  
 const PADDING: f32 = 10.0;  
 const PLACEHOLDER_TEXT: &'static str = "<type here>";  
-pub const DEFAULT_FONT_SIZE: f32 = 16.0;
-pub const FIELD_TEXT_SIZE: f32 = 16.0; 
+pub const DEFAULT_FONT_SIZE_16: f32 = 16.0;
+pub const HEADER_FONT_SIZE_20: f32 = 20.0;
+pub const FIELD_TEXT_SIZE_16: f32 = 16.0; 
 pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
@@ -234,7 +235,7 @@ fn gui_input_text(
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let byte_pos = byte_offset(&text, cursor_char);
         let prefix = &text[..byte_pos];
-        let cursor_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE, 1.0).width;
+        let cursor_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width;
         draw_line(
             cursor_x,
             rect.y + rect.h * 0.3,
@@ -381,7 +382,7 @@ where
     let now = get_time();
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let prefix = &text[..cursor_char];
-        let caret_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE, 1.0).width;
+        let caret_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width;
         draw_line(
             caret_x,
             rect.y + rect.h * 0.3,
@@ -498,7 +499,7 @@ fn gui_button_impl(
     let mut hovered = rect.contains(vec2(mouse.0, mouse.1));
 
     // Common text layout
-    let txt_dims = measure_text_ui(label, FIELD_TEXT_SIZE, 1.0);
+    let txt_dims = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0);
     let txt_y = rect.y + rect.h * 0.7;
     let mut txt_x = rect.x;
 
@@ -535,7 +536,7 @@ fn gui_button_impl(
         }
     }
     
-    draw_text_ui(label, txt_x + text_offset.x, txt_y + text_offset.y, FIELD_TEXT_SIZE, text_color);
+    draw_text_ui(label, txt_x + text_offset.x, txt_y + text_offset.y, FIELD_TEXT_SIZE_16, text_color);
 
     is_mouse_button_pressed(MouseButton::Left) 
     && hovered 
@@ -753,7 +754,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
     let mut max_opt_width = 0.0_f32;
     for opt in options.iter() {
         let txt = to_string(opt);
-        let width = measure_text_ui(&txt, DEFAULT_FONT_SIZE, 1.0).width;
+        let width = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0).width;
         if width > max_opt_width {
             max_opt_width = width;
         }
@@ -844,7 +845,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
                 &to_string(opt),
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
-                DEFAULT_FONT_SIZE,
+                DEFAULT_FONT_SIZE_16,
                 FIELD_TEXT_COLOR,
             );
 
@@ -975,13 +976,13 @@ pub fn gui_stepper(
     const Y_OFFSET: f32 = 15.0;
 
     let label = format!("{}:", label);
-    let label_width = measure_text_ui(&label, FIELD_TEXT_SIZE, 1.0).width;
+    let label_width = measure_text_ui(&label, FIELD_TEXT_SIZE_16, 1.0).width;
 
-    let btn_w = FIELD_TEXT_SIZE * 1.2;
-    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE, 1.0).width + SPACING + 5.0;
+    let btn_w = FIELD_TEXT_SIZE_16 * 1.2;
+    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE_16, 1.0).width + SPACING + 5.0;
 
     // Label
-    draw_text_ui(&label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(&label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
     // Display value
     let val_rect = Rect::new(
@@ -1006,7 +1007,7 @@ pub fn gui_stepper(
         &txt,
         val_rect.x + 7.5,
         val_rect.y + 17.5,
-        FIELD_TEXT_SIZE,
+        FIELD_TEXT_SIZE_16,
         FIELD_TEXT_COLOR,
     );
 
@@ -1092,7 +1093,7 @@ pub fn draw_input_field_text(text: &str, rect: Rect) {
         text,
         rect.x + PADDING / 2.,
         rect.y + rect.h * 0.7,
-        DEFAULT_FONT_SIZE,
+        DEFAULT_FONT_SIZE_16,
         FIELD_TEXT_COLOR,
     );
 }
@@ -1100,7 +1101,7 @@ pub fn draw_input_field_text(text: &str, rect: Rect) {
 /// Returns the x position and width for text to be centered around a given x position.
 pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
     let text_to_measure = if text.is_empty() { PLACEHOLDER_TEXT } else { text };
-    let text_size = measure_text_ui(text_to_measure, DEFAULT_FONT_SIZE, 1.0);
+    let text_size = measure_text_ui(text_to_measure, DEFAULT_FONT_SIZE_16, 1.0);
     let new_x = x - (text_size.width / 2.);
     (new_x - PADDING / 2., text_size.width + PADDING)
 }

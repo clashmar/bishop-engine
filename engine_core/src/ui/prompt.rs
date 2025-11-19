@@ -57,7 +57,7 @@ impl StringPromptWidget {
             &self.message,
             message_pos.x,
             message_pos.y,
-            DEFAULT_FONT_SIZE,
+            DEFAULT_FONT_SIZE_16,
             WHITE,
         );
 
@@ -96,11 +96,12 @@ impl StringPromptWidget {
         let cancel_clicked = gui_button(cancel_rect, "Cancel");
 
         // Handle result
-        if confirm_clicked || Controls::enter() {
+        if (confirm_clicked || Controls::enter())
+        && !self.current.trim().is_empty()  {
             return Some(StringPromptResult::Confirmed(self.current.clone()));
         }
 
-        if cancel_clicked {
+        if cancel_clicked || Controls::escape() {
             return Some(StringPromptResult::Cancelled);
         }
 
