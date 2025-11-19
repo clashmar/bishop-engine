@@ -124,16 +124,16 @@ impl InspectorPanel {
             // Measure text to obtain proper button widths
             let txt_remove = measure_text_ui(remove_label, HEADER_FONT_SIZE_20, 1.0);
             let txt_add = measure_text_ui(add_label, HEADER_FONT_SIZE_20, 1.0);
-            let btn_w_remove = txt_remove.width + PADDING;
-            let btn_w_add = txt_add.width + PADDING;
+            let btn_w_remove = txt_remove.width + WIDGET_PADDING;
+            let btn_w_add = txt_add.width + WIDGET_PADDING;
 
             // Compute left‑most X so the pair stays inside the screen
-            let total_w = btn_w_remove + btn_w_add + SPACING;
+            let total_w = btn_w_remove + btn_w_add + WIDGET_SPACING;
             let x_start = screen_width() - INSET - total_w;
 
             // Add Component button
             let add_rect = self.register_rect(Rect::new(
-                x_start + btn_w_remove + SPACING,
+                x_start + btn_w_remove + WIDGET_SPACING,
                 INSET,
                 btn_w_add,
                 BTN_HEIGHT,
@@ -189,7 +189,7 @@ impl InspectorPanel {
                             module.draw(sub_rect, asset_manager, world_ecs, entity);
                         }
 
-                        y += h + SPACING;
+                        y += h + WIDGET_SPACING;
                     }
                 }
 
@@ -245,22 +245,22 @@ impl InspectorPanel {
             // No entity selected
             let create_label = "Create Entity";
             let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
-            let create_btn = self.register_rect(Rect::new(
-                self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - PADDING,
+            let create_btn = Rect::new(
+                self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - WIDGET_PADDING,
                 self.rect.y + BTN_MARGIN,
-                txt_create.width + PADDING,
+                txt_create.width + WIDGET_PADDING,
                 BTN_HEIGHT,
-            ));
+            );
 
             let add_cam_label = "Add Camera";
             let txt_cam = measure_text_ui(add_cam_label, HEADER_FONT_SIZE_20, 1.0);
-            let cam_btn_w = txt_cam.width + PADDING;
-            let cam_btn = self.register_rect(Rect::new(
-                create_btn.x - SPACING - cam_btn_w,
+            let cam_btn_w = txt_cam.width + WIDGET_PADDING;
+            let cam_btn = Rect::new(
+                create_btn.x - WIDGET_SPACING - cam_btn_w,
                 create_btn.y,
                 cam_btn_w,
                 BTN_HEIGHT,
-            ));
+            );
 
             if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
@@ -296,7 +296,7 @@ impl InspectorPanel {
 
             let txt_val = format!("{:.2}", room.darkness);
             let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
-            let txt_x = slider_rect.x - txt_measure.width - SPACING;
+            let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;
             draw_text_ui(&txt_val, txt_x, txt_y, 20.0, WHITE);
 
@@ -437,12 +437,12 @@ impl InspectorPanel {
         let mut total_content_h = 0.0;
         for module in &self.modules {
             if module.visible(world_ecs, entity) {
-                total_content_h += module.height() + SPACING;
+                total_content_h += module.height() + WIDGET_SPACING;
             }
         }
         // Remove the trailing spacing that we added after the last module
         if total_content_h > 0.0 {
-            total_content_h -= SPACING;
+            total_content_h -= WIDGET_SPACING;
         }
 
         total_content_h += INSET * 2.0; // Top and bottom inset

@@ -62,8 +62,8 @@ impl RoomEditor {
 
                 // Play‑test button (menu bar)
                 let play_label = "Play";
-                let play_width = measure_text_ui(play_label, 20.0, 1.0).width + PADDING;
-                let play_x = mode_rect.x + mode_rect.w + SPACING;
+                let play_width = measure_text_ui(play_label, 20.0, 1.0).width + WIDGET_PADDING;
+                let play_x = mode_rect.x + mode_rect.w + WIDGET_SPACING;
                 let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
 
                 if menu_button(play_rect, play_label, false) {

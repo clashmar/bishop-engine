@@ -112,7 +112,7 @@ impl RoomEditor {
         }
 
         if !self.initialized {
-            EditorCameraController::reset_editor_camera(camera, room);
+            EditorCameraController::reset_room_editor_camera(camera, room);
             self.initialized = true;
         }
 
@@ -429,7 +429,7 @@ impl RoomEditor {
         }
 
         if Controls::r() && !input_is_focused() {
-            EditorCameraController::reset_editor_camera(camera, room);
+            EditorCameraController::reset_room_editor_camera(camera, room);
         }
 
         for mode in RoomEditorMode::iter() {

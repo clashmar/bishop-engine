@@ -21,17 +21,18 @@ impl Default for WidgetId {
     }
 }
 
-const HOLD_INITIAL_DELAY: f64 = 0.50;
-const HOLD_REPEAT_RATE: f64 = 0.05;
-const SPACING: f32 = 10.0;  
-const PADDING: f32 = 10.0;  
-const PLACEHOLDER_TEXT: &'static str = "<type here>";  
+pub const WIDGET_PADDING: f32 = 10.0; 
+pub const WIDGET_SPACING: f32 = 10.0;   
 pub const DEFAULT_FONT_SIZE_16: f32 = 16.0;
 pub const HEADER_FONT_SIZE_20: f32 = 20.0;
 pub const FIELD_TEXT_SIZE_16: f32 = 16.0; 
 pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
+
+const HOLD_INITIAL_DELAY: f64 = 0.50;
+const HOLD_REPEAT_RATE: f64 = 0.05;
+const PLACEHOLDER_TEXT: &'static str = "<type here>";  
 
 thread_local! {
     static INPUT_TEXT_STATE: RefCell<HashMap<WidgetId, (String, usize, bool, f64, bool)>> =
@@ -518,8 +519,8 @@ fn gui_button_impl(
         }
         ButtonStyle::Plain => {
             // Hover only
-            let width = txt_dims.width + PADDING * 2.0;
-            txt_x = txt_x + PADDING;
+            let width = txt_dims.width + WIDGET_PADDING * 2.0;
+            txt_x = txt_x + WIDGET_PADDING;
 
             hovered = Rect::new(rect.x, rect.y, width, rect.h)
                 .contains(vec2(mouse.0, mouse.1));
@@ -979,14 +980,14 @@ pub fn gui_stepper(
     let label_width = measure_text_ui(&label, FIELD_TEXT_SIZE_16, 1.0).width;
 
     let btn_w = FIELD_TEXT_SIZE_16 * 1.2;
-    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE_16, 1.0).width + SPACING + 5.0;
+    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE_16, 1.0).width + WIDGET_SPACING + 5.0;
 
     // Label
     draw_text_ui(&label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
     // Display value
     let val_rect = Rect::new(
-        rect.x + label_width + SPACING,
+        rect.x + label_width + WIDGET_SPACING,
         rect.y - Y_OFFSET,
         val_w,
         rect.h,
@@ -1013,7 +1014,7 @@ pub fn gui_stepper(
 
     // “‑” button
     let decrease_rect = Rect::new(
-        val_rect.x + val_w + SPACING,
+        val_rect.x + val_w + WIDGET_SPACING,
         rect.y - Y_OFFSET,
         btn_w,
         btn_w,
@@ -1025,7 +1026,7 @@ pub fn gui_stepper(
 
     // “+” button
     let increase_rect = Rect::new(
-        decrease_rect.x + btn_w + SPACING,
+        decrease_rect.x + btn_w + WIDGET_SPACING,
         rect.y - Y_OFFSET,
         btn_w,
         btn_w,
@@ -1051,7 +1052,7 @@ pub fn gui_sprite_picker(
     };
 
     let remove_w = rect.h; // square button
-    let picker_w = rect.w - remove_w - SPACING;
+    let picker_w = rect.w - remove_w - WIDGET_SPACING;
 
     let picker_rect = Rect::new(rect.x, rect.y, picker_w, rect.h);
     let remove_rect = Rect::new(
@@ -1091,7 +1092,7 @@ pub fn gui_sprite_picker(
 pub fn draw_input_field_text(text: &str, rect: Rect) {
     draw_text_ui(
         text,
-        rect.x + PADDING / 2.,
+        rect.x + WIDGET_PADDING / 2.,
         rect.y + rect.h * 0.7,
         DEFAULT_FONT_SIZE_16,
         FIELD_TEXT_COLOR,
@@ -1103,12 +1104,12 @@ pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
     let text_to_measure = if text.is_empty() { PLACEHOLDER_TEXT } else { text };
     let text_size = measure_text_ui(text_to_measure, DEFAULT_FONT_SIZE_16, 1.0);
     let new_x = x - (text_size.width / 2.);
-    (new_x - PADDING / 2., text_size.width + PADDING)
+    (new_x - WIDGET_PADDING / 2., text_size.width + WIDGET_PADDING)
 }
 
 /// Returns the x position and width for text to be centered around a given x position.
 pub fn rect_width_for_text(text: &str, font_size: f32) -> f32 {
-    measure_text_ui(text, font_size, 1.0).width + PADDING * 2.0
+    measure_text_ui(text, font_size, 1.0).width + WIDGET_PADDING * 2.0
 }
 
 

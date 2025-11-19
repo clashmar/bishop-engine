@@ -73,8 +73,8 @@ impl InspectorModule for AnimationModule {
             .get_mut::<Animation>(entity)
             .expect("Animation must exist");
 
-        let mut y = rect.y + SPACING;
-        let full_w = rect.w - 2.0 * PADDING;
+        let mut y = rect.y + WIDGET_SPACING;
+        let full_w = rect.w - 2.0 * WIDGET_PADDING;
 
         // Add-clip button
         const ADD_LABEL: &str = "Add Clip";
@@ -106,7 +106,7 @@ impl InspectorModule for AnimationModule {
             animation.current = Some(new_id);
         }
 
-        y += MARGIN + PADDING;
+        y += MARGIN + WIDGET_PADDING;
         
         // Return if there is no current id
         if animation.current.is_none() {
@@ -114,16 +114,16 @@ impl InspectorModule for AnimationModule {
         }
 
         // Calculate clip selector dropdown here
-        let clip_dropdown_rect = Rect::new(rect.x + PADDING, y, full_w, BTN_HEIGHT);
+        let clip_dropdown_rect = Rect::new(rect.x + WIDGET_PADDING, y, full_w, BTN_HEIGHT);
         
-        y += MARGIN + PADDING;
+        y += MARGIN + WIDGET_PADDING;
 
         // Edit the currently selected clip
         if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
             // Variant picker
             let has_variant = !animation.variant.0.as_os_str().is_empty();
 
-            let sprite_btn = Rect::new(rect.x + PADDING, y, full_w / 2., MARGIN);
+            let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, full_w / 2., MARGIN);
 
             if gui_button(sprite_btn,
                 if has_variant { "Edit Variant" } else { "Choose Variant" }) {
@@ -149,25 +149,25 @@ impl InspectorModule for AnimationModule {
 
             draw_text_ui(
                 &variant_label, 
-                rect.x + sprite_btn.w + SPACING + PADDING, 
+                rect.x + sprite_btn.w + WIDGET_SPACING + WIDGET_PADDING, 
                 y + LABEL_Y_OFFSET, 
                 DEFAULT_FONT_SIZE_16, 
                 FIELD_TEXT_COLOR
             );
 
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // Frame size
             draw_frame_size_fields(self, y, rect, clip);
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // Columns / rows
             draw_spritesheet_dimension_fields(self, y, rect, clip);
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // FPS / Loop toggle
             draw_fps_and_loop(self, y, rect, clip);
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // Optional offset
             draw_offset_fields(self, y, rect, clip);
@@ -204,7 +204,7 @@ pub fn draw_current_clip_dropdowns(
 ) {
     let current_id = animation.current.as_ref().unwrap();
     let clip_label = format!("{current_id}");
-    let width = rect.w / 2.0 - SPACING;
+    let width = rect.w / 2.0 - WIDGET_SPACING;
     // Select clip
     let select_rect = Rect::new(rect.x, rect.y, width, rect.h);
 
@@ -438,7 +438,7 @@ fn layout_pair(
 
     // First label
     let label1 = Rect::new(
-        rect.x + PADDING,
+        rect.x + WIDGET_PADDING,
         y + LABEL_Y_OFFSET,
         width1,
         INPUT_HEIGHT,

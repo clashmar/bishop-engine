@@ -46,8 +46,8 @@ impl Game {
             .expect("Current world id not present in game.")
     }
 
-    /// Mutable reference to the current world.
-    pub fn get_world(&mut self, world_id: WorldId) -> &mut World {
+    /// Gets a mutable reference to a world from its id.
+    pub fn get_world_mut(&mut self, world_id: WorldId) -> &mut World {
         self.worlds
             .iter_mut()
             .find(|w| w.id == world_id)
@@ -64,6 +64,20 @@ impl Game {
     pub fn select_world(&mut self, id: WorldId) {
         if self.worlds.iter().any(|w| w.id == id) {
             self.current_world_id = id;
+        }
+    }
+
+    /// Deletes the world from the game.
+    pub fn delete_world(&mut self, id: WorldId) {
+        if let Some(pos) = self.worlds.iter().position(|w| w.id == id) {
+            self.worlds.swap_remove(pos);
+        }
+
+        if self.current_world_id == id {
+            self.current_world_id = self.worlds
+                .first()
+                .and_then(|w| Some(w.id))
+                .unwrap_or(WorldId(Uuid::nil()))
         }
     }
 

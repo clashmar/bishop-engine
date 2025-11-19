@@ -54,7 +54,7 @@ impl EditorCameraController {
 
     // Rurn a scalar zoom into a non‑uniform pair that keeps world
     // units square for the current aspect ratio.
-    fn apply_aspect(camera: &mut Camera2D, scalar_zoom: f32) {
+    pub fn apply_aspect(camera: &mut Camera2D, scalar_zoom: f32) {
         let aspect = screen_width() / screen_height();
         let (zoom_x, zoom_y) = if aspect > 1.0 {
             // Window wider than tall 
@@ -86,9 +86,22 @@ impl EditorCameraController {
     }
 
     /// Reset a `Camera2D` so that the whole room fits the screen.
-    pub fn reset_editor_camera(camera: &mut Camera2D, room: &Room) {
+    pub fn reset_room_editor_camera(camera: &mut Camera2D, room: &Room) {
         let map_size = vec2(room.variants[0].tilemap.width as f32, room.variants[0].tilemap.height as f32);
         *camera = Self::camera_for_room(map_size, room.position);
+    }
+
+    /// Returns a zoom vector that makes the whole `size` fit the screen,
+    /// respecting the current aspect ratio.
+    /// Zoom factor decides how 'zoomed in' the camera is (higher = more zoom).
+    pub fn zoom_for_size(size: Vec2, zoom_factor: f32) -> Vec2 {
+        let max_dim_px = size.max_element() / zoom_factor;
+        let scalar = editor_zoom_factor() / max_dim_px;
+
+        let mut temp = Camera2D::default();
+        temp.zoom = vec2(scalar, scalar);
+        EditorCameraController::apply_aspect(&mut temp, scalar);
+        temp.zoom
     }
 }
 

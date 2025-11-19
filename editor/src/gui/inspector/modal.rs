@@ -1,6 +1,6 @@
 // editor/src/gui/inspector/modal.rs
-use std::cell::RefCell;
-use engine_core::assets::asset_manager::AssetManager;
+use std::{cell::RefCell, thread::LocalKey};
+use engine_core::{assets::asset_manager::AssetManager, ui::prompt::*};
 use macroquad::prelude::*;
 
 #[derive(Default)]
@@ -134,5 +134,28 @@ impl Modal {
 
         false
     }
+
+    /// Opens a model with a confirm prompt widget.
+    /// The caller must pass in a static reference to the result store.
+    pub fn open_confirm_modal(result_store: &'static LocalKey<RefCell<Option<ConfirmPromptResult>>>) -> Modal {
+        let prompt_message = "Are You Sure?";
+        let mut modal = Modal::new(300.0, 120.0);
+
+        let mut prompt = ConfirmPromptWidget::new(modal.rect, prompt_message);
+
+        let widgets: Vec<BoxedWidget> = vec![ 
+            Box::new(move |_| {
+                if let Some(result) = prompt.draw() {
+                    // Write the result to the static thread local
+                    result_store.with(|c| *c.borrow_mut() = Some(result));
+                }
+            })
+        ];
+
+        modal.open(widgets);
+        modal
+    }
 }
+
+
 
