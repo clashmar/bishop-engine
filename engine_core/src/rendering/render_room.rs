@@ -134,9 +134,9 @@ fn draw_entity(
         return;
     } else if let Some(sprite) = sprite_store.get(entity) {
         // No animation
-        if asset_manager.contains(sprite.sprite_id) {
+        if asset_manager.contains(sprite.sprite) {
             
-            let tex = asset_manager.get_texture_from_id(sprite.sprite_id);
+            let tex = asset_manager.get_texture_from_id(sprite.sprite);
             draw_texture_ex(
                 tex,
                 pos.x,
@@ -190,7 +190,7 @@ pub fn entity_dimensions(
         world_ecs
             .get_store::<Sprite>()
             .get(entity)
-            .and_then(|sprite| asset_manager.texture_size(sprite.sprite_id))
+            .and_then(|sprite| asset_manager.texture_size(sprite.sprite))
     };
 
     let from_glow = || {

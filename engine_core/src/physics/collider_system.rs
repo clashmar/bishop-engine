@@ -41,7 +41,7 @@ pub fn update_colliders_from_sprites(world_ecs: &mut WorldEcs, assets: &mut Asse
             
             // Then try sprite components if not
             for (entity, sprite) in sprite_store.data.iter() {
-                if let Some(col) = collider_from_sprite(assets, sprite.sprite_id) {
+                if let Some(col) = collider_from_sprite(assets, sprite.sprite) {
                     pending.push((*entity, col));
                 }
             }

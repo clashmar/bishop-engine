@@ -11,13 +11,13 @@ pub struct SpriteId(pub usize);
 #[derive(Clone, Serialize, Deserialize, Reflect)]
 pub struct Sprite {
     /// Reference to the texture stored by the AssetManager.
-    pub sprite_id: SpriteId,
+    pub sprite: SpriteId,
 }
 
 impl Default for Sprite {
     fn default() -> Self {
         Self {
-            sprite_id: SpriteId(0),
+            sprite: SpriteId(0),
         }
     }
 }

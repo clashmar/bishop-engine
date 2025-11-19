@@ -81,10 +81,9 @@ impl Game {
         }
     }
 
-    /// Syncs all assets that belong to this game.
+    /// Syncs all assets that belong to this game and sets the global tile size.
     pub async fn initialize(&mut self) {
         set_global_tile_size(self.tile_size);
-        let (asset_manager, worlds) = (&mut self.asset_manager, &mut self.worlds);
-        asset_manager.init_manager(worlds).await;
+        AssetManager::init_manager(self).await;
     }
 }
