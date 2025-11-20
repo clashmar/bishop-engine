@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 engine_core = { path = "../engine_core" }
 reflect_derive = { path = "../reflect_derive" }
-macroquad = "0.4"
+macroquad = "0.4.14"
 rfd = "0.13"
 serde = { version = "1.0", features = ["derive"] }
 ron = "0.9"

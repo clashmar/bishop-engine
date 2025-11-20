@@ -24,7 +24,7 @@ pub struct AssetManager {
     pub game_name: String,
 }
 
-/// Empty texture which guards against crashes.
+/// Empty guard texture.
 static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty());
 
 impl AssetManager {
@@ -57,9 +57,9 @@ impl AssetManager {
         // Load the texture from the assets folder.
         let texture = self.load_texture_from_game(&path).await?;
 
-        // Set and increment the texture id
+        // Set and calculate the next texture id
         let id = SpriteId(self.next_sprite_id);
-        self.next_sprite_id += 1;
+        self.restore_next_id();
 
         // Store everything
         self.textures.insert(id, texture);
@@ -227,7 +227,8 @@ impl AssetManager {
     }
 
     /// Removes all sprite ids that are no longer referenced by any loaded world.
-    /// Returns the number of ids that were purged.
+    /// Returns the number of ids that were purged. 
+    /// Only call this on program init/close to protect the undo/redo stack.
     pub fn purge_unused_assets(game: &mut Game) -> usize {
         // Collect every SpriteId that is still in use
         let mut used_ids: HashSet<SpriteId> = HashSet::new();
@@ -291,7 +292,7 @@ impl AssetManager {
         // Calculate the next free id
         game.asset_manager.restore_next_id();
 
-        // Return the amount of purged ids
+        // Return the number of purged ids
         previous - game.asset_manager.sprite_id_to_path.len()
     }
 }

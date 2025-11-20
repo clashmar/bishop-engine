@@ -16,7 +16,7 @@ use serde_with::serde_as;
 pub struct WorldId(pub Uuid);
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct World {
     pub id: WorldId,
     pub name: String,
@@ -30,7 +30,7 @@ pub struct World {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct WorldMeta {
     /// Position on the game map.
     #[serde_as(as = "FromInto<[f32; 2]>")]

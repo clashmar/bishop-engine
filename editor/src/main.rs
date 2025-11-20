@@ -1,7 +1,7 @@
 // editor/src/main.rs
-use crate::{
-    editor::Editor, global::*
-};
+use crate::global::*;
+use crate::editor::Editor;
+use engine_core::assets::asset_manager::AssetManager;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::prelude::*;
 
@@ -48,6 +48,11 @@ async fn main() -> std::io::Result<()> {
     let mut current_window_size = (screen_width() as u32, screen_height() as u32);
 
     loop {
+        if is_quit_requested() {
+            println!("Quitting");
+            break;
+        }
+
         // Update the render targets with the current window size
         let cur_screen = (screen_width() as u32, screen_height() as u32);
         if cur_screen != current_window_size {
@@ -65,5 +70,11 @@ async fn main() -> std::io::Result<()> {
         
         next_frame().await
     }
-}
 
+    with_editor(|editor| {
+        let purged = AssetManager::purge_unused_assets(&mut editor.game);
+        println!("Purged {purged} unused asset(s) on exit.");
+    });
+    
+    Ok(())
+}

@@ -7,7 +7,7 @@ use crate::assets::sprite::SpriteId;
 pub struct TileDefId(pub usize);
 
 /// A list of component adding closures.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TileDef {
     /// SpriteId for the tile.
     pub sprite_id: SpriteId,
@@ -16,7 +16,7 @@ pub struct TileDef {
 }
 
 /// Serialisable description of a component.
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub enum TileComponent {
     Walkable(bool),
     Solid(bool),

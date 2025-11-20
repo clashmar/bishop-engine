@@ -5,7 +5,6 @@ use engine_core::ecs::module::CollapsibleModule;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
-use crate::gui::gui_constants::*;
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::{

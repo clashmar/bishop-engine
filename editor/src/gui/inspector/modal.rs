@@ -86,6 +86,12 @@ impl Modal {
             return false;
         }
 
+        // Prevent any interaction on first click
+        if self.just_opened {
+            self.just_opened = false;
+            return false;
+        }
+
         // Dim the whole screen
         draw_rectangle(
             0.0, 
@@ -116,12 +122,6 @@ impl Modal {
         // Run all widgets
         for widget in self.widgets.iter_mut() {
             widget.as_mut()(asset_manager);
-        }
-
-        // Skip the outside click check if just opened
-        if self.just_opened {
-            self.just_opened = false;
-            return false;
         }
 
         // Detect a click outside the window
