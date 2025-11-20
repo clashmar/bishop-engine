@@ -386,7 +386,7 @@ impl GameEditor {
         );
 
         if menu_button(create_btn, create_label, false) {
-            game.add_world(create_new_world());
+            push_command(Box::new(CreateWorldCmd::new()));
             self.init_camera(camera, game);
         }
     }

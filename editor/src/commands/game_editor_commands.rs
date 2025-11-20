@@ -1,4 +1,6 @@
 // editor/src/commands/game_editor_commands.rs
+use engine_core::ui::toast::Toast;
+use crate::storage::editor_storage::*;
 use engine_core::assets::sprite::SpriteId;
 use engine_core::world::world::World;
 use crate::with_editor;
@@ -109,6 +111,44 @@ impl Command for DeleteWorldCmd {
 }
 
 #[derive(Debug)]
+pub struct CreateWorldCmd {
+    world_id: Option<WorldId>,
+}
+
+impl CreateWorldCmd {
+    pub fn new() -> Self {
+        Self {
+            world_id: None,
+        }
+    }
+}
+
+impl Command for CreateWorldCmd {
+    fn execute(&mut self) {
+        with_editor(|editor| {
+            let game = &mut editor.game;
+            let world = create_new_world();
+            self.world_id = Some(world.id);
+            game.add_world(world);
+        });
+    }
+
+    fn undo(&mut self) {
+        with_editor(|editor| {
+            let game = &mut editor.game;
+            if let Some(id) = self.world_id.take() {
+                game.delete_world(id);
+                editor.save();
+            }
+        });
+    }
+
+    fn mode(&self) -> EditorMode {
+        EditorMode::Game
+    }
+}
+
+#[derive(Debug)]
 pub struct EditWorldCmd {
     world_id: WorldId,
     /// Values before the edit
@@ -188,6 +228,59 @@ impl Command for EditWorldCmd {
                 Some(self.old_sprite),
             );
             editor.save();
+        });
+    }
+
+    fn mode(&self) -> EditorMode {
+        EditorMode::Game
+    }
+}
+
+#[derive(Debug)]
+pub struct RenameGameCmd {
+    pub new_name: String,
+    pub old_name: String,
+}
+
+impl RenameGameCmd {
+    pub fn new(new_name: String, old_name: String) -> Self {
+        Self {
+            new_name,
+            old_name,
+        }
+    }
+}
+
+impl Command for RenameGameCmd {
+    fn execute(&mut self) {
+        with_editor(|editor| {
+            match rename_game(&mut editor.game, &self.new_name) {
+                Ok(()) => {
+                    editor.save();
+                }
+                Err(err) => {
+                    editor.toast = Some(Toast::new(
+                        &format!("Failed to rename game: {err}"),
+                        3.0,
+                    ));
+                }
+            }
+        });
+    }
+
+    fn undo(&mut self) {
+        with_editor(|editor| {
+            match rename_game(&mut editor.game, &self.old_name) {
+                Ok(()) => {
+                    editor.save();
+                }
+                Err(err) => {
+                    editor.toast = Some(Toast::new(
+                        &format!("Failed to rename game: {err}"),
+                        3.0,
+                    ));
+                }
+            }
         });
     }
 
