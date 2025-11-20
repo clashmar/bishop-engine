@@ -1,4 +1,6 @@
 // editor/src/game/game_editor.rs
+use crate::push_command;
+use crate::commands::game_editor_commands::*;
 use std::cell::RefCell;
 use engine_core::assets::sprite::SpriteId;
 use engine_core::assets::asset_manager::AssetManager;
@@ -10,7 +12,6 @@ use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::gui_constants::*;
 use crate::gui::inspector::modal::*;
 use crate::miniquad::CursorIcon;
-use crate::storage::editor_storage;
 use crate::storage::editor_storage::create_new_world;
 use crate::world::coord;
 use macroquad::miniquad::window::set_mouse_cursor;
@@ -68,7 +69,9 @@ pub struct GameEditor {
     mode_selector: ModeSelector<GameEditorMode>,
     active_rects: Vec<Rect>,
     dragged_world: Option<WorldId>,
+    dragging: bool,
     drag_offset: Vec2,
+    drag_start_position: Option<Vec2>,
     world_widget_ids: HashMap<WorldId, WidgetId>,
     selected_world_id: Option<WorldId>,
     modal: Modal,
@@ -85,7 +88,9 @@ impl GameEditor {
             },
             active_rects: Vec::new(),
             dragged_world: None,
+            dragging: false,
             drag_offset: Vec2::ZERO,
+            drag_start_position: None,
             world_widget_ids: HashMap::new(),
             selected_world_id: None,
             modal: Modal::new(340.0, 140.0),
@@ -152,8 +157,7 @@ impl GameEditor {
             GameEditorMode::Move => {
                 if !self.is_mouse_over_ui() {
                     // Drag world
-                    self.handle_drag_start(camera, game);
-                    self.handle_drag_move(camera, game);
+                    self.handle_drag(camera, game);
                 }
             },
             GameEditorMode::Delete => {
@@ -177,7 +181,7 @@ impl GameEditor {
 
     pub fn draw(
         &mut self, 
-        camera: &Camera2D, 
+        camera: &mut Camera2D, 
         game: &mut Game,
 
     ) {
@@ -189,7 +193,7 @@ impl GameEditor {
         }
 
         self.draw_worlds(camera, game);
-        self.draw_ui(game);
+        self.draw_ui(camera, game);
     }
 
     fn draw_worlds(
@@ -224,12 +228,10 @@ impl GameEditor {
                 world.meta.position.y,
                 tint,
             );
-        }
 
-        // Display name
-        for world in &mut game.worlds {
+            // Display name
             const NAME_HEIGHT: f32 = 24.0;
-            let center = world.meta.position.x + (CIRCLE_120PX.width() / 2.);
+            let center = world.meta.position.x + (texture.width() / 2.);
             let (x, width) = center_text_field(center, &world.name);
 
             let name_rect = Rect::new(
@@ -243,35 +245,60 @@ impl GameEditor {
         }
     }
 
-    fn handle_drag_start(&mut self, camera: &Camera2D, game: &mut Game) {
-        if is_mouse_button_pressed(MouseButton::Left) {
+    fn handle_drag(&mut self, camera: &Camera2D, game: &mut Game) {
+        // Start dragging
+        if !self.dragging && is_mouse_button_pressed(MouseButton::Left) {
             for world in &game.worlds {
                 let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                 if self.is_mouse_over_world(camera, world, texture) {
+                    self.dragging = true;
                     self.dragged_world = Some(world.id);
-                    let world_mouse = coord::mouse_world_pos(camera);
-                    self.drag_offset = world.meta.position - world_mouse;
+
+                    let mouse_world = coord::mouse_world_pos(camera);
+                    self.drag_offset = world.meta.position - mouse_world;
+                    self.drag_start_position = Some(world.meta.position);
                     break;
                 }
             }
         }
-    }
 
-    fn handle_drag_move(&mut self, camera: &Camera2D, game: &mut Game) {
-        if let Some(id) = self.dragged_world {
-            if is_mouse_button_down(MouseButton::Left) {
-                let world_mouse = coord::mouse_world_pos(camera);
-                
-                if let Some(world) = game.worlds.iter_mut().find(|w| w.id == id) {
-                    world.meta.position = world_mouse + self.drag_offset;
+        // While dragging
+        if self.dragging {
+            if let Some(id) = self.dragged_world {
+                if is_mouse_button_down(MouseButton::Left) {
+                    let mouse_world = coord::mouse_world_pos(camera);
+
+                    if let Some(world) = game.worlds.iter_mut().find(|w| w.id == id) {
+                        world.meta.position = mouse_world + self.drag_offset;
+                    }
                 }
-            } else {
-                self.dragged_world = None;
+
+                // Finish on release
+                if is_mouse_button_released(MouseButton::Left) {
+                    if let (Some(start_pos), Some(id)) =
+                        (self.drag_start_position.take(), self.dragged_world.take())
+                    {
+                        if let Some(world) =
+                            game.worlds.iter().find(|w| w.id == id)
+                        {
+                            let final_pos = world.meta.position;
+
+                            // Only push command if world actually moved
+                            if (final_pos - start_pos).length_squared() > 0.0 {
+                                push_command(Box::new(
+                                    MoveWorldCmd::new(id, start_pos, final_pos),
+                                ));
+                            }
+                        }
+                    }
+
+                    self.dragging = false;
+                }
             }
         }
     }
 
-    fn draw_ui(&mut self, game: &mut Game) {
+    fn draw_ui(&mut self, camera: &mut Camera2D, game: &mut Game) {
         set_default_camera();
 
         self.active_rects.clear();
@@ -281,7 +308,7 @@ impl GameEditor {
             self.mode = self.mode_selector.current;
         }
 
-        self.draw_menu_buttons(game);
+        self.draw_menu_buttons(camera, game);
 
         // Draw modal last
         if self.modal.is_open() {
@@ -294,21 +321,36 @@ impl GameEditor {
             // Handle results
             EDIT_WORLD_RESULT.with(|c| {
                 if let Some(result) = c.borrow_mut().take() {
-                    // Apply any name change
-                    if let Some(new_name) = result.name {
-                        if let Some(world) = game.worlds.iter_mut().find(|w| w.id == result.id) {
-                            world.name = new_name;
+                    let mut new_name = None;
+                    let mut new_sprite = None;
+
+                    // Name change
+                    if let Some(ref name) = result.name {
+                        // Compare with the current name
+                        if let Some(world) = game.worlds.iter().find(|w| w.id == result.id) {
+                            if world.name != *name {
+                                new_name = Some(name.clone());
+                            }
                         }
                     }
-                    // Apply any sprite change
-                    if let Some(new_sprite) = result.sprite {
-                        if let Some(world) = game.worlds.iter_mut().find(|w| w.id == result.id) {
-                            world.meta.sprite_id = if new_sprite.0 == 0 {
-                                None
-                            } else {
-                                Some(new_sprite)
-                            };
+
+                    // Sprite change
+                    if let Some(sprite) = result.sprite {
+                        let sprite_opt = if sprite.0 == 0 { None } else { Some(sprite) };
+                        if let Some(world) = game.worlds.iter().find(|w| w.id == result.id) {
+                            if world.meta.sprite_id != sprite_opt {
+                                new_sprite = Some(sprite_opt);
+                            }
                         }
+                    }
+
+                    // Push the command if something changed
+                    if new_name.is_some() || new_sprite.is_some() {
+                        push_command(Box::new(EditWorldCmd::new(
+                            result.id,
+                            new_name,
+                            new_sprite,
+                        )));
                     }
                     self.modal.close();
                 }
@@ -319,8 +361,7 @@ impl GameEditor {
                     match result {
                         ConfirmPromptResult::Confirmed => {
                             if let Some(id) = self.selected_world_id {
-                                game.delete_world(id);
-                                let _ = editor_storage::save_game(game);
+                                push_command(Box::new(DeleteWorldCmd::new(game, id)));
                             }
                         },
                         ConfirmPromptResult::Cancelled => { }
@@ -332,7 +373,7 @@ impl GameEditor {
         }
     }
 
-    fn draw_menu_buttons(&mut self, game: &mut Game) {
+    fn draw_menu_buttons(&mut self, camera: &mut Camera2D, game: &mut Game, ) {
         const BTN_MARGIN: f32 = 10.0;
 
         let create_label = "New World";
@@ -346,6 +387,7 @@ impl GameEditor {
 
         if menu_button(create_btn, create_label, false) {
             game.add_world(create_new_world());
+            self.init_camera(camera, game);
         }
     }
 

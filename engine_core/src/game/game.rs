@@ -76,8 +76,8 @@ impl Game {
         if self.current_world_id == id {
             self.current_world_id = self.worlds
                 .first()
-                .and_then(|w| Some(w.id))
-                .unwrap_or(WorldId(Uuid::nil()))
+                .map(|w| w.id)
+                .unwrap_or(WorldId(Uuid::nil()));
         }
     }
 

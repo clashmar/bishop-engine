@@ -20,6 +20,8 @@ use crate::room::room_editor::RoomEditor;
 use crate::world::world_editor::WorldEditor;
 use crate::game::game_editor::GameEditor;
 
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum EditorMode {
     Game,
     World(WorldId),
@@ -202,14 +204,14 @@ impl Editor {
             }
         }
 
-        self.handle_user_input().await;
+        self.handle_shortcuts().await;
     }
 
     pub async fn draw(&mut self) {
         match self.mode {
             EditorMode::Game => {
                 self.game_editor.draw(
-                    &self.camera,
+                    &mut self.camera,
                     &mut self.game
                 );
             },

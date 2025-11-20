@@ -1,4 +1,3 @@
-use engine_core::assets::asset_manager::AssetManager;
 // editor/src/editor_actions.rs
 use engine_core::controls::controls::Controls;
 use engine_core::ui::prompt::StringPromptResult;
@@ -145,12 +144,13 @@ impl Editor {
                 }
                 MenuAction::Save => self.save(),
                 MenuAction::SaveAs => self.open_save_as_modal(),
-                _ => {}, // TODO Handle all actions
+                MenuAction::Undo => crate::global::request_undo(),
+                MenuAction::Redo => crate::global::request_redo(),
             }
         }
     }
 
-    pub async fn handle_user_input(&mut self) {
+    pub async fn handle_shortcuts(&mut self) {
         if Controls::save() {
             self.save();
         }
@@ -169,7 +169,6 @@ impl Editor {
     }
 
     pub fn save(&mut self) {
-        AssetManager::purge_unused_assets(&mut self.game);
         save_game(&self.game)
             .expect("Could not save game.");
         self.toast = Some(Toast::new("Saved", 2.5));

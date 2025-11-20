@@ -15,7 +15,7 @@ use serde::de::Deserializer;
 use macroquad::prelude::*;
 
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct WorldEcs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
     pub tile_defs: HashMap<TileDefId, TileDef>,

@@ -1,4 +1,5 @@
 // engine_core/src/ui/widgets.rs
+use std::borrow::Cow;
 use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::ui::text::*;
@@ -1045,10 +1046,17 @@ pub fn gui_sprite_picker(
     id: &mut SpriteId,
     asset_manager: &mut AssetManager,
 ) -> bool {
-    let btn_label = if id.0 == 0 {
-        "[Pick File]"
+    let btn_label: Cow<str> = if id.0 == 0 {
+        Cow::Borrowed("[Pick File]")
     } else {
-        "[Change File]"
+        let filename = asset_manager
+            .sprite_id_to_path
+            .get(id)
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "???".to_string());
+
+        Cow::Owned(format!("[/{}]", filename))
     };
 
     let remove_w = rect.h; // square button
@@ -1064,7 +1072,7 @@ pub fn gui_sprite_picker(
 
     let mut changed = false;
 
-    if gui_button(picker_rect, btn_label) {
+    if gui_button(picker_rect, &btn_label) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
