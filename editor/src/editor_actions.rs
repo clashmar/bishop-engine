@@ -9,7 +9,9 @@ use engine_core::game::game::Game;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::storage::path_utils::*;
 use engine_core::ui::toast::Toast;
+use crate::commands::game_editor_commands::RenameGameCmd;
 use crate::game::game_editor::GameEditor;
+use crate::global::push_command;
 use crate::gui::inspector::modal::*;
 use crate::room::room_editor::RoomEditor;
 use crate::world::world_editor::WorldEditor;
@@ -288,17 +290,7 @@ impl Editor {
                                 if self.duplicate_game_exists(&name) {
                                     return None;
                                 } 
-                                match rename_game(&mut self.game, &name) {
-                                    Ok(()) => {
-                                        self.save();
-                                    }
-                                    Err(err) => {
-                                        self.toast = Some(Toast::new(
-                                            &format!("Failed to rename game: {err}"),
-                                            3.0,
-                                        ));
-                                    }
-                                }
+                                push_command(Box::new(RenameGameCmd::new(name, self.game.name.clone())))
                             } 
                             EditorMode::World(_) => {
                                 self.game.current_world_mut().name = name
