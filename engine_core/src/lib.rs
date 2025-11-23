@@ -4,6 +4,7 @@ pub mod ecs;
 pub mod camera;
 pub mod constants;
 pub mod input;
+pub mod logging;
 pub mod game;
 pub mod global;
 pub mod lighting;
