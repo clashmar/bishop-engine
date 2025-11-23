@@ -1,6 +1,7 @@
 // editor/src/editor.rs
 use crate::gui::inspector::modal::Modal;
 use engine_core::logging::logging::*;
+use engine_core::onscreen_log;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::input_is_focused;
 use engine_core::world::world::WorldId;
@@ -12,7 +13,7 @@ use macroquad::prelude::*;
 use engine_core::game::game::Game;
 use crate::gui::menu_bar::MenuBar;
 use engine_core::controls::controls::Controls;
-use crate::playtest::room_playtest;
+use crate::playtest::room_playtest::*;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::editor_camera_controller::EditorCameraController;
 use crate::storage::editor_storage;
@@ -181,21 +182,21 @@ impl Editor {
                     // Write the payload
                     if let Some(room_id) = self.current_room_id {
                         let room = self.get_room_from_id(&room_id);
-                        let payload_path = room_playtest::write_playtest_payload(room, &self.game);
+                        let payload_path = write_playtest_payload(room, &self.game);
 
-                        // Build the binary first
-                        match room_playtest::build_playtest_binary().await {
+                        // If in dev mode the binary will be built first
+                        match resolve_playtest_binary().await {
                             Ok(exe_path) => {
                                 // Launch the binary
                                 if let Err(e) = std::process::Command::new(&exe_path)
                                     .arg(&payload_path)
                                     .spawn()
                                 {
-                                    eprintln!("Failed to launch play‑test: {e}");
+                                    onscreen_log!("Failed to launch playtest: {e}");
                                 }
                             }
                             Err(e) => {
-                                eprintln!("{e}");
+                                onscreen_log!("{e}");
                             }
                         }
                         // Reset the request flag so we don’t spawn multiple processes (and really ruin everything)
