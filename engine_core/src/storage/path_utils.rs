@@ -1,22 +1,112 @@
 // engine_core/src/storage/path_utils.rs
+use futures::executor::block_on;
+use macroquad::prelude::*;
+use rfd::AsyncFileDialog;
+use crate::storage::editor_config::*;
+use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use crate::constants::GAME_SAVE_ROOT;
+use crate::onscreen_log; 
 
 /// Returns the absolute path to the folder that stores all games.
 pub fn absolute_save_root() -> PathBuf {
-    // Bundled binary
-    if let Ok(res_dir) = std::env::var("CARGO_BUNDLE_RESOURCES") {
-        return PathBuf::from(res_dir).join(GAME_SAVE_ROOT);
+    // Dev mode
+    if cfg!(debug_assertions) {
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let workspace_root = manifest_dir
+            .parent()
+            .expect("Cannot locate workspace root.");
+
+        let path_buf = workspace_root.join(GAME_SAVE_ROOT);
+        return path_buf;
     }
 
-    // Dev mode
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest_dir
-        .parent() // editor
-        .expect("Cannot locate workspace root.");
+    // Release mode
+    if let Some(user_path) = get_save_root() {
+        // Ensure the folder still exists or recreate it
+        if let Err(e) = fs::create_dir_all(&user_path) {
+            onscreen_log!("Could not create user save root '{}': {e}", user_path.display());
+        } else {
+            if let Ok(canon) = user_path.canonicalize() {
+                return canon.clone();
+            }
+        }
 
-    workspace_root.join(GAME_SAVE_ROOT)
+        onscreen_log!("Stored save root is no longer valid, resetting.");
+        {
+            let mut cfg = CONFIG.write().expect("Failed to lock CONFIG for writing");
+            cfg.save_root = None;
+        }
+        
+        // Update the .ron
+        save_config();
+    }
+    else {
+        // Save root needs to be set
+        if let Some(path_buf) = block_on(pick_save_root_async()) {
+            return path_buf;
+        }
+    }
+
+    // Fallback to the platform‑default location.
+    let fallback_path = default_save_root();
+    let _ = fs::create_dir_all(&fallback_path);
+    onscreen_log!("Using fallback save root: {}", fallback_path.display());
+    fallback_path
+}
+
+/// Pick the folder that will become the absolute save root.
+pub async fn pick_save_root_async() -> Option<PathBuf> {
+    // Let the user choose a base folder
+    let base_folder = AsyncFileDialog::new()
+        .set_title("Select a folder for the editor assets root directory.")
+        .pick_folder().await?
+        .path()
+        .to_path_buf();
+
+    // Build the full path
+    let save_root = base_folder
+        .join("Bishop Engine")
+        .join(GAME_SAVE_ROOT);
+
+    // Make sure the directory chain exists
+    if let Err(e) = fs::create_dir_all(&save_root) {
+        onscreen_log!("Cannot write to the selected folder: {e}");
+        return None;
+    }
+
+    // Update the in memory config
+    {
+        let mut cfg = CONFIG.write().expect("Failed to lock CONFIG for writing");
+        cfg.save_root = Some(save_root.clone());
+    }
+    
+    // Update the .ron
+    save_config();
+
+    onscreen_log!("Successfully created save root at: {:?}", save_root);
+    Some(save_root)
+}
+
+
+/// Checks for a valid save root, or prompts the user to choose one.
+pub async fn ensure_save_root() -> bool {
+    // Fast path
+    if get_save_root().is_some() {
+        return true;
+    }
+
+    // Give Macroquad a chance to start its event loop
+    next_frame().await;
+
+    // Show the async picker.
+    if let Some(_path) = pick_save_root_async().await {
+        return get_save_root().is_some();
+    }
+
+    // The user cancelled the picker
+    false
 }
 
 /// Turns a game name into a safe folder name.
@@ -55,6 +145,7 @@ pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
     let root = absolute_save_root()
         .canonicalize()
         .map_err(|e| format!("Cannot canonicalize save root: {e}"))?;
+
     let candidate = path
         .canonicalize()
         .map_err(|e| format!("Cannot canonicalize selected folder: {e}"))?;
@@ -67,5 +158,24 @@ pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
             candidate.display(),
             root.display()
         ))
+    }
+}
+
+/// Platform-default location used when the user has not chosen a folder.
+fn default_save_root() -> PathBuf {
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var("HOME").expect("HOME not set");
+        Path::new(&home).join("Library/Application Support/Bishop Engine/games")
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let appdata = std::env::var("APPDATA").expect("APPDATA not set");
+        Path::new(&appdata).join("Bishop Engine\\games")
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        let home = std::env::var("HOME").expect("HOME not set");
+        Path::new(&home).join(".local/share/BishopEngine/games")
     }
 }
