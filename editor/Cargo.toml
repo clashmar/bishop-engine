@@ -5,9 +5,10 @@ edition = "2021"
 
 [dependencies]
 engine_core = { path = "../engine_core" }
+game = { path = "../game" }
 reflect_derive = { path = "../reflect_derive" }
 log = "0.4"
-env_logger = "0.7"
+simplelog = "0.12"
 macroquad = "0.4.14"
 rfd = "0.13"
 serde = { version = "1.0", features = ["derive"] }
@@ -30,3 +31,5 @@ version = "0.1.0"
 category = "Game"
 short_description = "A lightweight 2D game engine built with Rust."
 icon = ["src/editor_assets/Icon.icns"]
+# Game binaries (game, playtest etc) need to be compiled and added to Resources/game
+# TODO: Automate this ^

@@ -246,15 +246,15 @@ impl InspectorPanel {
             let create_label = "Create Entity";
             let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
             let create_btn = Rect::new(
-                self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - WIDGET_PADDING,
+                self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - (WIDGET_PADDING * 2.0),
                 self.rect.y + BTN_MARGIN,
-                txt_create.width + WIDGET_PADDING,
+                txt_create.width + WIDGET_PADDING * 2.0,
                 BTN_HEIGHT,
             );
 
             let add_cam_label = "Add Camera";
             let txt_cam = measure_text_ui(add_cam_label, HEADER_FONT_SIZE_20, 1.0);
-            let cam_btn_w = txt_cam.width + WIDGET_PADDING;
+            let cam_btn_w = txt_cam.width + WIDGET_PADDING * 2.0;
             let cam_btn = Rect::new(
                 create_btn.x - WIDGET_SPACING - cam_btn_w,
                 create_btn.y,

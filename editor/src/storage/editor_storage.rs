@@ -11,7 +11,7 @@ use engine_core::{
     }
 };
 use std::{
-    fs, io, time::SystemTime
+    fs, io, path::PathBuf, time::SystemTime
 };
 use crate::{
     storage::{editor_storage}, 
@@ -229,6 +229,31 @@ pub fn save_as(
     game.asset_manager.game_name = new_name.to_owned();
 
     Ok(())
+}
+
+/// Returns the absolute path to the bundled game binaries.
+pub fn game_binary_dir() -> Option<PathBuf> {
+    // Path of the running executable
+    let exe = std::env::current_exe().ok()?;
+
+    // Platform specific layout
+    #[cfg(target_os = "macos")]
+    {
+        // …/Bishop Engine.app/Contents/MacOS/editor
+        exe.parent() // MacOS/
+            .and_then(|p| p.parent()) // Contents/
+            .map(|p| p.join("Resources").join("game"))
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        // …/Bishop Engine.exe  or  …/bishop-engine
+        let game_dir = exe.parent()
+            .expect("cannot locate bundled resources")
+            .join("game");
+
+        Some(game_dir)
+    }
 }
 
 pub fn list_game_names() -> Vec<String> {

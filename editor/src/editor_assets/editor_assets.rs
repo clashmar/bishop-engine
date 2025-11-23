@@ -93,7 +93,7 @@ fn load_rgba_resized<const N: usize>(
         .decode()
         .expect("failed to decode PNG");
 
-    let resized = img.resize_exact(size, size, FilterType::Lanczos3);
+    let resized = img.resize_exact(size, size, FilterType::Nearest);
 
     let raw = resized.to_rgba8().into_raw();
 

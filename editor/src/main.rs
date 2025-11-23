@@ -2,6 +2,7 @@
 use crate::editor_assets::editor_assets::*;
 use crate::global::*;
 use crate::editor::Editor;
+use engine_core::logging::logging::init_file_logger;
 use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::miniquad::conf::Icon;
@@ -46,7 +47,7 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() -> std::io::Result<()> {
     // Initialize logging
-    env_logger::init();
+    init_file_logger();    
 
     if !ensure_save_root().await {
         // User cancelled
