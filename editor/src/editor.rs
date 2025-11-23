@@ -1,5 +1,6 @@
 // editor/src/editor.rs
 use crate::gui::inspector::modal::Modal;
+use engine_core::logging::logging::*;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::input_is_focused;
 use engine_core::world::world::WorldId;
@@ -269,5 +270,21 @@ impl Editor {
         }
 
         self.draw_toast();
+
+        // Draw overlay logs to screen in debug mode
+        if cfg!(debug_assertions) {
+            {
+                let msg = LAST_LOG.lock().unwrap().clone();
+                if !msg.is_empty() {
+                    draw_text(
+                        &msg,
+                        10.0,
+                        screen_height() - 10.0,
+                        20.0,
+                        WHITE,
+                    );
+                }
+            }
+        }
     }
 }

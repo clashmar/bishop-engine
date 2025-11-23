@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 engine_core = { path = "../engine_core" }
 reflect_derive = { path = "../reflect_derive" }
+log = "0.4"
+env_logger = "0.7"
 macroquad = "0.4.14"
 rfd = "0.13"
 serde = { version = "1.0", features = ["derive"] }
@@ -19,3 +21,12 @@ strum = "0.26"
 strum_macros = "0.26"
 once_cell = "1"
 fontdue = "0.9.3"
+image = "0.25.9"
+
+[package.metadata.bundle]
+name = "Bishop's Engine"
+identifier = "com.bishop.engine"
+version = "0.1.0"
+category = "Game"
+short_description = "A lightweight 2D game engine built with Rust."
+icon = ["src/editor_assets/Icon.icns"]
