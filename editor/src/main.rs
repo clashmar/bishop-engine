@@ -1,8 +1,10 @@
 // editor/src/main.rs
+use crate::editor_assets::editor_assets::*;
 use crate::global::*;
 use crate::editor::Editor;
-use engine_core::assets::asset_manager::AssetManager;
+use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
+use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
 
 mod global;
@@ -21,22 +23,37 @@ mod editor_assets;
 mod editor_actions;
 
 fn window_conf() -> Conf {
-    let width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
-    let height = FIXED_WINDOW_HEIGHT.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+    let window_width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
+    let window_height = FIXED_WINDOW_HEIGHT.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+
+    let icon: Icon = Icon {
+        small: *ICON_SMALL,
+        medium: *ICON_MEDIUM,
+        big: *ICON_BIG,
+    };
 
     Conf {
         window_title: "Bishop Engine".to_owned(),
-        window_height: height,
-        window_width: width,
+        window_height,
+        window_width,
         fullscreen: false,
         window_resizable: true,
+        icon: Some(icon),
         ..Default::default()
     }
 }
 
 #[macroquad::main(window_conf)]
 async fn main() -> std::io::Result<()> {
-    // Create folder structure if it doesn't exist
+    // Initialize logging
+    env_logger::init();
+
+    if !ensure_save_root().await {
+        // User cancelled
+        println!("No save root selected. Exiting.");
+        std::process::exit(0);
+    }
+
     let games_path = absolute_save_root();
     std::fs::create_dir_all(&games_path)?;
     
@@ -48,11 +65,6 @@ async fn main() -> std::io::Result<()> {
     let mut current_window_size = (screen_width() as u32, screen_height() as u32);
 
     loop {
-        if is_quit_requested() {
-            println!("Quitting");
-            break;
-        }
-
         // Update the render targets with the current window size
         let cur_screen = (screen_width() as u32, screen_height() as u32);
         if cur_screen != current_window_size {
@@ -70,11 +82,4 @@ async fn main() -> std::io::Result<()> {
         
         next_frame().await
     }
-
-    with_editor(|editor| {
-        let purged = AssetManager::purge_unused_assets(&mut editor.game);
-        println!("Purged {purged} unused asset(s) on exit.");
-    });
-    
-    Ok(())
 }
