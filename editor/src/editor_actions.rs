@@ -1,5 +1,6 @@
 // editor/src/editor_actions.rs
 use engine_core::controls::controls::Controls;
+use engine_core::logging::logging::LAST_LOG;
 use engine_core::ui::prompt::StringPromptResult;
 use std::cell::RefCell;
 use engine_core::ui::prompt::StringPromptWidget;
@@ -351,10 +352,28 @@ impl Editor {
         }
     }
 
+    pub fn draw_logs(&self) {
+        // Draw overlay logs to screen in debug mode
+        if cfg!(debug_assertions) {
+            {
+                let msg = LAST_LOG.lock().unwrap().clone();
+                if !msg.is_empty() {
+                    draw_text(
+                        &msg,
+                        10.0,
+                        screen_height() - 10.0,
+                        20.0,
+                        WHITE,
+                    );
+                }
+            }
+        }
+    }
+
     pub fn reset(&mut self, game: Game) {
         *self = Self {
             game: game,
-            camera: std::mem::take(&mut self.camera), // TODO: set camera correctly
+            camera: std::mem::take(&mut self.camera),
             ..Self::default()
         };
     }
