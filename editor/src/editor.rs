@@ -1,7 +1,6 @@
 // editor/src/editor.rs
 use crate::gui::inspector::modal::Modal;
-use engine_core::logging::logging::*;
-use engine_core::onscreen_log;
+use engine_core::*;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::input_is_focused;
 use engine_core::world::world::WorldId;
@@ -192,14 +191,14 @@ impl Editor {
                                     .arg(&payload_path)
                                     .spawn()
                                 {
-                                    onscreen_log!("Failed to launch playtest: {e}");
+                                    onscreen_error!("Failed to launch playtest: {e}");
                                 }
                             }
                             Err(e) => {
-                                onscreen_log!("{e}");
+                                onscreen_error!("{e}");
                             }
                         }
-                        // Reset the request flag so we don’t spawn multiple processes (and really ruin everything)
+                        // Reset the request flag so multiple processes don’t spawn (and really ruin everything)
                         self.room_editor.request_play = false;      
                     }
                 }
@@ -272,20 +271,7 @@ impl Editor {
 
         self.draw_toast();
 
-        // Draw overlay logs to screen in debug mode
-        if cfg!(debug_assertions) {
-            {
-                let msg = LAST_LOG.lock().unwrap().clone();
-                if !msg.is_empty() {
-                    draw_text(
-                        &msg,
-                        10.0,
-                        screen_height() - 10.0,
-                        20.0,
-                        WHITE,
-                    );
-                }
-            }
-        }
+        // Draws onscreen logs in debug mode
+        self.draw_logs();
     }
 }
