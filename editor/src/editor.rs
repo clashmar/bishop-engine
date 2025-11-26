@@ -54,14 +54,14 @@ impl Editor {
             editor_storage::create_new_game(name).await
         } else {
             // User pressed Cancel
-            println!("User cancelled the new game dialogue.");
+            onscreen_info!("User cancelled new game dialogue.");
             std::process::exit(0);
         };
 
         let palette = match editor_storage::load_palette(&game.name.clone()) {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Failed to load palette: {e}");
+                onscreen_error!("Failed to load palette: {e}");
                 // Fall back to a new palette
                 TilePalette::new()
             }
@@ -130,23 +130,11 @@ impl Editor {
                         .find(|w| w.id == self.game.current_world_id)
                         .expect("Current world id not present in game.");
 
-                    let other_bounds: Vec<(Vec2, Vec2)> = current_world.rooms
-                        .iter()
-                        .filter(|r| r.id != room_id)
-                        .map(|r| (r.position, r.size))
-                        .collect();
-                    
-                    let room = current_world.rooms
-                        .iter_mut()
-                        .find(|r| r.id == room_id)
-                        .expect("Could not find room in world.");
-
                     // Returns true if escaped
                     self.room_editor.update(
                         &mut self.camera, 
-                        room,
-                        &other_bounds,
-                        &mut current_world.world_ecs,
+                        room_id,
+                        current_world,
                         &mut self.game.asset_manager,
                     ).await;
 
@@ -157,8 +145,10 @@ impl Editor {
 
                     if Controls::escape() && !input_is_focused() {
                         let palette = &mut self.room_editor.tilemap_editor.tilemap_panel.palette;
-                        editor_storage::save_palette(palette, &self.game.name)
-                            .expect("Could not save tile palette");
+
+                        if let Err(e) = editor_storage::save_palette(palette, &self.game.name) {
+                            onscreen_error!("Could not save tile palette: {e}.")
+                        }
 
                         // Find the room we just left for center_on_room
                         if let Some(room) = current_world.rooms.iter()
@@ -179,28 +169,26 @@ impl Editor {
                 // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {
                     // Write the payload
-                    if let Some(room_id) = self.current_room_id {
-                        let room = self.get_room_from_id(&room_id);
-                        let payload_path = write_playtest_payload(room, &self.game);
+                    let room = self.get_room_from_id(&room_id);
+                    let payload_path = write_playtest_payload(room, &self.game);
 
-                        // If in dev mode the binary will be built first
-                        match resolve_playtest_binary().await {
-                            Ok(exe_path) => {
-                                // Launch the binary
-                                if let Err(e) = std::process::Command::new(&exe_path)
-                                    .arg(&payload_path)
-                                    .spawn()
-                                {
-                                    onscreen_error!("Failed to launch playtest: {e}");
-                                }
-                            }
-                            Err(e) => {
-                                onscreen_error!("{e}");
+                    // If in dev mode the binary will be built first
+                    match resolve_playtest_binary().await {
+                        Ok(exe_path) => {
+                            // Launch the binary
+                            if let Err(e) = std::process::Command::new(&exe_path)
+                                .arg(&payload_path)
+                                .spawn()
+                            {
+                                onscreen_error!("Failed to launch playtest: {e}");
                             }
                         }
-                        // Reset the request flag so multiple processes don’t spawn (and really ruin everything)
-                        self.room_editor.request_play = false;      
+                        Err(e) => {
+                            onscreen_error!("{e}");
+                        }
                     }
+                    // Reset the request flag so multiple processes don’t spawn (and really ruin everything)
+                    self.room_editor.request_play = false;      
                 }
             }
         }

@@ -22,7 +22,6 @@ strum = "0.26"
 strum_macros = "0.26"
 once_cell = "1"
 fontdue = "0.9.3"
-image = "0.25.9"
 
 [package.metadata.bundle]
 name = "Bishop's Engine"
@@ -31,5 +30,6 @@ version = "0.1.0"
 category = "Game"
 short_description = "A lightweight 2D game engine built with Rust."
 icon = ["src/editor_assets/Icon.icns"]
-# Game binaries (game, playtest etc) need to be compiled and added to Resources/game
-# TODO: Automate this ^
+resources = ["templates", "binaries"]
+# Run "cargo make bundle-editor" to build game binaries and copy
+# copy them to the binaries folder

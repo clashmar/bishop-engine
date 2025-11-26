@@ -11,6 +11,7 @@ use crate::world::coord;
 use crate::canvas::grid;
 use crate::editor_camera_controller::EditorCameraController;
 use engine_core::controls::controls::Controls;
+use engine_core::world::world::World;
 use macroquad::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::ui::widgets::*;
@@ -102,11 +103,23 @@ impl RoomEditor {
     pub async fn update(
         &mut self, 
         camera: &mut Camera2D,
-        room: &mut Room,
-        other_bounds: &Vec<(Vec2, Vec2)>,
-        world_ecs: &mut WorldEcs,
+        room_id: RoomId,
+        current_world: &mut World,
         asset_manager: &mut AssetManager,
     ) {
+        let other_bounds: Vec<(Vec2, Vec2)> = current_world.rooms
+            .iter()
+            .filter(|r| r.id != room_id)
+            .map(|r| (r.position, r.size))
+            .collect();
+
+        let world_ecs = &mut current_world.world_ecs;
+        
+        let room = current_world.rooms
+            .iter_mut()
+            .find(|r| r.id == room_id)
+            .expect("Could not find room in world.");
+
         if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
             clear_all_input_focus();
         }
@@ -137,7 +150,7 @@ impl RoomEditor {
                 self.tilemap_editor.update(
                     camera,
                     room, 
-                    &other_bounds, 
+                    &other_bounds,
                     world_ecs,
                 ).await;
             }
@@ -162,14 +175,14 @@ impl RoomEditor {
                 // Create a new entity if create was pressed
                 if self.create_entity_requested && self.inspector.target.is_none() {
                     // Build the entity
-                    let entity = world_ecs
+                    let entity = &mut current_world.world_ecs
                         .create_entity()
                         .with(Position { position: room.position })
                         .with(CurrentRoom(room.id))
                         .finish();
 
                     // Immediately select it so the inspector shows the newly‑created entity
-                    self.selected_entity = Some(entity);
+                    self.selected_entity = Some(*entity);
                     self.create_entity_requested = false;
                 }
 

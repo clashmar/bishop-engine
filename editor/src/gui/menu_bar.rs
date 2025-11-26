@@ -25,6 +25,7 @@ pub enum MenuAction {
     Open,
     Save,
     SaveAs,
+    Export,
     // Edit actions
     Undo,
     Redo,
@@ -37,6 +38,7 @@ impl MenuAction {
             MenuAction::NewGame => "New Game".to_string(),
             MenuAction::Save => "Save".to_string(),
             MenuAction::SaveAs => "Save As".to_string(),
+            MenuAction::Export => "Export".to_string(),
             MenuAction::Undo => "Undo".to_string(),
             MenuAction::Redo => "Redo".to_string(),
             _ => format!("{self:?}"),
@@ -143,6 +145,7 @@ impl MenuBar {
             MenuAction::Open,
             MenuAction::Save,
             MenuAction::SaveAs,
+            MenuAction::Export,
         ];
 
         if let Some(selected) = menu_dropdown(
