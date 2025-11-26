@@ -230,6 +230,7 @@ fn templates_dir() -> Option<PathBuf> {
 }
 
 /// Exports the game to the chosen folder on all platforms.
+/// TODO: Find a way to automate new things being added.
 pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
     let dest_root = rfd::FileDialog::new()
         .set_title("Select destination folder for export:")
@@ -316,6 +317,17 @@ pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
         .join("Icon.icns");
 
     fs::copy(src_icons, target_icons)?;
+
+    // Copy app window icon
+    let src_window_icon = game_folder(&game.name)
+        .join("icon.png");
+
+    let target_window_icon = bundle_path
+        .join("Contents")
+        .join("Resources")
+        .join("icon.png");
+
+    fs::copy(src_window_icon, target_window_icon)?;
 
     Ok(bundle_path)
 }
