@@ -1,11 +1,9 @@
 // editor/src/editor_assets/editor_assets.rs
-use std::io::Cursor;
 use std::hash::Hasher;
 use std::hash::BuildHasherDefault;
 use std::hash::DefaultHasher;
+use engine_core::assets::core_assets::load_rgba_resized;
 use futures::executor::block_on;
-use image::ImageReader;
-use image::imageops::FilterType;
 use std::{env, fs};
 use std::hash::BuildHasher;
 use std::path::PathBuf;
@@ -81,26 +79,5 @@ fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
 
     texture.set_filter(FilterMode::Nearest);
     texture
-}
-
-
-/// Helper that decodes a PNG, resizes it and returns the raw RGBA bytes.
-fn load_rgba_resized<const N: usize>(
-    data: &'static [u8],
-    size: u32,
-) -> [u8; N] {
-    let img = ImageReader::with_format(Cursor::new(data), image::ImageFormat::Png)
-        .decode()
-        .expect("failed to decode PNG");
-
-    let resized = img.resize_exact(size, size, FilterType::Nearest);
-
-    let raw = resized.to_rgba8().into_raw();
-
-    assert_eq!(raw.len(), N, "unexpected pixel count after resize");
-
-    let mut out = [0u8; N];
-    out.copy_from_slice(&raw);
-    out
 }
 

@@ -1,0 +1,24 @@
+[tasks.build-game]
+script = [
+    "cd ..",
+    "cargo build -p game --release --target aarch64-apple-darwin",
+]
+
+[tasks.copy-game-bins]
+script = [
+    "cd ..",
+    "mkdir -p editor/binaries",
+    "cp -f target/aarch64-apple-darwin/release/game editor/binaries/",
+    "cp -f target/aarch64-apple-darwin/release/game-playtest editor/binaries/"
+]
+dependencies = ["build-game"]
+
+[tasks.build-editor]
+command = "cargo"
+args = ["build", "--release", "--target", "aarch64-apple-darwin"]
+dependencies = ["copy-game-bins"]
+
+[tasks.bundle-editor]
+command = "cargo"
+args = ["bundle", "--release", "--target", "aarch64-apple-darwin"]
+dependencies = ["build-editor"]

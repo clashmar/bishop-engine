@@ -1,4 +1,5 @@
 // editor/src/editor_actions.rs
+use engine_core::*;
 use engine_core::controls::controls::Controls;
 use engine_core::logging::logging::LAST_LOG;
 use engine_core::ui::prompt::StringPromptResult;
@@ -117,7 +118,7 @@ impl Editor {
                                                 ));
                                             }
                                             Err(e) => {
-                                                eprintln!("Failed to load game: {e}");
+                                                onscreen_error!("Failed to load game: {e}");
                                                 self.toast = Some(Toast::new(
                                                     "Could not load selected game.",
                                                     2.5,
@@ -149,6 +150,16 @@ impl Editor {
                 MenuAction::SaveAs => self.open_save_as_modal(),
                 MenuAction::Undo => crate::global::request_undo(),
                 MenuAction::Redo => crate::global::request_redo(),
+                MenuAction::Export => {
+                    match export_game(&self.game).await {
+                        Ok(path) => {
+                            self.toast = Some(Toast::new(format!("Exported to: {}", path.display()), 2.5));
+                        }
+                        Err(e) => {
+                            onscreen_error!("Export failed: {e}");
+                        }
+                    }
+                }
             }
         }
     }
