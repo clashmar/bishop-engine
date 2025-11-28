@@ -7,11 +7,36 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use crate::constants::GAME_SAVE_ROOT;
-use crate::onscreen_log; 
+use crate::*; 
+
+// Gets the Resources dir for the current process.
+pub fn resources_dir() -> Option<PathBuf> {
+    // Path of the running executable
+    let exe = std::env::current_exe().ok()?;
+
+    // Platform specific layout
+    #[cfg(target_os = "macos")]
+    {
+        // …/Bishop Engine.app/Contents/MacOS/editor
+        exe.parent() // MacOS/
+            .and_then(|p| p.parent()) // Contents/
+            .map(|p| p.join("Resources")) // Resources/
+    }
+    // This is not correct yet
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        // …/Bishop Engine.exe  or  …/bishop-engine
+        let game_dir = exe.parent()
+            .expect("cannot locate bundled resources")
+            .join("game");
+
+        Some(game_dir)
+    }
+}
 
 /// Returns the absolute path to the folder that stores all games.
 pub fn absolute_save_root() -> PathBuf {
-    // Dev mode
+    // Editor dev mode
     if cfg!(debug_assertions) {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let workspace_root = manifest_dir
@@ -22,25 +47,29 @@ pub fn absolute_save_root() -> PathBuf {
         return path_buf;
     }
 
-    // Release mode
+    // Game mode, TODO: return bundled Resources folder for game
+
+    // Editor release mode
     if let Some(user_path) = get_save_root() {
         // Ensure the folder still exists or recreate it
         if let Err(e) = fs::create_dir_all(&user_path) {
-            onscreen_log!("Could not create user save root '{}': {e}", user_path.display());
+            onscreen_error!("Could not create user save root '{}': {e}", user_path.display());
         } else {
             if let Ok(canon) = user_path.canonicalize() {
                 return canon.clone();
             }
         }
 
-        onscreen_log!("Stored save root is no longer valid, resetting.");
+        onscreen_error!("Stored save root is no longer valid, resetting.");
         {
-            let mut cfg = CONFIG.write().expect("Failed to lock CONFIG for writing");
+            let mut cfg = EDITOR_CONFIG.write().expect("Failed to lock CONFIG for writing");
             cfg.save_root = None;
         }
         
         // Update the .ron
-        save_config();
+        if let Err(e) = save_config() {
+            onscreen_error!("Error saving config: {e}.");
+        }
     }
     else {
         // Save root needs to be set
@@ -52,7 +81,7 @@ pub fn absolute_save_root() -> PathBuf {
     // Fallback to the platform‑default location.
     let fallback_path = default_save_root();
     let _ = fs::create_dir_all(&fallback_path);
-    onscreen_log!("Using fallback save root: {}", fallback_path.display());
+    onscreen_error!("Using fallback save root: {}", fallback_path.display());
     fallback_path
 }
 
@@ -72,20 +101,22 @@ pub async fn pick_save_root_async() -> Option<PathBuf> {
 
     // Make sure the directory chain exists
     if let Err(e) = fs::create_dir_all(&save_root) {
-        onscreen_log!("Cannot write to the selected folder: {e}");
+        onscreen_error!("Cannot write to the selected folder: {e}");
         return None;
     }
 
     // Update the in memory config
     {
-        let mut cfg = CONFIG.write().expect("Failed to lock CONFIG for writing");
+        let mut cfg = EDITOR_CONFIG.write().expect("Failed to lock CONFIG for writing");
         cfg.save_root = Some(save_root.clone());
     }
     
     // Update the .ron
-    save_config();
+    if let Err(e) = save_config() {
+        onscreen_error!("Error saving config: {e}.");
+    }
 
-    onscreen_log!("Successfully created save root at: {:?}", save_root);
+    onscreen_info!("Successfully created save root at: {:?}", save_root);
     Some(save_root)
 }
 
