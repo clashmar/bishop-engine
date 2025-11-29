@@ -2,6 +2,11 @@
 name = "editor"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
+
+[[bin]]
+name = "Bishop"
+path = "src/main.rs" 
 
 [dependencies]
 engine_core = { path = "../engine_core" }
@@ -22,6 +27,9 @@ strum = "0.26"
 strum_macros = "0.26"
 once_cell = "1"
 fontdue = "0.9.3"
+
+[build-dependencies]
+winres = "0.1.12"
 
 # Bundle for macOS
 [package.metadata.bundle]

@@ -10,6 +10,14 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 use macroquad::prelude::*;
 
+pub static GAME_EXE: &[u8] = include_bytes!(
+    concat!(env!("CARGO_MANIFEST_DIR"), "/binaries/game.exe")
+);
+
+pub static PLAYTEST_EXE: &[u8] = include_bytes!(
+    concat!(env!("CARGO_MANIFEST_DIR"), "/binaries/game-playtest.exe")
+);
+
 pub static ICON_SMALL: LazyLock<[u8; 16 * 16 * 4]> = LazyLock::new(|| {
     load_rgba_resized::<{ 16 * 16 * 4 }>(include_bytes!("icon.png"), 16)
 });

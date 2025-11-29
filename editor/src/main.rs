@@ -1,4 +1,6 @@
 // editor/src/main.rs
+#![windows_subsystem = "windows"] 
+
 use crate::editor_assets::editor_assets::*;
 use crate::global::*;
 use crate::editor::Editor;
