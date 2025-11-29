@@ -1,7 +1,7 @@
 // game/src/main.rs
 use std::fs;
 use engine_core::assets::core_assets::load_rgba_resized;
-use engine_core::storage::path_utils::resources_dir;
+use engine_core::storage::path_utils::resources_dir_from_exe;
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
 use game_lib::game::GameState;
@@ -11,7 +11,7 @@ fn window_conf() -> Conf {
     let mut icon = Some(Icon::miniquad_logo());
 
     // Try to set the user defined icon
-    if let Some(resources_dir) = resources_dir() {
+    if let Some(resources_dir) = resources_dir_from_exe() {
         let icon_path = resources_dir.join("Icon.png");
 
         // Read the file and make the icon

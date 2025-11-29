@@ -9,10 +9,12 @@ use crate::storage::editor_config::app_dir;
 // Global mutable buffer that stores the most recent message.
 pub static LAST_LOG: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
 
-/// Helper macro that allow logs to be displayed by the program.
+/// Helper macro that allow logs to be displayed by 
+/// the program and printed to the console.
 #[macro_export]
 macro_rules! onscreen_log {
     ($lvl:expr, $($arg:tt)*) => {{
+        println!($($arg)*);
         log::log!($lvl, $($arg)*);
         let mut buf = $crate::logging::logging::LAST_LOG.lock().unwrap();
         *buf = format!($($arg)*);
@@ -41,7 +43,7 @@ pub fn init_file_logger() {
     let log_dir = app_dir().join("logs");
 
     let file_spec = FileSpec::default()
-        .directory(log_dir)         
+        .directory(&log_dir)         
         .basename("bishop_engine")
         .suffix("log");
 
@@ -57,6 +59,8 @@ pub fn init_file_logger() {
         .write_mode(WriteMode::BufferAndFlush)
         .start()
         .expect("Unable to init logger.");
+
+    onscreen_info!("Log dir: {}.", &log_dir.display());
 
     fn my_formatter(
         write: &mut dyn Write, 

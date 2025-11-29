@@ -1,4 +1,9 @@
 // editor/src/storage/editor_storage.rs
+use crate::tilemap::tile_palette::TilePalette;
+use std::time::SystemTime;
+use std::io;
+use std::fs;
+use std::path::PathBuf;
 use engine_core::*;
 use engine_core::world::room::Room;
 use engine_core::ecs::component::*;
@@ -13,23 +18,11 @@ use macroquad::prelude::*;
 use uuid::Uuid;
 use std::io::Error;
 use std::io::ErrorKind;
-use std::{
-    fs, io, path::PathBuf, time::SystemTime
-};
-use crate::{
-    storage::{editor_storage}, 
-    tilemap::tile_palette::TilePalette
-};
 
 /// Create a brand‑new game with a single empty world.
 pub async fn create_new_game(name: String) -> Game {
     // Ensure the folder structure exists.
-    let assets = assets_folder(&name);
-
-    // Does nothing if the folder already exists
-    if let Err(e) = fs::create_dir_all(&assets) {
-        eprintln!("Could not create assets folder '{}': {e}", assets.display());
-    }
+    create_game_folders(&name);
 
     // Build the game
     let world = create_new_world();
@@ -49,11 +42,26 @@ pub async fn create_new_game(name: String) -> Game {
     };
 
     // Save the game.
-    if let Err(e) = editor_storage::save_game(&game) {
+    if let Err(e) = save_game(&game) {
         eprintln!("Could not save the new game: {e}");
     }
 
     game
+}
+
+fn create_game_folders(name: &String) {
+    let folders: [(PathBuf, &str); 4] = [
+        (assets_folder(&name), RESOURCES_FOLDER),
+        (assets_folder(&name), ASSETS_FOLDER),
+        (windows_folder(&name), WINDOWS_FOLDER),
+        (mac_os_folder(&name), MAC_OS_FOLDER),
+    ];
+
+    for (path, folder) in folders {
+        if let Err(e) = fs::create_dir_all(&path) {
+            onscreen_error!("Could not create {folder} folder '{}': {e}", path.display());
+        }
+    }
 }
 
 /// Save a `Game` and all its contents.
@@ -64,15 +72,15 @@ pub fn save_game(game: &Game) -> io::Result<()> {
     let ron_string = ron::ser::to_string_pretty(game, pretty)
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
-    let dir = game_folder(&game.name);
-    let file_path = dir.join("game.ron");
-    fs::create_dir_all(&dir)?;
+    let resources_folder = resources_folder(&game.name);
+    let file_path = resources_folder.join(GAME_RON);
+    fs::create_dir_all(&resources_folder)?;
     fs::write(file_path, ron_string)
 }
 
 /// Load a `Game` from the folder that matches the supplied name.
 pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
-    let path = game_folder(name).join("game.ron");
+    let path = game_folder(name).join(GAME_RON);
     // Try to read the file
     let ron_string = match fs::read_to_string(&path) {
         Ok(s) => s,
@@ -210,152 +218,6 @@ pub fn save_as(
     game.name = new_name.to_owned();
     game.asset_manager.game_name = new_name.to_owned();
 
-    Ok(())
-}
-
-/// Returns the absolute path to the bundled game binaries.
-pub fn game_binary_dir() -> Option<PathBuf> {
-    if let Some(resources_dir) = resources_dir() {
-        return Some(resources_dir.join("binaries"));
-    }
-    None
-}
-
-/// Returns the absolute path to the bundled platform app templates.
-fn templates_dir() -> Option<PathBuf> {
-    if let Some(resources_dir) = resources_dir() {
-        return Some(resources_dir.join("templates"));
-    }
-    None
-}
-
-/// Exports the game to the chosen folder on all platforms.
-/// TODO: Find a way to automate new things being added.
-pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
-    let dest_root = rfd::FileDialog::new()
-        .set_title("Select destination folder for export:")
-        .pick_folder()
-        .ok_or_else(|| {
-            Error::new(
-                ErrorKind::InvalidInput,  
-                "No destination folder was selected.")
-        })?;
-
-    // TODO: Handle by platform
-
-    // TODO: Check for duplicates
-
-    let bundle_path = dest_root.join(format!("{}.app", game.name));
-
-    // Copy template structure
-    let template_dir = templates_dir()
-        .ok_or_else(|| {
-            Error::new(
-                ErrorKind::NotFound,  
-                "Could not find templates.",)
-        })?;
-
-    let template_path = template_dir.join("template.app");
-    copy_dir_recursive(&template_path, &bundle_path)?;
-
-    // Copy game binary
-    let macos_dir = bundle_path
-        .join("Contents")
-        .join("MacOS");
-
-    // Make sure this file exists
-    fs::create_dir_all(&macos_dir)?;
-
-    let game_binary_dir = game_binary_dir()
-    .ok_or_else(|| {
-        Error::new(
-            ErrorKind::NotFound,  
-            "Could not find game binaries.",)
-        })?;
-
-    let src_binary = game_binary_dir.join("game");
-    let target_binary = macos_dir.join(&game.name);
-    fs::copy(src_binary, &target_binary)?;
-
-    // Copy assets
-    let src_assets = assets_folder(&game.name);
-
-    let target_assets = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join("assets");
-    
-    copy_dir_recursive(&src_assets, &target_assets)?;
-
-    // Copy the game.ron
-    let src_ron = game_folder(&game.name)
-        .join("game.ron");
-
-    let target_ron = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join("game.ron");
-
-    fs::copy(src_ron, target_ron)?;
-
-    // Create Info.plist TODO: this does not work
-    let target_plist = bundle_path.join("Contents").join("Info.plist");
-    let mut plist = fs::read_to_string(&target_plist)?;
-    plist = plist
-        .replace("__BUNDLE_NAME__", &game.name)
-        .replace("__BUNDLE_IDENTIFIER__", &format!("com.bishop.{}", game.name.to_lowercase()))
-        .replace("__BUNDLE_VERSION__", "0.1.0");
-    fs::write(&target_plist, plist)?;
-
-    // Copy app icons
-    let src_icons = game_folder(&game.name)
-        .join("Icon.icns");
-
-    let target_icons = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join("Icon.icns");
-
-    fs::copy(src_icons, target_icons)?;
-
-    // Copy app window icon
-    let src_window_icon = game_folder(&game.name)
-        .join("icon.png");
-
-    let target_window_icon = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join("icon.png");
-
-    fs::copy(src_window_icon, target_window_icon)?;
-
-    Ok(bundle_path)
-}
-
-/// Recursively copy the directory. TODO: Research why it sometimes ignores empty dirs.
-fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
-    if !src.is_dir() {
-        return Err(Error::new(
-            ErrorKind::InvalidInput,
-            format!("Source `{}` is not a directory.", src.display()),
-        ));
-    }
-
-    // Create the target directory
-    fs::create_dir_all(dest)?;
-
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        onscreen_error!("{:?}", entry.file_name());
-        let src_path = entry.path();
-        let dst_path = dest.join(entry.file_name());
-
-        if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
-        } else {
-            fs::copy(&src_path, &dst_path)?;
-        }
-    }
     Ok(())
 }
 
