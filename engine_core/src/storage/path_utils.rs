@@ -1,7 +1,7 @@
 // engine_core/src/storage/path_utils.rs
 use futures::executor::block_on;
 use macroquad::prelude::*;
-use rfd::AsyncFileDialog;
+use rfd::FileDialog;
 use crate::storage::editor_config::*;
 use std::fs;
 use std::path::Path;
@@ -88,11 +88,10 @@ pub fn absolute_save_root() -> PathBuf {
 /// Pick the folder that will become the absolute save root.
 pub async fn pick_save_root_async() -> Option<PathBuf> {
     // Let the user choose a base folder
-    let base_folder = AsyncFileDialog::new()
+    let base_folder = FileDialog::new()
         .set_title("Select a folder for the editor assets root directory.")
-        .pick_folder().await?
-        .path()
-        .to_path_buf();
+        .pick_folder()
+        .unwrap_or_else(|| default_save_root());
 
     // Build the full path
     let save_root = base_folder

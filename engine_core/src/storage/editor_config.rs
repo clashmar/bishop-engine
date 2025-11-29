@@ -42,16 +42,6 @@ pub fn get_save_root() -> Option<PathBuf> {
     }
 }
 
-/// Returns a clone of the current in-memory config.
-pub fn clone_config() -> Option<EditorConfig> {
-    if let Err(e) = EDITOR_CONFIG.read() {
-        onscreen_error!("Could not read save root: {e}.");
-        None
-    } else {
-        Some(EDITOR_CONFIG.read().unwrap().clone())
-    }
-}
-
 pub fn app_dir() -> PathBuf {
     if let Some(project_dir) = ProjectDirs::from("com", "bishop", "engine") {
         project_dir.config_dir().to_path_buf()
