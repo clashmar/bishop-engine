@@ -59,9 +59,6 @@ dependencies = [
     "copy-game-exes-unix", 
 ]
 
-[tasks.bundle-editor-windows]
-# New command
-
 # Final command
 [tasks.bundle-editor]
 dependencies = [
