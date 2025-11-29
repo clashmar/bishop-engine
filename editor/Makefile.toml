@@ -1,24 +1,70 @@
-[tasks.build-game]
+# Mac
+[tasks.build-game-mac]
 script = [
     "cd ..",
     "cargo build -p game --release --target aarch64-apple-darwin",
 ]
 
-[tasks.copy-game-bins]
+[tasks.copy-game-bins-mac]
 script = [
     "cd ..",
     "mkdir -p editor/binaries",
     "cp -f target/aarch64-apple-darwin/release/game editor/binaries/",
     "cp -f target/aarch64-apple-darwin/release/game-playtest editor/binaries/"
 ]
-dependencies = ["build-game"]
+dependencies = ["build-game-mac"]
 
-[tasks.build-editor]
+[tasks.build-editor-mac]
 command = "cargo"
 args = ["build", "--release", "--target", "aarch64-apple-darwin"]
-dependencies = ["copy-game-bins"]
+dependencies = ["copy-game-bins-mac"]
 
-[tasks.bundle-editor]
+[tasks.bundle-editor-mac]
 command = "cargo"
 args = ["bundle", "--release", "--target", "aarch64-apple-darwin"]
-dependencies = ["build-editor"]
+dependencies = ["build-editor-mac"]
+
+# Windows
+[tasks.build-game-windows]
+script = [
+    "cd ..",
+    "cargo build -p game --release --target x86_64-pc-windows-msvc",
+]
+
+[tasks.copy-game-exes-unix]
+condition = { platforms = ["mac", "linux"]}
+script = [
+    "cd ..",
+    "mkdir -p editor/binaries",
+    "cp -f target/x86_64-pc-windows-msvc/release/game.exe editor/binaries/",
+    "cp -f target/x86_64-pc-windows-msvc/release/game-playtest.exe editor/binaries/",
+]
+dependencies = ["build-game-windows"]
+
+[tasks.copy-game-exes-windows]
+condition = { platforms = ["windows"]}
+script = [
+    "cd ..",
+    "mkdir editor\\binaries",
+    "copy /Y target\\x86_64-pc-windows-msvc\\release\\game.exe editor\\binaries\\",
+    "copy /Y target\\x86_64-pc-windows-msvc\\release\\game-playtest.exe editor\\binaries\\"
+]
+dependencies = ["build-game-windows"]
+
+[tasks.build-editor-windows]
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-pc-windows-msvc"]
+dependencies = [
+    "copy-game-exes-windows",
+    "copy-game-exes-unix", 
+]
+
+[tasks.bundle-editor-windows]
+# New command
+
+# Final command
+[tasks.bundle-editor]
+dependencies = [
+    "bundle-editor-mac",
+    "bundle-editor-windows",
+]

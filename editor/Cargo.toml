@@ -23,13 +23,14 @@ strum_macros = "0.26"
 once_cell = "1"
 fontdue = "0.9.3"
 
+# Bundle for macOS
 [package.metadata.bundle]
 name = "Bishop's Engine"
 identifier = "com.bishop.engine"
 version = "0.1.0"
 category = "Game"
 short_description = "A lightweight 2D game engine built with Rust."
-icon = ["src/editor_assets/Icon.icns"]
+icon = ["Icon.icns"]
 resources = ["templates", "binaries"]
-# Run "cargo make bundle-editor" to build game binaries and copy
+# Run "cargo make bundle-editor-mac" to build game binaries and copy
 # copy them to the binaries folder
