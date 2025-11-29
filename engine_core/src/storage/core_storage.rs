@@ -50,7 +50,7 @@ pub fn most_recent_game_folder() -> Option<PathBuf> {
 
 /// Finds the game .ron in /Resources and returns an initialized `Game`.
 pub async fn load_game_ron() -> io::Result<Game> {
-    match resources_dir() {
+    match resources_dir_from_exe() {
         Some(resources_folder) => {
             match load_game_from_folder(&resources_folder).await {
                 Ok(game) => Ok(game),

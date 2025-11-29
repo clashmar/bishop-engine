@@ -12,6 +12,7 @@ fn main() -> std::io::Result<()> {
             .set("CompanyName", "Clashmar Ltd.")
             .set("Comments", "Lightweight 2D Editor")
             .set("InternalName", "Bishop Engine")
+            .set_version_info(winres::VersionInfo::FILEVERSION, 0x0001000000000000)
             .set_version_info(winres::VersionInfo::PRODUCTVERSION, 0x0001000000000000);
 
         res.compile()?;

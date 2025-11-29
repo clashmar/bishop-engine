@@ -18,6 +18,11 @@ pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(16.0, 10.0);
 pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
 
 pub const GAME_SAVE_ROOT: &str = "games";
+pub const RESOURCES_FOLDER: &str = "Resources";
+pub const ASSETS_FOLDER: &str = "assets";
+pub const WINDOWS_FOLDER: &str = "windows";
+pub const MAC_OS_FOLDER: &str = "mac_os";
+pub const GAME_RON: &str = "game.ron";
 
 /// Scale to the base resolution.
 pub fn editor_zoom_factor() -> f32 { tile_size() / BASE_TILE_SIZE }

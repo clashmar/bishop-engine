@@ -1,7 +1,14 @@
 // engine_core/src/storage/path_utils.rs
+use std::io::ErrorKind;
+use std::io::Error;
+use std::io;
 use futures::executor::block_on;
 use macroquad::prelude::*;
 use rfd::FileDialog;
+use crate::constants::ASSETS_FOLDER;
+use crate::constants::MAC_OS_FOLDER;
+use crate::constants::RESOURCES_FOLDER;
+use crate::constants::WINDOWS_FOLDER;
 use crate::storage::editor_config::*;
 use std::fs;
 use std::path::Path;
@@ -10,28 +17,66 @@ use crate::constants::GAME_SAVE_ROOT;
 use crate::*; 
 
 // Gets the Resources dir for the current process.
-pub fn resources_dir() -> Option<PathBuf> {
+pub fn resources_dir_from_exe() -> Option<PathBuf> {
     // Path of the running executable
     let exe = std::env::current_exe().ok()?;
 
     // Platform specific layout
     #[cfg(target_os = "macos")]
     {
-        // …/Bishop Engine.app/Contents/MacOS/editor
+        // …/Bishop.app/Contents/MacOS/editor
         exe.parent() // MacOS/
             .and_then(|p| p.parent()) // Contents/
             .map(|p| p.join("Resources")) // Resources/
     }
-    // This is not correct yet
+    // Linux is yet to be implemented
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
-        // …/Bishop Engine.exe  or  …/bishop-engine
-        let game_dir = exe.parent()
-            .expect("cannot locate bundled resources")
-            .join("game");
-
-        Some(game_dir)
+        // …/Bishop.exe  or  …/bishop
+        exe.parent()
+            .map(|p| p.join(RESOURCES_FOLDER))
     }
+}
+
+/// Path to the folder that belongs to a particular game.
+pub fn game_folder(name: &str) -> PathBuf {
+    absolute_save_root().join(sanitise_name(name))
+}
+
+/// Path to the resources folder that belongs to a particular game.
+pub fn resources_folder(name: &str) -> PathBuf {
+    game_folder(name).join(RESOURCES_FOLDER)
+}
+
+/// Path to the assets folder inside a resources folder.
+pub fn assets_folder(name: &str) -> PathBuf {
+    resources_folder(name).join(ASSETS_FOLDER)
+}
+
+/// Path to the windows folder inside a resources folder.
+pub fn windows_folder(name: &str) -> PathBuf {
+    game_folder(name).join(WINDOWS_FOLDER)
+}
+
+/// Path to the mac_os folder inside a resources folder.
+pub fn mac_os_folder(name: &str) -> PathBuf {
+    game_folder(name).join(MAC_OS_FOLDER)
+}
+
+/// Returns the absolute path to the bundled game binaries for macOS.
+pub fn game_binary_dir() -> Option<PathBuf> {
+    if let Some(resources_dir) = resources_dir_from_exe() {
+        return Some(resources_dir.join("binaries"));
+    }
+    None
+}
+
+/// Returns the absolute path to the bundled platform app templates for macOS.
+pub fn templates_dir() -> Option<PathBuf> {
+    if let Some(resources_dir) = resources_dir_from_exe() {
+        return Some(resources_dir.join("templates"));
+    }
+    None
 }
 
 /// Returns the absolute path to the folder that stores all games.
@@ -160,16 +205,6 @@ pub fn sanitise_name(name: &str) -> String {
     out.trim_matches('_').to_string()
 }
 
-/// Path to the folder that belongs to a particular game.
-pub fn game_folder(name: &str) -> PathBuf {
-    absolute_save_root().join(sanitise_name(name))
-}
-
-/// Path to the assets folder inside a game folder.
-pub fn assets_folder(name: &str) -> PathBuf {
-    game_folder(name).join("assets")
-}
-
 /// Returns `Ok(())` if `candidate` is inside `absolute_save_root()`.
 pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
     let root = absolute_save_root()
@@ -189,6 +224,33 @@ pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
             root.display()
         ))
     }
+}
+
+/// Recursively copy the directory.
+pub fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
+    if !src.is_dir() {
+        return Err(Error::new(
+            ErrorKind::InvalidInput,
+            format!("Source `{}` is not a directory.", src.display()),
+        ));
+    }
+
+    // Create the target directory
+    fs::create_dir_all(dest)?;
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        onscreen_error!("{:?}", entry.file_name());
+        let src_path = entry.path();
+        let dst_path = dest.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
 }
 
 /// Platform-default location used when the user has not chosen a folder.

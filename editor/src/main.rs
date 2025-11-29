@@ -1,10 +1,13 @@
 // editor/src/main.rs
-#![windows_subsystem = "windows"] 
+
+// Tells windows if it's a console app or not (console is useful in debug)
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::editor_assets::editor_assets::*;
 use crate::global::*;
 use crate::editor::Editor;
 use engine_core::logging::logging::init_file_logger;
+use engine_core::*;
 use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::miniquad::conf::Icon;
@@ -48,12 +51,14 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() -> std::io::Result<()> {
+    onscreen_info!("Starting editor.");
+
     // Initialize logging
     init_file_logger();    
 
     if !ensure_save_root().await {
         // User cancelled
-        println!("No save root selected. Exiting.");
+        onscreen_warn!("No save root selected. Exiting.");
         std::process::exit(0);
     }
 

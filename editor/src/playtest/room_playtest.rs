@@ -1,4 +1,5 @@
 // editor/src/playtest/room_playtest.rs
+use engine_core::storage::path_utils::game_binary_dir;
 use std::io::{Error, ErrorKind};
 use std::process::Command;
 use std::{env, fs, io::Write, path::PathBuf};
@@ -6,7 +7,6 @@ use engine_core::game::game::Game;
 use engine_core::world::room::Room;
 use ron::ser::to_string_pretty;
 use ron::ser::PrettyConfig;
-use crate::storage::editor_storage::game_binary_dir;
 
 /// Serialise everything the play‑test binary needs and return the
 /// path to the temporary file.
