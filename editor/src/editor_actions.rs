@@ -184,9 +184,11 @@ impl Editor {
     }
 
     pub fn save(&mut self) {
-        save_game(&self.game)
-            .expect("Could not save game.");
-        self.toast = Some(Toast::new("Saved", 2.5));
+        if let Err(e) = save_game(&self.game) {
+            onscreen_error!("Could not save game: {}.", e)
+        } else {
+            self.toast = Some(Toast::new("Saved", 2.5));
+        }
     }
 
     pub fn get_room_from_id(&self, room_id: &RoomId) -> &Room {

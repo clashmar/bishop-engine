@@ -1,5 +1,7 @@
 // editor/src/storage/editor_storage.rs
+use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;
+use std::io::Write;
 use std::time::SystemTime;
 use std::io;
 use std::fs;
@@ -21,6 +23,8 @@ use std::io::ErrorKind;
 
 /// Create a brand‑new game with a single empty world.
 pub async fn create_new_game(name: String) -> Game {
+    onscreen_debug!("Creating new game.");
+
     // Ensure the folder structure exists.
     create_game_folders(&name);
 
@@ -69,18 +73,23 @@ pub fn save_game(game: &Game) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
         .separate_tuple_members(true)
         .enumerate_arrays(true);
+    
     let ron_string = ron::ser::to_string_pretty(game, pretty)
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
     let resources_folder = resources_folder(&game.name);
     let file_path = resources_folder.join(GAME_RON);
+    
     fs::create_dir_all(&resources_folder)?;
+    onscreen_info!("{}", file_path.display());
     fs::write(file_path, ron_string)
 }
 
 /// Load a `Game` from the folder that matches the supplied name.
 pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
-    let path = game_folder(name).join(GAME_RON);
+    let path = resources_folder(name).join(GAME_RON);
+    onscreen_debug!("Loading game from .ron: {}.", path.display());
+
     // Try to read the file
     let ron_string = match fs::read_to_string(&path) {
         Ok(s) => s,
@@ -123,6 +132,22 @@ pub fn most_recent_game_name() -> Option<String> {
         }
     }
     best.map(|(name, _)| name)
+}
+
+/// Returns the absolute path to the bundled game binaries for macOS.
+pub fn game_binary_dir() -> Option<PathBuf> {
+    if let Some(resources_dir) = resources_dir_from_exe() {
+        return Some(resources_dir.join("binaries"));
+    }
+    None
+}
+
+/// Returns the absolute path to the bundled platform app templates for macOS.
+pub fn templates_dir() -> Option<PathBuf> {
+    if let Some(resources_dir) = resources_dir_from_exe() {
+        return Some(resources_dir.join("templates"));
+    }
+    None
 }
 
 /// Save the palette for the game.
@@ -221,6 +246,55 @@ pub fn save_as(
     Ok(())
 }
 
+/// Writes an embedded slice of bytes to the system app directory and returns the path or error.
+pub fn write_to_app_dir(filename: &str, embedded: &[u8]) -> io::Result<PathBuf> {
+    let mut path = app_dir();
+    fs::create_dir_all(&path)?;
+
+    path.push(filename);
+
+    let mut file = fs::File::create(&path)?;
+    file.write_all(embedded)?;
+
+    Ok(path)
+}
+
+/// Find all game folders in `games/`.
+pub fn list_game_folders() -> io::Result<Vec<PathBuf>> {
+    let root = absolute_save_root();
+    let mut folders = Vec::new();
+
+    for entry in fs::read_dir(root)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() && path.join(GAME_RON).exists() {
+            folders.push(path);
+        }
+    }
+
+    Ok(folders)
+}
+
+/// Return the most recently modified game folder.
+pub fn most_recent_game_folder() -> Option<PathBuf> {
+    let mut best: Option<(PathBuf, SystemTime)> = None;
+
+    for path in list_game_folders().ok()? {
+        if let Ok(meta) = fs::metadata(&path) {
+            if let Ok(mod_time) = meta.modified() {
+                match best {
+                    None => best = Some((path.clone(), mod_time)),
+                    Some((_, t)) if mod_time > t => best = Some((path.clone(), mod_time)),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    best.map(|(p, _)| p)
+}
+
+/// Returns a Vec of all game names in the absolute save root.
 pub fn list_game_names() -> Vec<String> {
     std::fs::read_dir(absolute_save_root())
         .into_iter()

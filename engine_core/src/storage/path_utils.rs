@@ -5,82 +5,61 @@ use std::io;
 use futures::executor::block_on;
 use macroquad::prelude::*;
 use rfd::FileDialog;
-use crate::constants::ASSETS_FOLDER;
-use crate::constants::MAC_OS_FOLDER;
-use crate::constants::RESOURCES_FOLDER;
-use crate::constants::WINDOWS_FOLDER;
+use crate::constants::*;
+use crate::global::EngineMode;
+use crate::global::get_engine_mode;
 use crate::storage::editor_config::*;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
-use crate::constants::GAME_SAVE_ROOT;
 use crate::*; 
 
-// Gets the Resources dir for the current process.
-pub fn resources_dir_from_exe() -> Option<PathBuf> {
-    // Path of the running executable
-    let exe = std::env::current_exe().ok()?;
-
-    // Platform specific layout
-    #[cfg(target_os = "macos")]
-    {
-        // …/Bishop.app/Contents/MacOS/editor
-        exe.parent() // MacOS/
-            .and_then(|p| p.parent()) // Contents/
-            .map(|p| p.join("Resources")) // Resources/
-    }
-    // Linux is yet to be implemented
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    {
-        // …/Bishop.exe  or  …/bishop
-        exe.parent()
-            .map(|p| p.join(RESOURCES_FOLDER))
-    }
-}
-
-/// Path to the folder that belongs to a particular game.
+/// Path to the folder that belongs to a particular game (Editor).
 pub fn game_folder(name: &str) -> PathBuf {
     absolute_save_root().join(sanitise_name(name))
 }
 
-/// Path to the resources folder that belongs to a particular game.
+/// Path to the resources folder for a game (Editor/Game).
 pub fn resources_folder(name: &str) -> PathBuf {
-    game_folder(name).join(RESOURCES_FOLDER)
+    match get_engine_mode() {
+        EngineMode::Editor => {
+            game_folder(name).join(RESOURCES_FOLDER)
+        }
+        EngineMode::Game => {
+            // Panic is acceptable here as there is no possible fallback 
+            resources_dir_from_exe().unwrap()
+        }
+    }
 }
 
-/// Path to the assets folder inside a resources folder.
+/// Path to the assets folder inside a resources folder (Editor/Game).
 pub fn assets_folder(name: &str) -> PathBuf {
     resources_folder(name).join(ASSETS_FOLDER)
 }
 
-/// Path to the windows folder inside a resources folder.
+/// Path to the windows folder inside a resources folder (Editor).
 pub fn windows_folder(name: &str) -> PathBuf {
     game_folder(name).join(WINDOWS_FOLDER)
 }
 
-/// Path to the mac_os folder inside a resources folder.
+/// Path to the mac_os folder inside a resources folder (Editor).
 pub fn mac_os_folder(name: &str) -> PathBuf {
     game_folder(name).join(MAC_OS_FOLDER)
 }
 
-/// Returns the absolute path to the bundled game binaries for macOS.
-pub fn game_binary_dir() -> Option<PathBuf> {
-    if let Some(resources_dir) = resources_dir_from_exe() {
-        return Some(resources_dir.join("binaries"));
-    }
-    None
-}
-
-/// Returns the absolute path to the bundled platform app templates for macOS.
-pub fn templates_dir() -> Option<PathBuf> {
-    if let Some(resources_dir) = resources_dir_from_exe() {
-        return Some(resources_dir.join("templates"));
-    }
-    None
-}
-
-/// Returns the absolute path to the folder that stores all games.
+/// Returns the absolute path to the folder that stores all games for the editor,
+/// or the parent of the resources folder for games on all platforms.
 pub fn absolute_save_root() -> PathBuf {
+    // Game path
+    if get_engine_mode() == EngineMode::Game {
+        let path = exe_dir().unwrap_or_else(|| {
+            // If this isn't found then the game can't work
+            onscreen_error!("Could not find exe_dir in game mode");
+            panic!("Could not find exe_dir in game mode");
+        });
+        return path;
+    }
+
     // Editor dev mode
     if cfg!(debug_assertions) {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -92,22 +71,19 @@ pub fn absolute_save_root() -> PathBuf {
         return path_buf;
     }
 
-    // Game mode, TODO: return bundled Resources folder for game
-
     // Editor release mode
     if let Some(user_path) = get_save_root() {
         // Ensure the folder still exists or recreate it
         if let Err(e) = fs::create_dir_all(&user_path) {
             onscreen_error!("Could not create user save root '{}': {e}", user_path.display());
         } else {
-            if let Ok(canon) = user_path.canonicalize() {
-                return canon.clone();
-            }
+            return user_path;
         }
 
         onscreen_error!("Stored save root is no longer valid, resetting.");
         {
-            let mut cfg = EDITOR_CONFIG.write().expect("Failed to lock CONFIG for writing");
+            // TODO: Get rid of expect
+            let mut cfg = EDITOR_CONFIG.write().expect("Failed to lock CONFIG for writing.");
             cfg.save_root = None;
         }
         
@@ -128,6 +104,45 @@ pub fn absolute_save_root() -> PathBuf {
     let _ = fs::create_dir_all(&fallback_path);
     onscreen_error!("Using fallback save root: {}", fallback_path.display());
     fallback_path
+}
+
+// Gets the dir that contains the current process.
+pub fn exe_dir() -> Option<PathBuf> {
+    // Path of the running executable
+    let exe = std::env::current_exe().ok()?;
+
+    // Platform specific layout
+    #[cfg(target_os = "macos")]
+    {
+        // …/.app/Contents/MacOS/<app>
+        exe.parent().map(|p| p.to_path_buf())
+    }
+    // Linux is yet to be implemented
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        // …/<app>.exe
+        exe.parent().map(|p| p.to_path_buf())
+    }
+}
+
+// Gets the Resources dir for the current process.
+pub fn resources_dir_from_exe() -> Option<PathBuf> {
+    // Path of the running executable dir
+    let exe_dir = exe_dir()?;
+
+    // Platform specific layout
+    #[cfg(target_os = "macos")]
+    {
+        // …/Bishop.app/Contents/MacOS/
+        return exe_dir.parent() // Contents/
+            .map(|p| p.join(RESOURCES_FOLDER)); // Resources/
+    }
+    // Linux is yet to be implemented
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        // …/Bishop.exe  or  …/bishop
+        Some(exe_dir.join(RESOURCES_FOLDER))
+    }
 }
 
 /// Pick the folder that will become the absolute save root.
@@ -190,10 +205,11 @@ pub fn sanitise_name(name: &str) -> String {
     let mut out = trimmed
         .chars()
         .map(|c| {
-            if c.is_ascii_alphanumeric() {
-                c
+            // keep spaces and TODO: decide other special chars
+            if c.is_ascii_alphanumeric() || c == ' ' {
+                c 
             } else {
-                '_'         
+                '_'
             }
         })
         .collect::<String>();
@@ -207,20 +223,14 @@ pub fn sanitise_name(name: &str) -> String {
 
 /// Returns `Ok(())` if `candidate` is inside `absolute_save_root()`.
 pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
-    let root = absolute_save_root()
-        .canonicalize()
-        .map_err(|e| format!("Cannot canonicalize save root: {e}"))?;
+    let root = absolute_save_root();
 
-    let candidate = path
-        .canonicalize()
-        .map_err(|e| format!("Cannot canonicalize selected folder: {e}"))?;
-
-    if candidate.starts_with(&root) {
+    if path.starts_with(&root) {
         Ok(())
     } else {
         Err(format!(
             "Selected folder '{}' is not in the 'games' directory '{}'.",
-            candidate.display(),
+            path.display(),
             root.display()
         ))
     }
@@ -240,7 +250,6 @@ pub fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
 
     for entry in fs::read_dir(src)? {
         let entry = entry?;
-        onscreen_error!("{:?}", entry.file_name());
         let src_path = entry.path();
         let dst_path = dest.join(entry.file_name());
 

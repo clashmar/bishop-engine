@@ -1,6 +1,8 @@
 // editor/src/playtest/room_playtest.rs
-use engine_core::storage::path_utils::game_binary_dir;
+use crate::PLAYTEST_EXE;
+use crate::storage::editor_storage::write_to_app_dir;
 use std::io::{Error, ErrorKind};
+use std::io;
 use std::process::Command;
 use std::{env, fs, io::Write, path::PathBuf};
 use engine_core::game::game::Game;
@@ -21,6 +23,7 @@ pub fn write_playtest_payload(
         game: &'a Game,
     }
 
+    // TODO: Get rid of expects
     let payload = Payload { room, game };
     let ron = to_string_pretty(&payload, PrettyConfig::default())
         .expect("failed to serialise playtest payload");
@@ -36,23 +39,30 @@ pub fn write_playtest_payload(
 
 /// Return the absolute path to the game executable.
 /// If in dev mode, builds the binary first.
-pub async fn resolve_playtest_binary() -> std::io::Result<PathBuf> {    
+pub async fn resolve_playtest_binary() -> io::Result<PathBuf> {    
     // Choose the correct binary name for the platform
-    #[cfg(target_os = "windows")]
+    #[cfg(target_os = "windows")] 
     let exe_name = "game-playtest.exe";
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     let exe_name = "game-playtest";
 
     // Release mode
     if !cfg!(debug_assertions) {
-        if let Some(mut exe_path) = game_binary_dir() {
-            exe_path.push(exe_name);
-            return Ok(exe_path);
-        } else {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Could not find game binary directory.",
-            ));
+        #[cfg(target_os = "windows")] {
+            // Write PLAYTEST_EXE to a temp file and return path
+            return write_to_app_dir(exe_name, PLAYTEST_EXE);
+        }
+
+        #[cfg(target_os = "macos")] {
+            if let Some(mut exe_path) = game_binary_dir() {
+                exe_path.push(exe_name);
+                return Ok(exe_path);
+            } else {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    "Could not find game binary directory",
+                ));
+            }
         }
     }
 
