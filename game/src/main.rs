@@ -1,6 +1,7 @@
 // game/src/main.rs
 use std::fs;
 use engine_core::assets::core_assets::load_rgba_resized;
+use engine_core::*;
 use engine_core::storage::path_utils::resources_dir_from_exe;
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
@@ -10,7 +11,7 @@ fn window_conf() -> Conf {
     // Start with the default miniquad icon
     let mut icon = Some(Icon::miniquad_logo());
 
-    // Try to set the user defined icon
+    // Try to set the user defined icon TODO: work it out for windows
     if let Some(resources_dir) = resources_dir_from_exe() {
         let icon_path = resources_dir.join("Icon.png");
 
@@ -18,7 +19,7 @@ fn window_conf() -> Conf {
         if let Ok(png_bytes) = fs::read(&icon_path) {
             icon = Some(load_icon(&png_bytes));
         } else {
-            // TODO: Add game engine logging
+            onscreen_warn!("Could not read icon")
         }
     }
 

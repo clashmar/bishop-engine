@@ -147,7 +147,7 @@ impl Editor {
                         let palette = &mut self.room_editor.tilemap_editor.tilemap_panel.palette;
 
                         if let Err(e) = editor_storage::save_palette(palette, &self.game.name) {
-                            onscreen_error!("Could not save tile palette: {e}.")
+                            onscreen_error!("Could not save tile palette: {e}")
                         }
 
                         // Find the room we just left for center_on_room

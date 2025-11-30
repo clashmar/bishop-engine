@@ -1,6 +1,7 @@
 // game/src/game.rs
 use crate::input::player_input::*;
 use crate::physics::physics_system::*;
+use engine_core::global::*;
 use engine_core::rendering::render_room::*;
 use engine_core::animation::animation_system::*;
 use engine_core::ecs::component::Velocity;
@@ -34,11 +35,15 @@ pub struct GameState {
 
 impl GameState {
     pub async fn new() -> Self {
+        // Allows the shared engine features to make decisions
+        set_engine_mode(EngineMode::Game);
+        
         let game = match load_game_ron().await {
             Ok(game) => game,
             Err(e) => panic!("{e}")
         };
 
+        // TODO: Get rid of expects
         let start_room_id = game.current_world().starting_room_id
             .or_else(|| game.worlds.first().map(|m| m.starting_room_id.expect("Game has no starting room.")))
             .expect("Game has no starting room nor any rooms");

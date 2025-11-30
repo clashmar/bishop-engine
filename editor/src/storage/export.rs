@@ -1,4 +1,5 @@
 // editor\src\storage\export.rs
+use crate::storage::editor_storage::*;
 use engine_core::constants::GAME_RON;
 use engine_core::constants::RESOURCES_FOLDER;
 use engine_core::*;
@@ -71,17 +72,6 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     let target_resources = target_package.join(RESOURCES_FOLDER);
     copy_dir_recursive(&src_resources, &target_resources)?;
 
-    // // Copy game.ron
-    // onscreen_debug!("Copying .ron");
-    // let src_ron = game_folder(&game.name).join(GAME_RON);
-    // let target_ron = target_resources.join(GAME_RON);
-    
-    // fs::copy(src_ron, target_ron)?;
-
-    // onscreen_debug!("Copying assets");
-    // let target_assets = target_resources.join("assets");
-    // copy_dir_recursive(&assets_folder(&game.name), &target_assets)?;
-
     // TODO: Write manifest for game
 
     // TODO: Might have to handle window icon as well
@@ -89,7 +79,7 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     Ok(target_package)
 }
 
-/// TODO: Find a way to automate new things being added.
+/// TODO: Implement add recursively properly
 async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> {
     let bundle_path = dest_root.join(format!("{}.app", game.name));
 
