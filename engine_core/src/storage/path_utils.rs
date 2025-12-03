@@ -1,4 +1,5 @@
 // engine_core/src/storage/path_utils.rs
+use std::ffi::OsStr;
 use std::io::ErrorKind;
 use std::io::Error;
 use std::io;
@@ -65,6 +66,7 @@ pub fn absolute_save_root() -> PathBuf {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let workspace_root = manifest_dir
             .parent()
+            // TODO: Choose/Create a new one
             .expect("Cannot locate workspace root.");
 
         let path_buf = workspace_root.join(GAME_SAVE_ROOT);
@@ -82,9 +84,17 @@ pub fn absolute_save_root() -> PathBuf {
 
         onscreen_error!("Stored save root is no longer valid, resetting.");
         {
-            // TODO: Get rid of expect
-            let mut cfg = EDITOR_CONFIG.write().expect("Failed to lock CONFIG for writing.");
-            cfg.save_root = None;
+            match EDITOR_CONFIG.write() {
+                Ok(mut cfg) => {
+                    cfg.save_root = None;
+                }
+                Err(poison_err) => {
+                    onscreen_error!(
+                        "Could not lock editor config for writing: {}",
+                        poison_err
+                    );
+                }
+            }
         }
         
         // Update the .ron
@@ -155,7 +165,7 @@ pub async fn pick_save_root_async() -> Option<PathBuf> {
 
     // Build the full path
     let save_root = base_folder
-        .join("Bishop Engine")
+        .join(SAVE_ROOT)
         .join(GAME_SAVE_ROOT);
 
     // Make sure the directory chain exists
@@ -164,21 +174,90 @@ pub async fn pick_save_root_async() -> Option<PathBuf> {
         return None;
     }
 
-    // Update the in memory config
-    {
-        let mut cfg = EDITOR_CONFIG.write().expect("Failed to lock CONFIG for writing");
-        cfg.save_root = Some(save_root.clone());
-    }
-    
-    // Update the .ron
-    if let Err(e) = save_config() {
-        onscreen_error!("Error saving config: {e}.");
-    }
+    update_config_root(&save_root)?;
 
     onscreen_info!("Successfully created save root at: {:?}", save_root);
     Some(save_root)
 }
 
+/// Pick a new absolute save root and move the existing games 
+/// folder there if possible.
+pub async fn change_save_root_async() -> Option<PathBuf> {
+    // Let the user choose a new base folder
+    let base_folder = rfd::FileDialog::new()
+        .set_title("Select a new folder for the editor assets root directory.")
+        .pick_folder()
+        .unwrap_or_else(|| default_save_root());
+
+    // Build the full path
+    let new_root = base_folder
+        .join(SAVE_ROOT)
+        .join(GAME_SAVE_ROOT);
+
+    // Make sure the new folder can be created
+    if let Err(e) = fs::create_dir_all(&new_root) {
+        onscreen_error!("Cannot create the selected folder: {e}");
+        return None;
+    }
+
+    // Move the old games folder (if it exists) to the new location
+    if let Some(old_root) = get_save_root() {
+        if old_root != new_root {
+            // Try a rename
+            match fs::rename(&old_root, &new_root) {
+                Ok(_) => {
+                    delete_save_root();
+                }
+                Err(rename_err) => {
+                    // If rename fails fall back to copy
+                    onscreen_error!("Rename failed: {rename_err}.");
+                    if let Err(copy_err) = copy_dir_recursive(&old_root, &new_root) {
+                        // Continue even if copy fails
+                        onscreen_error!("Failed to copy old games: {copy_err}.");
+                    }
+                    else {
+                        delete_save_root();
+                    }
+                }
+            }
+        }
+    }
+
+    update_config_root(&new_root)?;
+
+    onscreen_debug!("Save root changed to: {}", new_root.display());
+    Some(new_root)
+}
+
+/// Deletes SAVE_ROOT if it is the parent of GAME_SAVE_ROOT after a 
+/// successful copy. DO NOT MAKE PUBLIC.
+fn delete_save_root() {
+    if let Some(root) = get_save_root() {
+        if let Some(parent) = root.parent() {
+            if parent.file_name() == Some(OsStr::new(SAVE_ROOT)) {
+                let _ = fs::remove_dir_all(parent);
+            }
+        }
+    }
+}
+
+/// Update the in‑memory config and persist it.
+fn update_config_root(root_path: &PathBuf) -> Option<()> {
+    match EDITOR_CONFIG.write() {
+        Ok(mut cfg) => cfg.save_root = Some(root_path.clone()),
+        Err(poison) => {
+            onscreen_error!("Editor config lock poisoned: {poison}");
+            return None;
+        }
+    }
+
+    if let Err(e) = save_config() {
+        onscreen_error!("Error saving  new save root: {e}");
+        return None;
+    }
+
+    Some(())
+}
 
 /// Checks for a valid save root, or prompts the user to choose one.
 pub async fn ensure_save_root() -> bool {
@@ -251,7 +330,7 @@ pub fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
-        let dst_path = dest.join(entry.file_name());
+        let dst_path = dest.join(entry.file_name()); 
 
         if src_path.is_dir() {
             copy_dir_recursive(&src_path, &dst_path)?;

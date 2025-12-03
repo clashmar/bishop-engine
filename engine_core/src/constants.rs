@@ -17,6 +17,7 @@ pub const BASE_TILE_SIZE: f32 = 32.0;
 pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(16.0, 10.0);
 pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
 
+pub const SAVE_ROOT: &str = "Bishop Engine";
 pub const GAME_SAVE_ROOT: &str = "games";
 pub const RESOURCES_FOLDER: &str = "Resources";
 pub const ASSETS_FOLDER: &str = "assets";

@@ -38,17 +38,19 @@ pub fn get_save_root() -> Option<PathBuf> {
         onscreen_error!("Could not read config: {e}.");
         None
     } else {
+        // Safe unwrap
         EDITOR_CONFIG.read().unwrap().save_root.clone()
     }
 }
 
+/// Returns the app_dir for the program.
 pub fn app_dir() -> PathBuf {
+    // TODO: Insert 'company' name
     if let Some(project_dir) = ProjectDirs::from("com", "bishop", "engine") {
         project_dir.config_dir().to_path_buf()
     }
     else {
         onscreen_error!("Could not resolve app directory.");
-        // TODO: Handle this gracefully
         panic!("Could not resolve app directory.");
     }
 }
