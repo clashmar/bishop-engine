@@ -170,7 +170,13 @@ impl Editor {
                 if self.room_editor.request_play {
                     // Write the payload
                     let room = self.get_room_from_id(&room_id);
-                    let payload_path = write_playtest_payload(room, &self.game);
+                    let payload_path = match write_playtest_payload(room, &self.game) {
+                        Ok(p) => p,
+                        Err(e) => {
+                            onscreen_error!("Could not write playtest payload: {e}");
+                            return;              
+                        }
+                    };
 
                     // If in dev mode the binary will be built first
                     match resolve_playtest_binary().await {

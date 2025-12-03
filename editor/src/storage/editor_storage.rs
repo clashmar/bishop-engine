@@ -206,7 +206,7 @@ pub fn rename_game(
     new_name: &str,
 ) -> io::Result<()> {
     let old_game_dir = game_folder(&game.name);
-    let new_game_dir = game_folder(&new_name);
+    let new_game_dir = game_folder(new_name);
     fs::rename(&old_game_dir, &new_game_dir)?;
 
     // Asset manager uses the game name to find the assets folder

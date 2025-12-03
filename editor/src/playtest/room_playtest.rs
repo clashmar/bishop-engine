@@ -15,26 +15,29 @@ use ron::ser::PrettyConfig;
 pub fn write_playtest_payload(
     room: &Room,
     game: &Game,
-) -> PathBuf {
+) -> io::Result<PathBuf> {
 
     #[derive(serde::Serialize)]
     struct Payload<'a> {
         room: &'a Room,
         game: &'a Game,
     }
-
-    // TODO: Get rid of expects
+    
     let payload = Payload { room, game };
+
     let ron = to_string_pretty(&payload, PrettyConfig::default())
-        .expect("failed to serialise playtest payload");
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not serialize payload: {e}")))?;
 
     // Use the OS temporary directory. It will be cleaned up automatically
-    let mut tmp = env::temp_dir();
-    tmp.push(format!("playtest_{}.ron", uuid::Uuid::new_v4()));
-    let mut file = fs::File::create(&tmp).expect("could not create temp playtest file");
-    file.write_all(ron.as_bytes())
-        .expect("could not write playtest payload");
-    tmp
+    let mut temp_dir = env::temp_dir();
+
+    temp_dir.push(format!("playtest_{}.ron", uuid::Uuid::new_v4()));
+
+    let mut file = fs::File::create(&temp_dir)?;
+
+    file.write_all(ron.as_bytes())?;
+
+    Ok(temp_dir)
 }
 
 /// Return the absolute path to the game executable.

@@ -1,4 +1,5 @@
 // game/src/main.rs
+use std::env;
 use std::fs;
 use engine_core::assets::core_assets::load_rgba_resized;
 use engine_core::*;
@@ -11,7 +12,6 @@ fn window_conf() -> Conf {
     // Start with the default miniquad icon
     let mut icon = Some(Icon::miniquad_logo());
 
-    // Try to set the user defined icon TODO: work it out for windows
     if let Some(resources_dir) = resources_dir_from_exe() {
         let icon_path = resources_dir.join("Icon.png");
 
@@ -23,9 +23,14 @@ fn window_conf() -> Conf {
         }
     }
 
-    // TODO Create and get game config for conf:
+    // Use the exe as the window title
+    let window_title = env::current_exe()
+        .ok()
+        .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().into_owned()))
+        .unwrap_or_else(|| "Game".to_string());
+
     Conf {
-        window_title: "Zelda".to_owned(),
+        window_title,
         fullscreen: true,
         window_resizable: true,
         icon,

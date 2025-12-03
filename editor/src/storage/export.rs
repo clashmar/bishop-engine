@@ -18,6 +18,30 @@ use std::io;
 use std::fs;
 use crate::editor_assets::editor_assets::GAME_EXE;
 
+/// Removes `path` when dropped unless `success()` has been called.
+struct ExportGuard {
+    path: PathBuf,
+    ok: bool,
+}
+
+impl ExportGuard {
+    fn new(path: PathBuf) -> Self {
+        Self { path, ok: false }
+    }
+
+    fn success(&mut self) {
+        self.ok = true;
+    }
+}
+
+impl Drop for ExportGuard {
+    fn drop(&mut self) {
+        if !self.ok && self.path.exists() {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+}
+
 /// Exports the game to the chosen folder on all platforms.
 pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
     let dest_root = rfd::FileDialog::new()
@@ -29,7 +53,7 @@ pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
                 "No destination folder was selected.")
         })?;
 
-    // TODO: Check for duplicates
+    // TODO: This overwrites, check for duplicates
 
     #[cfg(target_os = "windows")]
     {
@@ -48,6 +72,9 @@ pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
 
 async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<PathBuf> {
     let target_package = dest_root.join(format!("{}", &game.name));
+
+    // Guard will clear up the package if there is an error
+    let mut guard = ExportGuard::new(target_package.clone());
 
     // Write the .exe to the package directory
     fs::create_dir_all(&target_package)?;
@@ -73,15 +100,18 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     copy_dir_recursive(&src_resources, &target_resources)?;
 
     // TODO: Write manifest for game
-
-    // TODO: Might have to handle window icon as well
     
+    // Tell the guard to keep the folder
+    guard.success();
     Ok(target_package)
 }
 
 /// TODO: Implement add recursively properly
 async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> {
     let bundle_path = dest_root.join(format!("{}.app", game.name));
+
+    // Guard will clear up the export if there are errors
+    let mut guard = ExportGuard::new(bundle_path.clone());
 
     // Copy template structure
     let template_dir = templates_dir()
@@ -166,6 +196,8 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 
     fs::copy(src_window_icon, target_window_icon)?;
 
+    // Tell the guard to keep the folder
+    guard.success();
     Ok(bundle_path)
 }
 

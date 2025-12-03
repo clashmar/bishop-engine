@@ -18,14 +18,15 @@ pub struct MenuBar {
 
 #[derive(EnumIter, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum MenuAction {
-    // Rename Game/World/Room
-    Rename,
+    // Game actions
+    Rename, // Rename Game/World/Room
     // File actions
     NewGame,
     Open,
     Save,
     SaveAs,
     Export,
+    ChangeSaveRoot,
     // Edit actions
     Undo,
     Redo,
@@ -41,6 +42,7 @@ impl MenuAction {
             MenuAction::Export => "Export".to_string(),
             MenuAction::Undo => "Undo".to_string(),
             MenuAction::Redo => "Redo".to_string(),
+            MenuAction::ChangeSaveRoot => "Change Save Root".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -146,6 +148,7 @@ impl MenuBar {
             MenuAction::Save,
             MenuAction::SaveAs,
             MenuAction::Export,
+            MenuAction::ChangeSaveRoot,
         ];
 
         if let Some(selected) = menu_dropdown(
