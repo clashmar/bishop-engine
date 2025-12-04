@@ -1,6 +1,5 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
-use std::os::unix::fs::PermissionsExt;
 use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;
 use std::io::Write;
@@ -22,6 +21,8 @@ use macroquad::prelude::*;
 use uuid::Uuid;
 use std::io::Error;
 use std::io::ErrorKind;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// Create a brand‑new game with a single empty world.
 pub async fn create_new_game(name: String) -> Game {

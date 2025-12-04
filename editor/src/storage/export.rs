@@ -1,6 +1,6 @@
 // editor\src\storage\export.rs
+#![allow(unused)]
 use crate::editor_assets::editor_assets::GAME_BIN;
-use std::os::unix::fs::PermissionsExt;
 use engine_core::constants::CONTENTS_FOLDER;
 use engine_core::constants::RESOURCES_FOLDER;
 use engine_core::*;
@@ -17,6 +17,8 @@ use macroquad::prelude::*;
 use std::io;
 use std::fs;
 use crate::editor_assets::editor_assets::GAME_EXE;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// Removes `path` when dropped unless `success()` has been called.
 struct ExportGuard {
