@@ -1,4 +1,5 @@
 // editor/src/editor_assets/editor_assets.rs
+#![allow(unused)]
 use std::hash::Hasher;
 use std::hash::BuildHasherDefault;
 use std::hash::DefaultHasher;
@@ -10,12 +11,24 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 use macroquad::prelude::*;
 
+/// Windows .exe for the game binary.
 pub static GAME_EXE: &[u8] = include_bytes!(
     concat!(env!("CARGO_MANIFEST_DIR"), "/binaries/game.exe")
 );
 
+/// Windows .exe for the game playtest binary.
 pub static PLAYTEST_EXE: &[u8] = include_bytes!(
     concat!(env!("CARGO_MANIFEST_DIR"), "/binaries/game-playtest.exe")
+);
+
+/// Mac binary for the game.
+pub static GAME_BIN: &[u8] = include_bytes!(
+    concat!(env!("CARGO_MANIFEST_DIR"), "/binaries/game")
+);
+
+/// Mac binary for the game. playtest
+pub static PLAYTEST_BIN: &[u8] = include_bytes!(
+    concat!(env!("CARGO_MANIFEST_DIR"), "/binaries/game-playtest")
 );
 
 pub static ICON_SMALL: LazyLock<[u8; 16 * 16 * 4]> = LazyLock::new(|| {

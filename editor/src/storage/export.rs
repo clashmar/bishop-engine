@@ -1,11 +1,12 @@
 // editor\src\storage\export.rs
-use crate::storage::editor_storage::*;
-use engine_core::constants::GAME_RON;
+#![allow(unused)]
+use crate::editor_assets::editor_assets::GAME_BIN;
+use std::os::unix::fs::PermissionsExt;
+use engine_core::constants::CONTENTS_FOLDER;
 use engine_core::constants::RESOURCES_FOLDER;
 use engine_core::*;
 use std::io::Write;
 use std::path::PathBuf;
-use engine_core::onscreen_info;
 use winres_edit::Id;
 use winres_edit::Resources;
 use winres_edit::resource_type;
@@ -106,98 +107,66 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     Ok(target_package)
 }
 
-/// TODO: Implement add recursively properly
 async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> {
     let bundle_path = dest_root.join(format!("{}.app", game.name));
 
     // Guard will clear up the export if there are errors
     let mut guard = ExportGuard::new(bundle_path.clone());
 
-    // Copy template structure
-    let template_dir = templates_dir()
-        .ok_or_else(|| {
-            Error::new(
-                ErrorKind::NotFound,  
-                "Could not find templates.",)
-        })?;
-
-    // TODO: Sort this out
-    let template_path = template_dir.join("template.app");
-    copy_dir_recursive(&template_path, &bundle_path)?;
-
-    // Copy game binary
+    // Write the game binary to the bundle
     let macos_dir = bundle_path
-        .join("Contents")
+        .join(CONTENTS_FOLDER)
         .join("MacOS");
 
     // Make sure this file exists
     fs::create_dir_all(&macos_dir)?;
 
-    let game_binary_dir = game_binary_dir()
-    .ok_or_else(|| {
-        Error::new(
-            ErrorKind::NotFound,  
-            "Could not find game binaries.",)
-        })?;
+    let bin_path = &macos_dir.join(format!("{}", game.name));
 
-    let src_binary = game_binary_dir.join("game");
-    let target_binary = macos_dir.join(&game.name);
-    fs::copy(src_binary, &target_binary)?;
+    onscreen_debug!("Creating new binary at: {}", bin_path.display());
+    let mut bin_file = fs::File::create(&bin_path)?;
 
-    // Copy assets
-    let src_assets = assets_folder(&game.name);
+    onscreen_debug!("Writing buffer into binary.");
+    bin_file.write_all(GAME_BIN)?;
+    bin_file.flush()?;  
 
-    let target_assets = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join("assets");
-    
-    copy_dir_recursive(&src_assets, &target_assets)?;
+    // Set executable permissions
+    onscreen_debug!("Writing binary permissions.");
+    let mut permissions = fs::metadata(&bin_path)?.permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&bin_path, permissions)?;
 
-    // Copy the game.ron
-    let src_ron = game_folder(&game.name)
-        .join(GAME_RON);
+    // Copy /Resources
+    onscreen_debug!("Copying /Resources.");
+    let src_resources = resources_folder(&game.name);
+    let target_resources = bundle_path
+        .join(CONTENTS_FOLDER)
+        .join(RESOURCES_FOLDER);
 
-    let target_ron = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join(GAME_RON);
+    copy_dir_recursive(&src_resources, &target_resources)?;
 
-    fs::copy(src_ron, target_ron)?;
-
-    // Create Info.plist TODO: this does not work
-    let target_plist = bundle_path.join("Contents").join("Info.plist");
-    let mut plist = fs::read_to_string(&target_plist)?;
-    plist = plist
-        .replace("__BUNDLE_NAME__", &game.name)
-        .replace("__BUNDLE_IDENTIFIER__", &format!("com.bishop.{}", game.name.to_lowercase()))
-        .replace("__BUNDLE_VERSION__", "0.1.0");
-    fs::write(&target_plist, plist)?;
-
-    // Copy app icons
-    let src_icons = game_folder(&game.name)
+    // Copy Icon.icns
+    onscreen_debug!("Copying Icon.icns.");
+    let src_icns = mac_os_folder(&game.name)
         .join("Icon.icns");
 
-    let target_icons = bundle_path
-        .join("Contents")
-        .join("Resources")
+    let target_icns = target_resources
         .join("Icon.icns");
 
-    fs::copy(src_icons, target_icons)?;
+    fs::copy(src_icns, target_icns)?;
 
-    // Copy app window icon
-    let src_window_icon = game_folder(&game.name)
-        .join("icon.png");
-
-    let target_window_icon = bundle_path
-        .join("Contents")
-        .join("Resources")
-        .join("icon.png");
-
-    fs::copy(src_window_icon, target_window_icon)?;
+    // Copy Info.plist
+    if let Some(bundle_assets) = bundle_assets_folder() {
+        // TODO: add more to plist
+        onscreen_debug!("Copying Info.plist.");
+        let src_plist = bundle_assets.join("Info.plist");
+        let target_plist = bundle_path.join(CONTENTS_FOLDER).join("Info.plist");
+        let _ = fs::copy(src_plist, target_plist);
+    }
 
     // Tell the guard to keep the folder
     guard.success();
+    onscreen_debug!("Export successful.");
     Ok(bundle_path)
 }
 

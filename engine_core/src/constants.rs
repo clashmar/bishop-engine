@@ -17,13 +17,32 @@ pub const BASE_TILE_SIZE: f32 = 32.0;
 pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(16.0, 10.0);
 pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
 
-pub const SAVE_ROOT: &str = "Bishop Engine";
-pub const GAME_SAVE_ROOT: &str = "games";
-pub const RESOURCES_FOLDER: &str = "Resources";
-pub const ASSETS_FOLDER: &str = "assets";
-pub const WINDOWS_FOLDER: &str = "windows";
-pub const MAC_OS_FOLDER: &str = "mac_os";
+/// Name of the game .ron save file.
 pub const GAME_RON: &str = "game.ron";
+
+/// Name of the root user-facing save folder for the editor.
+pub const SAVE_ROOT: &str = "Bishop Engine";
+
+/// Name of the root of the save root for all games.
+pub const GAME_SAVE_ROOT: &str = "games";
+
+// Name of the the 'Resources' folder.
+pub const RESOURCES_FOLDER: &str = "Resources";
+
+/// Name of the assets folder.
+pub const ASSETS_FOLDER: &str = "assets";
+
+/// Name of the folder for windows-specific game assets.
+pub const WINDOWS_FOLDER: &str = "windows";
+
+/// Name of the folder for macOS-specific game assets.
+pub const MAC_OS_FOLDER: &str = "mac_os";
+
+/// Name of the macOS contents folder 
+pub const CONTENTS_FOLDER: &str = "Contents";
+
+/// Name of the bundle assets for the macOS editor;
+pub const BUNDLE_ASSETS: &str = "bundle_assets";
 
 /// Scale to the base resolution.
 pub fn editor_zoom_factor() -> f32 { tile_size() / BASE_TILE_SIZE }
