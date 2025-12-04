@@ -1,7 +1,6 @@
 // editor\src\storage\export.rs
 #![allow(unused)]
 use crate::editor_assets::editor_assets::GAME_BIN;
-use std::os::unix::fs::PermissionsExt;
 use engine_core::constants::CONTENTS_FOLDER;
 use engine_core::constants::RESOURCES_FOLDER;
 use engine_core::*;
@@ -18,6 +17,8 @@ use macroquad::prelude::*;
 use std::io;
 use std::fs;
 use crate::editor_assets::editor_assets::GAME_EXE;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// Removes `path` when dropped unless `success()` has been called.
 struct ExportGuard {
@@ -71,6 +72,7 @@ pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
     // TODO Handle Linux
 }
 
+#[cfg(windows)]
 async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<PathBuf> {
     let target_package = dest_root.join(format!("{}", &game.name));
 
@@ -107,6 +109,7 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     Ok(target_package)
 }
 
+#[cfg(unix)]
 async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> {
     let bundle_path = dest_root.join(format!("{}.app", game.name));
 
@@ -171,6 +174,7 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 }
 
 /// Updates the game .exe with the game information.
+#[cfg(windows)]
 fn update_exe(exe_path: &PathBuf, game: &Game) -> Result<(), winres_edit::Error> {
     let resources = Resources::new(&exe_path);
 

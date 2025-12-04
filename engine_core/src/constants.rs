@@ -21,7 +21,7 @@ pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
 pub const GAME_RON: &str = "game.ron";
 
 /// Name of the root user-facing save folder for the editor.
-pub const SAVE_ROOT: &str = "Bishop Engine";
+pub const SAVE_ROOT: &str = "Bishop";
 
 /// Name of the root of the save root for all games.
 pub const GAME_SAVE_ROOT: &str = "games";

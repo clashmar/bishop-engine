@@ -156,6 +156,7 @@ pub fn resources_dir_from_exe() -> Option<PathBuf> {
 }
 
 /// Gets the bundle assets folder for the editor on macOS.
+#[cfg(unix)]
 pub fn bundle_assets_folder() -> Option<PathBuf> {
     let resources_dir = resources_dir_from_exe()?;
     Some(resources_dir.join(BUNDLE_ASSETS))
