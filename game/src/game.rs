@@ -1,16 +1,21 @@
 // game/src/game.rs
+use crate::input::player_input::*;
+use crate::physics::physics_system::*;
+use engine_core::global::*;
+use engine_core::rendering::render_room::*;
+use engine_core::animation::animation_system::*;
+use engine_core::ecs::component::Velocity;
+use engine_core::ecs::component::Position;
+use engine_core::ecs::component::CurrentRoom;
+use engine_core::constants::*;
+use engine_core::ecs::entity::Entity;
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::storage::core_storage::load_game_ron;
+use engine_core::world::room::Room;
+use engine_core::world::transition_manager::TransitionManager;
+use engine_core::camera::camera_manager::CameraManager;
+use engine_core::game::game::*;
 use std::collections::HashMap;
-use engine_core::{
-    animation::animation_system::update_animation_sytem, camera::camera_manager::CameraManager, constants::{FIXED_DT, MAX_ACCUM}, ecs::{component::{
-        CurrentRoom, Position, Velocity
-    }, entity::Entity}, game::game::Game, rendering::{render_room::{lerp, render_room}, render_system::RenderSystem}, storage::core_storage, world::{
-        room::Room, transition_manager::TransitionManager
-    }
-};
-use crate::{
-    input::player_input::update_player_input, 
-    physics::physics_system::update_physics
-};
 use macroquad::prelude::*;
 
 pub struct GameState {
@@ -30,14 +35,17 @@ pub struct GameState {
 
 impl GameState {
     pub async fn new() -> Self {
-        let game_folder = core_storage::most_recent_game_folder()
-            .expect("No valid game folder found in games/");
+        // Allows the shared engine features to make decisions
+        set_engine_mode(EngineMode::Game);
+        
+        let game = match load_game_ron().await {
+            Ok(game) => game,
+            Err(e) => panic!("{e}")
+        };
 
-        let game = core_storage::load_game_from_folder(&game_folder).await
-            .expect("Failed to deserialize game.ron");
-
-        let start_room_id = game.current_world().starting_room
-            .or_else(|| game.worlds.first().map(|m| m.starting_room.expect("Game has no starting room.")))
+        // TODO: Get rid of expects
+        let start_room_id = game.current_world().starting_room_id
+            .or_else(|| game.worlds.first().map(|m| m.starting_room_id.expect("Game has no starting room.")))
             .expect("Game has no starting room nor any rooms");
 
         let current_room = game.current_world().rooms

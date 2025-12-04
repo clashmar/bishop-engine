@@ -1,3 +1,5 @@
+// game/src/world/world_helpers.rs
+use engine_core::world::room::RoomId;
 use engine_core::{
     ecs::component::Collider, 
     global::tile_size, 
@@ -10,7 +12,7 @@ pub fn crossed_exit(
     delta: Vec2,               
     collider: &Collider,
     room: &Room,
-) -> Option<usize> {
+) -> Option<RoomId> {
     // Position after the movement
     let new_pos = entity_position + delta;
     let entity_rect = Rect::new(new_pos.x, new_pos.y, collider.width, collider.height);

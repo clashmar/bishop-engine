@@ -1,4 +1,5 @@
 // engine_core/src/ecs/module.rs
+use crate::ui::text::*;
 use crate::ui::widgets::*;
 use macroquad::prelude::*;
 use crate::assets::asset_manager::AssetManager;
@@ -94,18 +95,18 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
     ) {
         // Background for the header
         draw_rectangle(rect.x, rect.y, rect.w, Self::HEADER_HEIGHT, Color::new(0., 0., 0., 0.4));
-        draw_text(
+        draw_text_ui(
             self.title(),
             rect.x + 28.0,
             rect.y + 18.0,
-            18.0,
+            DEFAULT_FONT_SIZE_16,
             WHITE,
         );
 
         // Toggle button (‑ when open, ＋ when closed)
         let btn = Rect::new(rect.x + 4.0, rect.y + 4.0, 16.0, 16.0);
         let symbol = if self.expanded { "-" } else { "+" };
-        if gui_button(btn, symbol) {
+        if gui_button_y_offset(btn, symbol, vec2(-0.3, 1.5)) {
             self.expanded = !self.expanded;
         }
 

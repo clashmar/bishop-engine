@@ -1,6 +1,6 @@
 // engine_core/src/ecs/generic_module.rs
-use crate::assets::sprite::SpriteId;
 use crate::ecs::module::InspectorModule;
+use crate::ui::text::*;
 use crate::ui::widgets::*;
 use crate::{
     assets::asset_manager::AssetManager, 
@@ -22,7 +22,7 @@ const SPACING: f32 = 5.0;
 const LABEL_PADDING: f32 = 10.0;
 const MIN_WIDGET_WIDTH: f32 = 80.0;
 const MIN_LABEL_WIDTH: f32 = 80.0;
-const FONT_SIZE: f32 = 18.0;
+const FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 
 /// A thin wrapper that can draw *any* `T: Reflect`.
 pub struct GenericModule<T> {
@@ -75,10 +75,10 @@ where
 
             // Prepare the field label
             let label = parse_field_name(field.name);
-            let label_w = measure_text(&label, None, FONT_SIZE as u16, 1.0).width.max(MIN_LABEL_WIDTH);
+            let label_w = measure_text_ui(&label, FONT_SIZE, 1.0).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
-            draw_text(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
+            draw_text_ui(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
 
             // Widget rectangle
             let widget_x = if widget_x > rect.x + rect.w - MIN_WIDGET_WIDTH {
@@ -94,35 +94,7 @@ where
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
                 (FieldValue::SpriteId(id), _) => {
-                    let btn_label = if id.0 == 0 {
-                        "[Pick File]".to_string()
-                    } else {
-                        "[Change File]".to_string()
-                    };
-
-                    let remove_w = widget_rect.h;
-                    let picker_rect = Rect::new(widget_rect.x, widget_rect.y, widget_w - remove_w - SPACING, widget_rect.h);
-                    let remove_rect = Rect::new(widget_rect.x + widget_w - remove_w, widget_rect.y, remove_w, widget_rect.h);
-
-                    if gui_button(picker_rect, &btn_label) {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            if let Some(path) = rfd::FileDialog::new()
-                                .add_filter("PNG images", &["png"])
-                                .pick_file()
-                            {
-                                let normalized_path = asset_manager.normalize_path(path);
-
-                                *id = asset_manager
-                                    .get_or_load(&normalized_path)
-                                    .expect("Could not get id for sprite path.");
-                            }
-                        }
-                    }
-
-                    if gui_button(remove_rect, "x") {
-                        *id = SpriteId(0);
-                    }
+                    gui_sprite_picker(widget_rect, id, asset_manager);
                 }
                 (FieldValue::Text(txt), _) => {
                     let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());

@@ -17,7 +17,7 @@ use engine_core::{
         module_factory::ModuleFactoryEntry, 
         world_ecs::WorldEcs
     }, 
-    ui::{toast::WarningToast, widgets::*}
+    ui::{text::*, toast::Toast, widgets::*}
 };
 use macroquad::prelude::*;
 use crate::gui::gui_constants::*;
@@ -25,15 +25,15 @@ use crate::gui::gui_constants::*;
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;
 const LABEL_Y_OFFSET: f32 = 20.0;
-const LABEL_FONT_SIZE: f32 = 18.0;
-const COLON_GAP: f32 = 0.0;
+const LABEL_FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
+const COLON_GAP: f32 = 10.0;
 const FIELD_GAP: f32 = 20.0;
 
 #[derive(Default)]   
 pub struct AnimationModule {
     pending_rename: bool,
     rename_initial_value: String,
-    warning: Option<WarningToast>,
+    warning: Option<Toast>,
     select_dropdown_id: WidgetId,
     set_dropdown_id: WidgetId,
     rename_field_id: WidgetId,
@@ -73,12 +73,12 @@ impl InspectorModule for AnimationModule {
             .get_mut::<Animation>(entity)
             .expect("Animation must exist");
 
-        let mut y = rect.y + SPACING;
-        let full_w = rect.w - 2.0 * PADDING;
+        let mut y = rect.y + WIDGET_SPACING;
+        let full_w = rect.w - 2.0 * WIDGET_PADDING;
 
         // Add-clip button
         const ADD_LABEL: &str = "Add Clip";
-        let txt = measure_text(ADD_LABEL, None, 20, 1.0);
+        let txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
         let btn_w = txt.width + 12.0;   
         let btn_h = txt.height + 8.0;
 
@@ -106,7 +106,7 @@ impl InspectorModule for AnimationModule {
             animation.current = Some(new_id);
         }
 
-        y += MARGIN + PADDING;
+        y += MARGIN + WIDGET_PADDING;
         
         // Return if there is no current id
         if animation.current.is_none() {
@@ -114,16 +114,16 @@ impl InspectorModule for AnimationModule {
         }
 
         // Calculate clip selector dropdown here
-        let clip_dropdown_rect = Rect::new(rect.x + PADDING, y, full_w, BTN_HEIGHT);
+        let clip_dropdown_rect = Rect::new(rect.x + WIDGET_PADDING, y, full_w, BTN_HEIGHT);
         
-        y += MARGIN + PADDING;
+        y += MARGIN + WIDGET_PADDING;
 
         // Edit the currently selected clip
         if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
             // Variant picker
             let has_variant = !animation.variant.0.as_os_str().is_empty();
 
-            let sprite_btn = Rect::new(rect.x + PADDING, y, full_w / 2., MARGIN);
+            let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, full_w / 2., MARGIN);
 
             if gui_button(sprite_btn,
                 if has_variant { "Edit Variant" } else { "Choose Variant" }) {
@@ -147,27 +147,27 @@ impl InspectorModule for AnimationModule {
                 Cow::Borrowed("/...")
             };
 
-            draw_text(
+            draw_text_ui(
                 &variant_label, 
-                rect.x + sprite_btn.w + SPACING + PADDING, 
+                rect.x + sprite_btn.w + WIDGET_SPACING + WIDGET_PADDING, 
                 y + LABEL_Y_OFFSET, 
-                20.0, 
+                DEFAULT_FONT_SIZE_16, 
                 FIELD_TEXT_COLOR
             );
 
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // Frame size
             draw_frame_size_fields(self, y, rect, clip);
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // Columns / rows
             draw_spritesheet_dimension_fields(self, y, rect, clip);
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // FPS / Loop toggle
             draw_fps_and_loop(self, y, rect, clip);
-            y += MARGIN + PADDING;
+            y += MARGIN + WIDGET_PADDING;
 
             // Optional offset
             draw_offset_fields(self, y, rect, clip);
@@ -204,7 +204,7 @@ pub fn draw_current_clip_dropdowns(
 ) {
     let current_id = animation.current.as_ref().unwrap();
     let clip_label = format!("{current_id}");
-    let width = rect.w / 2.0 - SPACING;
+    let width = rect.w / 2.0 - WIDGET_SPACING;
     // Select clip
     let select_rect = Rect::new(rect.x, rect.y, width, rect.h);
 
@@ -255,7 +255,7 @@ pub fn draw_current_clip_dropdowns(
             other => {
                 // Prevent duplicate concrete types on the same entity
                 if animation.clips.contains_key(&other) && Some(&other) != animation.current.as_ref() {
-                    module.warning = Some(WarningToast::new(
+                    module.warning = Some(Toast::new(
                         format!("Enity already has this animation."),
                         2.0, // seconds
                     ));
@@ -312,8 +312,8 @@ pub fn draw_frame_size_fields(
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
 
     // Render the two labels
-    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
-    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     // Numeric inputs
     clip.frame_size.x = gui_input_number_f32(module.frame_x_id, inp_x, clip.frame_size.x);
@@ -329,8 +329,8 @@ pub fn draw_spritesheet_dimension_fields(
     const LABELS: [&str; 2] = ["Cols:", "Rows:"];
     let (lbl_c, inp_c, lbl_r, inp_r) = layout_pair(y, rect, LABELS);
 
-    draw_text(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
-    draw_text(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     clip.cols = gui_input_number_f32(module.cols_id, inp_c, clip.cols as f32) as usize;
     clip.rows = gui_input_number_f32(module.rows_id, inp_r, clip.rows as f32) as usize;
@@ -348,8 +348,8 @@ pub fn draw_fps_and_loop(
     inp_loop.h = CHECKBOX_SIZE;
     inp_loop.y += 5.;
 
-    draw_text(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
-    draw_text(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     clip.fps = gui_input_number_f32(module.fps_id, inp_fps, clip.fps);
     gui_checkbox(inp_loop, &mut clip.looping);
@@ -364,8 +364,8 @@ pub fn draw_offset_fields(
     const LABELS: [&str; 2] = ["Offset X:", "Offset Y:"];
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
 
-    draw_text(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
-    draw_text(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     clip.offset.x = gui_input_number_f32(module.offset_x_id, inp_x, clip.offset.x);
     clip.offset.y = gui_input_number_f32(module.offset_y_id, inp_y, clip.offset.y);
@@ -433,32 +433,32 @@ fn layout_pair(
     labels: [&'static str; 2],
 ) -> (Rect, Rect, Rect, Rect) {
     // Width of each label
-    let w0 = measure_text(labels[0], None, 20, 1.0).width + COLON_GAP;
-    let w1 = measure_text(labels[1], None, 20, 1.0).width + COLON_GAP;
+    let width1 = measure_text_ui(labels[0], LABEL_FONT_SIZE, 1.0).width + COLON_GAP;
+    let width2 = measure_text_ui(labels[1], LABEL_FONT_SIZE, 1.0).width + COLON_GAP;
 
     // First label
-    let label0 = Rect::new(
-        rect.x + PADDING,
+    let label1 = Rect::new(
+        rect.x + WIDGET_PADDING,
         y + LABEL_Y_OFFSET,
-        w0,
+        width1,
         INPUT_HEIGHT,
     );
 
     // First input
-    let input0 = Rect::new(label0.x + w0, y, NUM_FIELD_W, INPUT_HEIGHT);
+    let input0 = Rect::new(label1.x + width1, y, NUM_FIELD_W, INPUT_HEIGHT);
 
     // Second label
-    let label1 = Rect::new(
+    let label2 = Rect::new(
         input0.x + NUM_FIELD_W + FIELD_GAP,
         y + LABEL_Y_OFFSET,
-        w1,
+        width2,
         INPUT_HEIGHT,
     );
     
     // Second input
-    let input1 = Rect::new(label1.x + w1, y, NUM_FIELD_W, INPUT_HEIGHT);
+    let input1 = Rect::new(label2.x + width2, y, NUM_FIELD_W, INPUT_HEIGHT);
 
-    (label0, input0, label1, input1)
+    (label1, input0, label2, input1)
 }
 
 inventory::submit! {

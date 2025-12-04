@@ -2,6 +2,24 @@
 use crate::{constants::*, ecs::component::Position, game::game::Game};
 use std::sync::Mutex;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EngineMode {
+    Editor,
+    Game
+}
+
+pub static ENGINE_MODE: Mutex<EngineMode> = Mutex::new(EngineMode::Editor);
+
+/// Switch the global engine mode.
+pub fn set_engine_mode(mode: EngineMode) {
+    *ENGINE_MODE.lock().unwrap() = mode;
+}
+
+/// Retrieve the current engine mode.
+pub fn get_engine_mode() -> EngineMode {
+    *ENGINE_MODE.lock().unwrap()
+}
+
 static TILE_SIZE: Mutex<f32> = Mutex::new(DEFAULT_TILE_SIZE);
 static CAM_TILE_DIMS: Mutex<(f32, f32)> = Mutex::new((DEFAULT_CAM_TILES_X, DEFAULT_CAM_TILES_Y));
 

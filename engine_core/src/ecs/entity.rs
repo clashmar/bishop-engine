@@ -5,7 +5,8 @@ use inventory::iter;
 use serde::{Deserialize, Serialize};
 use crate::ecs::component::{Component, ComponentStore, CurrentRoom};
 use crate::ecs::component_registry::ComponentRegistry;
-use crate::ecs::world_ecs::WorldEcs;  
+use crate::ecs::world_ecs::WorldEcs;
+use crate::world::room::RoomId;  
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
 pub struct Entity(pub usize);
@@ -49,7 +50,7 @@ impl<'a> EntityBuilder<'a> {
 }
 
 // Returns a HashSet of all entities in the current room.
-pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: usize) -> HashSet<Entity> {
+pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: RoomId) -> HashSet<Entity> {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     room_store
         .data

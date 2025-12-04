@@ -1,4 +1,8 @@
 // engine_core/src/ui/widgets.rs
+use std::borrow::Cow;
+use crate::assets::asset_manager::AssetManager;
+use crate::assets::sprite::SpriteId;
+use crate::ui::text::*;
 use macroquad::prelude::*;
 use std::collections::HashMap;
 use std::cell::RefCell;
@@ -18,13 +22,18 @@ impl Default for WidgetId {
     }
 }
 
-const HOLD_INITIAL_DELAY: f64 = 0.50;
-const HOLD_REPEAT_RATE: f64 = 0.05;
-const SPACING: f32 = 10.0;  
-pub const FIELD_TEXT_SIZE: f32 = 20.0; 
+pub const WIDGET_PADDING: f32 = 10.0; 
+pub const WIDGET_SPACING: f32 = 10.0;   
+pub const DEFAULT_FONT_SIZE_16: f32 = 16.0;
+pub const HEADER_FONT_SIZE_20: f32 = 20.0;
+pub const FIELD_TEXT_SIZE_16: f32 = 16.0; 
 pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
+
+const HOLD_INITIAL_DELAY: f64 = 0.50;
+const HOLD_REPEAT_RATE: f64 = 0.05;
+const PLACEHOLDER_TEXT: &'static str = "<type here>";  
 
 thread_local! {
     static INPUT_TEXT_STATE: RefCell<HashMap<WidgetId, (String, usize, bool, f64, bool)>> =
@@ -52,12 +61,12 @@ pub fn input_is_focused() -> bool {
 }
 
 thread_local! {
-    static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
+    pub static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
 }
 
 /// Global flag that tells the rest of the editor whether a dropdown
 /// is currently open.
-pub fn dropdown_is_open() -> bool {
+pub fn is_dropdown_open() -> bool {
     DROPDOWN_OPEN.with(|f| *f.borrow())
 }
 
@@ -106,9 +115,9 @@ fn gui_input_text(
 
         if let Some((saved_text, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&id) {
             text = saved_text.clone();
-            cursor_char = if start_focused { text.chars().count() } else { *saved_cur };
             focused = if start_focused { true } else { *saved_foc };
             just_gained_focus = start_focused && !*saved_foc;
+            cursor_char = if start_focused && just_gained_focus { text.chars().count() } else { *saved_cur };
             last_backspace = *saved_time;
             repeat_started = *saved_repeat;
         } else {
@@ -130,18 +139,9 @@ fn gui_input_text(
     // Draw background & current text
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
-    let placeholder = "<type here>";
-    let display = if text.is_empty() { placeholder } else { &text };
-    draw_text_ex(
-        display,
-        rect.x + 5.,
-        rect.y + rect.h * 0.7,
-        TextParams {
-            font_size: 20,
-            color: FIELD_TEXT_COLOR,
-            ..Default::default()
-        },
-    );
+    let display = if text.is_empty() { PLACEHOLDER_TEXT } else { &text };
+
+    draw_input_field_text(display, rect);
 
     // Focus handling
     let mouse = mouse_position();
@@ -152,6 +152,10 @@ fn gui_input_text(
             just_gained_focus = true;
         }
         focused = mouse_over;
+
+        if !focused {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+        }
     }
 
     if just_gained_focus {
@@ -160,7 +164,7 @@ fn gui_input_text(
     }
 
     // Don't update the field if a dropdown is open
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return (text, false)
     }
 
@@ -210,7 +214,7 @@ fn gui_input_text(
 
         // Typed characters
         while let Some(chr) = get_char_pressed() {
-            if chr.is_ascii_graphic() {
+            if chr.is_ascii_graphic() || chr == ' ' {
                 // Enforce the length limit
                 let cur_len = text.chars().count();
                 if max_len.map_or(true, |limit| cur_len < limit) {
@@ -223,6 +227,7 @@ fn gui_input_text(
 
         // Escape 
         if is_key_pressed(KeyCode::Escape) || is_key_down(KeyCode::Enter) {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
             focused = false;
         }
     }
@@ -232,7 +237,7 @@ fn gui_input_text(
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let byte_pos = byte_offset(&text, cursor_char);
         let prefix = &text[..byte_pos];
-        let cursor_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
+        let cursor_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width;
         draw_line(
             cursor_x,
             rect.y + rect.h * 0.3,
@@ -310,19 +315,11 @@ where
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., WHITE);
     let placeholder = "<#>";
     let display = if text.is_empty() { placeholder } else { &text };
-    draw_text_ex(
-        display,
-        rect.x + 5.,
-        rect.y + rect.h * 0.7,
-        TextParams {
-            font_size: 20,
-            color: FIELD_TEXT_COLOR,
-            ..Default::default()
-        },
-    );
+
+    draw_input_field_text(display, rect);
 
     // Abort input handling if a dropdown blocks interaction
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return current;
     }
 
@@ -379,6 +376,7 @@ where
         }
 
         if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::Enter) {
+            INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
             focused = false;
         }
     } 
@@ -386,7 +384,7 @@ where
     let now = get_time();
     if focused && ((now * 2.0) as i32 % 2 == 0) {
         let prefix = &text[..cursor_char];
-        let caret_x = rect.x + 5. + measure_text(prefix, None, 20, 1.0).width;
+        let caret_x = rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width;
         draw_line(
             caret_x,
             rect.y + rect.h * 0.3,
@@ -458,7 +456,7 @@ pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
     }
 
     // Don't update the field if a dropdown is open
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return *value
     }
 
@@ -471,29 +469,80 @@ pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
     }
 }
 
-/// Rectangular button with a centered label. Returns `true` on click.
+/// Possible styles for a button.
+pub enum ButtonStyle {
+    Default,
+    Plain,
+}
+
+/// Rectangular button with background and outline. Returns `true` on click.
 pub fn gui_button(rect: Rect, label: &str) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO)
+}
+
+/// Rectangular button with no background or outline. Returns `true` on click.
+pub fn gui_button_plain(rect: Rect, label: &str, text_color: Color) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO)
+}
+
+/// Default button with text offset. Returns `true` on click.
+pub fn gui_button_y_offset(rect: Rect, label: &str, text_offset: Vec2) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset)
+}
+
+fn gui_button_impl(
+    rect: Rect, 
+    label: &str, 
+    style: ButtonStyle, 
+    text_color: Color,
+    text_offset: Vec2,
+) -> bool {
     let mouse = mouse_position();
-    let hovered = rect.contains(vec2(mouse.0, mouse.1));
+    let mut hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    // Don't highlight if a dropdown is open
-    let bg = if hovered && !dropdown_is_open() {
-        Color::new(0.2, 0.2, 0.2, 0.8)
-    } else {
-        FIELD_BACKGROUND_COLOR
-    };
-
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, bg);
-    draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
-
-    let txt_dims = measure_text(label, None, 20, 1.0);
-    let txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
+    // Common text layout
+    let txt_dims = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0);
     let txt_y = rect.y + rect.h * 0.7;
-    draw_text(label, txt_x, txt_y, 20., FIELD_TEXT_COLOR);
+    let mut txt_x = rect.x;
 
-    is_mouse_button_pressed(MouseButton::Left) && 
-    hovered && 
-    !dropdown_is_open()
+    match style {
+        ButtonStyle::Default => {
+            // Background, Outline & Hover
+            let hovered = rect.contains(vec2(mouse.0, mouse.1));
+            let background = if hovered && !is_dropdown_open() {
+                Color::new(0.2, 0.2, 0.2, 0.8)
+            } else {
+                FIELD_BACKGROUND_COLOR
+            };
+            draw_rectangle(rect.x, rect.y, rect.w, rect.h, background);
+            draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
+            txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
+        }
+        ButtonStyle::Plain => {
+            // Hover only
+            let width = txt_dims.width + WIDGET_PADDING * 2.0;
+            txt_x = txt_x + WIDGET_PADDING;
+
+            hovered = Rect::new(rect.x, rect.y, width, rect.h)
+                .contains(vec2(mouse.0, mouse.1));
+
+            if hovered && !is_dropdown_open() {
+                draw_rectangle(
+                    rect.x,
+                    rect.y,
+                    width,
+                    rect.h,
+                    Color::new(0.0, 0.0, 0.0, 0.5),
+                );
+            }
+        }
+    }
+    
+    draw_text_ui(label, txt_x + text_offset.x, txt_y + text_offset.y, FIELD_TEXT_SIZE_16, text_color);
+
+    is_mouse_button_pressed(MouseButton::Left) 
+    && hovered 
+    && !is_dropdown_open()
 }
 
 /// Returns the byte offset of the `char_idx`‑th character in `s`.
@@ -537,7 +586,7 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     draw_rectangle(rect.x, track_y, rect.w, track_h, Color::new(0.2, 0.2, 0.2, 0.8));
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
 
-    let handle_col = if dragging && !dropdown_is_open() {
+    let handle_col = if dragging && !is_dropdown_open() {
         Color::new(0.6, 0.6, 0.9, 1.0)
     } else {
         Color::new(0.4, 0.4, 0.8, 1.0)
@@ -545,7 +594,7 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     draw_rectangle(handle_x, rect.y, handle_sz, rect.h, handle_col);
     draw_rectangle_lines(handle_x, rect.y, handle_sz, rect.h, 2., WHITE);
 
-    if dropdown_is_open() {
+    if is_dropdown_open() {
         return (value, false)
     }
 
@@ -596,6 +645,14 @@ pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (
     (new_value, changed)
 }
 
+/// Possible styles for a dropdown menu.
+pub enum DropDownStyle {
+    /// Uses default button to open dropdown.
+    Default,
+    /// Uses plain button to open dropdown.
+    Plain,
+}
+
 /// A simple dropdown that shows `options` when the button is pressed.
 /// Returns `Some(selected)` when the user picks a different entry,
 /// otherwise `None`.
@@ -606,33 +663,114 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     options: &[T],
     to_string: impl Fn(&T) -> String,
 ) -> Option<T> {
+    gui_dropdown_impl(
+        id, 
+        rect, 
+        label, 
+        options, 
+        to_string, 
+        DropDownStyle::Default, 
+        WHITE,
+        0.0,
+    )
+}
+
+/// Same as gui_dropdown but uses a plain button. Text color sets the color 
+/// of the button text and y_offset moves the options.
+pub fn gui_dropdown_plain<T: Clone + PartialEq + Display>(
+    id: WidgetId,
+    rect: Rect,
+    label: &str,
+    options: &[T],
+    to_string: impl Fn(&T) -> String,
+    text_color: Color,
+    y_offset: f32,
+) -> Option<T> {
+    gui_dropdown_impl(
+        id, 
+        rect, 
+        label, 
+        options, 
+        to_string, 
+        DropDownStyle::Plain, 
+        text_color,
+        y_offset
+    )
+}
+
+fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
+    id: WidgetId,
+    rect: Rect,
+    label: &str,
+    options: &[T],
+    to_string: impl Fn(&T) -> String,
+    style: DropDownStyle,
+    text_color: Color,
+    y_offset: f32,
+) -> Option<T> {
     const MAX_VISIBLE_ROWS: usize = 8;
     const SCROLL_SPEED: f32 = 5.0;
-
-    // Button
-    let button_clicked = gui_button(rect, label);
+    const W_PADDING: f32 = 8.0;
+    const SCROLLBAR_WIDTH: f32 = 6.0;
 
     // Load previous state
     let mut state = dropdown_state::get(id);
 
+    // Temporarily set dropdown open to false so the button is still interactable
+    let prev_state = state.open;
+    state.open = false;
+    dropdown_state::set(id, state);
+    update_global_dropdown_flag();
+
+    let button_clicked = match style {
+        DropDownStyle::Default => {
+            gui_button(rect, label)
+        }
+        DropDownStyle::Plain => {
+            gui_button_plain(rect, label, text_color)
+        }
+    };
+
+    // Set it back to the previous state
+    state.open = prev_state;
+    dropdown_state::set(id, state);
+    update_global_dropdown_flag();
+
+    if button_clicked {
+        state.open = !state.open;
+    }
+
     // Decide whether the list should be open this frame
-    let list_is_open = button_clicked || state.open;
+    let list_is_open = state.open; 
     state.open = list_is_open; // Remember for next frame   
 
     // Let the editor know a dropdown is open
     let mut any_open = false;
-    DROPDOWN_OPEN.with(|f| {
-        let was = *f.borrow();
-        *f.borrow_mut() = was || list_is_open;
-        any_open = *f.borrow();
+    DROPDOWN_OPEN.with(|r| {
+        let was = *r.borrow();
+        *r.borrow_mut() = was || list_is_open;
+        any_open = *r.borrow();
     });     
+
+    // Compute the widest option
+    let mut max_opt_width = 0.0_f32;
+    for opt in options.iter() {
+        let txt = to_string(opt);
+        let width = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0).width;
+        if width > max_opt_width {
+            max_opt_width = width;
+        }
+    }
+
+    let list_width = rect.w
+        .max(max_opt_width + 2.0 * W_PADDING + SCROLLBAR_WIDTH);
 
     // Compute the list rectangle
     let visible_rows = MAX_VISIBLE_ROWS.min(options.len());
     let list_rect = Rect::new(
         rect.x,
-        rect.y + rect.h,
-        rect.w,
+        rect.y + rect.h + y_offset,
+        list_width,
         rect.h * visible_rows as f32,
     );
 
@@ -705,11 +843,11 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
                 );
             }
             
-            draw_text(
+            draw_text_ui(
                 &to_string(opt),
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
-                20.,
+                DEFAULT_FONT_SIZE_16,
                 FIELD_TEXT_COLOR,
             );
 
@@ -767,7 +905,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
 }
 
 /// Helper module that stores the temporary dropdown state.
-mod dropdown_state {
+pub mod dropdown_state {
     use macroquad::prelude::*;
     use std::cell::RefCell;
     use std::collections::HashMap;
@@ -812,7 +950,7 @@ mod dropdown_state {
 }
 
 // Helper, called at the end of gui_dropdown
-fn update_global_dropdown_flag() {
+pub fn update_global_dropdown_flag() {
     dropdown_state::STATE.with(|s| {
         let any = s.borrow().values().any(|st| st.open);
         DROPDOWN_OPEN.with(|f| *f.borrow_mut() = any);
@@ -840,17 +978,17 @@ pub fn gui_stepper(
     const Y_OFFSET: f32 = 15.0;
 
     let label = format!("{}:", label);
-    let label_width = measure_text(&label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
+    let label_width = measure_text_ui(&label, FIELD_TEXT_SIZE_16, 1.0).width;
 
-    let btn_w = FIELD_TEXT_SIZE * 1.2;
-    let val_w = measure_text("3.0", None, FIELD_TEXT_SIZE as u16, 1.0).width + SPACING + 5.0;
+    let btn_w = FIELD_TEXT_SIZE_16 * 1.2;
+    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE_16, 1.0).width + WIDGET_SPACING + 5.0;
 
     // Label
-    draw_text(&label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+    draw_text_ui(&label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
     // Display value
     let val_rect = Rect::new(
-        rect.x + label_width + SPACING,
+        rect.x + label_width + WIDGET_SPACING,
         rect.y - Y_OFFSET,
         val_w,
         rect.h,
@@ -867,17 +1005,17 @@ pub fn gui_stepper(
     );
 
     let txt = format!("{:.1}", steps[idx]);
-    draw_text(
+    draw_text_ui(
         &txt,
         val_rect.x + 7.5,
         val_rect.y + 17.5,
-        FIELD_TEXT_SIZE,
+        FIELD_TEXT_SIZE_16,
         FIELD_TEXT_COLOR,
     );
 
     // “‑” button
     let decrease_rect = Rect::new(
-        val_rect.x + val_w + SPACING,
+        val_rect.x + val_w + WIDGET_SPACING,
         rect.y - Y_OFFSET,
         btn_w,
         btn_w,
@@ -889,7 +1027,7 @@ pub fn gui_stepper(
 
     // “+” button
     let increase_rect = Rect::new(
-        decrease_rect.x + btn_w + SPACING,
+        decrease_rect.x + btn_w + WIDGET_SPACING,
         rect.y - Y_OFFSET,
         btn_w,
         btn_w,
@@ -900,4 +1038,89 @@ pub fn gui_stepper(
 
     steps[idx]
 }
+
+/// UI widget that can choose a PNG from disk to update a SriteId, or remove it.
+/// Returns true if the sprite was updated.
+pub fn gui_sprite_picker(
+    rect: Rect,
+    id: &mut SpriteId,
+    asset_manager: &mut AssetManager,
+) -> bool {
+    let btn_label: Cow<str> = if id.0 == 0 {
+        Cow::Borrowed("[Pick File]")
+    } else {
+        let filename = asset_manager
+            .sprite_id_to_path
+            .get(id)
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "???".to_string());
+
+        Cow::Owned(format!("[/{}]", filename))
+    };
+
+    let remove_w = rect.h; // square button
+    let picker_w = rect.w - remove_w - WIDGET_SPACING;
+
+    let picker_rect = Rect::new(rect.x, rect.y, picker_w, rect.h);
+    let remove_rect = Rect::new(
+        rect.x + rect.w - remove_w,
+        rect.y,
+        remove_w,
+        rect.h,
+    );
+
+    let mut changed = false;
+
+    if gui_button(picker_rect, &btn_label) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("PNG images", &["png"])
+                .pick_file()
+            {
+                let normalized = asset_manager.normalize_path(path);
+                *id = asset_manager
+                    .get_or_load(&normalized)
+                    .expect("Could not get id for sprite path.");
+                changed = true;
+            }
+        }
+    }
+
+    if gui_button(remove_rect, "x") && id.0 != 0 {
+        *id = SpriteId(0);
+        changed = true;
+    }
+
+    changed
+}
+
+/// Draws the text for an input widget. Can be called by non-widgets.
+pub fn draw_input_field_text(text: &str, rect: Rect) {
+    draw_text_ui(
+        text,
+        rect.x + WIDGET_PADDING / 2.,
+        rect.y + rect.h * 0.7,
+        DEFAULT_FONT_SIZE_16,
+        FIELD_TEXT_COLOR,
+    );
+}
+
+/// Returns the x position and width for text to be centered around a given x position.
+pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
+    let text_to_measure = if text.is_empty() { PLACEHOLDER_TEXT } else { text };
+    let text_size = measure_text_ui(text_to_measure, DEFAULT_FONT_SIZE_16, 1.0);
+    let new_x = x - (text_size.width / 2.);
+    (new_x - WIDGET_PADDING / 2., text_size.width + WIDGET_PADDING)
+}
+
+/// Returns the x position and width for text to be centered around a given x position.
+pub fn rect_width_for_text(text: &str, font_size: f32) -> f32 {
+    measure_text_ui(text, font_size, 1.0).width + WIDGET_PADDING * 2.0
+}
+
+
+
+
 

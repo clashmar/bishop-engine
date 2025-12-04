@@ -1,74 +1,77 @@
 // editor/src/editor.rs
-use engine_core::{
-    constants::*, game::game::Game, global::set_global_tile_size, physics::collider_system, rendering::render_system::RenderSystem, world::room::Room
-};
+use crate::gui::inspector::modal::Modal;
+use engine_core::*;
+use engine_core::ui::toast::Toast;
+use engine_core::ui::widgets::input_is_focused;
+use engine_core::world::world::WorldId;
+use engine_core::world::room::RoomId;
+use engine_core::physics::collider_system;
+use engine_core::rendering::render_system::RenderSystem;
 use std::io;
 use macroquad::prelude::*;
-use crate::{
-    editor_camera_controller::EditorCameraController,
-    controls::controls::Controls,
-    room::room_editor::RoomEditor,
-    storage::editor_storage,
-    tilemap::tile_palette::TilePalette,
-    world::world_editor::WorldEditor,
-    playtest::room_playtest,
-};
+use engine_core::game::game::Game;
+use crate::gui::menu_bar::MenuBar;
+use engine_core::controls::controls::Controls;
+use crate::playtest::room_playtest::*;
+use crate::tilemap::tile_palette::TilePalette;
+use crate::editor_camera_controller::EditorCameraController;
+use crate::storage::editor_storage;
+use crate::Camera2D;
+use crate::room::room_editor::RoomEditor;
+use crate::world::world_editor::WorldEditor;
+use crate::game::game_editor::GameEditor;
 
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum EditorMode {
-    World,
-    Room(usize),
+    Game,
+    World(WorldId),
+    Room(RoomId),
 }
 
 pub struct Editor {
     pub game: Game,
     pub mode: EditorMode,
+    pub game_editor: GameEditor,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
     pub camera: Camera2D,
-    pub current_room_id: Option<usize>,
+    pub current_world_id: Option<WorldId>,
+    pub current_room_id: Option<RoomId>,
     pub render_system: RenderSystem,
+    pub menu_bar: MenuBar,
+    pub modal: Modal,
+    pub toast: Option<Toast>,
 }
 
 impl Editor {
     pub async fn new() -> io::Result<Self> {
-        let game = if let Some(name) = editor_storage::most_recent_game_name() {
+        let mut editor = Editor::default();
+
+        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
             editor_storage::load_game_by_name(&name).await?
-        } else if let Some(name) = editor_storage::prompt_user_input().await {
+        } else if let Some(name) = editor.prompt_new_game().await {
             editor_storage::create_new_game(name).await
         } else {
-            // User pressed Escape
-            editor_storage::create_new_game("untitled".to_string()).await
+            // User pressed Cancel
+            onscreen_info!("User cancelled new game dialogue.");
+            std::process::exit(0);
         };
 
-        // Set global tile size that the game scales to
-        set_global_tile_size(game.tile_size);
-
-        let camera = EditorCameraController::camera_for_room(
-            DEFAULT_ROOM_SIZE,
-            DEFAULT_ROOM_POSITION,
-        );
-
-        let palette = match editor_storage::load_palette(&game.name) {
+        let palette = match editor_storage::load_palette(&game.name.clone()) {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Failed to load palette: {e}");
+                onscreen_error!("Failed to load palette: {e}");
                 // Fall back to a new palette
                 TilePalette::new()
             }
         };
 
-        let mut editor = Self {
-            game,
-            mode: EditorMode::World,
-            world_editor: WorldEditor::new(),
-            room_editor: RoomEditor::new(),
-            camera,
-            current_room_id: None,
-            render_system: RenderSystem::new(),
-        };
+        editor.game_editor.init_camera(&mut editor.camera, &mut game);
+        editor.game = game;
 
         // Give the palette to the tilemap editor
-        editor.room_editor.tilemap_editor.panel.palette = palette;
+        editor.room_editor.tilemap_editor.tilemap_panel.palette = palette;
 
         Ok(editor)
     }
@@ -79,14 +82,45 @@ impl Editor {
         }
         
         match self.mode {
-            EditorMode::World => {
-                // Update returns the id of the room being edited
+            EditorMode::Game => {
+                // Returns the id of the world that was clicked on or None
+                if let Some(world_id) = self.game_editor.update(
+                    &self.camera,
+                    &mut self.game
+                ).await {
+                    self.world_editor.init_camera(
+                        &mut self.camera, 
+                        self.game.get_world_mut(world_id)
+                    );
+                    self.game.current_world_id = world_id;
+                    self.current_world_id = Some(world_id);
+                    self.mode = EditorMode::World(world_id);
+                }
+            }
+            EditorMode::World(world_id) => {
+                // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
-                    &mut self.game.current_world_mut()
+                    &mut self.game.get_world_mut(world_id)
                 ).await {
                     self.current_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
+                }
+
+                // Handle escape
+                if Controls::escape() && !input_is_focused() {
+                    self.game_editor.init_camera(
+                        &mut self.camera,
+                        &mut self.game
+                    );
+
+                    // Clean up
+                    self.current_world_id = None;
+                    self.world_editor.reset();
+                    self.mode = EditorMode::Game;
+
+                    // Save everything
+                    self.save();
                 }
             }
             EditorMode::Room(room_id) => {
@@ -96,37 +130,25 @@ impl Editor {
                         .find(|w| w.id == self.game.current_world_id)
                         .expect("Current world id not present in game.");
 
-                    let other_bounds: Vec<(Vec2, Vec2)> = current_world.rooms
-                        .iter()
-                        .filter(|r| r.id != room_id)
-                        .map(|r| (r.position, r.size))
-                        .collect();
-                    
-                    let room = current_world.rooms
-                        .iter_mut()
-                        .find(|r| r.id == room_id)
-                        .expect("Could not find room in world.");
-
-                    let done = {
-                        // Returns true if escaped
-                        self.room_editor.update(
-                            &mut self.camera, 
-                            room,
-                            &other_bounds,
-                            &mut current_world.world_ecs,
-                            &mut self.game.asset_manager,
-                        ).await
-                    };
+                    // Returns true if escaped
+                    self.room_editor.update(
+                        &mut self.camera, 
+                        room_id,
+                        current_world,
+                        &mut self.game.asset_manager,
+                    ).await;
 
                     collider_system::update_colliders_from_sprites(
                         &mut current_world.world_ecs,
                         &mut self.game.asset_manager,
                     );
 
-                    if done {
-                        let palette = &mut self.room_editor.tilemap_editor.panel.palette;
-                        editor_storage::save_palette(palette, &self.game.name)
-                            .expect("Could not save tile palette");
+                    if Controls::escape() && !input_is_focused() {
+                        let palette = &mut self.room_editor.tilemap_editor.tilemap_panel.palette;
+
+                        if let Err(e) = editor_storage::save_palette(palette, &self.game.name) {
+                            onscreen_error!("Could not save tile palette: {e}")
+                        }
 
                         // Find the room we just left for center_on_room
                         if let Some(room) = current_world.rooms.iter()
@@ -134,70 +156,74 @@ impl Editor {
                             self.world_editor.center_on_room(&mut self.camera, room);
                         }
 
-                        // Save everything
-                        editor_storage::save_game(&self.game)
-                            .expect("Could not save game.");
-
-                        // Clean up the temporary cache
+                        // Clean up
                         self.current_room_id = None;
                         self.room_editor.reset();
-                        self.mode = EditorMode::World;
+                        self.mode = EditorMode::World(current_world.id);
+
+                        // Save everything
+                        self.save();
                     }
                 }
 
                 // Launch play‑test if the play button was pressed
                 if self.room_editor.request_play {
                     // Write the payload
-                    if let Some(room_id) = self.current_room_id {
-                        let room = self.get_room_from_id(&room_id);
-                        let payload_path = room_playtest::write_playtest_payload(room, &self.game);
+                    let room = self.get_room_from_id(&room_id);
+                    let payload_path = match write_playtest_payload(room, &self.game) {
+                        Ok(p) => p,
+                        Err(e) => {
+                            onscreen_error!("Could not write playtest payload: {e}");
+                            return;              
+                        }
+                    };
 
-                        // Build the binary first
-                        match room_playtest::build_playtest_binary().await {
-                            Ok(exe_path) => {
-                                // Launch the binary
-                                if let Err(e) = std::process::Command::new(&exe_path)
-                                    .arg(&payload_path)
-                                    .spawn()
-                                {
-                                    eprintln!("Failed to launch play‑test: {e}");
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("{e}");
+                    // If in dev mode the binary will be built first
+                    match resolve_playtest_binary().await {
+                        Ok(exe_path) => {
+                            // Launch the binary
+                            if let Err(e) = std::process::Command::new(&exe_path)
+                                .arg(&payload_path)
+                                .spawn()
+                            {
+                                onscreen_error!("Failed to launch playtest: {e}");
                             }
                         }
-                        // Reset the request flag so we don’t spawn multiple processes (and really ruin everything)
-                        self.room_editor.request_play = false;      
+                        Err(e) => {
+                            onscreen_error!("{e}");
+                        }
                     }
+                    // Reset the request flag so multiple processes don’t spawn (and really ruin everything)
+                    self.room_editor.request_play = false;      
                 }
             }
         }
 
-        if Controls::save() {
-            editor_storage::save_game(&self.game)
-                .expect("Could not save game.");
-        }
-
-        if Controls::undo() {
-            crate::global::request_undo();
-        }
-
-        if Controls::redo() {
-            crate::global::request_redo();
-        }
+        self.handle_shortcuts().await;
     }
 
     pub async fn draw(&mut self) {
         match self.mode {
-            EditorMode::World => {
+            EditorMode::Game => {
+                self.game_editor.draw(
+                    &mut self.camera,
+                    &mut self.game
+                );
+            },
+            EditorMode::World(world_id) => {
+                // World id should already be set
+                if self.current_world_id.is_none() {
+                    self.current_world_id = Some(world_id);
+                }
+
                 self.world_editor.draw(
+                    world_id,
                     &self.camera, 
                     &mut self.game,
                 );
-            }
+            },
             EditorMode::Room(room_id) => {
-                // The room id should already be set
+                // Room id should already be set
                 if self.current_room_id.is_none() {
                     self.current_room_id = Some(room_id);
                 }
@@ -221,13 +247,25 @@ impl Editor {
                 ).await;
             }
         }
+
+        // Draw global UI here
+        self.draw_ui().await;
     }
 
-    fn get_room_from_id(&self, room_id: &usize) -> &Room {
-        self.game
-            .current_world().rooms
-            .iter()
-            .find(|m| m.id == *room_id)
-            .expect("Could not find room from id.")
+    async fn draw_ui(&mut self) {
+        set_default_camera();
+
+        // Global menu options
+        self.draw_menu_bar().await;
+
+        // Draws and handles result of modal
+        if let Some(_) = self.handle_modal().await {
+            self.modal.close();
+        }
+
+        self.draw_toast();
+
+        // Draws onscreen logs in debug mode
+        self.draw_logs();
     }
 }

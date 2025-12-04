@@ -1,13 +1,13 @@
-// engine_core/src/tiles/tile_def.rs
+// engine_core/src/tiles/tile.rs
 use serde::{Deserialize, Serialize};
 use crate::assets::sprite::SpriteId;
 
-/// Opaque identifier used by the editor and by the TileMap.
+/// Identifier used by the editor and by the TileMap.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TileDefId(pub usize);
 
 /// A list of component adding closures.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TileDef {
     /// SpriteId for the tile.
     pub sprite_id: SpriteId,
@@ -16,7 +16,7 @@ pub struct TileDef {
 }
 
 /// Serialisable description of a component.
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub enum TileComponent {
     Walkable(bool),
     Solid(bool),

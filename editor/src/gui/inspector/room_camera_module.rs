@@ -1,11 +1,10 @@
 // editor/src/gui/inspector/camera_module.rs
 use strum::IntoEnumIterator;
-use engine_core::camera::game_camera::*;
+use engine_core::{camera::game_camera::*, ui::text::*};
 use engine_core::ecs::module::CollapsibleModule;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
-use crate::gui::gui_constants::*;
 use engine_core::{
     assets::asset_manager::AssetManager, 
     ecs::{
@@ -41,21 +40,21 @@ impl InspectorModule for RoomCameraModule {
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
 
-        let mut y = rect.y + SPACING;
+        let mut y = rect.y + WIDGET_SPACING;
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
-        let label_width = measure_text(mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
+        draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
-        let mode_rect = Rect::new(rect.x + label_width + SPACING, y, rect.w - label_width - SPACING, 30.0);
+        let mode_rect = Rect::new(rect.x + label_width + WIDGET_SPACING, y, rect.w - label_width - WIDGET_SPACING, 30.0);
         let current_mode = cam.zoom_mode;
         let current_label = format!("{current_mode}");
         let zoom_options: Vec<ZoomMode> = ZoomMode::iter()
             .collect();
 
         // Advance y for the next position
-        y += mode_rect.h + mode_rect.h + SPACING;
+        y += mode_rect.h + mode_rect.h + WIDGET_SPACING;
 
         match cam.zoom_mode   {
             ZoomMode::Step => {
@@ -99,19 +98,19 @@ impl InspectorModule for RoomCameraModule {
 
         // Camera mode
         let cam_mode_label = "Camera Mode: ";
-        let cam_label_width = measure_text(cam_mode_label, None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(
+        let cam_label_width = measure_text_ui(cam_mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
+        draw_text_ui(
             cam_mode_label,
             rect.x,
             y + 20.0,
-            FIELD_TEXT_SIZE,
+            FIELD_TEXT_SIZE_16,
             FIELD_TEXT_COLOR,
         );
 
         let cam_mode_rect = Rect::new(
-            rect.x + cam_label_width + SPACING,
+            rect.x + cam_label_width + WIDGET_SPACING,
             y,
-            rect.w - cam_label_width - SPACING,
+            rect.w - cam_label_width - WIDGET_SPACING,
             30.0,
         );
 
@@ -170,23 +169,23 @@ impl RoomCameraModule {
 
         // Label
         let label = "Scale: ";
-        let label_width = measure_text(label, None, FIELD_TEXT_SIZE as u16, 1.0).width + 1.0;
-        let num_width = measure_text("0.00", None, FIELD_TEXT_SIZE as u16, 1.0).width;
-        draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0).width + 1.0;
+        let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE_16, 1.0).width;
+        draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         // Numeric field 
         let num_rect = Rect::new(
             rect.x + label_width,
-            rect.y - FIELD_TEXT_SIZE,
-            num_width + SPACING,
+            rect.y - FIELD_TEXT_SIZE_16,
+            num_width + WIDGET_SPACING,
             rect.h,
         );
 
         // Slider
         let slider_rect = Rect::new(
-            rect.x + label_width + num_width + 2.0 * SPACING,
-            rect.y - FIELD_TEXT_SIZE,
-            rect.w - (label_width + num_width + 2.0 * SPACING),
+            rect.x + label_width + num_width + 2.0 * WIDGET_SPACING,
+            rect.y - FIELD_TEXT_SIZE_16,
+            rect.w - (label_width + num_width + 2.0 * WIDGET_SPACING),
             rect.h,
         );
 

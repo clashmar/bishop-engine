@@ -4,6 +4,7 @@ pub mod ecs;
 pub mod camera;
 pub mod constants;
 pub mod input;
+pub mod logging;
 pub mod game;
 pub mod global;
 pub mod lighting;
@@ -14,3 +15,9 @@ pub mod storage;
 pub mod tiles;
 pub mod world;
 pub mod ui;
+pub mod controls;
+
+/// Simple helper used only for the demo test.
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}

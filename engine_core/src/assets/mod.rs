@@ -1,2 +1,3 @@
 pub mod asset_manager;
 pub mod sprite;
+pub mod core_assets;
