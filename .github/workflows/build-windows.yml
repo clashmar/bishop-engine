@@ -31,8 +31,7 @@ jobs:
         working-directory: ./editor
         run: cargo make build-game-windows
 
-      - name: Zip Artefact
-        working-directory: ./editor    
+      - name: Zip Artefact  
         run: |
           $binary = "target\x86_64-pc-windows-msvc\release\Bishop.exe"
           $zip = "${{ env.RELEASE_ZIP }}"
@@ -49,6 +48,7 @@ jobs:
           prerelease: true                        
           generate_release_notes: true
           files: ${{ env.RELEASE_ZIP }}
-          overwrite: true                          
+          overwrite_files: true    
+          make_latest: true                      
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

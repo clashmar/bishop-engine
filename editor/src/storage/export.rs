@@ -1,5 +1,4 @@
 // editor\src\storage\export.rs
-#![allow(unused)]
 use crate::editor_assets::editor_assets::GAME_BIN;
 use std::os::unix::fs::PermissionsExt;
 use engine_core::constants::CONTENTS_FOLDER;
