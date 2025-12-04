@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-latest
 
     env:
-      RELEASE_TAG: v0.1.0-mac-alpha.1
+      RELEASE_TAG: v0.1.0-mac-alpha
       RELEASE_ZIP: BishopEngine-MacOS.zip 
 
     steps:
@@ -35,7 +35,7 @@ jobs:
       - name: Zip macOS Artefact
         id: zip_artifact
         run: |
-          APP_PATH="target/aarch64-apple-darwin/release/Bishop Engine.app"
+          APP_PATH="target/aarch64-apple-darwin/release/bundle/osx/Bishop Engine.app"
           ZIP_NAME="${{ env.RELEASE_ZIP }}"
           zip -r -y -q "$ZIP_NAME" "$APP_PATH"
         shell: bash
