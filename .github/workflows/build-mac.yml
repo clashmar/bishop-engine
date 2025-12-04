@@ -1,0 +1,67 @@
+name: macOS
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main] 
+
+permissions:
+  contents: write
+  packages: write 
+
+jobs:
+  build-mac:
+    if: github.event.pull_request.merged == true
+    runs-on: macos-latest
+    env:
+      RELEASE_TAG: v0.1.0-mac-alpha
+      RELEASE_ZIP: Bishop-macOS.zip 
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          override: true
+
+      - name: Install cargo-make
+        run: cargo install cargo-make
+
+      - name: Run macOS Build
+        working-directory: ./editor
+        run: cargo make bundle-editor-mac
+
+      - name: Sign the Bundle
+        run: |
+          APP_PATH="target/aarch64-apple-darwin/release/bundle/osx/Bishop.app"
+          codesign --force --deep --sign - "$APP_PATH"
+
+      - name: Zip Artefact
+        id: zip_artifact
+        run: |
+          APP_DIR="target/aarch64-apple-darwin/release/bundle/osx"
+          APP_NAME="Bishop.app"
+          ZIP_NAME="${{ env.RELEASE_ZIP }}"
+          ditto -c -k --sequesterRsrc --keepParent \
+                "${APP_DIR}/${APP_NAME}" \
+                "${GITHUB_WORKSPACE}/${ZIP_NAME}"
+        shell: bash
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}        
+          name: "macOS ${{ env.RELEASE_TAG }}"  
+          draft: false
+          prerelease: true                        
+          generate_release_notes: true
+          files: ${{ env.RELEASE_ZIP }}
+          overwrite_files: true    
+          make_latest: true                           
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -6,7 +6,7 @@ build = "build.rs"
 
 [[bin]]
 name = "Bishop"
-path = "src/main.rs" 
+path = "src/main.rs"  
 
 [dependencies]
 engine_core = { path = "../engine_core" }
@@ -35,8 +35,8 @@ winres = "0.1.12"
 
 # Bundle for macOS
 [package.metadata.bundle]
-name = "Bishop's Engine"
-identifier = "com.bishop.engine"
+name = "Bishop"
+identifier = "com.clashmar.bishop"
 version = "0.1.0"
 category = "Game"
 short_description = "A lightweight 2D game engine built with Rust."
