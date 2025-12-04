@@ -1,4 +1,6 @@
 // editor/src/storage/editor_storage.rs
+#![allow(unused)]
+use std::os::unix::fs::PermissionsExt;
 use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;
 use std::io::Write;
@@ -134,22 +136,6 @@ pub fn most_recent_game_name() -> Option<String> {
     best.map(|(name, _)| name)
 }
 
-/// Returns the absolute path to the bundled game binaries for macOS.
-pub fn game_binary_dir() -> Option<PathBuf> {
-    if let Some(resources_dir) = resources_dir_from_exe() {
-        return Some(resources_dir.join("binaries"));
-    }
-    None
-}
-
-/// Returns the absolute path to the bundled platform app templates for macOS.
-pub fn templates_dir() -> Option<PathBuf> {
-    if let Some(resources_dir) = resources_dir_from_exe() {
-        return Some(resources_dir.join("templates"));
-    }
-    None
-}
-
 /// Save the palette for the game.
 pub fn save_palette(palette: &TilePalette, game_name: &str) -> io::Result<()> {
     let dir = game_folder(game_name);
@@ -256,12 +242,25 @@ pub fn write_to_app_dir(filename: &str, embedded: &[u8]) -> io::Result<PathBuf> 
     let mut file = fs::File::create(&path)?;
     file.write_all(embedded)?;
 
+    #[cfg(target_os = "macos")]
+    {
+        // Set executable permissions
+        onscreen_debug!("Writing binary permissions.");
+        let mut permissions = fs::metadata(&path)?.permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions)?;
+    }
+
     Ok(path)
 }
 
 /// Find all game folders in `games/`.
 pub fn list_game_folders() -> io::Result<Vec<PathBuf>> {
-    let root = absolute_save_root();
+    let root = match cfg!(debug_assertions) {
+        true => absolute_save_root(),
+        false => absolute_save_root().join(GAME_SAVE_ROOT),
+    };
+
     let mut folders = Vec::new();
 
     for entry in fs::read_dir(root)? {

@@ -19,7 +19,7 @@ fn window_conf() -> Conf {
         if let Ok(png_bytes) = fs::read(&icon_path) {
             icon = Some(load_icon(&png_bytes));
         } else {
-            onscreen_warn!("Could not read icon")
+            onscreen_warn!("Could not read icon.")
         }
     }
 

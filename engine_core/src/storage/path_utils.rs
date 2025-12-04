@@ -155,6 +155,12 @@ pub fn resources_dir_from_exe() -> Option<PathBuf> {
     }
 }
 
+/// Gets the bundle assets folder for the editor on macOS.
+pub fn bundle_assets_folder() -> Option<PathBuf> {
+    let resources_dir = resources_dir_from_exe()?;
+    Some(resources_dir.join(BUNDLE_ASSETS))
+}
+
 /// Pick the folder that will become the absolute save root.
 pub async fn pick_save_root_async() -> Option<PathBuf> {
     // Let the user choose a base folder
@@ -315,7 +321,7 @@ pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
     }
 }
 
-/// Recursively copy the directory.
+/// Recursively copy the directory and all of its contents.
 pub fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
     if !src.is_dir() {
         return Err(Error::new(

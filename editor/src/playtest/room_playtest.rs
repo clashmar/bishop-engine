@@ -1,6 +1,6 @@
 // editor/src/playtest/room_playtest.rs
-use crate::PLAYTEST_EXE;
-use crate::storage::editor_storage::write_to_app_dir;
+use crate::editor_assets::editor_assets::*;
+use crate::storage::editor_storage::*;
 use std::io::{Error, ErrorKind};
 use std::io;
 use std::process::Command;
@@ -55,17 +55,8 @@ pub async fn resolve_playtest_binary() -> io::Result<PathBuf> {
             // Write PLAYTEST_EXE to a temp file and return path
             return write_to_app_dir(exe_name, PLAYTEST_EXE);
         }
-
         #[cfg(target_os = "macos")] {
-            if let Some(mut exe_path) = game_binary_dir() {
-                exe_path.push(exe_name);
-                return Ok(exe_path);
-            } else {
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    "Could not find game binary directory",
-                ));
-            }
+            return write_to_app_dir(exe_name, PLAYTEST_BIN);
         }
     }
 

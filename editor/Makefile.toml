@@ -58,10 +58,3 @@ dependencies = [
     "copy-game-exes-windows",
     "copy-game-exes-unix", 
 ]
-
-# Final command
-[tasks.bundle-editor]
-dependencies = [
-    "bundle-editor-mac",
-    "bundle-editor-windows",
-]

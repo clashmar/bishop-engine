@@ -41,6 +41,6 @@ version = "0.1.0"
 category = "Game"
 short_description = "A lightweight 2D game engine built with Rust."
 icon = ["mac/Icon.icns"]
-resources = ["templates", "binaries"]
+resources = ["bundle_assets"]
 # Run "cargo make bundle-editor-mac" to build game binaries and copy
 # copy them to the binaries folder
