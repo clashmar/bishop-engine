@@ -10,7 +10,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v0.1.0-windows-alpha.1
+      RELEASE_TAG: v0.1.0-windows-alpha
       RELEASE_ZIP: BishopEngine-Windows.zip 
 
     steps:
@@ -32,6 +32,7 @@ jobs:
         run: cargo make build-game-windows
 
       - name: Zip Artefact
+        working-directory: ./editor    
         run: |
           $binary = "target\x86_64-pc-windows-msvc\release\Bishop.exe"
           $zip = "${{ env.RELEASE_ZIP }}"
