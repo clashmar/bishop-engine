@@ -35,8 +35,8 @@ winres = "0.1.12"
 
 # Bundle for macOS
 [package.metadata.bundle]
-name = "Bishop Engine"
-identifier = "com.clashmar.bishop-engine"
+name = "Bishop"
+identifier = "com.clashmar.bishop"
 version = "0.1.0"
 category = "Game"
 short_description = "A lightweight 2D game engine built with Rust."

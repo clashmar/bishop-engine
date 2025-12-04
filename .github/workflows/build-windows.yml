@@ -15,7 +15,7 @@ jobs:
     runs-on: windows-latest
     env:
       RELEASE_TAG: v0.1.0-windows-alpha
-      RELEASE_ZIP: BishopEngine-Windows.zip 
+      RELEASE_ZIP: Bishop-Windows.zip 
 
     steps:
       - name: Checkout Repository
