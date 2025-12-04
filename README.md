@@ -3,7 +3,9 @@
 [![MacOS](https://github.com/clashmar/bishop-engine/actions/workflows/build-mac.yml/badge.svg)](https://github.com/clashmar/bishop-engine/actions/workflows/build-mac.yml)
 [![Windows](https://github.com/clashmar/bishop-engine/actions/workflows/build-windows.yml/badge.svg)](https://github.com/clashmar/bishop-engine/actions/workflows/build-windows.yml)
 
-Bishop Engine is a simple cross-platform 2D game editor for Windows and MacOS built with Rust and Macroquad.
+Bishop is a simple cross-platform 2D game editor for Windows and MacOS built with Rust and Macroquad.
+
+Please note that the current feature set is minimal and not yet suitable for production‑grade game development. Though Macroquad is the primary engine, it will eventually be patched or swapped out piece by piece. Suggestions are welcome; feel free to comment on the existing codebase and help shape the direction of this project.
 
 ## Table of Contents
 - [Releases](docs/releases.md)  

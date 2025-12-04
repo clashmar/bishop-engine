@@ -16,7 +16,7 @@ jobs:
 
     env:
       RELEASE_TAG: v0.1.0-mac-alpha
-      RELEASE_ZIP: BishopEngine-MacOS.zip 
+      RELEASE_ZIP: Bishop-MacOS.zip 
 
     steps:
       - name: Checkout Repository
@@ -36,13 +36,20 @@ jobs:
         working-directory: ./editor
         run: cargo make bundle-editor-mac
 
+      - name: Sign the Bundle
+        run: |
+          APP_PATH="target/aarch64-apple-darwin/release/bundle/osx/Bishop.app"
+          codesign --force --deep --sign - "$APP_PATH"
+
       - name: Zip Artefact
         id: zip_artifact
         run: |
           APP_DIR="target/aarch64-apple-darwin/release/bundle/osx"
-          APP_NAME="Bishop Engine.app"
+          APP_NAME="Bishop.app"
           ZIP_NAME="${{ env.RELEASE_ZIP }}"
-          (cd "$APP_DIR" && zip -r -y -q "$GITHUB_WORKSPACE/$ZIP_NAME" "$APP_NAME")
+          ditto -c -k --sequesterRsrc --keepParent \
+                "${APP_DIR}/${APP_NAME}" \
+                "${GITHUB_WORKSPACE}/${ZIP_NAME}"
         shell: bash
 
       - name: Create Release
