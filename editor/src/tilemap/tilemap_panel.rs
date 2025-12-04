@@ -64,36 +64,11 @@ impl TilemapPanel {
 
         const PADDING: f32 = 20.0;
 
-        // Create button
+        // Layout create button
         let create_label = "Create Tile";
         let create_width = measure_text(create_label, None, 20, 1.0).width + PADDING;
         let create_start = screen_width() - INSET - create_width;
         let create_rect = self.register_rect(Rect::new(create_start, INSET, create_width, BTN_HEIGHT));
-
-        if gui_button(create_rect, create_label) {
-            if self.palette.ui.open && self.palette.ui.mode == TilePaletteUiMode::Create {
-                self.palette.ui.open = false; // hide dialog
-            } else {
-                self.palette.ui = TilePaletteUi::default(); // reset fields
-                self.palette.ui.open = true;
-                self.palette.ui.mode = TilePaletteUiMode::Create;
-            }
-        }
-
-        // Edit button appears only when there is a selected palette tile
-        if !self.palette.entries.is_empty() {
-            let edit_label = "Edit";
-            let edit_width = measure_text(edit_label, None, 20, 1.0).width + PADDING;
-            let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
-            let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
-
-            if gui_button(edit_rect, edit_label) {
-                self.palette.ui.mode = TilePaletteUiMode::Edit;
-                self.palette.ui.edit_index = self.palette.selected_index;
-                self.palette.ui.edit_initialized = true;
-                self.palette.ui.open = true;
-            }
-        }
 
         // Compute the top offset for the panel
         let top_offset = create_rect.y + BTN_HEIGHT + INSET;
@@ -116,6 +91,9 @@ impl TilemapPanel {
             Color::new(0., 0., 0., 0.6),
         );
 
+        // Top/bottom/side panelling
+        self.draw_overflow_covers(inner);
+
         // Outline
         draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
 
@@ -133,6 +111,32 @@ impl TilemapPanel {
         // Background module
         let background_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
         self.background.draw(background_rect, map);
+
+        // Draw create button
+        if gui_button(create_rect, create_label) {
+            if self.palette.ui.open && self.palette.ui.mode == TilePaletteUiMode::Create {
+                self.palette.ui.open = false; // Hide dialog
+            } else {
+                self.palette.ui = TilePaletteUi::default(); // Reset fields
+                self.palette.ui.open = true;
+                self.palette.ui.mode = TilePaletteUiMode::Create;
+            }
+        }
+
+        // Edit button appears only when there is a selected palette tile
+        if !self.palette.entries.is_empty() {
+            let edit_label = "Edit";
+            let edit_width = measure_text(edit_label, None, 20, 1.0).width + PADDING;
+            let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
+            let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
+
+            if gui_button(edit_rect, edit_label) {
+                self.palette.ui.mode = TilePaletteUiMode::Edit;
+                self.palette.ui.edit_index = self.palette.selected_index;
+                self.palette.ui.edit_initialized = true;
+                self.palette.ui.open = true;
+            }
+        }
     }
 
     pub fn handle_click(&mut self, mouse_pos: Vec2, rect: Rect) -> bool {
@@ -163,5 +167,50 @@ impl TilemapPanel {
 
     pub fn is_mouse_over(&self, mouse_screen: Vec2) -> bool {
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
+    }
+
+    /// Draw the four solid‑grey mask rectangles which hide anything 
+    /// that scrolls outside the visible inspector area.
+    fn draw_overflow_covers(&self, inner: Rect) {
+        // Top cover
+        draw_rectangle(
+            self.rect.x,
+            self.rect.y,
+            self.rect.w,
+            inner.y - self.rect.y,
+            PANEL_COLOR,
+        );
+
+        // Bottom cover
+        let inner_bottom = inner.y + inner.h;
+        let panel_bottom = self.rect.y + self.rect.h;
+
+        draw_rectangle(
+            self.rect.x,
+            inner_bottom,
+            self.rect.w,
+            panel_bottom - inner_bottom,
+            PANEL_COLOR,
+        );
+        
+        // Left strip
+        draw_rectangle(
+            self.rect.x - INSET,
+            self.rect.y,
+            INSET,
+            self.rect.h,
+            PANEL_COLOR,
+        );
+        
+        // Right strip
+        let inner_right = inner.x + inner.w;
+        let panel_right = self.rect.x + self.rect.w;
+        draw_rectangle(
+            inner_right,
+            self.rect.y,
+            panel_right - inner_right,
+            self.rect.h,
+            PANEL_COLOR,
+        );
     }
 }

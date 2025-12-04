@@ -1,3 +1,4 @@
+// engine_core/src/animation/animation_system.rs
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::{
@@ -9,7 +10,8 @@ use crate::{
         entity::{Entity, entities_in_room}, 
         world_ecs::WorldEcs
     }, 
-    ecs_component
+    ecs_component, 
+    world::room::RoomId
 };
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -34,7 +36,7 @@ pub async fn update_animation_sytem(
     world_ecs: &mut WorldEcs,
     asset_manager: &mut AssetManager,
     dt: f32,
-    room_id: usize,
+    room_id: RoomId,
 ) {
     // Gather the ids of all entities that are in the current room
     let entities = entities_in_room(world_ecs, room_id);

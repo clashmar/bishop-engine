@@ -1,26 +1,81 @@
 // editor/src/room/room_editor_actions.rs
-use engine_core::{
-    animation::animation_clip::Animation, assets::{
-        asset_manager::AssetManager, 
-        sprite::Sprite
-    }, camera::game_camera::RoomCamera, ecs::{
-        component::{Collider, CurrentRoom, Position}, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, global::tile_size, lighting::{glow::Glow, light::Light}, rendering::render_room::entity_dimensions, world::room::Room
-};
-use crate::{editor_camera_controller::*, room::room_editor::RoomEditor};
+use engine_core::animation::animation_clip::Animation;
+use engine_core::lighting::glow::Glow;
+use engine_core::lighting::light::Light;
+use engine_core::assets::sprite::Sprite;
+use engine_core::ecs::component::CurrentRoom;
+use engine_core::ecs::component::Position;
+use engine_core::ecs::component::Collider;
+use engine_core::rendering::render_room::*;
+use engine_core::camera::game_camera::RoomCamera;
+use engine_core::ecs::entity::Entity;
+use engine_core::ui::text::*;
+use engine_core::world::room::*;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::assets::asset_manager::AssetManager;
+use engine_core::global::*;
 use macroquad::prelude::*;
+use engine_core::ui::widgets::*;
+use crate::gui::gui_constants::*;
+use crate::gui::menu_bar::*;
+use crate::editor_camera_controller::*;
+use crate::room::room_editor::*;
 use crate::world::coord;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
 fn thickness() -> f32 { (tile_size() * 0.175).max(1.0) }
 
 impl RoomEditor {
+    /// Draw static UI for the scene editor
+    pub fn draw_ui(
+        &mut self, 
+        asset_manager: &mut AssetManager,
+        world_ecs: &mut WorldEcs,
+        room: &mut Room
+    ) {
+        // Reset to static camera
+        set_default_camera();
+
+        match self.mode {
+            RoomEditorMode::Tilemap => {
+                // Mode selector
+                if self.mode_selector.draw().1 {
+                    self.mode = self.mode_selector.current;
+                }
+            }
+            RoomEditorMode::Scene => {
+                // Top menu background
+                self.register_rect(draw_top_panel_full());
+                
+                // Draw inspector
+                self.create_entity_requested = self.inspector.draw(
+                    asset_manager, 
+                    world_ecs,
+                    room,
+                );
+
+                // Mode selector (menu bar)
+                let (mode_rect, changed) = self.mode_selector.draw();
+                if changed {
+                    self.mode = self.mode_selector.current;
+                }
+
+                // Play‑test button (menu bar)
+                let play_label = "Play";
+                let play_width = measure_text_ui(play_label, HEADER_FONT_SIZE_20, 1.0).width + WIDGET_PADDING * 2.0;
+                let play_x = mode_rect.x + mode_rect.w + WIDGET_SPACING;
+                let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
+
+                if menu_button(play_rect, play_label, false) {
+                    self.request_play = true;
+                }
+            }
+        }
+    }
+
     /// Draw the cursor coordinates in world space.
     pub fn draw_coordinates(&self, camera: &Camera2D, room: &Room) {
         let local_grid = coord::mouse_world_grid(camera);
-
         let world_grid = local_grid + room.position;
         
         let txt = format!(
@@ -28,8 +83,13 @@ impl RoomEditor {
             world_grid.x, world_grid.y,
         );
 
+        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0);
         let margin = 10.0;
-        draw_text(&txt, margin, screen_height() - margin, 20.0, BLUE);
+
+        let x = (screen_width() - txt_metrics.width) / 2.0;
+        let y = screen_height() - margin;
+
+        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLUE);
     }
 
     /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.
@@ -130,7 +190,7 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: usize) {
+pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: RoomId) {
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let pos_store = world_ecs.get_store::<Position>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
@@ -188,7 +248,7 @@ pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: usize) {
 /// Draw an icon for a `Light` that has no other visual component.
 pub fn draw_light_placeholders(
     world_ecs: &WorldEcs,
-    room_id: usize,
+    room_id: RoomId,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, _light) in world_ecs.get_store::<Light>().data.iter() {
@@ -241,7 +301,7 @@ pub fn draw_light_placeholders(
 pub fn draw_glow_placeholders(
     world_ecs: &WorldEcs, 
     asset_manager: &mut AssetManager,
-    room_id: usize,
+    room_id: RoomId,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     for (entity, glow) in world_ecs.get_store::<Glow>().data.iter() {

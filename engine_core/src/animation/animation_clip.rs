@@ -1,5 +1,5 @@
 // engine_core/src/animation/animation_clip.rs
-use strum_macros::{EnumIter, EnumString};
+use strum_macros::EnumIter;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::{Path, PathBuf}};
@@ -90,7 +90,7 @@ impl Animation {
 }
 
 /// Logical name of a clip.
-#[derive(EnumIter, EnumString, Debug, Default, 
+#[derive(EnumIter, Debug, Default, 
     Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ClipId {
     #[default]

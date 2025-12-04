@@ -1,12 +1,14 @@
 // editor/src/controls/command_manager.rs
-
 use std::fmt::Debug;
+use crate::{editor::EditorMode, global::with_editor};
 
 /// Trait for every undoable command.
 pub trait Command: Debug {
     fn execute(&mut self);
     fn undo(&mut self);
+    fn mode(&self) -> EditorMode;
 }
+
 /// Stores and manages undo/redo stacks.
 pub struct CommandManager {
     pending: Vec<Box<dyn Command>>,
@@ -32,17 +34,52 @@ impl CommandManager {
 
     /// Undo a command on the undo stack and push it onto the redo stack.
     pub fn undo(&mut self) {
-        if let Some(mut command) = self.undo_stack.pop() {
-            command.undo();
-            self.redo_stack.push(command);
+        // Get the current editor mode
+        let current_mode = with_editor(|editor| editor.mode);
+
+        // Temp buffer
+        let mut buffer: Vec<Box<dyn Command>> = Vec::new();
+
+        // Find the first command that matches the current mode
+        while let Some(mut command) = self.undo_stack.pop() {
+            if command.mode() == current_mode {
+                command.undo();
+                self.redo_stack.push(command);
+                break;
+            } else {
+                // Push non matching commands to the temp
+                buffer.push(command);
+            }
+        }
+
+        // Push the temp back to the undo stack
+        while let Some(command) = buffer.pop() {
+            self.undo_stack.push(command);
         }
     }
 
     /// Redo a command on the redo stack and push it onto the undo stack.
     pub fn redo(&mut self) {
-        if let Some(mut command) = self.redo_stack.pop() {
-            command.execute();
-            self.undo_stack.push(command);
+        // Get the current editor mode
+        let current_mode = with_editor(|editor| editor.mode);
+
+        // Temp buffer
+        let mut buffer: Vec<Box<dyn Command>> = Vec::new();
+
+        // Find the first command that matches the current mode
+        while let Some(mut cmd) = self.redo_stack.pop() {
+            if cmd.mode() == current_mode {
+                cmd.execute();
+                self.undo_stack.push(cmd);
+                break;
+            } else {
+                buffer.push(cmd);
+            }
+        }
+
+        // Push the temp back to the redo stack
+        while let Some(cmd) = buffer.pop() {
+            self.redo_stack.push(cmd);
         }
     }
 

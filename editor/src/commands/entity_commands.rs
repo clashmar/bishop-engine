@@ -1,11 +1,12 @@
 // editor/src/commands/entity_commands.rs
-use engine_core::ecs::{
+use crate::editor::EditorMode;
+use engine_core::{ecs::{
     capture::capture_entity, 
     component::Position, 
     component_registry::ComponentRegistry, 
     entity::Entity, 
     world_ecs::WorldEcs
-};
+}, world::room::RoomId};
 use macroquad::prelude::*;
 use crate::{
     commands::command_manager::Command, 
@@ -37,6 +38,10 @@ impl Command for DeleteEntityCmd {
                 restore_entity(world_ecs, self.entity, bag);
             });
         }
+    }
+
+    fn mode(&self) -> EditorMode { 
+        EditorMode::Room(RoomId::default())
     }
 }
 
@@ -112,7 +117,7 @@ impl Command for PasteEntityCmd {
 
         let entity = self.entity.expect("Entity must be set.");
 
-        // Populate the component stores for that UUID
+        // Populate the component stores for that id
         with_editor(|editor| {
             let world = &mut editor.game.current_world_mut().world_ecs;
             for (type_name, ron) in snapshot {
@@ -127,17 +132,17 @@ impl Command for PasteEntityCmd {
                 // Run any post‑create logic the component may have
                 (component_reg.post_create)(&mut *boxed);
 
-                // Insert it into the world under the same UUID
+                // Insert it into the world under the same id
                 (component_reg.inserter)(world, entity, boxed);
             }
 
-            // Select the entity in the UI
+            // Select the entity in the ui
             editor.room_editor.set_selected_entity(Some(entity));
         });
     }
 
     fn undo(&mut self) {
-        // Remove the entity but keep the UUID for a later redo
+        // Remove the entity but keep the id for a later redo
         if let Some(entity) = self.entity {
             with_editor(|editor| {
                 let world = &mut editor.game.current_world_mut().world_ecs;
@@ -145,6 +150,10 @@ impl Command for PasteEntityCmd {
                 editor.room_editor.set_selected_entity(None);
             });
         }
+    }
+
+    fn mode(&self) -> EditorMode { 
+        EditorMode::Room(RoomId::default())
     }
 }
 
@@ -195,5 +204,9 @@ impl Command for MoveEntityCmd {
             Self::set_position(world_ecs, self.entity, self.from);
         });
         self.executed = false;
+    }
+
+    fn mode(&self) -> EditorMode { 
+        EditorMode::Room(RoomId::default())
     }
 }

@@ -2,10 +2,12 @@
 use std::time::Instant;
 use macroquad::prelude::*;
 
+use crate::ui::{text::{draw_text_ui, measure_text_ui}, widgets::DEFAULT_FONT_SIZE_16};
+
 const PADDING: f32 = 20.0;
 
 /// A simple toast that disappears after a short delay.
-pub struct WarningToast {
+pub struct Toast {
     /// Text that will be shown.
     pub msg: String,
     /// When the toast was created.
@@ -16,7 +18,7 @@ pub struct WarningToast {
     pub active: bool,
 }
 
-impl WarningToast {
+impl Toast {
     /// Create a new toast that lives for `duration` seconds.
     pub fn new<S: Into<String>>(msg: S, duration: f32) -> Self {
         Self {
@@ -38,14 +40,14 @@ impl WarningToast {
             return;
         }
         
-        let txt = measure_text(&self.msg, None, 18, 1.0);
+        let txt = measure_text_ui(&self.msg, DEFAULT_FONT_SIZE_16, 1.0);
 
         // Top left
         let bg_rect = Rect::new(
-            PADDING,                         
-            PADDING,                        
-            txt.width + PADDING * 2.0,       
-            txt.height + PADDING * 2.0,      
+            PADDING,                                          
+            screen_height() - PADDING - (txt.height + PADDING),
+            txt.width + PADDING * 2.0,
+            txt.height + PADDING,
         );
 
         // Background
@@ -58,11 +60,11 @@ impl WarningToast {
         );
 
         // Text
-        draw_text(
+        draw_text_ui(
             &self.msg,
             bg_rect.x + PADDING,
             bg_rect.y + txt.height + PADDING / 2.0,
-            18.0,
+            DEFAULT_FONT_SIZE_16,
             WHITE,
         );
     }

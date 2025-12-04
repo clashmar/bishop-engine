@@ -1,26 +1,28 @@
-use engine_core::camera::game_camera::RoomCamera;
 // editor/src/gui/inspector/inspector_panel.rs
-use engine_core::ecs::component::{CurrentRoom, Player, Position};
+use engine_core::camera::game_camera::RoomCamera;
+use engine_core::ecs::component::*;
+use engine_core::ui::text::*;
 use engine_core::world::room::Room;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::{
     assets::asset_manager::AssetManager,
     ecs::{
-        component_registry::{COMPONENTS, ComponentRegistry},
+        component_registry::*,
         entity::Entity,
-        module::{CollapsibleModule, InspectorModule},
+        module::*,
         module_factory::MODULES,
         world_ecs::WorldEcs,
     },
 };
-use crate::commands::entity_commands::{DeleteEntityCmd, copy_entity};
-use crate::controls::controls::Controls;
+use engine_core::controls::controls::Controls;
+use crate::commands::entity_commands::*;
 use crate::global::push_command;
 use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::inspector::transform_module::TransformModule;
+use crate::gui::menu_bar::menu_button;
 
 const SCROLL_SPEED: f32 = 5.0; 
 
@@ -98,7 +100,7 @@ impl InspectorPanel {
     }
 
     /// Render the panel and any visible sub‑modules
-    /// Returns true if 'Create' was pressed
+    /// Returns true if 'Create' was pressed.
     pub fn draw(
         &mut self,
         asset_manager: &mut AssetManager,
@@ -120,18 +122,18 @@ impl InspectorPanel {
             let add_label = "Add Component";
 
             // Measure text to obtain proper button widths
-            let txt_remove = measure_text(remove_label, None, 20, 1.0);
-            let txt_add = measure_text(add_label, None, 20, 1.0);
-            let btn_w_remove = txt_remove.width + PADDING;
-            let btn_w_add = txt_add.width + PADDING;
+            let txt_remove = measure_text_ui(remove_label, HEADER_FONT_SIZE_20, 1.0);
+            let txt_add = measure_text_ui(add_label, HEADER_FONT_SIZE_20, 1.0);
+            let btn_w_remove = txt_remove.width + WIDGET_PADDING;
+            let btn_w_add = txt_add.width + WIDGET_PADDING;
 
             // Compute left‑most X so the pair stays inside the screen
-            let total_w = btn_w_remove + btn_w_add + SPACING;
+            let total_w = btn_w_remove + btn_w_add + WIDGET_SPACING;
             let x_start = screen_width() - INSET - total_w;
 
             // Add Component button
             let add_rect = self.register_rect(Rect::new(
-                x_start + btn_w_remove + SPACING,
+                x_start + btn_w_remove + WIDGET_SPACING,
                 INSET,
                 btn_w_add,
                 BTN_HEIGHT,
@@ -187,7 +189,7 @@ impl InspectorPanel {
                             module.draw(sub_rect, asset_manager, world_ecs, entity);
                         }
 
-                        y += h + SPACING;
+                        y += h + WIDGET_SPACING;
                     }
                 }
 
@@ -215,7 +217,8 @@ impl InspectorPanel {
             }
             
             // Draw buttons at the top after the covers
-            if gui_button(add_rect, add_label) {
+            // Add entity
+            if menu_button(add_rect, add_label, false) {
                 if self.can_show_any_component(world_ecs) {
                     self.add_mode = !self.add_mode;
                 }
@@ -226,7 +229,7 @@ impl InspectorPanel {
             if !(world_ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                if gui_button(remove_rect, remove_label) || Controls::delete() && !input_is_focused() {
+                if menu_button(remove_rect, remove_label, false) || Controls::delete() && !input_is_focused() {
                     let command = DeleteEntityCmd {
                         entity,
                         saved: None,
@@ -240,26 +243,26 @@ impl InspectorPanel {
             }
         } else {
             // No entity selected
-            let create_label = "Create";
-            let txt_create = measure_text(create_label, None, 20, 1.0);
-            let create_btn = self.register_rect(Rect::new(
-                self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - PADDING,
+            let create_label = "Create Entity";
+            let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
+            let create_btn = Rect::new(
+                self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - (WIDGET_PADDING * 2.0),
                 self.rect.y + BTN_MARGIN,
-                txt_create.width + PADDING,
+                txt_create.width + WIDGET_PADDING * 2.0,
                 BTN_HEIGHT,
-            ));
+            );
 
             let add_cam_label = "Add Camera";
-            let txt_cam = measure_text(add_cam_label, None, 20, 1.0);
-            let cam_btn_w = txt_cam.width + PADDING;
-            let cam_btn = self.register_rect(Rect::new(
-                create_btn.x - SPACING - cam_btn_w,
+            let txt_cam = measure_text_ui(add_cam_label, HEADER_FONT_SIZE_20, 1.0);
+            let cam_btn_w = txt_cam.width + WIDGET_PADDING * 2.0;
+            let cam_btn = Rect::new(
+                create_btn.x - WIDGET_SPACING - cam_btn_w,
                 create_btn.y,
                 cam_btn_w,
                 BTN_HEIGHT,
-            ));
+            );
 
-            if gui_button(cam_btn, add_cam_label) {
+            if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
                 let _ = world_ecs
                     .create_entity()
@@ -273,7 +276,7 @@ impl InspectorPanel {
             let slider_width = 150.0;
             let slider_rect = self.register_rect(Rect::new(
                 create_btn.x + create_btn.w - slider_width,
-                create_btn.y + BTN_HEIGHT + 5.0,
+                create_btn.y + BTN_HEIGHT + 20.0,
                 slider_width,
                 BTN_HEIGHT,
             ));
@@ -292,12 +295,12 @@ impl InspectorPanel {
             }
 
             let txt_val = format!("{:.2}", room.darkness);
-            let txt_measure = measure_text(&txt_val, None, 20, 1.0);
-            let txt_x = slider_rect.x - txt_measure.width - SPACING;
+            let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
+            let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;
-            draw_text(&txt_val, txt_x, txt_y, 20.0, WHITE);
+            draw_text_ui(&txt_val, txt_x, txt_y, 20.0, WHITE);
 
-            return gui_button(create_btn, create_label);
+            return menu_button(create_btn, create_label, false);
         }
 
         // Process pending component addition
@@ -345,10 +348,10 @@ impl InspectorPanel {
         const DEFAULT_MENU_W: f32 = 200.0;
         const MIN_INSET: f32 = 10.0;
 
-        // Determine width (widest entry + padding)
+        // Determine width
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
-            let txt = measure_text(reg.type_name, None, 20, 1.0);
+            let txt = measure_text_ui(reg.type_name, DEFAULT_FONT_SIZE_16, 1.0);
             let w = txt.width + 20.0;
             if w > needed_w {
                 needed_w = w;
@@ -362,7 +365,7 @@ impl InspectorPanel {
         // Height depends on number of entries
         let menu_h = (shown.len() as f32) * ENTRY_H + 10.0;
 
-        // Horizontal position: shift left if it would overflow the right edge
+        // Horizontal position
         let mut menu_x = button_rect.x;
         if menu_x + menu_w > screen_width() - MIN_INSET {
             menu_x = screen_width() - MIN_INSET - menu_w;
@@ -370,7 +373,7 @@ impl InspectorPanel {
         if menu_x < MIN_INSET {
             menu_x = MIN_INSET;
         }
-        // Vertical position: just directly below the button
+        // Vertical position
         let menu_y = button_rect.y + button_rect.h + MIN_INSET;
         let menu_rect = self.register_rect(Rect::new(menu_x, menu_y, menu_w, menu_h));
 
@@ -382,6 +385,7 @@ impl InspectorPanel {
             menu_rect.h,
             Color::new(0.0, 0.0, 0.0, 0.8),
         );
+        
         draw_rectangle_lines(menu_rect.x, menu_rect.y, menu_rect.w, menu_rect.h, 2.0, WHITE);
 
         // Entries
@@ -429,21 +433,16 @@ impl InspectorPanel {
         || (self.rect.contains(mouse_screen) && self.target.is_some())
     }
 
-    /// Checks whether the inspector was clicked during this frame.
-    pub fn was_clicked(&self) -> bool {
-        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over()
-    }
-
     fn total_content_height(&self, world_ecs: &WorldEcs, entity: Entity) -> f32 {
         let mut total_content_h = 0.0;
         for module in &self.modules {
             if module.visible(world_ecs, entity) {
-                total_content_h += module.height() + SPACING;
+                total_content_h += module.height() + WIDGET_SPACING;
             }
         }
         // Remove the trailing spacing that we added after the last module
         if total_content_h > 0.0 {
-            total_content_h -= SPACING;
+            total_content_h -= WIDGET_SPACING;
         }
 
         total_content_h += INSET * 2.0; // Top and bottom inset
@@ -454,15 +453,13 @@ impl InspectorPanel {
     /// Draw the four solid‑grey mask rectangles which hide anything 
     /// that scrolls outside the visible inspector area.
     fn draw_overflow_covers(&self, inner: Rect) {
-        const COVER_COLOUR: Color = GRAY;
-
         // Top cover
         draw_rectangle(
             self.rect.x,
             self.rect.y,
             self.rect.w,
             inner.y - self.rect.y,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
 
         // Bottom cover
@@ -474,7 +471,7 @@ impl InspectorPanel {
             inner_bottom,
             self.rect.w,
             panel_bottom - inner_bottom,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
         
         // Left strip
@@ -483,7 +480,7 @@ impl InspectorPanel {
             self.rect.y,
             INSET,
             self.rect.h,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
         
         // Right strip
@@ -494,7 +491,7 @@ impl InspectorPanel {
             self.rect.y,
             panel_right - inner_right,
             self.rect.h,
-            COVER_COLOUR,
+            PANEL_COLOR,
         );
     }
 }

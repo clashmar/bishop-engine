@@ -1,4 +1,5 @@
 // game/src/physics/physics_system.rs
+use engine_core::world::room::RoomId;
 use macroquad::prelude::Vec2;
 use engine_core::{
     ecs::{
@@ -19,7 +20,7 @@ pub fn update_physics(
     world_ecs: &mut WorldEcs,
     room: &Room,
     dt: f32,
-) -> Option<(Entity, usize, Vec2)> {
+) -> Option<(Entity, RoomId, Vec2)> {
     let tilemap = &room.variants[0].tilemap;
     let entities: Vec<_> = world_ecs
         .get_store::<PhysicsBody>()
