@@ -16,3 +16,8 @@ pub mod tiles;
 pub mod world;
 pub mod ui;
 pub mod controls;
+
+/// Simple helper used only for the demo test.
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
