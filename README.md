@@ -12,29 +12,13 @@ Bishop Engine is a simple cross-platform 2D game editor for Windows and MacOS bu
 | 4 | [Upcoming Features](#upcoming-features) |
 | 6 | [License](#license) |
 
----
-
-## docs/releases.md
-```markdown
-# Alpha Releases
-| v0.1.0-windows-alpha | 2025‑12‑04 | [placeholder‑link] |
-| v0.1.0-mac-alpha | 2025‑12‑04 | [placeholder‑link] |
-
----
-
-## docs/editor-modes.md
-
----
-
 ## Upcoming Features {#upcoming-features}
 
-1. **Lua Scripting Bridge** – Expose engine APIs to Lua with controller input mappings, scriptable objects and dynamic fields.
-2. **Audio Engine** – Sound effects, music, spatial audio.    
-3. **Full Tilemap Editor** – Multi-dimensions and perspectives, palette tools, parallax/animated backgrounds.  
-4. **Dialogue Branch Designer** – Visual node editor for NPC conversations.  
-5. **In Built Localization** – TOML-based translation management.
-
----
+**Lua Scripting Bridge** – Expose engine APIs to Lua with controller input mappings, scriptable objects and dynamic fields.
+**Audio Engine** – Sound effects, music, spatial audio.    
+**Full Tilemap Editor** – Multi-dimensions and perspectives, palette tools, parallax/animated backgrounds.  
+**Dialogue Branch Designer** – Visual node editor for NPC conversations.  
+**In Built Localization** – TOML-based translation management.
 
 ## License {#license}
 
