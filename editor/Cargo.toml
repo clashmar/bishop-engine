@@ -6,7 +6,7 @@ build = "build.rs"
 
 [[bin]]
 name = "Bishop"
-path = "src/main.rs" 
+path = "src/main.rs"  
 
 [dependencies]
 engine_core = { path = "../engine_core" }
