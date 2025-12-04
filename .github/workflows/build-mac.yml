@@ -1,0 +1,35 @@
+name: Build macOS
+
+on:
+  push:         
+    branches: ['*']   
+  pull_request: 
+    branches: ['*'] 
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          override: true
+
+      - name: Install cargo-make
+        run: cargo install cargo-make
+
+      - name: Run macOS build
+        working-directory: ./editor
+        run: cargo make bundle-editor-mac
+
+      #- name: Upload binaries
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: mac-binaries
+      #    path: editor/binaries/*
