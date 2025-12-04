@@ -1,4 +1,4 @@
-name: Build macOS
+name: Build MacOS
 
 on:
   push:         
@@ -9,6 +9,10 @@ on:
 jobs:
   build-mac:
     runs-on: macos-latest
+
+    env:
+      RELEASE_TAG: v0.1.0-mac-alpha.1
+      RELEASE_ZIP: BishopEngine-MacOS.zip 
 
     steps:
       - name: Checkout Repository
@@ -24,12 +28,28 @@ jobs:
       - name: Install cargo-make
         run: cargo install cargo-make
 
-      - name: Run macOS build
+      - name: Run MacOS Build
         working-directory: ./editor
         run: cargo make bundle-editor-mac
 
-      #- name: Upload binaries
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    name: mac-binaries
-      #    path: editor/binaries/*
+      - name: Zip macOS Artefact
+        id: zip_artifact
+        run: |
+          APP_PATH="target/aarch64-apple-darwin/release/Bishop Engine.app"
+          ZIP_NAME="${{ env.RELEASE_ZIP }}"
+          zip -r -y -q "$ZIP_NAME" "$APP_PATH"
+        shell: bash
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}        
+          name: "MacOS ${{ env.RELEASE_TAG }}"  
+          draft: false
+          prerelease: true                        
+          generate_release_notes: true
+          files: ${{ env.RELEASE_ZIP }}
+          overwrite: true                          
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
