@@ -1,6 +1,6 @@
 # Getting Started
 
-1. [**Download the latest release**](https://github.com/clashmar/bishop-engine/main/docs/releases.md).
+1. [**Download the latest release**](https://github.com/clashmar/bishop-engine/blob/main/docs/releases.md).
 
 2. **First launch** – the program will ask you where to create the *Bishop* root
    folder. You can move or re‑select this folder later with **File → Change Root Directory**.
