@@ -6,6 +6,10 @@ on:
   pull_request: 
     branches: ['*'] 
 
+permissions:
+  contents: write
+  packages: write 
+
 jobs: 
   build-windows:
     runs-on: windows-latest
@@ -29,7 +33,7 @@ jobs:
 
       - name: Run Windows Build
         working-directory: ./editor
-        run: cargo make build-game-windows
+        run: cargo make build-editor-windows
 
       - name: Zip Artefact  
         run: |
