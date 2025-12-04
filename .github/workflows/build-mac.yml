@@ -1,10 +1,9 @@
-name: MacOS
+name: macOS
 
 on:
-  push:         
-    branches: ['*']   
-  pull_request: 
-    branches: ['*'] 
+  pull_request:
+    types: [closed]
+    branches: [main] 
 
 permissions:
   contents: write
@@ -12,11 +11,11 @@ permissions:
 
 jobs:
   build-mac:
+    if: github.event.pull_request.merged == true
     runs-on: macos-latest
-
     env:
       RELEASE_TAG: v0.1.0-mac-alpha
-      RELEASE_ZIP: Bishop-MacOS.zip 
+      RELEASE_ZIP: Bishop-macOS.zip 
 
     steps:
       - name: Checkout Repository
@@ -32,7 +31,7 @@ jobs:
       - name: Install cargo-make
         run: cargo install cargo-make
 
-      - name: Run MacOS Build
+      - name: Run macOS Build
         working-directory: ./editor
         run: cargo make bundle-editor-mac
 
@@ -57,7 +56,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}        
-          name: "MacOS ${{ env.RELEASE_TAG }}"  
+          name: "macOS ${{ env.RELEASE_TAG }}"  
           draft: false
           prerelease: true                        
           generate_release_notes: true
