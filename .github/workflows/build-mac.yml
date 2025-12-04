@@ -1,4 +1,4 @@
-name: Build MacOS
+name: MacOS
 
 on:
   push:         
@@ -36,12 +36,13 @@ jobs:
         working-directory: ./editor
         run: cargo make bundle-editor-mac
 
-      - name: Zip macOS Artefact
+      - name: Zip Artefact
         id: zip_artifact
         run: |
-          APP_PATH="target/aarch64-apple-darwin/release/bundle/osx/Bishop Engine.app"
+          APP_DIR="target/aarch64-apple-darwin/release/bundle/osx"
+          APP_NAME="Bishop Engine.app"
           ZIP_NAME="${{ env.RELEASE_ZIP }}"
-          zip -r -y -q "$ZIP_NAME" "$APP_PATH"
+          (cd "$APP_DIR" && zip -r -y -q "$GITHUB_WORKSPACE/$ZIP_NAME" "$APP_NAME")
         shell: bash
 
       - name: Create Release
