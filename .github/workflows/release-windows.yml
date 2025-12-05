@@ -1,0 +1,70 @@
+name: Windows Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main] 
+
+permissions:
+  contents: write
+  packages: write 
+
+jobs: 
+  build-windows:
+    if: github.event.pull_request.merged == true
+    runs-on: windows-latest
+    env:
+      RELEASE_ZIP: Bishop-Windows.zip 
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install TinyTOML 
+        run: cargo install toml-cli --locked
+
+      - name: Get RELEASE_TAG from Cargo.toml
+        id: tag_from_toml
+        run: |
+          CARGO_TOML=editor/Cargo.toml
+          VERSION=$(toml get "$CARGO_TOML" package.version -r)
+          TAG="v${VERSION}-windows"
+          echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          override: true
+
+      - name: Install cargo-make
+        run: cargo install cargo-make
+
+      - name: Run Windows Build
+        working-directory: ./editor
+        run: cargo make release-editor-windows
+
+      - name: Zip Artefact  
+        run: |
+          $binary = "target\x86_64-pc-windows-msvc\release\Bishop.exe"
+          $zip = "${{ env.RELEASE_ZIP }}"
+          powershell -Command "Compress-Archive -Path $binary -DestinationPath $zip"
+        shell: powershell
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}        
+          name: "${{ env.RELEASE_TAG }}"  
+          draft: false
+          prerelease: true                        
+          generate_release_notes: true
+          files: ${{ env.RELEASE_ZIP }}
+          overwrite_files: true    
+          make_latest: true                      
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
