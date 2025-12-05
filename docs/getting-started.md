@@ -34,7 +34,6 @@ embedded, so the editor can be run directly.
 
 ## Source Code
 
-
 1. **Clone or fork the repository:**
 ```bash
 git clone https://github.com/clashmar/bishop-engine.git
@@ -47,12 +46,16 @@ cd bishop-engine
 ```bash
 cargo install cargo-make
 ```
-4. Build and run the editor:
+4. **Make the Release**
 ```bash
-cargo run -p editor --release
+cd editor
+cargo make release-editor-mac
+or
+cargo make release-editor-windows
 ```
 
-The save root for projects will be created at the root of the workspace at `./games`
+Cargo make ensures that the game binaries needed to playtest and export are built and copied to the correct location.
+The save root for projects will be created at the root of the workspace at `./games`.
 
 
 
