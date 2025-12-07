@@ -1,23 +1,18 @@
 // engine_core/src/ecs/generic_module.rs
+use crate::ecs::reflect_field::*;
+use crate::game::game::*;
+use crate::ecs::entity::Entity;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::ecs::component::Component;
+use crate::ecs::reflect_field::Reflect;
 use crate::ecs::module::InspectorModule;
 use crate::ui::text::*;
 use crate::ui::widgets::*;
-use crate::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        component::Component,
-        entity::Entity, 
-        reflect::{FieldValue, Reflect}, 
-        world_ecs::WorldEcs
-    }
-};
 use macroquad::prelude::*;
 use std::collections::HashMap;
-use std::{borrow::Cow, marker::PhantomData};
-
+use std::marker::PhantomData;
 
 const TOP_PADDING: f32 = 10.0;
-const FIELD_HEIGHT: f32 = 30.0;
 const SPACING: f32 = 5.0;
 const LABEL_PADDING: f32 = 10.0;
 const MIN_WIDGET_WIDTH: f32 = 80.0;
@@ -51,15 +46,21 @@ where
     fn draw(
         &mut self,
         rect: Rect,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtx,
         entity: Entity,
     ) {
+        let world_ecs = &mut game_ctx.cur_world_ecs;
+
         // Grab a mutable reference to the component instance
-        let component = world_ecs
-            .get_store_mut::<T>()
-            .get_mut(entity)
-            .expect("Component must exist for selected entity");
+        let component = {
+            match world_ecs
+                .get_store_mut::<T>()
+                .get_mut(entity)
+            {
+                Some(c) => c,
+                None => return,
+            }
+        };
 
         // Layout constants
         let mut y = rect.y + TOP_PADDING;
@@ -74,7 +75,8 @@ where
                 .or_insert_with(WidgetId::default);
 
             // Prepare the field label
-            let label = parse_field_name(field.name);
+            let display_name = parse_field_name(field.name);
+            let label = format!("{} :", display_name);
             let label_w = measure_text_ui(&label, FONT_SIZE, 1.0).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
@@ -89,12 +91,12 @@ where
             };
 
             let widget_w = (rect.x + rect.w) - widget_x - 10.0;
-            let widget_rect = Rect::new(widget_x, y, widget_w.max(MIN_WIDGET_WIDTH), FIELD_HEIGHT);
+            let widget_rect = Rect::new(widget_x, y, widget_w.max(MIN_WIDGET_WIDTH), DEFAULT_FIELD_HEIGHT);
 
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
                 (FieldValue::SpriteId(id), _) => {
-                    gui_sprite_picker(widget_rect, id, asset_manager);
+                    gui_sprite_picker(widget_rect, id, game_ctx.asset_manager);
                 }
                 (FieldValue::Text(txt), _) => {
                     let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());
@@ -115,8 +117,14 @@ where
                     }
                 }
                 (FieldValue::Bool(b), _) => {
+                    let cb_rect = Rect::new(
+                        widget_rect.x,
+                        widget_rect.y + 7.5,
+                        DEFAULT_CHECKBOX_DIMS,
+                        DEFAULT_CHECKBOX_DIMS,
+                    );
                     let mut v = *b;
-                    if gui_checkbox(widget_rect, &mut v) {
+                    if gui_checkbox(cb_rect, &mut v) {
                         *b = v;
                     }
                 }
@@ -198,7 +206,7 @@ where
                 }
             }
 
-            y += FIELD_HEIGHT + SPACING;
+            y += widget_rect.h + SPACING;
         }
     }
 
@@ -209,7 +217,7 @@ where
         let field_count = temp.fields().len() as f32;
 
         // Total height = top padding + (field height + spacing) * count
-        TOP_PADDING + field_count * (FIELD_HEIGHT + SPACING)
+        TOP_PADDING + field_count * (DEFAULT_FIELD_HEIGHT + SPACING)
     }
 
     fn removable(&self) -> bool { true }
@@ -217,51 +225,4 @@ where
     fn remove(&mut self, world_ecs: &mut WorldEcs, entity: Entity) {
         world_ecs.get_store_mut::<T>().remove(entity);
     }
-}
-
-pub fn parse_field_name(name: &str) -> Cow<str> {
-    // Fast path
-    if !name.contains('_')
-        && name
-            .chars()
-            .next()
-            .map(|c| c.is_ascii_uppercase())
-            .unwrap_or(false)
-    {
-        return Cow::Borrowed(name);
-    }
-
-    // Split on '_' and capitalise each segment
-    let mut parts = name.split('_').filter(|s| !s.is_empty());
-
-    // Build the first part (to avoid an extra allocation when possible)
-    let first = match parts.next() {
-        Some(p) => {
-            let mut chars = p.chars();
-            let first_char = chars.next().map(|c| c.to_ascii_uppercase());
-            let rest: String = chars.collect();
-            match first_char {
-                Some(f) => format!("{}{}", f, rest),
-                None => String::new(),
-            }
-        }
-        None => return Cow::Borrowed(name), // empty input
-    };
-
-    // Append the remaining parts, each preceded by a space
-    let result = parts.fold(first, |mut acc, part| {
-        let mut chars = part.chars();
-        let first_char = chars.next().map(|c| c.to_ascii_uppercase());
-        let rest: String = chars.collect();
-        match first_char {
-            Some(f) => {
-                acc.push(' ');
-                acc.push_str(&format!("{}{}", f, rest));
-            }
-            None => {}
-        }
-        acc
-    });
-
-    Cow::Owned(result)
 }

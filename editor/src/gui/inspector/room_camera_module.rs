@@ -1,18 +1,14 @@
 // editor/src/gui/inspector/camera_module.rs
+use engine_core::ecs::entity::Entity;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::ecs::module::InspectorModule;
+use engine_core::game::game::GameCtx;
 use strum::IntoEnumIterator;
 use engine_core::{camera::game_camera::*, ui::text::*};
 use engine_core::ecs::module::CollapsibleModule;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        module::InspectorModule, 
-        world_ecs::WorldEcs
-    }
-};
 
 pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 
@@ -32,10 +28,11 @@ impl InspectorModule for RoomCameraModule {
     fn draw(
         &mut self,
         rect: Rect,
-        _asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtx,
         entity: Entity,
     ) {
+        let world_ecs = &mut game_ctx.cur_world_ecs;
+
         let cam = world_ecs
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");

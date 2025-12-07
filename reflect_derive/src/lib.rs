@@ -56,7 +56,7 @@ pub fn derive_reflect(input: TokenStream) -> TokenStream {
         };
 
         quote! {
-            <#ty as crate::ecs::reflect::ReflectField>::field_info(
+            <#ty as crate::ecs::reflect_field::ReflectField>::field_info(
                 &mut self.#field_name,
                 #field_str
             )
@@ -69,8 +69,8 @@ pub fn derive_reflect(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         // The generated impl lives in the same crate that defines `Reflect`
-        impl #impl_generics crate::ecs::reflect::Reflect for #name #ty_generics #where_clause {
-            fn fields(&mut self) -> ::std::vec::Vec<crate::ecs::reflect::FieldInfo<'_>> {
+        impl #impl_generics crate::ecs::reflect_field::Reflect for #name #ty_generics #where_clause {
+            fn fields(&mut self) -> ::std::vec::Vec<crate::ecs::reflect_field::FieldInfo<'_>> {
                 vec![
                     #(#field_infos),*
                 ]

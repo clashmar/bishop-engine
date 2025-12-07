@@ -1,20 +1,15 @@
 // editor/src/gui/inspector/inspector_panel.rs
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::ecs::component_registry::*;
+use engine_core::game::game::*;
+use engine_core::ecs::module_factory::MODULES;
+use engine_core::ecs::module::*;
+use engine_core::ecs::entity::Entity;
 use engine_core::camera::game_camera::RoomCamera;
 use engine_core::ecs::component::*;
 use engine_core::ui::text::*;
-use engine_core::world::room::Room;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
-use engine_core::{
-    assets::asset_manager::AssetManager,
-    ecs::{
-        component_registry::*,
-        entity::Entity,
-        module::*,
-        module_factory::MODULES,
-        world_ecs::WorldEcs,
-    },
-};
 use engine_core::controls::controls::Controls;
 use crate::commands::entity_commands::*;
 use crate::global::push_command;
@@ -60,7 +55,6 @@ impl InspectorPanel {
             PlayerModule::default(),
         ));
 
-        // Wrap each concrete module in a CollapsibleModule
         modules.push(Box::new(
             CollapsibleModule::new(TransformModule::default()).with_title("Transform"),
         ));
@@ -103,9 +97,7 @@ impl InspectorPanel {
     /// Returns true if 'Create' was pressed.
     pub fn draw(
         &mut self,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
-        room: &mut Room,
+        game_ctx: &mut GameCtx
     ) -> bool {
         self.active_rects.clear();
    
@@ -114,7 +106,7 @@ impl InspectorPanel {
         // When an entity is selected we show “Remove” and “Add Component”
         if let Some(entity) = self.target {
             if Controls::copy() {
-                copy_entity(world_ecs, entity);
+                copy_entity(game_ctx.cur_world_ecs, entity);
             }
 
             // Labels
@@ -141,7 +133,7 @@ impl InspectorPanel {
 
             // Draw the drop‑down menu when in add mode
             if self.add_mode {
-                self.draw_add_component_menu(add_rect, world_ecs);
+                self.draw_add_component_menu(add_rect, game_ctx.cur_world_ecs);
             }
 
             // Normal inspector UI (hidden while add_mode is true)
@@ -166,7 +158,7 @@ impl InspectorPanel {
                     Color::new(0., 0., 0., 0.6),
                 );
 
-                let total_content_h = self.total_content_height(&world_ecs, entity);
+                let total_content_h = self.total_content_height(&game_ctx.cur_world_ecs, entity);
 
                 if inner.contains(mouse_position().into()) {
                     let (_, dy) = mouse_wheel();
@@ -180,13 +172,13 @@ impl InspectorPanel {
                 // Render modules inside the scroll‑view
                 let mut y = inner.y + INSET - self.scroll_offset;
                 for module in &mut self.modules {
-                    if module.visible(world_ecs, entity) {
+                    if module.visible(game_ctx.cur_world_ecs, entity) {
                         let h = module.height();
                         
                         // Only draw when the module intersects the visible area
                         if y + h > inner.y && y < inner.y + inner.h {
                             let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
-                            module.draw(sub_rect, asset_manager, world_ecs, entity);
+                            module.draw(sub_rect, game_ctx, entity);
                         }
 
                         y += h + WIDGET_SPACING;
@@ -219,14 +211,14 @@ impl InspectorPanel {
             // Draw buttons at the top after the covers
             // Add entity
             if menu_button(add_rect, add_label, false) {
-                if self.can_show_any_component(world_ecs) {
+                if self.can_show_any_component(game_ctx.cur_world_ecs) {
                     self.add_mode = !self.add_mode;
                 }
             }
 
             // Remove button
             // Don't show remove for player entity
-            if !(world_ecs.get_store::<Player>().contains(entity)) {
+            if !(game_ctx.cur_world_ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
                 if menu_button(remove_rect, remove_label, false) || Controls::delete() && !input_is_focused() {
@@ -264,11 +256,11 @@ impl InspectorPanel {
 
             if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
-                let _ = world_ecs
+                let _ = game_ctx.cur_world_ecs
                     .create_entity()
-                    .with(RoomCamera::new(room.id))
-                    .with(Position { position: room.position })
-                    .with(CurrentRoom(room.id))
+                    .with(RoomCamera::new(game_ctx.cur_room.id))
+                    .with(Position { position: game_ctx.cur_room.position })
+                    .with(CurrentRoom(game_ctx.cur_room.id))
                     .finish();
             }
 
@@ -286,15 +278,15 @@ impl InspectorPanel {
                 slider_rect,
                 0.0,
                 1.0,
-                room.darkness,                      
+                game_ctx.cur_room.darkness,                      
             );
 
             if changed {
                 // Clamp just in case and write back to the room
-                room.darkness = new_val.clamp(0.0, 1.0);
+                game_ctx.cur_room.darkness = new_val.clamp(0.0, 1.0);
             }
 
-            let txt_val = format!("{:.2}", room.darkness);
+            let txt_val = format!("{:.2}", game_ctx.cur_room.darkness);
             let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
             let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;
@@ -306,7 +298,7 @@ impl InspectorPanel {
         // Process pending component addition
         if let (Some(name), Some(entity)) = (self.pending_add.take(), self.target) {
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == name) {
-                (reg.factory)(world_ecs, entity);
+                (reg.factory)(game_ctx.cur_world_ecs, entity);
             } else {
                 eprintln!("Component `{}` not found in registry", name);
             }

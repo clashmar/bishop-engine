@@ -1,16 +1,12 @@
 // editor/src/gui/inspector/transform_module.rs
+use engine_core::ecs::module::InspectorModule;
+use engine_core::ecs::component::Position;
+use engine_core::ecs::entity::Entity;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::game::game::GameCtx;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        component::Position, 
-        entity::Entity, 
-        module::InspectorModule, 
-        world_ecs::WorldEcs
-    }
-};
 
 #[derive(Default)]
 pub struct TransformModule {
@@ -38,7 +34,7 @@ impl TransformModule {
 
         // X
         let x_label = Rect::new(rect.x, rect.y, label_w, field_h);
-        draw_text_ui("X:", x_label.x + 2.0, x_label.y + 22.0, 18.0, FIELD_TEXT_COLOR);
+        draw_text_ui("X :", x_label.x + 2.0, x_label.y + 22.0, 18.0, FIELD_TEXT_COLOR);
         let x_field = Rect::new(
             x_label.x + label_w + spacing,
             rect.y,
@@ -54,7 +50,7 @@ impl TransformModule {
             label_w,
             field_h,
         );
-        draw_text_ui("Y:", y_label.x + 2.0, y_label.y + 22.0, 18.0, FIELD_TEXT_COLOR);
+        draw_text_ui("Y :", y_label.x + 2.0, y_label.y + 22.0, 18.0, FIELD_TEXT_COLOR);
         let y_field = Rect::new(
             y_label.x + label_w + spacing,
             rect.y,
@@ -81,13 +77,14 @@ impl InspectorModule for TransformModule {
     fn draw(
         &mut self,
         rect: Rect,
-        _asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtx,
         entity: Entity,
     ) {
+        let world_ecs = &mut game_ctx.cur_world_ecs;
+
         // Show the current world position
         if let Some(_pos) = world_ecs.get::<Position>(entity) {
-            let readout = format!("World position:");
+            let readout = format!("World position :");
             draw_text_ui(&readout, rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
 

@@ -1,24 +1,17 @@
+// editor/src/gui/inspector/animation_module.rs
+use engine_core::ecs::module::CollapsibleModule;
+use engine_core::ecs::module_factory::ModuleFactoryEntry;
+use engine_core::ui::text::*;
+use engine_core::game::game::*;
+use engine_core::animation::animation_system::*;
+use engine_core::animation::animation_clip::*;
+use engine_core::ecs::entity::Entity;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::ecs::module::InspectorModule;
+use engine_core::ui::toast::Toast;
+use engine_core::ui::widgets::*;
 use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
 use strum::IntoEnumIterator;
-use engine_core::{
-    animation::{
-            animation_clip::{
-            Animation, ClipDef, 
-            ClipId, 
-            ClipState, 
-            VariantFolder
-        }, 
-        animation_system::CurrentFrame
-    }, 
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        module::{CollapsibleModule, InspectorModule}, 
-        module_factory::ModuleFactoryEntry, 
-        world_ecs::WorldEcs
-    }, 
-    ui::{text::*, toast::Toast, widgets::*}
-};
 use macroquad::prelude::*;
 use crate::gui::gui_constants::*;
 
@@ -61,13 +54,16 @@ impl InspectorModule for AnimationModule {
     fn draw(
         &mut self,
         rect: Rect,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtx,
         entity: Entity,
     ) {
+        let world_ecs = &mut game_ctx.cur_world_ecs;
+
+        let asset_manager = &mut game_ctx.asset_manager;
+
         let mut variant_changed = false;
         let mut all_ids: Vec<ClipId> = vec![];
-        fill_all_clip_ids(&world_ecs, &mut all_ids);
+        fill_all_clip_ids(world_ecs, &mut all_ids);
         
         let animation = world_ecs
             .get_mut::<Animation>(entity)
@@ -192,7 +188,7 @@ impl InspectorModule for AnimationModule {
     }
 
     fn height(&self) -> f32 {
-        400.0
+        300.0
     }
 }
 

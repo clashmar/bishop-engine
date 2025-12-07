@@ -1,10 +1,9 @@
 // game/src/game.rs
-use crate::input::player_input::*;
+use crate::input::input_system::*;
 use crate::physics::physics_system::*;
 use engine_core::global::*;
 use engine_core::rendering::render_room::*;
 use engine_core::animation::animation_system::*;
-use engine_core::ecs::component::Velocity;
 use engine_core::ecs::component::Position;
 use engine_core::ecs::component::CurrentRoom;
 use engine_core::constants::*;
@@ -15,6 +14,7 @@ use engine_core::world::room::Room;
 use engine_core::world::transition_manager::TransitionManager;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::game::game::*;
+use engine_core::world::world::World;
 use std::collections::HashMap;
 use macroquad::prelude::*;
 
@@ -85,37 +85,37 @@ impl GameState {
 
     pub async fn run_game_loop(&mut self) {
         let mut accumulator: f32 = 0.0;
-        let mut current_window_size = (screen_width() as u32, screen_height() as u32);
+        let mut cur_window_size = (screen_width() as u32, screen_height() as u32);
 
         // Main loop
         loop {
-            // Update the render system if the window is resized
-            let cur_screen = (screen_width() as u32, screen_height() as u32);
-            if cur_screen != current_window_size {
-                self.render_system.resize(cur_screen.0, cur_screen.1);
-                current_window_size = cur_screen;
-            }
-
             // Time elapsed since last frame
             let frame_dt = get_frame_time();
             accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
-
+            
+            // Input system
+            self.poll_input();
+            
             // Fixed‑step physics
             while accumulator >= FIXED_DT {
                 self.fixed_update(FIXED_DT);
                 accumulator -= FIXED_DT;
             }
-
+            
             // Per‑frame async work (input, animation, camera …)
             self.update_async(frame_dt).await;
 
             // Render with interpolation
             let alpha = accumulator / FIXED_DT;
-            self.render(alpha);
+            self.render(alpha, &mut cur_window_size);
 
             next_frame().await;
         }
     }
+
+    pub fn poll_input(&mut self) {
+        update_player_input(&mut self.game)
+    } 
 
     pub fn fixed_update(&mut self, dt: f32) {
         // Store the current positions for the next frame
@@ -125,7 +125,7 @@ impl GameState {
 
         let player = current_world.world_ecs.get_player_entity();
 
-        // If an entity exits the current room
+        // If an entity exits the current room TODO: Decouple room transitions from physics
         if let Some((exiting_entity, target_id, new_pos)) = 
             update_physics(
                 &mut current_world.world_ecs, 
@@ -157,15 +157,7 @@ impl GameState {
             .find(|w| w.id == self.game.current_world_id)
             .expect("Current world id not present in game.");
 
-        let player = world.world_ecs.get_player_entity();
         let player_pos = world.world_ecs.get_player_position().position;
-
-        let player_vel = world.world_ecs
-            .get_store_mut::<Velocity>()
-            .get_mut(player)
-            .expect("Player must have a Velocity component");
-
-        update_player_input(player_vel);
 
         // Update the camera
         self.camera_manager.update_active(
@@ -182,8 +174,15 @@ impl GameState {
         ).await;
     }
 
-    pub fn render(&mut self, alpha: f32) {
-        clear_background(BLUE);
+    pub fn render(&mut self, alpha: f32, cur_window_size: &mut (u32, u32)) {
+        clear_background(BLACK);
+
+        // Update the render system if the window is resized
+        let cur_screen = (screen_width() as u32, screen_height() as u32);
+        if cur_screen != *cur_window_size {
+            self.render_system.resize(cur_screen.0, cur_screen.1);
+            *cur_window_size = cur_screen;
+        }
 
         let world = &mut self.game.worlds
             .iter_mut()

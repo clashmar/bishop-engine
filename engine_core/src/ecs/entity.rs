@@ -32,6 +32,7 @@ impl<'a> EntityBuilder<'a> {
         // Find the registration entry for `T`.
         let reg = iter::<ComponentRegistry>()
             .find(|r| r.type_id == TypeId::of::<ComponentStore<T>>())
+            // TODO handle expect
             .expect("Component not registered.");
 
         // Run the factory. This inserts `T` and every

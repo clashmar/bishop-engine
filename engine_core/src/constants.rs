@@ -32,6 +32,9 @@ pub const RESOURCES_FOLDER: &str = "Resources";
 /// Name of the assets folder.
 pub const ASSETS_FOLDER: &str = "assets";
 
+/// Name of the assets folder.
+pub const SCRIPTS_FOLDER: &str = "scripts";
+
 /// Name of the folder for windows-specific game assets.
 pub const WINDOWS_FOLDER: &str = "windows";
 

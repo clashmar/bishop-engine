@@ -1,5 +1,6 @@
 // editor/src/room/room_editor.rs
-use crate::gui::inspector::modal::is_modal_open;
+use engine_core::game::game::*;
+use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
@@ -205,13 +206,17 @@ impl RoomEditor {
     pub async fn draw(
         &mut self, 
         camera: &Camera2D,
-        room: &mut Room,
-        world_ecs: &mut WorldEcs, 
-        asset_manager: &mut AssetManager,
+        room_id: RoomId,
+        game: &mut Game,
         render_system: &mut RenderSystem,
     ) {
         self.request_play = false; // This is very important
         self.active_rects.clear();
+
+        let mut game_ctx = game.ctx();
+        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let room = &mut game_ctx.cur_room;
+        let asset_manager = &mut game_ctx.asset_manager;
 
         let tilemap = &mut room.variants[0].tilemap;
         let exits = &room.exits;
@@ -243,7 +248,7 @@ impl RoomEditor {
             }
             RoomEditorMode::Scene => {
                 // TODO: Pick best camera for preview from room cameras
-                let room_camera = get_room_camera(world_ecs, room.id)
+                let room_camera = get_room_camera(world_ecs, room_id)
                     .expect("This room should have at least one camera.");
 
                 let render_cam = if self.view_preview {
@@ -283,9 +288,9 @@ impl RoomEditor {
                         grid::draw_grid(camera);
                     }
                     
-                    draw_camera_placeholders(&world_ecs, room.id);
-                    draw_light_placeholders(world_ecs, room.id);
-                    draw_glow_placeholders(world_ecs, asset_manager, room.id);
+                    draw_camera_placeholders(&world_ecs, room_id);
+                    draw_light_placeholders(world_ecs, room_id);
+                    draw_glow_placeholders(world_ecs, asset_manager, room_id);
 
                     if let Some(selected_entity) = self.selected_entity {
                         if !world_ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
@@ -300,9 +305,8 @@ impl RoomEditor {
         }
 
         // Scene UI
-        self.draw_ui(asset_manager, world_ecs, room);
-        
         self.draw_coordinates(camera, room);
+        self.draw_ui(&mut game_ctx);
     }
 
     /// Handles mouse selection / movement.

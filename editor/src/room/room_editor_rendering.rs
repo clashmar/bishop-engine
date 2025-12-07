@@ -1,11 +1,10 @@
 // editor/src/room/room_editor_actions.rs
 use engine_core::animation::animation_clip::Animation;
+use engine_core::game::game::GameCtx;
 use engine_core::lighting::glow::Glow;
 use engine_core::lighting::light::Light;
 use engine_core::assets::sprite::Sprite;
-use engine_core::ecs::component::CurrentRoom;
-use engine_core::ecs::component::Position;
-use engine_core::ecs::component::Collider;
+use engine_core::ecs::component::*;
 use engine_core::rendering::render_room::*;
 use engine_core::camera::game_camera::RoomCamera;
 use engine_core::ecs::entity::Entity;
@@ -29,9 +28,7 @@ impl RoomEditor {
     /// Draw static UI for the scene editor
     pub fn draw_ui(
         &mut self, 
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
-        room: &mut Room
+        game_ctx: &mut GameCtx,
     ) {
         // Reset to static camera
         set_default_camera();
@@ -49,9 +46,7 @@ impl RoomEditor {
                 
                 // Draw inspector
                 self.create_entity_requested = self.inspector.draw(
-                    asset_manager, 
-                    world_ecs,
-                    room,
+                    game_ctx
                 );
 
                 // Mode selector (menu bar)
