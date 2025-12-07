@@ -1,4 +1,7 @@
 // engine_core/src/ui/widgets.rs
+use crate::*;
+use crate::script::script::ScriptId;
+use crate::script::script_manager::ScriptManager;
 use std::borrow::Cow;
 use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
@@ -28,6 +31,10 @@ pub const DEFAULT_FONT_SIZE_16: f32 = 16.0;
 pub const HEADER_FONT_SIZE_20: f32 = 20.0;
 pub const FIELD_TEXT_SIZE_16: f32 = 16.0; 
 pub const FIELD_TEXT_COLOR: Color = WHITE;
+pub const DEFAULT_FIELD_HEIGHT: f32 = 30.0;
+pub const DEFAULT_CHECKBOX_DIMS: f32 = 20.0;
+
+// Colours
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
 
@@ -1080,16 +1087,83 @@ pub fn gui_sprite_picker(
                 .pick_file()
             {
                 let normalized = asset_manager.normalize_path(path);
-                *id = asset_manager
-                    .get_or_load(&normalized)
-                    .expect("Could not get id for sprite path.");
-                changed = true;
+                match asset_manager.get_or_load(&normalized) {
+                    Some(new_id) => {
+                        *id = new_id;
+                        changed = true;
+                    }
+                    None => {
+                        onscreen_error!("Failed to load sprite.");
+                    }
+                }
             }
         }
     }
 
     if gui_button(remove_rect, "x") && id.0 != 0 {
         *id = SpriteId(0);
+        changed = true;
+    }
+
+    changed
+}
+
+/// UI widget that can choose a PNG from disk to update a SriteId, or remove it.
+/// Returns true if the sprite was updated.
+pub fn gui_script_picker(
+    rect: Rect,
+    id: &mut ScriptId,
+    script_manager: &mut ScriptManager,
+) -> bool {
+    let btn_label: Cow<str> = if id.0 == 0 {
+        Cow::Borrowed("[Pick File]")
+    } else {
+        let filename = script_manager
+            .script_id_to_path
+            .get(id)
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "???".to_string());
+
+        Cow::Owned(format!("[/{}]", filename))
+    };
+
+    let remove_w = rect.h; // square button
+    let picker_w = rect.w - remove_w - WIDGET_SPACING;
+
+    let picker_rect = Rect::new(rect.x, rect.y, picker_w, rect.h);
+    let remove_rect = Rect::new(
+        rect.x + rect.w - remove_w,
+        rect.y,
+        remove_w,
+        rect.h,
+    );
+
+    let mut changed = false;
+
+    if gui_button(picker_rect, &btn_label) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("Lua Scripts", &["lua"])
+                .pick_file()
+            {
+                let normalized = script_manager.normalize_path(path);
+                match script_manager.get_or_load(&normalized) {
+                    Some(new_id) => {
+                        *id = new_id;
+                        changed = true;
+                    }
+                    None => {
+                        onscreen_error!("Failed to load script.");
+                    }
+                }
+            }
+        }
+    }
+
+    if gui_button(remove_rect, "x") && id.0 != 0 {
+        *id = ScriptId(0);
         changed = true;
     }
 
@@ -1119,8 +1193,5 @@ pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
 pub fn rect_width_for_text(text: &str, font_size: f32) -> f32 {
     measure_text_ui(text, font_size, 1.0).width + WIDGET_PADDING * 2.0
 }
-
-
-
 
 

@@ -10,6 +10,7 @@ pub mod global;
 pub mod lighting;
 pub mod physics;
 pub mod rendering;
+pub mod script;
 pub mod shaders;
 pub mod storage;
 pub mod tiles;

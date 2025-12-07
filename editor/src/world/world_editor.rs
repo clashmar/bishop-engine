@@ -1,5 +1,5 @@
-use crate::gui::inspector::modal::is_modal_open;
 // editor/src/world/world_editor.rs
+use crate::gui::modal::is_modal_open;
 use crate::miniquad::CursorIcon;
 use macroquad::miniquad::window::set_mouse_cursor;
 use crate::gui::menu_bar::*;

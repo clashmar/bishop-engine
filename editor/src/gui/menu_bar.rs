@@ -1,6 +1,6 @@
 // editor/src/gui/menu_bar.rs
 use crate::gui::gui_constants::*;
-use crate::gui::inspector::modal::is_modal_open;
+use crate::gui::modal::is_modal_open;
 use std::cell::RefCell;
 use std::fmt::{self, Display};
 use engine_core::ui::text::*;

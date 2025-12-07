@@ -5,7 +5,7 @@ use crate::ecs::{
     module::{CollapsibleModule, InspectorModule},
 };
 use crate::ecs::component::Component;
-use crate::ecs::reflect::Reflect;
+use crate::ecs::reflect_field::Reflect;
 
 /// Human‑readable names of all components that have been registered with `ecs_component!`.
 pub static MODULES: Lazy<Vec<&'static ModuleFactoryEntry>> = Lazy::new(|| {

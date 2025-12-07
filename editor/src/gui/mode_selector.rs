@@ -1,7 +1,7 @@
 // editor/src/gui/mode_selector.rs
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
-use crate::gui::{gui_constants::MENU_PANEL_HEIGHT, inspector::modal::is_modal_open};
+use crate::gui::{gui_constants::MENU_PANEL_HEIGHT, modal::is_modal_open};
 
 /// A trait that each editor’s mode enum must implement.
 pub trait ModeInfo {

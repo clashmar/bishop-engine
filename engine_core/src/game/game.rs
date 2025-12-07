@@ -1,4 +1,6 @@
 // engine_core/src/game/game.rs
+use crate::script::script_manager::ScriptManager;
+use crate::{ecs::world_ecs::WorldEcs, world::room::Room};
 use crate::global::set_global_tile_size;
 use crate::game::game_map::GameMap;
 use serde::{Deserialize, Serialize};
@@ -21,6 +23,8 @@ pub struct Game {
     pub worlds: Vec<World>,
     /// Asset manager for the game.
     pub asset_manager: AssetManager,
+    /// Script manager for the game.
+    pub script_manager: ScriptManager,
     /// Id of the currently active world.
     pub current_world_id: WorldId,
     /// Tile size of the game that the world scales to.
@@ -29,7 +33,44 @@ pub struct Game {
     pub game_map: GameMap,
 }
 
+/// Temporary view into a `Game` that bundles together the 
+/// mutable systems that are usually needed at the same time.
+pub struct GameCtx<'a> {
+    // TODO: wrap in options
+    pub cur_world_ecs: &'a mut WorldEcs,
+    pub cur_room: &'a mut Room,
+    pub asset_manager: &'a mut AssetManager,
+    pub script_manager: &'a mut ScriptManager,
+}
+
 impl Game {
+    pub fn ctx<'a>(&'a mut self) -> GameCtx<'a> {
+        let world = self
+            .worlds
+            .iter_mut()
+            .find(|w| w.id == self.current_world_id)
+            .expect("There must be a current world.");
+
+        // First borrow into separate disjoint fields
+        let cur_world_ecs = &mut world.world_ecs;
+        let rooms = &mut world.rooms;
+
+        // Now you can borrow a room
+        let room_id = world.current_room_id.expect("Room id not found.");
+
+        let cur_room = rooms
+            .iter_mut()
+            .find(|r| r.id == room_id)
+            .expect("Room not found.");
+
+        GameCtx {
+            cur_world_ecs,
+            cur_room,
+            asset_manager: &mut self.asset_manager,
+            script_manager: &mut self.script_manager,
+        }
+    }
+
     /// Mutable reference to the current world.
     pub fn current_world_mut(&mut self) -> &mut World {
         self.worlds
@@ -85,5 +126,6 @@ impl Game {
     pub async fn initialize(&mut self) {
         set_global_tile_size(self.tile_size);
         AssetManager::init_manager(self).await;
+        ScriptManager::init_manager(self).await;
     }
 }

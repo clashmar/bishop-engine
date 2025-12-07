@@ -15,7 +15,7 @@ use engine_core::ui::toast::Toast;
 use crate::commands::game_editor_commands::RenameGameCmd;
 use crate::game::game_editor::GameEditor;
 use crate::global::push_command;
-use crate::gui::inspector::modal::*;
+use crate::gui::modal::*;
 use crate::room::room_editor::RoomEditor;
 use crate::world::world_editor::WorldEditor;
 use crate::editor::*;

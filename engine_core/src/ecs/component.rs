@@ -96,6 +96,7 @@ pub struct Position {
 }
 ecs_component!(Position);
 
+/// Z layer of an entity.
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 #[serde(default)]
@@ -170,5 +171,12 @@ pub struct Damage {
     pub amount: f32,
 }
 ecs_component!(Damage);
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+pub struct Bool {
+    pub active: bool,
+}
+ecs_component!(Bool);
+inspector_module!(Bool);
 
 

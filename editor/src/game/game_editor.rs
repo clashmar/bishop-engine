@@ -10,7 +10,7 @@ use engine_core::ui::text::*;
 use engine_core::world::world::World;
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::gui_constants::*;
-use crate::gui::inspector::modal::*;
+use crate::gui::modal::*;
 use crate::miniquad::CursorIcon;
 use crate::world::coord;
 use macroquad::miniquad::window::set_mouse_cursor;

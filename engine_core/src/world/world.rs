@@ -22,6 +22,7 @@ pub struct World {
     pub name: String,
     pub world_ecs: WorldEcs,
     pub rooms: Vec<Room>,
+    pub current_room_id: Option<RoomId>,
     pub starting_room_id: Option<RoomId>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
@@ -68,6 +69,18 @@ impl World {
         self.rooms
             .iter_mut()
             .find(|r| r.id == id)
+    }
+
+    /// Returns an  immutable reference to the current room of the world.
+    pub fn current_room(&self) -> Option<&Room> {
+        let id = self.current_room_id?;
+        self.get_room(id)
+    }
+
+    /// Returns a mutable reference to the current room of the world.
+    pub fn current_room_mut(&mut self) -> Option<&mut Room> {
+        let id = self.current_room_id?;
+        self.get_room_mut(id)
     }
 }
 

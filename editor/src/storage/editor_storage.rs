@@ -1,8 +1,12 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
+use crate::script::script_manager::ScriptManager;
+use std::cell::RefCell;
+use engine_core::script::script_manager;
 use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;
 use std::io::Write;
+use std::rc::Rc;
 use std::time::SystemTime;
 use std::io;
 use std::fs;
@@ -36,6 +40,7 @@ pub async fn create_new_game(name: String) -> Game {
     let current_id = world.id;
 
     let asset_manager = AssetManager::new(name.clone()).await;
+    let script_manager = ScriptManager::new(name.clone()).await;
 
     let game = Game {
         save_version: 1,
@@ -43,6 +48,7 @@ pub async fn create_new_game(name: String) -> Game {
         name,
         worlds: vec![world],
         asset_manager,
+        script_manager,
         current_world_id: current_id,
         tile_size: DEFAULT_TILE_SIZE,
         game_map: GameMap::default(),
@@ -50,16 +56,17 @@ pub async fn create_new_game(name: String) -> Game {
 
     // Save the game.
     if let Err(e) = save_game(&game) {
-        eprintln!("Could not save the new game: {e}");
+        onscreen_error!("Could not save the new game: {e}");
     }
 
     game
 }
 
 fn create_game_folders(name: &String) {
-    let folders: [(PathBuf, &str); 4] = [
-        (assets_folder(&name), RESOURCES_FOLDER),
+    let folders: [(PathBuf, &str); 5] = [
+        (resources_folder(&name), RESOURCES_FOLDER),
         (assets_folder(&name), ASSETS_FOLDER),
+        (scripts_folder(&name), SCRIPTS_FOLDER),
         (windows_folder(&name), WINDOWS_FOLDER),
         (mac_os_folder(&name), MAC_OS_FOLDER),
     ];
@@ -171,6 +178,7 @@ pub fn create_new_world() -> World {
         name: name.clone(),
         world_ecs,
         rooms: vec![first_room],
+        current_room_id: None,
         starting_room_id: Some(room_id),
         starting_position: Some(starting_position),
         meta: WorldMeta::default()

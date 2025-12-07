@@ -1,6 +1,6 @@
 // engine_core/src/ecs/reflect.rs
+use std::borrow::Cow;
 use macroquad::math::{Vec2, Vec3};
-
 use crate::assets::sprite::SpriteId;
 
 /// One mutable field value.
@@ -110,4 +110,51 @@ impl ReflectField for SpriteId {
             widget_hint: None, 
         }
     }
+}
+
+pub fn parse_field_name(name: &str) -> Cow<str> {
+    // Fast path
+    if !name.contains('_')
+        && name
+            .chars()
+            .next()
+            .map(|c| c.is_ascii_uppercase())
+            .unwrap_or(false)
+    {
+        return Cow::Borrowed(name);
+    }
+
+    // Split on '_' and capitalise each segment
+    let mut parts = name.split('_').filter(|s| !s.is_empty());
+
+    // Build the first part (to avoid an extra allocation when possible)
+    let first = match parts.next() {
+        Some(p) => {
+            let mut chars = p.chars();
+            let first_char = chars.next().map(|c| c.to_ascii_uppercase());
+            let rest: String = chars.collect();
+            match first_char {
+                Some(f) => format!("{}{}", f, rest),
+                None => String::new(),
+            }
+        }
+        None => return Cow::Borrowed(name), // empty input
+    };
+
+    // Append the remaining parts, each preceded by a space
+    let result = parts.fold(first, |mut acc, part| {
+        let mut chars = part.chars();
+        let first_char = chars.next().map(|c| c.to_ascii_uppercase());
+        let rest: String = chars.collect();
+        match first_char {
+            Some(f) => {
+                acc.push(' ');
+                acc.push_str(&format!("{}{}", f, rest));
+            }
+            None => {}
+        }
+        acc
+    });
+
+    Cow::Owned(result)
 }

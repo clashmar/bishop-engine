@@ -38,6 +38,11 @@ pub fn assets_folder(name: &str) -> PathBuf {
     resources_folder(name).join(ASSETS_FOLDER)
 }
 
+/// Path to the scripts folder inside a resources folder (Editor/Game).
+pub fn scripts_folder(name: &str) -> PathBuf {
+    resources_folder(name).join(SCRIPTS_FOLDER)
+}
+
 /// Path to the windows folder inside a resources folder (Editor).
 pub fn windows_folder(name: &str) -> PathBuf {
     game_folder(name).join(WINDOWS_FOLDER)

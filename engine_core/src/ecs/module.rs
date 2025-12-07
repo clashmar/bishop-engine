@@ -1,8 +1,8 @@
 // engine_core/src/ecs/module.rs
+use crate::game::game::GameCtx;
 use crate::ui::text::*;
 use crate::ui::widgets::*;
 use macroquad::prelude::*;
-use crate::assets::asset_manager::AssetManager;
 use crate::ecs::world_ecs::WorldEcs;
 use crate::ecs::entity::Entity;
 
@@ -11,12 +11,12 @@ pub trait InspectorModule {
     /// Return true when the module should be shown for the given entity.
     fn visible(&self, ecs: &WorldEcs, entity: Entity) -> bool;
 
+    // TODO: Make this async
     /// Draw the UI for the module inside the supplied rectangle.
     fn draw(
         &mut self,
         rect: Rect,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtx,
         entity: Entity,
     );
 
@@ -89,10 +89,11 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
     fn draw(
         &mut self,
         rect: Rect,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtx,
         entity: Entity,
     ) {
+        let world_ecs = &mut game_ctx.cur_world_ecs;
+
         // Background for the header
         draw_rectangle(rect.x, rect.y, rect.w, Self::HEADER_HEIGHT, Color::new(0., 0., 0., 0.4));
         draw_text_ui(
@@ -122,6 +123,9 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_H,
             );
             if gui_button(btn_rect, "x") {
+
+
+
                 self.inner.remove(world_ecs, entity);
                 return; // Don't draw the rest of the module
             }
@@ -136,7 +140,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 rect.w - 8.0,
                 rect.h - Self::HEADER_HEIGHT - 8.0,
             );
-            self.inner.draw(body_rect, asset_manager, world_ecs, entity);
+            self.inner.draw(body_rect, game_ctx, entity);
         }
     }
 
