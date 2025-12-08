@@ -53,7 +53,7 @@ impl InspectorModule for ScriptModule {
         };
 
         if script_comp.table.is_none() && script_comp.script_id.0 != 0 {
-            // TODO: script manager should load the script
+            // TODO: script manager should load the script?
             if let Err(e) = script_comp.load(script_manager) {
                 onscreen_error!("Failed to load script: {}", e);
             }
@@ -64,11 +64,20 @@ impl InspectorModule for ScriptModule {
         let full_w = rect.w - 2.0 * WIDGET_PADDING;                
 
         // Picker
+        let button_size = DEFAULT_FIELD_HEIGHT;
+
         let picker_rect = Rect::new(
             rect.x + WIDGET_PADDING,
             y,
-            full_w,
+            full_w - button_size - SPACING,
             DEFAULT_FIELD_HEIGHT,
+        );
+
+        let refresh_rect = Rect::new(
+            picker_rect.x + picker_rect.w + SPACING,
+            y,
+            button_size,
+            button_size,
         );
 
         if gui_script_picker(picker_rect, &mut script_comp.script_id, script_manager) {
@@ -76,7 +85,13 @@ impl InspectorModule for ScriptModule {
             script_comp.data.fields.clear();
         }
 
-        y += picker_rect.h + SPACING;
+        if gui_button(refresh_rect, "R") {
+            // TODO: Make button with picture 
+            // Force full script reload on next frame
+            script_comp.table = None;
+        }
+
+        y += picker_rect.h + SPACING * 2.0;
 
         // Draw each field if loaded
         if script_comp.table.is_some() {
@@ -136,7 +151,7 @@ impl InspectorModule for ScriptModule {
                     ScriptField::Bool(ref mut v) => {
                         let cb_rect = Rect::new(
                             widget_rect.x,
-                            widget_rect.y + 7.5,
+                            widget_rect.y + 6.0,
                             DEFAULT_CHECKBOX_DIMS,
                             DEFAULT_CHECKBOX_DIMS,
                         );

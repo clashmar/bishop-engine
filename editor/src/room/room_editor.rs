@@ -440,18 +440,22 @@ impl RoomEditor {
     }
 
     fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &mut Room) {
+        if input_is_focused() {
+            return;
+        }
+
         // Shortcuts for both tilemap and scene
-        if Controls::g() && !input_is_focused() {
+        if Controls::g() {
             self.show_grid = !self.show_grid;
         }
 
-        if Controls::r() && !input_is_focused() {
+        if Controls::r() {
             EditorCameraController::reset_room_editor_camera(camera, room);
         }
 
         for mode in RoomEditorMode::iter() {
             if let Some(is_pressed) = mode.shortcut() {
-                if is_pressed() && !input_is_focused() {
+                if is_pressed() {
                     self.mode = mode;
                     self.mode_selector.current = mode;
                     break;
@@ -464,7 +468,7 @@ impl RoomEditor {
 
             }
             RoomEditorMode::Scene => {
-                if Controls::v() && !input_is_focused() {
+                if Controls::v() {
                     self.view_preview = !self.view_preview;
                 }
 
