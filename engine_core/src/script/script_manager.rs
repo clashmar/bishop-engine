@@ -1,4 +1,8 @@
 // engine_core/src/script/script_manager.rs
+use mlua::Function;
+use mlua::Variadic;
+use crate::script::engine_api::EngineApi;
+use mlua::Value;
 use crate::game::game::Game;
 use crate::script::script::ScriptId;
 use crate::storage::path_utils::scripts_folder;
@@ -19,6 +23,8 @@ use serde::Serialize;
 pub struct ScriptManager {
     #[serde(skip)]
     pub lua: Lua,
+    #[serde(skip)]
+    engine_api: Arc<EngineApi>,
     /// Persistent map of all sprite is to their paths.
     pub script_id_to_path: HashMap<ScriptId, PathBuf>,
     #[serde(skip)]
@@ -33,14 +39,17 @@ pub struct ScriptManager {
 impl ScriptManager {
     /// Initializes a new script manager.
     pub async fn new(game_name: String) -> Self {
-        // TODO: register APIs
-        Self {
+        let mut manager = Self {
             lua: Lua::new(),
+            engine_api: Arc::new(EngineApi::default()),
             script_id_to_path: HashMap::new(),
             path_to_script_id: HashMap::new(),
             next_script_id: 1,
             game_name,
-        }
+        };
+
+        Self::register_engine(&mut manager);
+        manager
     }
 
     pub fn load_table_from_id(&mut self, id: ScriptId) -> mlua::Result<Table> {
@@ -131,10 +140,12 @@ impl ScriptManager {
         for (id, path) in scripts {
             game.script_manager.path_to_script_id.insert(path.clone(), id);
         }
+
+        Self::register_engine(&mut game.script_manager);
     }
 
     /// Calculates the next script id 
-    pub fn restore_next_id(&mut self) {
+    fn restore_next_id(&mut self) {
         let used: HashSet<_> = self.script_id_to_path
             .keys()
             .map(|sid| sid.0)
@@ -148,5 +159,85 @@ impl ScriptManager {
             candidate += 1;
         }
         self.next_script_id = candidate;
+    }
+
+    /// Call this once after the `Lua` instance has been created.
+    pub fn register_engine_module(&mut self) -> Result<(), mlua::Error> {
+        let lua = &self.lua;
+
+        // Build the module
+        let engine_mod = lua.create_table()?;
+
+        // engine.call(name, ...)
+        let engine_api = self.engine_api.clone();
+        let call_fn = lua.create_function(move |lua, args: Variadic<Value>| {
+            engine_api.lua_call(lua, args)
+        })?;
+        engine_mod.set("call", call_fn)?;
+
+        // Convenience wrappers (engine.log, engine.wait, …)
+        let api_for_fields = self.engine_api.clone();
+        for name in api_for_fields.callbacks.lock().unwrap().keys() {
+            let fn_name = name.clone();
+            let api = api_for_fields.clone();
+            let wrapper = lua.create_function(move |lua, args: Variadic<Value>| {
+                let mut full = vec![Value::String(lua.create_string(&fn_name)?)];
+                full.extend_from_slice(&args);
+                api.lua_call(lua, Variadic::from(full))
+            })?;
+            engine_mod.set(name.clone(), wrapper)?;
+        }
+
+        // engine.on(event, handler)
+        let engine_api = self.engine_api.clone();
+        let on_fn = lua.create_function(move |_, (event, handler): (String, Function)| {
+            engine_api.listeners
+                .lock()
+                .unwrap()
+                .entry(event)
+                .or_default()
+                .push(handler);
+            Ok(())
+        })?;
+        engine_mod.set("on", on_fn)?;
+
+        // engine.emit(event, …)
+        let engine_api = self.engine_api.clone();
+        let emit_fn = lua.create_function(move |_lua, (event, args): (String, Variadic<Value>)| {
+            let map = engine_api.listeners.lock().unwrap();
+            if let Some(callbacks) = map.get(&event) {
+                for cb in callbacks {
+                    if let Err(e) = cb.call::<()>(args.clone()) {
+                        onscreen_error!("Lua listener error for event '{}': {}", event, e);
+                    }
+                }
+            }
+            Ok(())
+        })?;
+        engine_mod.set("emit", emit_fn)?;
+
+        lua.register_module("engine", &engine_mod)?;
+        Ok(())
+    }
+
+    /// Register the built‑in functions.
+    fn register_builtin_functions(&mut self) {
+        let engine_api = self.engine_api.clone();
+
+        // Log
+        engine_api.register("log", |_, args| {
+            let msg = match args.iter().next() {
+                Some(Value::String(s)) => s.to_str()?.to_owned(),
+                _ => return Err(mlua::Error::RuntimeError("log expects a string".into())),
+            };
+            onscreen_info!("[Lua] {}", msg);
+            Ok(Value::Nil)
+        });
+    }
+
+    fn register_engine(script_manager: &mut ScriptManager) {
+        script_manager.register_builtin_functions();
+        script_manager.register_engine_module()
+            .expect("Failed to register engine module.");
     }
 }

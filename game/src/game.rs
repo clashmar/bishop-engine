@@ -1,7 +1,9 @@
 // game/src/game.rs
+use engine_core::*;
 use crate::input::input_system::*;
 use crate::physics::physics_system::*;
 use engine_core::global::*;
+use engine_core::onscreen_error;
 use engine_core::rendering::render_room::*;
 use engine_core::animation::animation_system::*;
 use engine_core::ecs::component::Position;
@@ -9,12 +11,12 @@ use engine_core::ecs::component::CurrentRoom;
 use engine_core::constants::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::rendering::render_system::RenderSystem;
+use engine_core::script::script_system::run_scripts;
 use engine_core::storage::core_storage::load_game_ron;
 use engine_core::world::room::Room;
 use engine_core::world::transition_manager::TransitionManager;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::game::game::*;
-use engine_core::world::world::World;
 use std::collections::HashMap;
 use macroquad::prelude::*;
 
@@ -152,23 +154,28 @@ impl GameState {
     }
 
     pub async fn update_async(&mut self, dt: f32) {
-        let world = &mut self.game.worlds
-            .iter_mut()
-            .find(|w| w.id == self.game.current_world_id)
-            .expect("Current world id not present in game.");
+        let game_ctx = self.game.ctx();
+        let asset_manager = game_ctx.asset_manager;
+        let script_manager = game_ctx.script_manager;
+        let world_ecs = game_ctx.cur_world_ecs;
 
-        let player_pos = world.world_ecs.get_player_position().position;
+        let player_pos = world_ecs.get_player_position().position;
+
+        // Update scripts here
+        if let Err(e) = run_scripts(dt, world_ecs, script_manager) {
+            onscreen_error!("{}", e);
+        }
 
         // Update the camera
         self.camera_manager.update_active(
-            &world.world_ecs,
+            world_ecs,
             &self.current_room,
             player_pos,
         );
 
         update_animation_sytem(
-            &mut world.world_ecs,
-            &mut self.game.asset_manager,
+            world_ecs,
+            asset_manager,
             dt, 
             self.current_room.id,
         ).await;

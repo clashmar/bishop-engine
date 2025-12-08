@@ -56,14 +56,12 @@ thread_local! {
     static INPUT_FOCUSED: RefCell<bool> = RefCell::new(false);
 }
 
-/// Global flag that tells the rest of the editor whether a character
-/// was consumed by a text field this frame.
+/// Global flag that tells the rest of the editor whether a 
+/// widget currently has focus.
 pub fn input_is_focused() -> bool {
     INPUT_FOCUSED.with(|f| {
-        let mut flag = f.borrow_mut();
-        let was = *flag;
-        *flag = false;
-        was
+        let flag = f.borrow_mut();
+        *flag
     })
 }
 

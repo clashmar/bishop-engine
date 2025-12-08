@@ -1,4 +1,5 @@
 // engine_core/src/script/script.rs
+use mlua::Function;
 use mlua::prelude::LuaValue;
 use mlua::Table;
 use std::collections::HashMap;
@@ -38,6 +39,8 @@ pub struct Script {
     /// The Lua table created at load time.
     #[serde(skip)]
     pub table: Option<Table>,
+    #[serde(skip)]
+    pub update_fn: Option<Function>, 
 }
 
 ecs_component!(Script);
@@ -48,11 +51,22 @@ impl Script {
         &mut self, 
         script_manager: &mut ScriptManager
     ) -> mlua::Result<()> {
+        if self.table.is_some() {
+            return Ok(());
+        }
+
         let table = script_manager.load_table_from_id(self.script_id)?;
+
+        // Look for `update(dt)`
+        if let Ok(update) = table.get::<Function>("update") {
+            self.update_fn = Some(update);
+        }
         
         let public = table
             .get::<Option<Table>>("public")?
-            .unwrap_or_else(|| table);
+            .unwrap_or_else(|| table.clone());
+
+        self.table = Some(table);
         
         // Convert each Lua value into a ScriptField
         let mut fields = HashMap::new();
@@ -86,8 +100,16 @@ impl Script {
             fields.insert(name, field);
         }
 
-        self.data = ScriptData { fields };
-        self.table = Some(public);
+        // Remove stale fields
+        self.data.fields.retain(|name, _| fields.contains_key(name));
+
+        // Only update fields that didn't previously exist
+        for (name, field) in fields {
+            self.data.fields.entry(name).or_insert(field);
+        }
+
+        // Make sure any stored values are written back to the table
+        self.sync_to_lua(script_manager)?;
         Ok(())
     }
 
@@ -96,14 +118,14 @@ impl Script {
         let lua = &script_manager.lua;
 
         let table = match &self.table {
-            Some(t) => t.clone(),
+            Some(t) => t,
             None => return Ok(()),
         };
 
         // Put everything under public if the sub‑table exists
         let public = table
             .get::<Option<Table>>("public")?
-            .unwrap_or_else(|| table);
+            .unwrap_or_else(|| table.clone());
 
         for (name, field) in &self.data.fields {
             match field {
