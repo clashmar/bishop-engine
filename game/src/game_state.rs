@@ -56,8 +56,12 @@ impl GameState {
             .expect("Missing id for the starting room")
             .clone();
 
-        let player_pos = game.current_world().world_ecs.get_player_position().position;
-        let camera_manager = CameraManager::new(&game.current_world().world_ecs, current_room.id, player_pos);
+        let world_ecs_arc = game.current_world_ecs_arc(); 
+        let player_pos = {
+            let world_ecs = world_ecs_arc.lock().unwrap();
+            world_ecs.get_player_position().position
+        };
+        let camera_manager = CameraManager::new(world_ecs_arc, current_room.id, player_pos);
 
         Self {
             game,
@@ -71,9 +75,12 @@ impl GameState {
 
     pub async fn for_room(room: Room, mut game: Game) -> Self {
         game.initialize().await;
-        let world_ecs = &mut game.current_world_mut().world_ecs;
-        let player_pos = world_ecs.get_player_position().position;
-        let camera_manager = CameraManager::new(world_ecs, room.id, player_pos);
+        let world_ecs_arc = game.current_world_ecs_arc(); 
+        let player_pos = {
+            let world_ecs = world_ecs_arc.lock().unwrap();
+            world_ecs.get_player_position().position
+        };
+        let camera_manager = CameraManager::new(world_ecs_arc.clone(), room.id, player_pos);
 
         Self {
             game,

@@ -1,5 +1,36 @@
-// engine_core/src/input.rs
+// engine_core/src/input/input_snapshot.rs
+use crate::input::input_table::*;
+use std::collections::HashMap;
 use macroquad::prelude::*;
+
+#[derive(Clone, Default)]
+pub struct InputSnapshot {
+    pub down: HashMap<&'static str, bool>,
+    pub pressed: HashMap<&'static str, bool>,
+    pub released: HashMap<&'static str, bool>,
+}
+
+/// Fill `snapshot.keys` with the raw key names that are currently down.
+pub fn capture_input_state(snapshot: &mut InputSnapshot) {
+    // Clear previous frame data
+    snapshot.down.clear();
+    snapshot.pressed.clear();
+    snapshot.released.clear();
+
+    // Keyboard
+    for &(name, code) in KEY_TABLE {
+        snapshot.down.insert(name, is_key_down(code));
+        snapshot.pressed.insert(name, is_key_pressed(code));
+        snapshot.released.insert(name, is_key_released(code));
+    }
+
+    // Mouse
+    for &(name, button) in MOUSE_TABLE {
+        snapshot.down.insert(name, is_mouse_button_down(button));
+        snapshot.pressed.insert(name, is_mouse_button_pressed(button));
+        snapshot.released.insert(name, is_mouse_button_released(button));
+    }
+}
 
 pub fn get_omni_input() -> Vec2 {
     let mut dir = Vec2::ZERO;

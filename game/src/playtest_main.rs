@@ -6,7 +6,7 @@ use engine_core::{
     world::room::Room
     
 };
-use game_lib::game::GameState;
+use game_lib::game_state::GameState;
 use macroquad::prelude::*;
 use ron::de::from_str;
 
