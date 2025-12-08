@@ -1,4 +1,6 @@
 // engine_core/src/world/world.rs
+use std::sync::Mutex;
+use std::sync::Arc;
 use crate::assets::sprite::SpriteId;
 use crate::world::room::RoomId;
 use crate::global::tile_size;
@@ -20,7 +22,8 @@ pub struct WorldId(pub Uuid);
 pub struct World {
     pub id: WorldId,
     pub name: String,
-    pub world_ecs: WorldEcs,
+    pub world_ecs: WorldEcs, // TODO: Merge these
+    pub world_ecs_arc: Arc<Mutex<WorldEcs>>,
     pub rooms: Vec<Room>,
     pub current_room_id: Option<RoomId>,
     pub starting_room_id: Option<RoomId>,
@@ -38,7 +41,6 @@ pub struct WorldMeta {
     pub position: Vec2,
     /// Sprite of the world or None. 
     pub sprite_id: Option<SpriteId>,
-
 }
 
 impl World {

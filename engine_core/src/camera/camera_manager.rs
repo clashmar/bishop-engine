@@ -1,4 +1,6 @@
 // engine_core/src/camera/camera_manager.rs
+use std::sync::Mutex;
+use std::sync::Arc;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::{camera::game_camera::*, ecs::world_ecs::WorldEcs, world::room::Room};
@@ -17,10 +19,11 @@ pub struct CameraManager {
 
 impl CameraManager {
     /// Initialise with the player’s starting room.
-    pub fn new(world_ecs: &WorldEcs, room_id: RoomId, player_pos: Vec2) -> Self {
-        let room_cameras = get_room_cameras(world_ecs, room_id);
-        let (active_camera, _) = Self::find_best_camera_for_room(world_ecs, &room_cameras, player_pos)
-            .expect("room must contain at least one camera");
+    pub fn new(world_ecs_arc: Arc<Mutex<WorldEcs>>, room_id: RoomId, player_pos: Vec2) -> Self {
+        let world_ecs = world_ecs_arc.lock().unwrap();
+        let room_cameras = get_room_cameras(&world_ecs, room_id);
+        let (active_camera, _) = Self::find_best_camera_for_room(&world_ecs, &room_cameras, player_pos)
+            .expect("Room must contain at least one camera.");
 
         Self { 
             active: active_camera,

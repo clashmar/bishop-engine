@@ -1,6 +1,7 @@
 // game/src/input/player_input.rs
+use engine_core::input::input_snapshot::*;
 use engine_core::game::game::Game;
-use engine_core::{ecs::component::Velocity, input::*};
+use engine_core::ecs::component::Velocity;
 
 /// Walk speed in world units per second.
 const PLAYER_SPEED: f32 = 100.0;

@@ -6,7 +6,7 @@ use engine_core::*;
 use engine_core::storage::path_utils::resources_dir_from_exe;
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
-use game_lib::game::GameState;
+use game_lib::game_state::GameState;
 
 fn window_conf() -> Conf {
     // Start with the default miniquad icon

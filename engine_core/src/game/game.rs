@@ -1,4 +1,7 @@
 // engine_core/src/game/game.rs
+use crate::input::input_snapshot::InputSnapshot;
+use std::sync::Mutex;
+use std::sync::Arc;
 use crate::script::script_manager::ScriptManager;
 use crate::{ecs::world_ecs::WorldEcs, world::room::Room};
 use crate::global::set_global_tile_size;
@@ -26,11 +29,14 @@ pub struct Game {
     /// Script manager for the game.
     pub script_manager: ScriptManager,
     /// Id of the currently active world.
-    pub current_world_id: WorldId,
+    pub current_world_id: WorldId, // TODO: Change this to an option
     /// Tile size of the game that the world scales to.
     pub tile_size: f32,
     /// Top level map of the whole game.
     pub game_map: GameMap,
+    #[serde(skip)]
+    /// Runtime input state for the game.
+    pub shared_input: Arc<Mutex<InputSnapshot>>,
 }
 
 /// Temporary view into a `Game` that bundles together the 
@@ -38,9 +44,11 @@ pub struct Game {
 pub struct GameCtx<'a> {
     // TODO: wrap in options
     pub cur_world_ecs: &'a mut WorldEcs,
+    pub cur_world_ecs_arc: Arc<Mutex<WorldEcs>>,
     pub cur_room: &'a mut Room,
     pub asset_manager: &'a mut AssetManager,
     pub script_manager: &'a mut ScriptManager,
+    pub input_snapshot: Arc<Mutex<InputSnapshot>>,
 }
 
 impl Game {
@@ -63,11 +71,15 @@ impl Game {
             .find(|r| r.id == room_id)
             .expect("Room not found.");
 
+        let cur_world_ecs_arc = world.world_ecs_arc.clone(); 
+
         GameCtx {
             cur_world_ecs,
+            cur_world_ecs_arc,
             cur_room,
             asset_manager: &mut self.asset_manager,
             script_manager: &mut self.script_manager,
+            input_snapshot: self.shared_input.clone(),
         }
     }
 
@@ -122,10 +134,21 @@ impl Game {
         }
     }
 
-    /// Syncs all assets that belong to this game and sets the global tile size.
+    /// Returns a clone of the Arc that holds the current world's ECS.
+    pub fn current_world_ecs_arc(&self) -> Arc<Mutex<WorldEcs>> {
+        self.worlds
+            .iter()
+            .find(|w| w.id == self.current_world_id)
+            .expect("There must be a current world.")
+            .world_ecs_arc
+            .clone()
+    }
+
+    /// Syncs all assets/scripts that belong to this game, sets the global tile size and inits input.
     pub async fn initialize(&mut self) {
         set_global_tile_size(self.tile_size);
         AssetManager::init_manager(self).await;
         ScriptManager::init_manager(self).await;
+        self.shared_input = Arc::new(Mutex::new(InputSnapshot::default()));
     }
 }

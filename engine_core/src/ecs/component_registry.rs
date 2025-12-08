@@ -1,4 +1,6 @@
 // engine_core/src/ecs/component_registry.rs
+use mlua::Value;
+use mlua::Lua;
 use crate::ecs::component::Component;
 use once_cell::sync::Lazy;
 use std::any::{Any, TypeId};
@@ -37,6 +39,10 @@ pub struct ComponentRegistry {
     pub from_ron_component: fn(String) -> Box<dyn Any>,
     /// Called for optional run post‑create logic.  If `None` the engine will do nothing.
     pub post_create: fn(&mut dyn Any),
+    /// Converts the rust component to a lua type.
+    pub to_lua: fn(&Lua, &dyn Any) -> mlua::Result<Value>,
+    /// Converts the lua value back to the rust component.
+    pub from_lua: fn(&Lua, Value) -> mlua::Result<Box<dyn Any>>,
 }
 
 /// Factory that works for any component that implements `Component + Default`.
@@ -155,6 +161,20 @@ macro_rules! ecs_component {
                     ron::de::from_str(&text).expect("failed to deserialize component");
                 Box::new(concrete) as Box<dyn std::any::Any>
             }
+
+            // Lua conversion methods
+            fn __to_lua(lua: &mlua::Lua, any: &dyn std::any::Any) -> mlua::Result<mlua::Value> {
+                use mlua::LuaSerdeExt;
+                let comp = any
+                    .downcast_ref::<$ty>()
+                    .expect(concat!("ComponentRegistry: type mismatch for ", stringify!($ty)));
+                lua.to_value(comp)
+            }
+            fn __from_lua(lua: &mlua::Lua, value: mlua::Value) -> mlua::Result<Box<dyn std::any::Any>> {
+                use mlua::LuaSerdeExt;
+                let comp: $ty = lua.from_value(value)?;
+                Ok(Box::new(comp) as Box<dyn std::any::Any>)
+            }
         }
 
         // Register the component (default path)
@@ -193,6 +213,8 @@ macro_rules! ecs_component {
                 },
                 to_ron_component: <$ty>::__to_ron_component,
                 from_ron_component: <$ty>::__from_ron_component,
+                to_lua: <$ty>::__to_lua,
+                from_lua: <$ty>::__from_lua,
                 post_create: $crate::ecs::component_registry::post_create,
             }
         }
@@ -257,6 +279,18 @@ macro_rules! ecs_component {
                     ron::de::from_str(&text).expect("failed to deserialize component");
                 Box::new(concrete) as Box<dyn std::any::Any>
             }
+            fn __to_lua(lua: &mlua::Lua, any: &dyn std::any::Any) -> mlua::Result<mlua::Value> {
+                use mlua::LuaSerdeExt;
+                let comp = any
+                    .downcast_ref::<$ty>()
+                    .expect(concat!("ComponentRegistry: type mismatch for ", stringify!($ty)));
+                lua.to_value(comp)
+            }
+            fn __from_lua(lua: &mlua::Lua, value: mlua::Value) -> mlua::Result<Box<dyn std::any::Any>> {
+                use mlua::LuaSerdeExt;
+                let comp: $ty = lua.from_value(value)?;
+                Ok(Box::new(comp) as Box<dyn std::any::Any>)
+            }
         }
 
         // Register the component
@@ -295,6 +329,8 @@ macro_rules! ecs_component {
                 },
                 to_ron_component: <$ty>::__to_ron_component,
                 from_ron_component: <$ty>::__from_ron_component,
+                to_lua: <$ty>::__to_lua,
+                from_lua: <$ty>::__from_lua,
                 post_create: |any: &mut dyn std::any::Any| {
                     // Down‑cast the erased component to the concrete type
                     let comp = any

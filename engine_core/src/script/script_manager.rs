@@ -1,4 +1,7 @@
 // engine_core/src/script/script_manager.rs
+use crate::input::input_snapshot::InputSnapshot;
+use crate::ecs::world_ecs::WorldEcs;
+use std::sync::Mutex;
 use mlua::Function;
 use mlua::Variadic;
 use crate::script::engine_api::EngineApi;
@@ -48,7 +51,7 @@ impl ScriptManager {
             game_name,
         };
 
-        Self::register_engine(&mut manager);
+        Self::register_all_modules(&mut manager);
         manager
     }
 
@@ -141,7 +144,8 @@ impl ScriptManager {
             game.script_manager.path_to_script_id.insert(path.clone(), id);
         }
 
-        Self::register_engine(&mut game.script_manager);
+        // Register all callbacks
+        Self::register_all_modules(&mut game.script_manager);
     }
 
     /// Calculates the next script id 
@@ -176,10 +180,10 @@ impl ScriptManager {
         engine_mod.set("call", call_fn)?;
 
         // Convenience wrappers (engine.log, engine.wait, …)
-        let api_for_fields = self.engine_api.clone();
-        for name in api_for_fields.callbacks.lock().unwrap().keys() {
+        let engine_api = self.engine_api.clone();
+        for name in engine_api.callbacks.lock().unwrap().keys() {
             let fn_name = name.clone();
-            let api = api_for_fields.clone();
+            let api = engine_api.clone();
             let wrapper = lua.create_function(move |lua, args: Variadic<Value>| {
                 let mut full = vec![Value::String(lua.create_string(&fn_name)?)];
                 full.extend_from_slice(&args);
@@ -220,24 +224,42 @@ impl ScriptManager {
         Ok(())
     }
 
-    /// Register the built‑in functions.
-    fn register_builtin_functions(&mut self) {
+    /// Register the built‑in modules.
+    fn register_modules(&mut self) {
         let engine_api = self.engine_api.clone();
 
-        // Log
+        // Log: TODO: convert to module
         engine_api.register("log", |_, args| {
             let msg = match args.iter().next() {
                 Some(Value::String(s)) => s.to_str()?.to_owned(),
                 _ => return Err(mlua::Error::RuntimeError("log expects a string".into())),
             };
+            // TODO: add multiple methods for levels
             onscreen_info!("[Lua] {}", msg);
             Ok(Value::Nil)
         });
+
+        // let modules: Vec<Box<dyn script::lua_module::LuaModule>> = vec![
+        //     Box::new(script::input_module::InputModule {
+        //         snapshot: self.input_snapshot.clone(),
+        //     }),
+        //     Box::new(script::entity_module::EntityModule {
+        //         world: self.world_arc.clone(),
+        //     }),
+        //     // add more modules here (physics, audio, UI, …)
+        // ];
+
+        // for m in modules {
+        //     if let Err(e) = m.register(&self.lua) {
+        //         onscreen_error!("Error registering lua module: {e}")
+        //     }
+        // }
     }
 
-    fn register_engine(script_manager: &mut ScriptManager) {
-        script_manager.register_builtin_functions();
-        script_manager.register_engine_module()
-            .expect("Failed to register engine module.");
+    fn register_all_modules(script_manager: &mut ScriptManager) {
+        script_manager.register_modules();
+        if let Err(e) = script_manager.register_engine_module() {
+            onscreen_error!("Error registering engine module: {e}")
+        }
     }
 }

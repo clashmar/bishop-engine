@@ -1,4 +1,5 @@
 // editor/src/room/room_editor.rs
+use engine_core::input::input_snapshot::get_omni_input_pressed;
 use engine_core::game::game::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
@@ -19,7 +20,6 @@ use engine_core::ui::widgets::*;
 use engine_core::animation::animation_system::*;
 use engine_core::rendering::render_room::*;
 use engine_core::world::room::*;
-use engine_core::input::*;
 use engine_core::global::*;
 use engine_core::camera::game_camera::*;
 use macroquad::prelude::*;
