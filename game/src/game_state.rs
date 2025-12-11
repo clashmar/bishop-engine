@@ -1,8 +1,11 @@
-// game/src/game.rs
+// game/src/game_state.rs
+use mlua::Value;
+use std::cell::RefCell;
 use engine_core::*;
 use crate::input::input_system::*;
 use crate::physics::physics_system::*;
-use engine_core::global::*;
+use crate::scripting::script_system::ScriptSystem;
+use engine_core::engine_global::*;
 use engine_core::onscreen_error;
 use engine_core::rendering::render_room::*;
 use engine_core::animation::animation_system::*;
@@ -11,7 +14,7 @@ use engine_core::ecs::component::CurrentRoom;
 use engine_core::constants::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::rendering::render_system::RenderSystem;
-use engine_core::script::script_system::run_scripts;
+use crate::scripting::script_system::run_scripts;
 use engine_core::storage::core_storage::load_game_ron;
 use engine_core::world::room::Room;
 use engine_core::world::transition_manager::TransitionManager;
@@ -20,9 +23,10 @@ use engine_core::game::game::*;
 use std::collections::HashMap;
 use macroquad::prelude::*;
 
+/// Top level orchestrator of the game and systems.
 pub struct GameState {
     /// The whole game.
-    game: Game,
+    pub game: Game,
     /// Camera that follows the player.
     camera_manager: CameraManager,
     /// Manages transitions between rooms.
@@ -31,16 +35,19 @@ pub struct GameState {
     current_room: Room,
     /// Rendering system for the game.
     pub render_system: RenderSystem,
+    /// TODO: ???
+    pub global_modules: RefCell<HashMap<String, Value>>,
     /// Holds the Position of every entity rendered in the previous frame.
     prev_positions: HashMap<Entity, Vec2>,
 }
 
 impl GameState {
+    // TODO: Make game creation DRYer
     pub async fn new() -> Self {
         // Allows the shared engine features to make decisions
         set_engine_mode(EngineMode::Game);
         
-        let game = match load_game_ron().await {
+        let mut game = match load_game_ron().await {
             Ok(game) => game,
             Err(e) => panic!("{e}")
         };
@@ -56,12 +63,11 @@ impl GameState {
             .expect("Missing id for the starting room")
             .clone();
 
-        let world_ecs_arc = game.current_world_ecs_arc(); 
-        let player_pos = {
-            let world_ecs = world_ecs_arc.lock().unwrap();
-            world_ecs.get_player_position().position
-        };
-        let camera_manager = CameraManager::new(world_ecs_arc, current_room.id, player_pos);
+        let world_ecs = &game.current_world().world_ecs;
+        let player_pos = world_ecs.get_player_position().position;
+        let camera_manager = CameraManager::new(&world_ecs, current_room.id, player_pos);
+
+        ScriptSystem::init(&mut game.script_manager);
 
         Self {
             game,
@@ -69,18 +75,21 @@ impl GameState {
             transition_manager: TransitionManager::new(),
             current_room,
             render_system: RenderSystem::new(),
+            global_modules: RefCell::new(HashMap::new()),
             prev_positions: HashMap::new(),
         }
     }
 
     pub async fn for_room(room: Room, mut game: Game) -> Self {
+        // Allows the shared engine features to make decisions
+        // set_engine_mode(EngineMode::Game); TODO: figure this out
+
         game.initialize().await;
-        let world_ecs_arc = game.current_world_ecs_arc(); 
-        let player_pos = {
-            let world_ecs = world_ecs_arc.lock().unwrap();
-            world_ecs.get_player_position().position
-        };
-        let camera_manager = CameraManager::new(world_ecs_arc.clone(), room.id, player_pos);
+        let world_ecs = &game.current_world().world_ecs;
+        let player_pos = world_ecs.get_player_position().position;
+        let camera_manager = CameraManager::new(world_ecs, room.id, player_pos);
+
+        ScriptSystem::init(&mut game.script_manager);
 
         Self {
             game,
@@ -88,6 +97,7 @@ impl GameState {
             transition_manager: TransitionManager::new(),
             current_room: room,
             render_system: RenderSystem::new(),
+            global_modules: RefCell::new(HashMap::new()),
             prev_positions: HashMap::new(),
         }
     }
@@ -101,7 +111,7 @@ impl GameState {
             // Time elapsed since last frame
             let frame_dt = get_frame_time();
             accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
-            
+
             // Input system
             self.poll_input();
             
@@ -110,10 +120,10 @@ impl GameState {
                 self.fixed_update(FIXED_DT);
                 accumulator -= FIXED_DT;
             }
-            
+
             // Per‑frame async work (input, animation, camera …)
             self.update_async(frame_dt).await;
-
+        
             // Render with interpolation
             let alpha = accumulator / FIXED_DT;
             self.render(alpha, &mut cur_window_size);
@@ -123,7 +133,7 @@ impl GameState {
     }
 
     pub fn poll_input(&mut self) {
-        update_player_input(&mut self.game)
+        update_player_input(&mut self.game);
     } 
 
     pub fn fixed_update(&mut self, dt: f32) {
@@ -161,6 +171,9 @@ impl GameState {
     }
 
     pub async fn update_async(&mut self, dt: f32) {
+        // Process lua commands from the previous frame
+        ScriptSystem::process_commands(self);
+
         let game_ctx = self.game.ctx();
         let asset_manager = game_ctx.asset_manager;
         let script_manager = game_ctx.script_manager;
@@ -170,7 +183,7 @@ impl GameState {
 
         // Update scripts here
         if let Err(e) = run_scripts(dt, world_ecs, script_manager) {
-            onscreen_error!("{}", e);
+            onscreen_error!("Error running scripts: {}", e);
         }
 
         // Update the camera

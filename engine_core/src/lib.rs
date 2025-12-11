@@ -1,24 +1,24 @@
 pub mod animation;
 pub mod assets;
-pub mod ecs;
 pub mod camera;
 pub mod constants;
-pub mod input;
-pub mod logging;
+pub mod controls;
+pub mod ecs;
+pub mod engine_global;
 pub mod game;
-pub mod global;
+pub mod input;
 pub mod lighting;
+pub mod logging;
 pub mod physics;
 pub mod rendering;
-pub mod script;
+pub mod scripting;
 pub mod shaders;
 pub mod storage;
 pub mod tiles;
 pub mod world;
 pub mod ui;
-pub mod controls;
 
-/// Simple helper used only for the demo test.
+/// Demo test.
 pub fn add(a: i32, b: i32) -> i32 {
     a + b
 }

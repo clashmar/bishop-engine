@@ -8,6 +8,7 @@ use crate::ecs::component_registry::ComponentRegistry;
 use crate::ecs::world_ecs::WorldEcs;
 use crate::world::room::RoomId;  
 
+// TODO: Add name?
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
 pub struct Entity(pub usize);
 
@@ -15,6 +16,19 @@ impl Entity {
     /// A sentinal value that can be used for optionals.
     pub fn null() -> Self {
         Entity(0)
+    }
+}
+
+impl std::ops::Deref for Entity {
+    type Target = usize;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Entity {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 

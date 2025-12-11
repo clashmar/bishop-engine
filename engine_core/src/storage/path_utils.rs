@@ -7,8 +7,8 @@ use futures::executor::block_on;
 use macroquad::prelude::*;
 use rfd::FileDialog;
 use crate::constants::*;
-use crate::global::EngineMode;
-use crate::global::get_engine_mode;
+use crate::engine_global::EngineMode;
+use crate::engine_global::get_engine_mode;
 use crate::storage::editor_config::*;
 use std::fs;
 use std::path::Path;
@@ -27,8 +27,13 @@ pub fn resources_folder(name: &str) -> PathBuf {
             game_folder(name).join(RESOURCES_FOLDER)
         }
         EngineMode::Game => {
-            // Panic is acceptable here as there is no possible fallback 
-            resources_dir_from_exe().unwrap()
+            if cfg!(debug_assertions) {
+                game_folder(name).join(RESOURCES_FOLDER)
+            } else {
+                // Panic is acceptable here as there is no possible fallback 
+                resources_dir_from_exe().unwrap()
+            }
+            
         }
     }
 }
@@ -57,7 +62,7 @@ pub fn mac_os_folder(name: &str) -> PathBuf {
 /// or the parent of the resources folder for games on all platforms.
 pub fn absolute_save_root() -> PathBuf {
     // Game path
-    if get_engine_mode() == EngineMode::Game {
+    if get_engine_mode() == EngineMode::Game && !cfg!(debug_assertions) {
         let path = exe_dir().unwrap_or_else(|| {
             // If this isn't found then the game can't work
             onscreen_error!("Could not find exe_dir in game mode");

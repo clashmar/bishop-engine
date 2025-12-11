@@ -11,7 +11,7 @@ use crate::{
         sprite::SpriteId
     },
     ecs_component, 
-    global::tile_size
+    engine_global::tile_size
 };
 
 /// The animation component for an entity.

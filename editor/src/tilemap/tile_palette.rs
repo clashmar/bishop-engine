@@ -2,7 +2,7 @@
 use std::collections::VecDeque;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use engine_core::{global::tile_size, ui::{text::draw_text_ui, widgets::*}};
+use engine_core::{engine_global::tile_size, ui::{text::draw_text_ui, widgets::*}};
 use serde_with::serde_as;
 use engine_core::{
     assets::{asset_manager::AssetManager, sprite::SpriteId},

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde::Serialize;
 use crate::ecs_component;
-use crate::script::script_manager::ScriptManager;
+use crate::scripting::script_manager::ScriptManager;
 
 /// Opaque handle that the script manager gives out. Default/Unset is 0.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]

@@ -1,6 +1,8 @@
+pub mod constants;
+pub mod game_global;
 pub mod game_state;
+pub mod input;
 pub mod modes;
 pub mod physics;
-pub mod input;
-pub mod constants;
+pub mod scripting;
 pub mod world;

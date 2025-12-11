@@ -1,11 +1,11 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
-use crate::script::script_manager::ScriptManager;
+use crate::scripting::script_manager::ScriptManager;
 use std::cell::RefCell;
 use std::sync::Arc;
 use std::sync::Mutex;
 use engine_core::input::input_snapshot::InputSnapshot;
-use engine_core::script::script_manager;
+use engine_core::scripting::script_manager;
 use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;
 use std::io::Write;
@@ -44,7 +44,6 @@ pub async fn create_new_game(name: String) -> Game {
 
     let asset_manager = AssetManager::new(name.clone()).await;
     let script_manager = ScriptManager::new(name.clone()).await;
-    let shared_input = Arc::new(Mutex::new(InputSnapshot::default()));
 
     let game = Game {
         save_version: 1,
@@ -56,7 +55,6 @@ pub async fn create_new_game(name: String) -> Game {
         current_world_id: current_id,
         tile_size: DEFAULT_TILE_SIZE,
         game_map: GameMap::default(),
-        shared_input,
     };
 
     // Save the game.

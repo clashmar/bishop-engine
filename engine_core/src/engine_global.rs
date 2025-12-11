@@ -1,4 +1,4 @@
-// engine_core/src/global.rs
+// engine_core/src/engine_global.rs
 use crate::{constants::*, ecs::component::Position, game::game::Game};
 use std::sync::Mutex;
 

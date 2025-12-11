@@ -1,5 +1,11 @@
 // engine_core/src/camera/game_camera.rs
-use crate::{ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, ecs_component, global::*, world::room::RoomId};
+use crate::engine_global::*;
+use crate::ecs::component::Position;
+use crate::ecs::component::CurrentRoom;
+use crate::ecs::entity::Entity;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::world::room::RoomId;
+use crate::ecs_component;
 use std::fmt;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};

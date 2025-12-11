@@ -1,4 +1,4 @@
-// engine_core/src/ecs/component_registry.rs
+// engine_core/src/ecs/component_registry.rs 
 use mlua::Value;
 use mlua::Lua;
 use crate::ecs::component::Component;
@@ -298,6 +298,7 @@ macro_rules! ecs_component {
             $crate::ecs::component_registry::ComponentRegistry {
                 type_name: <$ty>::TYPE_NAME,
                 type_id: std::any::TypeId::of::<
+                    
                     $crate::ecs::component::ComponentStore<$ty>
                 >(),
                 to_ron: <$ty>::__to_ron,

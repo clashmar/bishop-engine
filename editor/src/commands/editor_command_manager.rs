@@ -1,22 +1,22 @@
-// editor/src/controls/command_manager.rs
+// editor/src/controls/editor_command_manager.rs
 use std::fmt::Debug;
-use crate::{editor::EditorMode, global::with_editor};
+use crate::{editor::EditorMode, editor_global::with_editor};
 
 /// Trait for every undoable command.
-pub trait Command: Debug {
+pub trait EditorCommand: Debug {
     fn execute(&mut self);
     fn undo(&mut self);
     fn mode(&self) -> EditorMode;
 }
 
 /// Stores and manages undo/redo stacks.
-pub struct CommandManager {
-    pending: Vec<Box<dyn Command>>,
-    undo_stack: Vec<Box<dyn Command>>,
-    redo_stack: Vec<Box<dyn Command>>,
+pub struct EditorCommandManager {
+    pending: Vec<Box<dyn EditorCommand>>,
+    undo_stack: Vec<Box<dyn EditorCommand>>,
+    redo_stack: Vec<Box<dyn EditorCommand>>,
 }
 
-impl CommandManager {
+impl EditorCommandManager {
     /// Returns a new undo and redo stack.
     pub fn new() -> Self {
         Self {
@@ -27,7 +27,7 @@ impl CommandManager {
     }
 
     /// Push the command to the pending stack to be executed safely at the end of the frame.
-    pub fn push(&mut self, command: Box<dyn Command>) {
+    pub fn push(&mut self, command: Box<dyn EditorCommand>) {
         self.redo_stack.clear();
         self.pending.push(command);
     }
@@ -38,7 +38,7 @@ impl CommandManager {
         let current_mode = with_editor(|editor| editor.mode);
 
         // Temp buffer
-        let mut buffer: Vec<Box<dyn Command>> = Vec::new();
+        let mut buffer: Vec<Box<dyn EditorCommand>> = Vec::new();
 
         // Find the first command that matches the current mode
         while let Some(mut command) = self.undo_stack.pop() {
@@ -64,7 +64,7 @@ impl CommandManager {
         let current_mode = with_editor(|editor| editor.mode);
 
         // Temp buffer
-        let mut buffer: Vec<Box<dyn Command>> = Vec::new();
+        let mut buffer: Vec<Box<dyn EditorCommand>> = Vec::new();
 
         // Find the first command that matches the current mode
         while let Some(mut cmd) = self.redo_stack.pop() {

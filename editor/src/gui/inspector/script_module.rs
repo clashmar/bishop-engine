@@ -2,12 +2,12 @@
 use std::collections::HashMap;
 use engine_core::ecs::reflect_field::parse_field_name;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use engine_core::script::script::ScriptField;
+use engine_core::scripting::script::ScriptField;
 use engine_core::ui::text::*;
 use engine_core::game::game::*;
 use engine_core::*;
 use engine_core::ui::widgets::*;
-use engine_core::script::script::Script;
+use engine_core::scripting::script::Script;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::module::{CollapsibleModule, InspectorModule};
@@ -295,13 +295,13 @@ impl InspectorModule for ScriptModule {
 
 inventory::submit! {
     ModuleFactoryEntry {
-        title: <engine_core::script::script::Script>::TYPE_NAME,
+        title: <engine_core::scripting::script::Script>::TYPE_NAME,
         factory: || {
             Box::new(
                 CollapsibleModule::new(
                     crate::gui::inspector::script_module::ScriptModule::default()
                 )
-                .with_title(<engine_core::script::script::Script>::TYPE_NAME)
+                .with_title(<engine_core::scripting::script::Script>::TYPE_NAME)
             )
         },
     }

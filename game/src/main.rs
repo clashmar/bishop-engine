@@ -4,6 +4,8 @@ use std::fs;
 use engine_core::assets::core_assets::load_rgba_resized;
 use engine_core::*;
 use engine_core::storage::path_utils::resources_dir_from_exe;
+use game_lib::game_global::set_game;
+use game_lib::game_global::with_game_state_mut_async;
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
 use game_lib::game_state::GameState;
@@ -49,6 +51,10 @@ fn load_icon(png_bytes: &[u8]) -> Icon {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut game = GameState::new().await;
-    game.run_game_loop().await;
+    let game_state = GameState::new().await;
+    
+    // This allows global access to services
+    set_game(game_state);
+    
+    with_game_state_mut_async(|game_state| Box::pin(game_state.run_game_loop())).await;
 }

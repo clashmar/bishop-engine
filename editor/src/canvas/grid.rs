@@ -1,5 +1,5 @@
 // editor/src/canvas/grid.rs
-use engine_core::global::tile_size;
+use engine_core::engine_global::tile_size;
 use macroquad::prelude::*;
 use crate::{
     editor_camera_controller::{self, EditorCameraController}, 

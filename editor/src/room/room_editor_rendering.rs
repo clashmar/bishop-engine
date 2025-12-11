@@ -12,7 +12,7 @@ use engine_core::ui::text::*;
 use engine_core::world::room::*;
 use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::assets::asset_manager::AssetManager;
-use engine_core::global::*;
+use engine_core::engine_global::*;
 use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use crate::gui::gui_constants::*;

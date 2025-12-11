@@ -5,7 +5,7 @@ use engine_core::{
         component::{Collider, Position, Solid},
         world_ecs::WorldEcs,
     }, 
-    global::tile_size, 
+    engine_global::tile_size, 
     tiles::{tile::TileComponent, tilemap::TileMap}
 };
 

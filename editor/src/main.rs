@@ -4,7 +4,7 @@
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::editor_assets::editor_assets::*;
-use crate::global::*;
+use crate::editor_global::*;
 use crate::editor::Editor;
 use engine_core::logging::logging::init_file_logger;
 use engine_core::*;
@@ -13,7 +13,7 @@ use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
 
-mod global;
+mod editor_global;
 mod editor;
 mod gui;
 mod room;
@@ -67,7 +67,7 @@ async fn main() -> std::io::Result<()> {
     
     let editor = Editor::new().await?;
 
-    // This allows the command manager global access
+    // This allows global access to services
     set_editor(editor);
 
     let mut current_window_size = (screen_width() as u32, screen_height() as u32);

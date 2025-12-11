@@ -1,11 +1,10 @@
 // game/src/playtest_main.rs
+use game_lib::game_global::with_game_state_mut_async;
+use game_lib::game_global::set_game;
+use engine_core::constants::*;
+use engine_core::game::game::Game;
+use engine_core::world::room::Room;
 use std::{env, fs};
-use engine_core::{
-    constants::*, 
-    game::game::Game, 
-    world::room::Room
-    
-};
 use game_lib::game_state::GameState;
 use macroquad::prelude::*;
 use ron::de::from_str;
@@ -50,7 +49,10 @@ async fn main() {
         game,
     } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
-    let mut game = GameState::for_room(room, game).await;
+    let game_state = GameState::for_room(room, game).await;
     
-    game.run_game_loop().await;
+    // This allows global access to services
+    set_game(game_state);
+    
+    with_game_state_mut_async(|game_state| Box::pin(game_state.run_game_loop())).await;
 }

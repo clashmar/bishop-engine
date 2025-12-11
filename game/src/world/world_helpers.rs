@@ -2,7 +2,7 @@
 use engine_core::world::room::RoomId;
 use engine_core::{
     ecs::component::Collider, 
-    global::tile_size, 
+    engine_global::tile_size, 
     world::room::{ExitDirection, Room}
 };
 use macroquad::prelude::*;

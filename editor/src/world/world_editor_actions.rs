@@ -4,7 +4,7 @@ use engine_core::ui::text::*;
 use engine_core::ui::widgets::DEFAULT_FONT_SIZE_16;
 use engine_core::world::room::RoomId;
 use engine_core::{ 
-    global::tile_size, 
+    engine_global::tile_size, 
     tiles::tilemap::TileMap
 };
 use engine_core::{world::{room::{Room, RoomVariant}, world::World}};
