@@ -7,7 +7,7 @@ use crate::{
         component::*, 
         entity::Entity, 
         world_ecs::WorldEcs
-    }, global::tile_size, lighting::{
+    }, engine_global::tile_size, lighting::{
         glow::Glow, 
         light::Light,
     }, rendering::render_system::RenderSystem, world::room::Room

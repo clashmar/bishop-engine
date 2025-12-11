@@ -2,7 +2,7 @@
 use macroquad::prelude::*;
 use engine_core::{
     ecs::world_ecs::WorldEcs, 
-    global::tile_size, 
+    engine_global::tile_size, 
     tiles::tilemap::{
         TileMap, 
         shift_tiles

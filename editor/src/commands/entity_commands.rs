@@ -9,8 +9,8 @@ use engine_core::{ecs::{
 }, world::room::RoomId};
 use macroquad::prelude::*;
 use crate::{
-    commands::command_manager::Command, 
-    global::*
+    commands::editor_command_manager::EditorCommand, 
+    editor_global::*
 };
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub struct DeleteEntityCmd {
     pub saved: Option<Vec<(String, String)>>,
 }
 
-impl Command for DeleteEntityCmd {
+impl EditorCommand for DeleteEntityCmd {
     fn execute(&mut self) {
         // Capture components before deleting
         with_editor(|editor| {
@@ -70,7 +70,7 @@ fn restore_entity(
 /// Copy a snapshot of the entity to the global entity clipboard.
 pub fn copy_entity(world_ecs: &mut WorldEcs, entity: Entity) {
     let snapshot = capture_entity(world_ecs, entity);
-    SERVICES.with(|s| {
+    EDITOR_SERVICES.with(|s| {
         *s.entity_clipboard.borrow_mut() = Some(snapshot);
     });
 }
@@ -93,11 +93,11 @@ impl PasteEntityCmd {
     }
 }
 
-impl Command for PasteEntityCmd {
+impl EditorCommand for PasteEntityCmd {
     fn execute(&mut self) {
         // Grab the clipboard only once on first execution
         if self.snapshot.is_none() {
-            self.snapshot = SERVICES.with(|s| s.entity_clipboard.borrow().clone());
+            self.snapshot = EDITOR_SERVICES.with(|s| s.entity_clipboard.borrow().clone());
         }
 
         // Bail out if nothing is on the clipboard
@@ -187,7 +187,7 @@ impl MoveEntityCmd {
     }
 }
 
-impl Command for MoveEntityCmd {
+impl EditorCommand for MoveEntityCmd {
     fn execute(&mut self) {
         // Called the first time
         with_editor(|editor| {

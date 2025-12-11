@@ -8,7 +8,7 @@ use crate::editor::EditorMode;
 use engine_core::game::game::Game;
 use engine_core::world::world::WorldId;
 use macroquad::prelude::*;
-use crate::commands::command_manager::Command;
+use crate::commands::editor_command_manager::EditorCommand;
 
 /// Undo-able move‑entity command.
 #[derive(Debug)]
@@ -37,7 +37,7 @@ impl MoveWorldCmd {
     }
 }
 
-impl Command for MoveWorldCmd {
+impl EditorCommand for MoveWorldCmd {
     fn execute(&mut self) {
         // Called the first time
         with_editor(|editor| {
@@ -76,7 +76,7 @@ impl DeleteWorldCmd {
     }
 }
 
-impl Command for DeleteWorldCmd {
+impl EditorCommand for DeleteWorldCmd {
     fn execute(&mut self) {
         with_editor(|editor| {
             let game = &mut editor.game;
@@ -123,7 +123,7 @@ impl CreateWorldCmd {
     }
 }
 
-impl Command for CreateWorldCmd {
+impl EditorCommand for CreateWorldCmd {
     fn execute(&mut self) {
         with_editor(|editor| {
             let game = &mut editor.game;
@@ -196,7 +196,7 @@ impl EditWorldCmd {
 }
 
 
-impl Command for EditWorldCmd {
+impl EditorCommand for EditWorldCmd {
     fn execute(&mut self) {
         with_editor(|editor| {
             self.capture_original_state(&editor.game);
@@ -251,7 +251,7 @@ impl RenameGameCmd {
     }
 }
 
-impl Command for RenameGameCmd {
+impl EditorCommand for RenameGameCmd {
     fn execute(&mut self) {
         with_editor(|editor| {
             match rename_game(&mut editor.game, &self.new_name) {

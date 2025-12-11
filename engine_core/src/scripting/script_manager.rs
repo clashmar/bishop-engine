@@ -1,13 +1,7 @@
 // engine_core/src/script/script_manager.rs
-use crate::input::input_snapshot::InputSnapshot;
-use crate::ecs::world_ecs::WorldEcs;
-use std::sync::Mutex;
-use mlua::Function;
-use mlua::Variadic;
-use crate::script::engine_api::EngineApi;
-use mlua::Value;
+use crate::scripting::engine_api::EngineApi;
 use crate::game::game::Game;
-use crate::script::script::ScriptId;
+use crate::scripting::script::ScriptId;
 use crate::storage::path_utils::scripts_folder;
 use crate::*;
 use std::path::Path;
@@ -21,13 +15,13 @@ use mlua::Table;
 use serde::Deserialize;
 use serde::Serialize;
 
-/// A thin wrapper that owns the Lua VM and a reference to the world.
+/// Manages access to scripts and holds the Lua VM instance.
 #[derive(Serialize, Deserialize, Default)]
 pub struct ScriptManager {
     #[serde(skip)]
     pub lua: Lua,
     #[serde(skip)]
-    engine_api: Arc<EngineApi>,
+    pub engine_api: Arc<EngineApi>,
     /// Persistent map of all sprite is to their paths.
     pub script_id_to_path: HashMap<ScriptId, PathBuf>,
     #[serde(skip)]
@@ -42,7 +36,7 @@ pub struct ScriptManager {
 impl ScriptManager {
     /// Initializes a new script manager.
     pub async fn new(game_name: String) -> Self {
-        let mut manager = Self {
+        let manager = Self {
             lua: Lua::new(),
             engine_api: Arc::new(EngineApi::default()),
             script_id_to_path: HashMap::new(),
@@ -51,7 +45,6 @@ impl ScriptManager {
             game_name,
         };
 
-        Self::register_all_modules(&mut manager);
         manager
     }
 
@@ -143,9 +136,6 @@ impl ScriptManager {
         for (id, path) in scripts {
             game.script_manager.path_to_script_id.insert(path.clone(), id);
         }
-
-        // Register all callbacks
-        Self::register_all_modules(&mut game.script_manager);
     }
 
     /// Calculates the next script id 
@@ -163,103 +153,5 @@ impl ScriptManager {
             candidate += 1;
         }
         self.next_script_id = candidate;
-    }
-
-    /// Call this once after the `Lua` instance has been created.
-    pub fn register_engine_module(&mut self) -> Result<(), mlua::Error> {
-        let lua = &self.lua;
-
-        // Build the module
-        let engine_mod = lua.create_table()?;
-
-        // engine.call(name, ...)
-        let engine_api = self.engine_api.clone();
-        let call_fn = lua.create_function(move |lua, args: Variadic<Value>| {
-            engine_api.lua_call(lua, args)
-        })?;
-        engine_mod.set("call", call_fn)?;
-
-        // Convenience wrappers (engine.log, engine.wait, …)
-        let engine_api = self.engine_api.clone();
-        for name in engine_api.callbacks.lock().unwrap().keys() {
-            let fn_name = name.clone();
-            let api = engine_api.clone();
-            let wrapper = lua.create_function(move |lua, args: Variadic<Value>| {
-                let mut full = vec![Value::String(lua.create_string(&fn_name)?)];
-                full.extend_from_slice(&args);
-                api.lua_call(lua, Variadic::from(full))
-            })?;
-            engine_mod.set(name.clone(), wrapper)?;
-        }
-
-        // engine.on(event, handler)
-        let engine_api = self.engine_api.clone();
-        let on_fn = lua.create_function(move |_, (event, handler): (String, Function)| {
-            engine_api.listeners
-                .lock()
-                .unwrap()
-                .entry(event)
-                .or_default()
-                .push(handler);
-            Ok(())
-        })?;
-        engine_mod.set("on", on_fn)?;
-
-        // engine.emit(event, …)
-        let engine_api = self.engine_api.clone();
-        let emit_fn = lua.create_function(move |_lua, (event, args): (String, Variadic<Value>)| {
-            let map = engine_api.listeners.lock().unwrap();
-            if let Some(callbacks) = map.get(&event) {
-                for cb in callbacks {
-                    if let Err(e) = cb.call::<()>(args.clone()) {
-                        onscreen_error!("Lua listener error for event '{}': {}", event, e);
-                    }
-                }
-            }
-            Ok(())
-        })?;
-        engine_mod.set("emit", emit_fn)?;
-
-        lua.register_module("engine", &engine_mod)?;
-        Ok(())
-    }
-
-    /// Register the built‑in modules.
-    fn register_modules(&mut self) {
-        let engine_api = self.engine_api.clone();
-
-        // Log: TODO: convert to module
-        engine_api.register("log", |_, args| {
-            let msg = match args.iter().next() {
-                Some(Value::String(s)) => s.to_str()?.to_owned(),
-                _ => return Err(mlua::Error::RuntimeError("log expects a string".into())),
-            };
-            // TODO: add multiple methods for levels
-            onscreen_info!("[Lua] {}", msg);
-            Ok(Value::Nil)
-        });
-
-        // let modules: Vec<Box<dyn script::lua_module::LuaModule>> = vec![
-        //     Box::new(script::input_module::InputModule {
-        //         snapshot: self.input_snapshot.clone(),
-        //     }),
-        //     Box::new(script::entity_module::EntityModule {
-        //         world: self.world_arc.clone(),
-        //     }),
-        //     // add more modules here (physics, audio, UI, …)
-        // ];
-
-        // for m in modules {
-        //     if let Err(e) = m.register(&self.lua) {
-        //         onscreen_error!("Error registering lua module: {e}")
-        //     }
-        // }
-    }
-
-    fn register_all_modules(script_manager: &mut ScriptManager) {
-        script_manager.register_modules();
-        if let Err(e) = script_manager.register_engine_module() {
-            onscreen_error!("Error registering engine module: {e}")
-        }
     }
 }

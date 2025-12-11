@@ -14,7 +14,7 @@ use engine_core::storage::path_utils::*;
 use engine_core::ui::toast::Toast;
 use crate::commands::game_editor_commands::RenameGameCmd;
 use crate::game::game_editor::GameEditor;
-use crate::global::push_command;
+use crate::editor_global::push_command;
 use crate::gui::modal::*;
 use crate::room::room_editor::RoomEditor;
 use crate::world::world_editor::WorldEditor;
@@ -149,8 +149,8 @@ impl Editor {
                 }
                 MenuAction::Save => self.save(),
                 MenuAction::SaveAs => self.open_save_as_modal(),
-                MenuAction::Undo => crate::global::request_undo(),
-                MenuAction::Redo => crate::global::request_redo(),
+                MenuAction::Undo => crate::editor_global::request_undo(),
+                MenuAction::Redo => crate::editor_global::request_redo(),
                 MenuAction::Export => {
                     match export_game(&self.game).await {
                         Ok(path) => {
@@ -191,11 +191,11 @@ impl Editor {
         }
 
         if Controls::undo() {
-            crate::global::request_undo();
+            crate::editor_global::request_undo();
         }
 
         if Controls::redo() {
-            crate::global::request_redo();
+            crate::editor_global::request_redo();
         }
     }
 

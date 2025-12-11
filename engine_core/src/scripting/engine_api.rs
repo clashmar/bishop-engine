@@ -47,7 +47,7 @@ impl EngineApi {
         let callback = map
             .get(&name)
             .ok_or_else(|| mlua::Error::RuntimeError(
-                format!("engine function '{name}' not registered")
+                format!("Engine function '{name}' not registered.")
             ))?;
 
         // Pass the remaining arguments to the Rust callback

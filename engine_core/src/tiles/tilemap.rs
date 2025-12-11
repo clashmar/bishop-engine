@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde_with::{serde_as, FromInto};
 use crate::assets::asset_manager::{AssetManager};
 use crate::ecs::world_ecs::WorldEcs;
-use crate::global::tile_size;
+use crate::engine_global::tile_size;
 use crate::tiles::tile::TileDefId;
 use crate::world::room::{Exit, ExitDirection};
 use crate::world::world::GridPos;

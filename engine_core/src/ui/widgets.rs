@@ -1,7 +1,7 @@
 // engine_core/src/ui/widgets.rs
 use crate::*;
-use crate::script::script::ScriptId;
-use crate::script::script_manager::ScriptManager;
+use crate::scripting::script::ScriptId;
+use crate::scripting::script_manager::ScriptManager;
 use std::borrow::Cow;
 use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;

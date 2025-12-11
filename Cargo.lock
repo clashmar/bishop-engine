@@ -1263,8 +1263,10 @@ version = "0.1.0"
 dependencies = [
  "cargo-bundle",
  "engine_core",
+ "inventory",
  "log",
  "macroquad",
+ "mlua",
  "ron",
  "serde 1.0.228",
  "uuid",

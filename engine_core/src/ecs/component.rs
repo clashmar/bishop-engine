@@ -97,7 +97,6 @@ pub struct Position {
 ecs_component!(Position);
 
 /// Z layer of an entity.
-#[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 #[serde(default)]
 pub struct Layer {
@@ -121,13 +120,25 @@ ecs_component!(Player, [
     PhysicsBody
     ]);
 
-#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+#[serde_as]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
-pub struct Velocity {
-    pub x: f32,
-    pub y: f32,
-}
+pub struct Velocity(#[serde_as(as = "FromInto<[f32; 2]>")] pub Vec2);
 ecs_component!(Velocity);
+
+
+impl std::ops::Deref for Velocity {
+    type Target = Vec2;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Velocity {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
 #[serde(default)]
@@ -141,8 +152,8 @@ inspector_module!(Collider);
 impl Default for Collider {
     fn default() -> Self {
         Self {
-            width:  0.0,
-            height: 0.0,
+            width:  16.0,
+            height: 16.0,
         }
     }
 }

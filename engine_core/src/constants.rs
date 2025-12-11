@@ -1,6 +1,6 @@
 // engine_core/src/constants.rs
 use macroquad::prelude::*;
-use crate::global::tile_size;
+use crate::engine_global::tile_size;
 
 /// 60Hz pysics.
 pub const FIXED_DT: f32 = 1.0 / 60.0;

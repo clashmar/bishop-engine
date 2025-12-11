@@ -12,7 +12,7 @@ use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
 use engine_core::controls::controls::Controls;
 use crate::commands::entity_commands::*;
-use crate::global::push_command;
+use crate::editor_global::push_command;
 use crate::gui::gui_constants::*;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;

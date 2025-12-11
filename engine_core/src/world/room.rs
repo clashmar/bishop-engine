@@ -3,7 +3,7 @@ use crate::{
     camera::game_camera::RoomCamera, ecs::{
         component::{CurrentRoom, Position}, 
         world_ecs::WorldEcs
-    }, global::tile_size, tiles::tilemap::TileMap
+    }, engine_global::tile_size, tiles::tilemap::TileMap
 };
 use serde_with::FromInto;
 use macroquad::prelude::*;
