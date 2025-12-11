@@ -1,11 +1,18 @@
 // game/src/playtest_main.rs
-use engine_core::constants::*;
-use engine_core::game::game::Game;
-use engine_core::world::room::Room;
-use std::{env, fs};
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::camera::camera_manager::CameraManager;
 use game_lib::game_state::GameState;
+use engine_core::world::room::Room;
+use engine_core::game::game::Game;
+use game_lib::engine::LuaGameCtx;
+use engine_core::constants::*;
+use game_lib::engine::Engine;
 use macroquad::prelude::*;
+use std::cell::RefCell;
 use ron::de::from_str;
+use std::{env, fs};
+use std::rc::Rc;
+use mlua::Lua;
 
 /// The complete payload the editor writes for the play‑test binary.
 #[derive(serde::Deserialize)]
@@ -47,10 +54,21 @@ async fn main() {
         game,
     } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
-    let mut game_state = GameState::for_room(room, game).await;
-    let game_state = std::rc::Rc::new(std::cell::RefCell::new(game_state));
-    let script_mgr = &mut game_state.borrow_mut().game.script_manager;
-    let ctx = game_lib::engine::LuaGameCtx { game_state: game_state.clone() };
-    let _ = ctx.set_lua_game_ctx(&script_mgr);
-    game_state.borrow_mut().run_game_loop().await;
+    // TODO: Tidy up
+    let lua = Lua::new();
+    let mut camera_manager = CameraManager::default();
+
+    let game_state = Rc::new(RefCell::new(GameState::for_room(room, game, &lua, &mut camera_manager).await));
+
+    let ctx = LuaGameCtx { game_state: game_state.clone() };
+    let _ = ctx.set_lua_game_ctx(&lua);
+
+    let mut engine = Engine { 
+        game_state: game_state.clone(), 
+        lua, 
+        camera_manager,
+        render_system: RenderSystem::new(),
+    };
+
+    engine.run().await;
 }

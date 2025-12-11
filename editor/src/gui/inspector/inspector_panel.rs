@@ -97,7 +97,7 @@ impl InspectorPanel {
     /// Returns true if 'Create' was pressed.
     pub fn draw(
         &mut self,
-        game_ctx: &mut GameCtx
+        game_ctx: &mut GameCtxMut
     ) -> bool {
         self.active_rects.clear();
    

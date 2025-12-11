@@ -28,7 +28,6 @@ thread_local! {
 /// Push an `LuaCommand` to the global command queue.
 pub fn push_command(cmd: Box<dyn LuaCommand>) {
     GAME_SERVICES.with(|services| {
-        println!("Pushed");
         services.command_manager.borrow_mut().push(cmd);
     });
 }

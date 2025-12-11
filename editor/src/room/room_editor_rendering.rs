@@ -1,6 +1,6 @@
 // editor/src/room/room_editor_actions.rs
 use engine_core::animation::animation_clip::Animation;
-use engine_core::game::game::GameCtx;
+use engine_core::game::game::GameCtxMut;
 use engine_core::lighting::glow::Glow;
 use engine_core::lighting::light::Light;
 use engine_core::assets::sprite::Sprite;
@@ -28,7 +28,7 @@ impl RoomEditor {
     /// Draw static UI for the scene editor
     pub fn draw_ui(
         &mut self, 
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
     ) {
         // Reset to static camera
         set_default_camera();

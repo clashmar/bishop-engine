@@ -1,12 +1,14 @@
 // game/src/main.rs
-use std::env;
-use std::fs;
-use engine_core::assets::core_assets::load_rgba_resized;
-use engine_core::*;
 use engine_core::storage::path_utils::resources_dir_from_exe;
+use engine_core::assets::core_assets::load_rgba_resized;
+use engine_core::camera::camera_manager::CameraManager;
+use game_lib::game_state::GameState;
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
-use game_lib::game_state::GameState;
+use engine_core::*;
+use mlua::Lua;
+use std::env;
+use std::fs;
 
 fn window_conf() -> Conf {
     // Start with the default miniquad icon
@@ -49,9 +51,17 @@ fn load_icon(png_bytes: &[u8]) -> Icon {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let game_state = std::rc::Rc::new(std::cell::RefCell::new(GameState::new().await));
-    let script_mgr = &mut game_state.borrow_mut().game.script_manager;
-    let ctx = game_lib::engine::LuaGameCtx { game_state: game_state.clone() };
-    let _ = ctx.set_lua_game_ctx(&script_mgr);
-    game_state.borrow_mut().run_game_loop().await;
+    // let lua = Lua::new();
+    // let game_state = std::rc::Rc::new(std::cell::RefCell::new(GameState::new(&lua).await));
+    // let script_mgr = &mut game_state.borrow_mut().game.script_manager;
+    // let ctx = game_lib::engine::LuaGameCtx { game_state: game_state.clone() };
+    // let _ = ctx.set_lua_game_ctx(&script_mgr);
+
+    // let mut engine = game_lib::engine::Engine { 
+    //     game_state: game_state.clone(), 
+    //     lua, 
+    //     camera_manager: CameraManager::default(),
+    // };
+
+    // engine.run().await;
 }

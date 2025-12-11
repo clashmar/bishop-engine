@@ -7,6 +7,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use mlua::Table;
 use mlua::Value;
+use mlua::Lua;
 
 /// Opaque handle that the script manager gives out. Default/Unset is 0.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -42,14 +43,14 @@ ecs_component!(Script);
 
 impl Script {
     /// Loads the table from ScriptManager and updates ScriptData
-    pub fn load(&mut self, script_manager: &mut ScriptManager) -> LuaResult<()> {
+    pub fn load(&mut self, lua: &Lua, script_manager: &mut ScriptManager) -> LuaResult<()> {
         if self.script_id.0 == 0 {
             // Script hasn't been set yet
             self.data.fields.clear();
             return Ok(());
         }
 
-        let table = script_manager.load_script_table(self.script_id)?;
+        let table = script_manager.load_script_table(lua, self.script_id)?;
 
         // Determine the public fields table
         let public: Table = match table.get::<Option<Table>>("public")? {
@@ -62,11 +63,11 @@ impl Script {
         for pair in public.pairs::<String, Value>() {
             let (name, value) = pair?;
             let field = match value {
-                mlua::Value::Boolean(b) => ScriptField::Bool(b),
-                mlua::Value::Integer(i) => ScriptField::Int(i),
-                mlua::Value::Number(n) => ScriptField::Float(n),
-                mlua::Value::String(s) => ScriptField::Text(s.to_str()?.to_string()),
-                mlua::Value::Table(t) => {
+                Value::Boolean(b) => ScriptField::Bool(b),
+                Value::Integer(i) => ScriptField::Int(i),
+                Value::Number(n) => ScriptField::Float(n),
+                Value::String(s) => ScriptField::Text(s.to_str()?.to_string()),
+                Value::Table(t) => {
                     // Try Vec2
                     if let Ok(x) = t.get::<f64>(1) {
                         if let Ok(y) = t.get::<f64>(2) {
@@ -76,13 +77,16 @@ impl Script {
                                 ScriptField::Vec2([x as f32, y as f32])
                             }
                         } else {
-                            continue; // skip unsupported table
+                            // Skip unsupported table
+                            continue; 
                         }
                     } else {
-                        continue; // skip unsupported table
+                        // Skip unsupported table
+                        continue; 
                     }
                 }
-                _ => continue, // ignore function, userdata, etc.
+                // Ignore functions
+                _ => continue,
             };
             fields.insert(name, field);
         }
@@ -95,14 +99,14 @@ impl Script {
         }
 
         // Sync current values back to Lua
-        self.sync_to_lua(script_manager)?;
+        self.sync_to_lua(lua, script_manager)?;
 
         Ok(())
     }
 
      /// Sync the current ScriptData back to Lua table.
-    pub fn sync_to_lua(&self, script_manager: &ScriptManager) -> LuaResult<()> {
-        script_manager.sync_to_lua(self.script_id, &self.data)
+    pub fn sync_to_lua(&self, lua: &Lua, script_manager: &ScriptManager) -> LuaResult<()> {
+        script_manager.sync_to_lua(lua, self.script_id, &self.data)
     }
 }
 

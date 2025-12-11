@@ -871,6 +871,7 @@ dependencies = [
  "inventory",
  "log",
  "macroquad",
+ "mlua",
  "once_cell",
  "reflect_derive",
  "rfd",

@@ -9,26 +9,27 @@ pub struct InputSnapshot {
     pub pressed: HashMap<&'static str, bool>,
     pub released: HashMap<&'static str, bool>,
 }
+impl InputSnapshot {
+    /// Fill `snapshot.keys` with the raw key names that are currently down.
+    pub fn capture_input_state(&mut self) {
+        // Clear previous frame data
+        self.down.clear();
+        self.pressed.clear();
+        self.released.clear();
 
-/// Fill `snapshot.keys` with the raw key names that are currently down.
-pub fn capture_input_state(snapshot: &mut InputSnapshot) {
-    // Clear previous frame data
-    snapshot.down.clear();
-    snapshot.pressed.clear();
-    snapshot.released.clear();
+        // Keyboard
+        for &(name, code) in KEY_TABLE {
+            self.down.insert(name, is_key_down(code));
+            self.pressed.insert(name, is_key_pressed(code));
+            self.released.insert(name, is_key_released(code));
+        }
 
-    // Keyboard
-    for &(name, code) in KEY_TABLE {
-        snapshot.down.insert(name, is_key_down(code));
-        snapshot.pressed.insert(name, is_key_pressed(code));
-        snapshot.released.insert(name, is_key_released(code));
-    }
-
-    // Mouse
-    for &(name, button) in MOUSE_TABLE {
-        snapshot.down.insert(name, is_mouse_button_down(button));
-        snapshot.pressed.insert(name, is_mouse_button_pressed(button));
-        snapshot.released.insert(name, is_mouse_button_released(button));
+        // Mouse
+        for &(name, button) in MOUSE_TABLE {
+            self.down.insert(name, is_mouse_button_down(button));
+            self.pressed.insert(name, is_mouse_button_pressed(button));
+            self.released.insert(name, is_mouse_button_released(button));
+        }
     }
 }
 

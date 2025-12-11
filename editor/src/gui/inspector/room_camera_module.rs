@@ -2,7 +2,7 @@
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::module::InspectorModule;
-use engine_core::game::game::GameCtx;
+use engine_core::game::game::GameCtxMut;
 use strum::IntoEnumIterator;
 use engine_core::{camera::game_camera::*, ui::text::*};
 use engine_core::ecs::module::CollapsibleModule;
@@ -28,7 +28,7 @@ impl InspectorModule for RoomCameraModule {
     fn draw(
         &mut self,
         rect: Rect,
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
         let world_ecs = &mut game_ctx.cur_world_ecs;

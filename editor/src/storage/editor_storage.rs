@@ -191,6 +191,7 @@ pub fn create_new_world() -> World {
         .create_entity()
         .with(Player)
         .with(Position { position: starting_position })
+        .with(PhysicsBody)
         .with(CurrentRoom(room_id))
         .finish();
 

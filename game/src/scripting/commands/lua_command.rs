@@ -1,9 +1,8 @@
 // game/src/scripting/commands/lua_command.rs
-use crate::game_state::GameState;
 use engine_core::ecs::component_registry::COMPONENTS;
-use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::entity::Entity;
 use std::sync::mpsc::Sender;
+use crate::engine::Engine;
 use mlua::Function;
 use engine_core::*;
 use mlua::Value;
@@ -11,7 +10,7 @@ use mlua::Value;
 /// All Lua actions implement this.
 pub trait LuaCommand {
     /// Execute the command, mutating the supplied `GameState`.
-    fn execute(&mut self, game_state: &mut GameState);
+    fn execute(&mut self, engine: &mut Engine);
 }
 
 /// Set a component on an entity.
@@ -22,9 +21,10 @@ pub struct SetComponentCmd {
 }
 
 impl LuaCommand for SetComponentCmd {
-    fn execute(&mut self, game_state: &mut GameState) {
+    fn execute(&mut self, engine: &mut Engine) {
+        let mut game_state = engine.game_state.borrow_mut();
         if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == self.comp_name) {
-            if let Ok(boxed) = (reg.from_lua)(&game_state.game.script_manager.lua, self.value.clone()) {
+            if let Ok(boxed) = (reg.from_lua)(&engine.lua, self.value.clone()) {
                 (reg.inserter)(
                     &mut game_state.game.current_world_mut().world_ecs,
                     Entity(self.entity),
@@ -39,36 +39,6 @@ impl LuaCommand for SetComponentCmd {
     }
 }
 
-/// Query a component and send the result back through a channel.
-pub struct GetComponentCmd {
-    pub entity: usize,
-    pub comp_name: String,
-    pub responder: Sender<mlua::Result<Value>>,
-}
-
-impl LuaCommand for GetComponentCmd {
-    fn execute(&mut self, game_state: &mut GameState) {
-        let result = if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == self.comp_name) {
-            let world = &mut game_state.game.current_world_mut().world_ecs;
-            if (reg.has)(world, Entity(self.entity)) {
-                let boxed = (reg.clone)(world, Entity(self.entity));
-                (reg.to_lua)(&game_state.game.script_manager.lua, &*boxed)
-            } else {
-                Err(mlua::Error::RuntimeError(format!(
-                    "Entity {} has no {} component",
-                    self.entity, self.comp_name
-                )))
-            }
-        } else {
-            Err(mlua::Error::RuntimeError(format!(
-                "Component '{}' not known", 
-                self.comp_name,
-            )))
-        };
-        let _ = self.responder.send(result);
-    }
-}
-
 /// Call a method on a global module.
 pub struct CallGlobalCmd {
     pub name: String,
@@ -78,7 +48,8 @@ pub struct CallGlobalCmd {
 }
 
 impl LuaCommand for CallGlobalCmd {
-    fn execute(&mut self, game_state: &mut GameState) {
+    fn execute(&mut self, engine: &mut Engine) {
+        let game_state = engine.game_state.borrow_mut();
         let result = game_state
             .global_modules
             .borrow()
@@ -96,23 +67,5 @@ impl LuaCommand for CallGlobalCmd {
                 ))),
             });
         let _ = self.responder.send(result);
-    }
-}
-
-/// Catch‑all for ad‑hoc closures.
-pub struct CustomCmd {
-    pub cb: Option<Box<dyn FnOnce(&mut WorldEcs) + Send>>,
-}
-
-impl LuaCommand for CustomCmd {
-    fn execute(&mut self, game_state: &mut GameState) {
-        if let Some(cb) = self.cb.take() {
-            cb(&mut game_state
-                .game
-                .current_world_mut()
-                .world_ecs);
-        } else {
-            onscreen_error!("Unexpected error executing custom command.")
-        }
     }
 }
