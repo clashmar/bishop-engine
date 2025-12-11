@@ -47,11 +47,14 @@ where
     Sel: Fn(&InputSnapshot) -> &HashMap<&'static str, bool> + Copy + Send + 'static,
 {
     lua.create_function(move |_lua, key: String| {
-        let snapshot = get_input_snapshot();
+        let mut snapshot = get_input_snapshot();
+        snapshot.capture_input_state();
+        
         let value = map_selector(&snapshot)
             .get(key.as_str())
             .copied()
             .unwrap_or(false);
+
         Ok(value)
     })
 }

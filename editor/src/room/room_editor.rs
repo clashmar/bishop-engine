@@ -213,7 +213,7 @@ impl RoomEditor {
         self.request_play = false; // This is very important
         self.active_rects.clear();
 
-        let mut game_ctx = game.ctx();
+        let mut game_ctx = game.ctx_mut();
         let world_ecs = &mut game_ctx.cur_world_ecs;
         let room = &mut game_ctx.cur_room;
         let asset_manager = &mut game_ctx.asset_manager;

@@ -117,28 +117,20 @@ pub struct Player;
 ecs_component!(Player, [
     Collider, 
     Velocity,
-    PhysicsBody
     ]);
 
-#[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
-pub struct Velocity(#[serde_as(as = "FromInto<[f32; 2]>")] pub Vec2);
+pub struct Velocity {
+    pub x: f32,
+    pub y: f32,
+}
 ecs_component!(Velocity);
 
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+pub struct Grounded(#[serde(skip)] pub bool);
+ecs_component!(Grounded);
 
-impl std::ops::Deref for Velocity {
-    type Target = Vec2;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::DerefMut for Velocity {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
 
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
 #[serde(default)]
@@ -161,7 +153,7 @@ impl Default for Collider {
 /// Marker for participation in the physics system.
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct PhysicsBody;     
-ecs_component!(PhysicsBody);
+ecs_component!(PhysicsBody, [Grounded]);
 
 /// Marker for entities that move by code.
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]

@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
 use engine_core::*;
+use crate::with_lua;
 
 #[derive(Default)]   
 pub struct ScriptModule {
@@ -42,7 +43,7 @@ impl InspectorModule for ScriptModule {
     fn draw(
         &mut self,
         rect: Rect,
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
         let world_ecs = &mut game_ctx.cur_world_ecs;
@@ -56,10 +57,12 @@ impl InspectorModule for ScriptModule {
 
         // Ensure ScriptData is loaded if it exists
         if script_comp.script_id != ScriptId(0) {
-            if let Err(e) = script_comp.load(script_manager) {
-                onscreen_error!("Failed to load script: {}", e);
-                return;
-            }
+            with_lua(|lua| {
+                if let Err(e) = script_comp.load(lua, script_manager) {
+                    onscreen_error!("Failed to load script: {}", e);
+                    return;
+                }
+            });
         }
 
         // Layout
@@ -85,9 +88,11 @@ impl InspectorModule for ScriptModule {
 
         // Script picker
         if gui_script_picker(picker_rect, &mut script_comp.script_id, script_manager) {
-            if let Err(e) = script_comp.load(script_manager) {
-                onscreen_error!("Failed to load script: {}", e);
-            }
+            with_lua(|lua| {
+                if let Err(e) = script_comp.load(lua, script_manager) {
+                    onscreen_error!("Failed to load script: {}", e);
+                }
+            })
         }
 
         // Refresh button
@@ -96,11 +101,13 @@ impl InspectorModule for ScriptModule {
                 return;
             }
 
-            if let Err(e) = script_manager.reload(script_comp.script_id) {
-                onscreen_error!("Failed to reload script: {}", e);
-            } else if let Err(e) = script_comp.load(script_manager) {
-                onscreen_error!("Failed to reload script data: {}", e);
-            }
+            with_lua(|lua | {
+                if let Err(e) = script_manager.reload(lua, script_comp.script_id) {
+                    onscreen_error!("Failed to reload script: {}", e);
+                } else if let Err(e) = script_comp.load(lua, script_manager) {
+                    onscreen_error!("Failed to reload script data: {}", e);
+                }
+            });
         }
 
         if script_comp.data.fields.is_empty() {
@@ -285,9 +292,11 @@ impl InspectorModule for ScriptModule {
 
             // Write back to Lua
             if changed {
-                if let Err(e) = script_comp.sync_to_lua(script_manager) {
-                    onscreen_error!("Failed to sync script: {}", e);
-                }
+                with_lua(|lua| {
+                    if let Err(e) = script_comp.sync_to_lua(lua, script_manager) {
+                        onscreen_error!("Failed to sync script: {}", e);
+                    }
+                })
             }
 
             y += widget_rect.h + SPACING;

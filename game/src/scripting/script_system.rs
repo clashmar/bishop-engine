@@ -1,21 +1,23 @@
 // engine_core/src/script/script_system.rs
 use crate::game_global::drain_commands;
-use crate::game_state::GameState;
+use crate::engine::Engine;
 use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
 use engine_core::scripting::script_manager::ScriptManager;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::world_ecs::WorldEcs;
+use mlua::prelude::LuaResult;
 use engine_core::*;
 use mlua::Function;
 use mlua::Variadic;
 use mlua::Value;
+use mlua::Lua;
 
 pub struct ScriptSystem;
 
 impl ScriptSystem {
     /// Initialize the script system.
-    pub fn init(script_manager: &mut ScriptManager) {
-        if let Err(e) = Self::register_engine_module(script_manager) {
+    pub fn init(lua: &Lua, script_manager: &mut ScriptManager) {
+        if let Err(e) = Self::register_engine_module(lua, script_manager) {
             onscreen_error!("Error registering engine module: {e}")
         };
 
@@ -23,16 +25,14 @@ impl ScriptSystem {
         for descriptor in inventory::iter::<LuaModuleRegistry> {
             // Build the concrete module and register it
             let module = (descriptor.ctor)();
-            if let Err(e) = module.register(&script_manager.lua) {
+            if let Err(e) = module.register(lua) {
                 onscreen_error!("Lua module registration failed: {e}");
             }
         }
     }
 
     /// Call this once after the `Lua` instance has been created.
-    fn register_engine_module(script_manager: &mut ScriptManager) -> Result<(), mlua::Error> {
-        let lua = &script_manager.lua;
-
+    fn register_engine_module(lua: &Lua, script_manager: &mut ScriptManager) -> LuaResult<()> {
         // Build the module
         let engine_mod = lua.create_table()?;
 
@@ -91,31 +91,42 @@ impl ScriptSystem {
 
     /// Process all Lua commands to the `GameState`.
     /// Called once per frame, before any Lua script runs.
-    pub fn process_commands(game_state: &mut GameState) {
+    pub fn process_commands(engine: &mut Engine) {
         // Drain the command queue and apply each command
         for mut cmd in drain_commands() {
-            cmd.execute(game_state);
+            cmd.execute(engine);
         }
     }
 }
 
-
-pub fn run_scripts(
-    dt: f32, 
+// Load all scripts for the given ecs.
+pub fn load_scripts(
+    lua: &Lua,
     world_ecs: &mut WorldEcs, 
     script_manager: &mut ScriptManager
-) -> mlua::Result<()> {
+) -> LuaResult<()> {
     let script_store = world_ecs.get_store_mut::<Script>();
 
-    for (entity, script) in script_store.data.iter_mut() {
-        // Ensure the script table is loaded
+    for (_entity, script) in script_store.data.iter_mut() {
         if !script_manager.tables.contains_key(&script.script_id) {
-            script.load(script_manager)?
+            script.load(lua, script_manager)?
         }
+    }
 
+    Ok(())
+}
+
+// Run all scripts for the given ecs.
+pub fn run_scripts(
+    dt: f32,
+    world_ecs: &WorldEcs, 
+    script_manager: &ScriptManager
+) -> LuaResult<()> {
+    let script_store = world_ecs.get_store::<Script>();
+    for (entity, script) in script_store.data.iter() {
         if let Some(update) = script_manager.update_fns.get(&script.script_id) {
             let table = script_manager.tables.get(&script.script_id).unwrap();
-            table.set("entity", **entity)?;
+            table.set("entity", entity.0)?;
             update.call::<()>((table, dt))?
         }
     }

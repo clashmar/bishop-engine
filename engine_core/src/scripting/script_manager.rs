@@ -23,8 +23,6 @@ use serde::Serialize;
 #[derive(Serialize, Deserialize, Default)]
 pub struct ScriptManager {
     #[serde(skip)]
-    pub lua: Lua,
-    #[serde(skip)]
     /// ???
     pub engine_api: Arc<EngineApi>,
     #[serde(skip)]
@@ -48,7 +46,6 @@ impl ScriptManager {
     /// Initializes a new script manager.
     pub async fn new(game_name: String) -> Self {
         let manager = Self {
-            lua: Lua::new(),
             engine_api: Arc::new(EngineApi::default()),
             tables: HashMap::new(),
             update_fns: HashMap::new(),
@@ -62,12 +59,12 @@ impl ScriptManager {
     }
 
     /// Load the Lua table and store it in the manager
-    pub fn load_script_table(&mut self, id: ScriptId) -> LuaResult<&Table> {
+    pub fn load_script_table(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
         if self.tables.contains_key(&id) {
             return Ok(self.tables.get(&id).unwrap());
         }
 
-        let table = self.load_table_from_id(id)?;
+        let table = self.load_table_from_id(lua, id)?;
 
         if let Ok(update) = table.get::<_>("update") {
             self.update_fns.insert(id, update);
@@ -88,7 +85,7 @@ impl ScriptManager {
     }
 
     /// Sync ScriptData back into its Lua table.
-    pub fn sync_to_lua(&self, id: ScriptId, data: &ScriptData) -> LuaResult<()> {
+    pub fn sync_to_lua(&self, lua: &Lua, id: ScriptId, data: &ScriptData) -> LuaResult<()> {
         let table = match self.tables.get(&id) {
             Some(t) => t,
             None => return Ok(()),
@@ -104,13 +101,13 @@ impl ScriptManager {
                 ScriptField::Float(f) => public.set(name.clone(), *f)?,
                 ScriptField::Text(s) => public.set(name.clone(), s.clone())?,
                 ScriptField::Vec2(v) => {
-                    let t = self.lua.create_table()?;
+                    let t = lua.create_table()?;
                     t.set(1, v[0])?;
                     t.set(2, v[1])?;
                     public.set(name.clone(), t)?;
                 }
                 ScriptField::Vec3(v) => {
-                    let t = self.lua.create_table()?;
+                    let t = lua.create_table()?;
                     t.set(1, v[0])?;
                     t.set(2, v[1])?;
                     t.set(3, v[2])?;
@@ -121,7 +118,7 @@ impl ScriptManager {
         Ok(())
     }
 
-    pub fn load_table_from_id(&mut self, id: ScriptId) -> LuaResult<Table> {
+    pub fn load_table_from_id(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<Table> {
         let rel_path = self
             .script_id_to_path
             .get(&id)
@@ -136,7 +133,7 @@ impl ScriptManager {
 
         let path_name = rel_path.display().to_string();
 
-        let table: Table = self.lua.load(&src).set_name(path_name).eval()?;
+        let table: Table = lua.load(&src).set_name(path_name).eval()?;
         Ok(table)
     }
 
@@ -228,10 +225,10 @@ impl ScriptManager {
         self.next_script_id = candidate;
     }
 
-    pub fn reload(&mut self, id: ScriptId) -> LuaResult<&Table> {
+    pub fn reload(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
         self.tables.remove(&id);
         self.update_fns.remove(&id);
-        self.load_script_table(id)
+        self.load_script_table(lua, id)
     }
 
     pub fn unload(&mut self, id: ScriptId) {

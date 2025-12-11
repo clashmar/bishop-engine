@@ -34,8 +34,18 @@ pub struct Game {
 }
 
 /// Temporary view into a `Game` that bundles together the 
-/// mutable systems that are usually needed at the same time.
+/// immutable systems that are usually needed at the same time.
 pub struct GameCtx<'a> {
+    // TODO: wrap in options
+    pub cur_world_ecs: &'a WorldEcs,
+    pub cur_room: &'a Room,
+    pub asset_manager: &'a AssetManager,
+    pub script_manager: &'a ScriptManager,
+}
+
+/// Temporary view into a `Game` that bundles together the 
+/// mutable systems that are usually needed at the same time.
+pub struct GameCtxMut<'a> {
     // TODO: wrap in options
     pub cur_world_ecs: &'a mut WorldEcs,
     pub cur_room: &'a mut Room,
@@ -44,7 +54,34 @@ pub struct GameCtx<'a> {
 }
 
 impl Game {
-    pub fn ctx<'a>(&'a mut self) -> GameCtx<'a> {
+    /// Returns an immutable game context.
+    pub fn ctx<'a>(&'a self) -> GameCtx<'a> {
+        let world = self
+            .worlds
+            .iter()
+            .find(|w| w.id == self.current_world_id)
+            .expect("There must be a current world.");
+
+        let cur_world_ecs = &world.world_ecs;
+        let rooms = &world.rooms;
+
+        let room_id = world.current_room_id.expect("Room id not found.");
+
+        let cur_room = rooms
+            .iter()
+            .find(|r| r.id == room_id)
+            .expect("Room not found.");
+
+        GameCtx {
+            cur_world_ecs,
+            cur_room,
+            asset_manager: &self.asset_manager,
+            script_manager: &self.script_manager,
+        }
+    }
+
+    /// Returns a mutable game context.
+    pub fn ctx_mut<'a>(&'a mut self) -> GameCtxMut<'a> {
         let world = self
             .worlds
             .iter_mut()
@@ -63,7 +100,7 @@ impl Game {
             .find(|r| r.id == room_id)
             .expect("Room not found.");
 
-        GameCtx {
+        GameCtxMut {
             cur_world_ecs,
             cur_room,
             asset_manager: &mut self.asset_manager,

@@ -2,7 +2,7 @@
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::module::InspectorModule;
-use engine_core::{ecs::component::Player, game::game::GameCtx, ui::{text::*, widgets::*}};
+use engine_core::{ecs::component::Player, game::game::GameCtxMut, ui::{text::*, widgets::*}};
 use macroquad::prelude::*;
 
 #[derive(Default)]
@@ -16,7 +16,7 @@ impl InspectorModule for PlayerModule {
     fn draw(
         &mut self,
         rect: Rect,
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
         let world_ecs = &mut game_ctx.cur_world_ecs;

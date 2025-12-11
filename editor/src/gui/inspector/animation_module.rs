@@ -54,7 +54,7 @@ impl InspectorModule for AnimationModule {
     fn draw(
         &mut self,
         rect: Rect,
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
         let world_ecs = &mut game_ctx.cur_world_ecs;

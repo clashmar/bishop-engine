@@ -1,5 +1,5 @@
 // engine_core/src/ecs/module.rs
-use crate::game::game::GameCtx;
+use crate::game::game::GameCtxMut;
 use crate::ui::text::*;
 use crate::ui::widgets::*;
 use macroquad::prelude::*;
@@ -16,7 +16,7 @@ pub trait InspectorModule {
     fn draw(
         &mut self,
         rect: Rect,
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     );
 
@@ -89,7 +89,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
     fn draw(
         &mut self,
         rect: Rect,
-        game_ctx: &mut GameCtx,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
         let world_ecs = &mut game_ctx.cur_world_ecs;

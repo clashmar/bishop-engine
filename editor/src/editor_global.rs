@@ -1,16 +1,18 @@
 // editor/src/editor_global.rs
 use crate::commands::editor_command_manager::EditorCommandManager;
 use crate::commands::editor_command_manager::EditorCommand;
-use std::future::Future;
-use std::pin::Pin;
-use std::rc::Rc;
-use std::cell::Cell;
-use crate::Editor;
 use std::cell::RefCell;
+use std::future::Future;
+use std::cell::Cell;
+use std::pin::Pin;
+use crate::Editor;
+use std::rc::Rc;
+use mlua::Lua;
 
 /// Global services that can be reached from anywhere in the editor.
 pub struct EditorServices {
     pub editor: RefCell<Option<Editor>>, // set once at startup
+    pub lua: RefCell<Lua>,
     pub command_manager: RefCell<EditorCommandManager>,
     pub pending_undo: Cell<bool>,
     pub pending_redo: Cell<bool>,
@@ -21,6 +23,7 @@ impl EditorServices {
     pub fn new() -> Rc<Self> {
         Rc::new(Self {
             editor: RefCell::new(None),
+            lua: RefCell::new(Lua::new()),
             command_manager: RefCell::new(EditorCommandManager::new()),
             pending_undo: Cell::new(false),
             pending_redo: Cell::new(false),
@@ -69,6 +72,17 @@ where
 
     let fut = f(editor);
     fut.await
+}
+
+/// Gets immutable access to Lua VM.
+pub fn with_lua<F, R>(f: F) -> R
+where
+    F: FnOnce(&Lua) -> R,
+{
+    EDITOR_SERVICES.with(|services| {
+        let lua = services.lua.borrow();
+        f(&lua)
+    })
 }
 
 /// Push an `EditorCommand` to the global command queue.

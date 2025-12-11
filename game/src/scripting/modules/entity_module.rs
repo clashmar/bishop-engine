@@ -1,12 +1,15 @@
 // game/src/scripting/modules/entity_module.rs
 use crate::scripting::commands::lua_command::*;
 use crate::game_global::push_command;
+use crate::engine::LuaGameCtx;
 use engine_core::scripting::modules::lua_module::LuaModule;
+use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::ecs::entity::Entity;
 use engine_core::register_lua_module;
+use mlua::prelude::LuaResult;
 use mlua::UserDataMethods;
+use mlua::AnyUserData;
 use mlua::UserData;
-use std::sync::mpsc;
 use mlua::Value;
 use mlua::Lua;
 
@@ -16,7 +19,7 @@ pub struct EntityModule;
 register_lua_module!(EntityModule);
 
 impl LuaModule for EntityModule {
-    fn register(&self, lua: &Lua) -> mlua::Result<()> {
+    fn register(&self, lua: &Lua) -> LuaResult<()> {
         let factory = lua.create_function(|_, id: usize| {
             Ok(EntityHandle {
                 entity: Entity(id),
@@ -33,68 +36,27 @@ pub struct EntityHandle {
     pub entity: Entity,
 }
 
-/// Returns `Ok(Value)` if the component exists, otherwise a Lua error.
-pub fn read_component<'lua>(
-    lua: &'lua mlua::Lua,
-    state: &crate::game_state::GameState,
-    entity_id: usize,
-    comp_name: &str,
-) -> mlua::Result<Value> {
-    // Find the registry entry for the component name
-    let reg = engine_core::ecs::component_registry::COMPONENTS
-        .iter()
-        .find(|r| r.type_name == comp_name)
-        .ok_or_else(|| mlua::Error::RuntimeError(format!("Component '{}' not known", comp_name)))?;
-
-    // Get a mutable reference to the current world (the same as in GetComponentCmd)
-    let world = &state.game.current_world().world_ecs;
-
-    // Check that the entity actually has the component
-    if !(reg.has)(world, Entity(entity_id)) {
-        return Err(mlua::Error::RuntimeError(format!(
-            "Entity {} has no {} component",
-            entity_id, comp_name
-        )));
-    }
-
-    // Clone the boxed component and convert it to a Lua value.
-    // `reg.clone` returns `Box<dyn Any>`; we then hand it to `to_lua`.
-    let boxed = (reg.clone)(world, Entity(entity_id));
-    (reg.to_lua)(lua, &*boxed)
-}
-
 impl UserData for EntityHandle {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
-        // e:has("Component")
-        methods.add_method("has", |_, this, comp_name: String| {
-            let (tx, rx) = mpsc::channel();
-            push_command(Box::new(GetComponentCmd{ 
-                entity: *this.entity, 
-                comp_name, 
-                responder: tx,
-            }));
-            match rx.recv() {
-                Ok(Ok(_)) => Ok(true),
-                _ => Ok(false),
-            }
-        });
-
-        // e:get("Component")
+        // entity:get("Component")
         methods.add_method("get", |lua, this, comp_name: String| {
             let globals = lua.globals();
-            let user_data: mlua::AnyUserData = globals.get("GameCtx")?;
-            let ctx = user_data.borrow::<crate::engine::LuaGameCtx>()?;
-            let mut game_state = ctx.game_state.borrow_mut();
+            let user_data: AnyUserData = globals.get("GameCtx")?;
+            let ctx = user_data.borrow::<LuaGameCtx>()?;
 
-            let world = &game_state.game.current_world_mut().world_ecs;
-            let result = if let Some(reg) = engine_core::ecs::component_registry::COMPONENTS.iter().find(|r| r.type_name == comp_name) {
-                if (reg.has)(world, Entity(*this.entity)) {
-                    let boxed = (reg.clone)(world, Entity(*this.entity));
-                    (reg.to_lua)(&game_state.game.script_manager.lua, &*boxed)
+            let game_state = ctx.game_state.borrow();
+            let world_ecs = &game_state.game.current_world().world_ecs;
+
+            let entity = this.entity;
+
+            let result = if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
+                if (reg.has)(world_ecs, entity) {
+                    let boxed = (reg.clone)(world_ecs, entity);
+                    (reg.to_lua)(lua, &*boxed)
                 } else {
                     Err(mlua::Error::RuntimeError(format!(
                         "Entity {:?} has no {} component",
-                        this.entity, comp_name
+                        entity, comp_name
                     )))
                 }
             } else {
@@ -106,7 +68,7 @@ impl UserData for EntityHandle {
             result
         });
 
-        // e:set("Component", Value)
+        // entity:set("Component", Value)
         methods.add_method("set", |_lua, this, (comp_name, value): (String, Value)| {
             push_command(Box::new(SetComponentCmd { 
                 entity: *this.entity, 
@@ -115,6 +77,20 @@ impl UserData for EntityHandle {
             }));
             Ok(())
         });
+
+        // e:has("Component")
+        // methods.add_method("has", |_, this, comp_name: String| {
+        //     let (tx, rx) = mpsc::channel();
+        //     push_command(Box::new(GetComponentCmd{ 
+        //         entity: *this.entity, 
+        //         comp_name, 
+        //         responder: tx,
+        //     }));
+        //     match rx.recv() {
+        //         Ok(Ok(_)) => Ok(true),
+        //         _ => Ok(false),
+        //     }
+        // });
 
         // convenience: `entity.id` (read‑only)
         methods.add_method("id", |_, this, ()| Ok(*this.entity));

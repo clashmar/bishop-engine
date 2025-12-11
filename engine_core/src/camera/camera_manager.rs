@@ -1,11 +1,10 @@
 // engine_core/src/camera/camera_manager.rs
-use std::sync::Mutex;
-use std::sync::Arc;
+use crate::{camera::game_camera::*, ecs::world_ecs::WorldEcs, world::room::Room};
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
-use crate::{camera::game_camera::*, ecs::world_ecs::WorldEcs, world::room::Room};
 use macroquad::prelude::*;
 
+#[derive(Default)]
 pub struct CameraManager {
     /// The game camera that is fed to the renderer.
     pub active: GameCamera,
