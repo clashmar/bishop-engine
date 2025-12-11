@@ -80,15 +80,30 @@ impl UserData for EntityHandle {
         });
 
         // e:get("Component")
-        methods.add_method("get", |_lua, this, comp_name: String| {
-            crate::game_global::with_game_state(|state| {
-                read_component(
-                    &state.game.script_manager.lua,
-                    state,
-                    *this.entity,
-                    &comp_name,
-                )
-            })
+        methods.add_method("get", |lua, this, comp_name: String| {
+            let globals = lua.globals();
+            let user_data: mlua::AnyUserData = globals.get("GameCtx")?;
+            let ctx = user_data.borrow::<crate::engine::LuaGameCtx>()?;
+            let mut game_state = ctx.game_state.borrow_mut();
+
+            let world = &game_state.game.current_world_mut().world_ecs;
+            let result = if let Some(reg) = engine_core::ecs::component_registry::COMPONENTS.iter().find(|r| r.type_name == comp_name) {
+                if (reg.has)(world, Entity(*this.entity)) {
+                    let boxed = (reg.clone)(world, Entity(*this.entity));
+                    (reg.to_lua)(&game_state.game.script_manager.lua, &*boxed)
+                } else {
+                    Err(mlua::Error::RuntimeError(format!(
+                        "Entity {:?} has no {} component",
+                        this.entity, comp_name
+                    )))
+                }
+            } else {
+                Err(mlua::Error::RuntimeError(format!(
+                    "Component '{}' not known", 
+                    comp_name,
+                )))
+            };
+            result
         });
 
         // e:set("Component", Value)

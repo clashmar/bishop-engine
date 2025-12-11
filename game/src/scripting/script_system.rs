@@ -109,12 +109,12 @@ pub fn run_scripts(
 
     for (entity, script) in script_store.data.iter_mut() {
         // Ensure the script table is loaded
-        if script.table.is_none() && script.script_id.0 != 0 {
+        if !script_manager.tables.contains_key(&script.script_id) {
             script.load(script_manager)?
         }
 
-        if let Some(update) = &script.update_fn {
-            let table = script.table.as_ref().unwrap();
+        if let Some(update) = script_manager.update_fns.get(&script.script_id) {
+            let table = script_manager.tables.get(&script.script_id).unwrap();
             table.set("entity", **entity)?;
             update.call::<()>((table, dt))?
         }

@@ -1,6 +1,5 @@
 // game/src/scripting/modules/global_module.rs
 use crate::scripting::commands::lua_command::CallGlobalCmd;
-use crate::game_global::with_game_state_mut;
 use crate::game_global::push_command;
 use engine_core::register_lua_module;
 use engine_core::scripting::modules::lua_module::LuaModule;
@@ -25,25 +24,25 @@ impl LuaModule for GlobalModule {
         let global_tbl = lua.create_table()?;
 
         // engine.global.get(name)
-        let get = {
-            let lua = lua.clone();
-            lua.create_function(move |_lua, name: String| {
-                // Look up the value in the global map
-                with_game_state_mut(|game_state| {
-                    let map = game_state.global_modules.borrow();
-                    if let Some(val) = map.get(&name) {
-                        // Return a clone of the value
-                        Ok(val.clone())
-                    } else {
-                        Err(mlua::Error::RuntimeError(format!(
-                            "Global '{}' not found.",
-                            name
-                        )))
-                    }
-                })
-            })?
-        };
-        global_tbl.set("get", get)?;
+        // let get = {
+        //     let lua = lua.clone();
+        //     lua.create_function(move |_lua, name: String| {
+        //         // Look up the value in the global map
+        //         with_game_state_mut(|game_state| {
+        //             let map = game_state.global_modules.borrow();
+        //             if let Some(val) = map.get(&name) {
+        //                 // Return a clone of the value
+        //                 Ok(val.clone())
+        //             } else {
+        //                 Err(mlua::Error::RuntimeError(format!(
+        //                     "Global '{}' not found.",
+        //                     name
+        //                 )))
+        //             }
+        //         })
+        //     })?
+        // };
+        // global_tbl.set("get", get)?;
 
         // engine.global.call(name, method, …)
         let call = {

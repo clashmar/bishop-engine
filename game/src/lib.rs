@@ -1,4 +1,5 @@
 pub mod constants;
+pub mod engine;
 pub mod game_global;
 pub mod game_state;
 pub mod input;
