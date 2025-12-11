@@ -7,7 +7,7 @@ build = "build.rs"
 [dependencies]
 engine_core = { path = "../engine_core" }
 macroquad = "0.4.14" 
-mlua = { version = "0.11.5", features = ["lua54", "vendored", "send", "serde" ] }
+mlua = { version = "0.11.5", features = ["lua54", "vendored", "serde" ] }
 serde = { version = "1.0", features = ["derive"] }
 ron = "0.9"
 uuid = { version = "1.18", features = ["serde", "v4"] }

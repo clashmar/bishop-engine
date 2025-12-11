@@ -17,7 +17,7 @@ use engine_core::rendering::render_system::RenderSystem;
 use crate::scripting::script_system::run_scripts;
 use engine_core::storage::core_storage::load_game_ron;
 use engine_core::world::room::Room;
-use engine_core::world::transition_manager::TransitionManager;
+// use engine_core::world::transition_manager::TransitionManager;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::game::game::*;
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ pub struct GameState {
     /// Camera that follows the player.
     camera_manager: CameraManager,
     /// Manages transitions between rooms.
-    transition_manager: TransitionManager,
+    // transition_manager: TransitionManager,
     /// Current room
     current_room: Room,
     /// Rendering system for the game.
@@ -72,7 +72,7 @@ impl GameState {
         Self {
             game,
             camera_manager,
-            transition_manager: TransitionManager::new(),
+            // transition_manager: TransitionManager::new(),
             current_room,
             render_system: RenderSystem::new(),
             global_modules: RefCell::new(HashMap::new()),
@@ -94,7 +94,7 @@ impl GameState {
         Self {
             game,
             camera_manager,
-            transition_manager: TransitionManager::new(),
+            // transition_manager: TransitionManager::new(),
             current_room: room,
             render_system: RenderSystem::new(),
             global_modules: RefCell::new(HashMap::new()),

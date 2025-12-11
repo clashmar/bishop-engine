@@ -1,6 +1,4 @@
 // game/src/playtest_main.rs
-use game_lib::game_global::with_game_state_mut_async;
-use game_lib::game_global::set_game;
 use engine_core::constants::*;
 use engine_core::game::game::Game;
 use engine_core::world::room::Room;
@@ -49,10 +47,10 @@ async fn main() {
         game,
     } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
-    let game_state = GameState::for_room(room, game).await;
-    
-    // This allows global access to services
-    set_game(game_state);
-    
-    with_game_state_mut_async(|game_state| Box::pin(game_state.run_game_loop())).await;
+    let mut game_state = GameState::for_room(room, game).await;
+    let game_state = std::rc::Rc::new(std::cell::RefCell::new(game_state));
+    let script_mgr = &mut game_state.borrow_mut().game.script_manager;
+    let ctx = game_lib::engine::LuaGameCtx { game_state: game_state.clone() };
+    let _ = ctx.set_lua_game_ctx(&script_mgr);
+    game_state.borrow_mut().run_game_loop().await;
 }

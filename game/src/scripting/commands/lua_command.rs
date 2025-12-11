@@ -9,7 +9,7 @@ use engine_core::*;
 use mlua::Value;
 
 /// All Lua actions implement this.
-pub trait LuaCommand: Send {
+pub trait LuaCommand {
     /// Execute the command, mutating the supplied `GameState`.
     fn execute(&mut self, game_state: &mut GameState);
 }

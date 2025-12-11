@@ -1,4 +1,8 @@
 // engine_core/src/script/script_manager.rs
+use crate::scripting::script::ScriptData;
+use crate::scripting::script::ScriptField;
+use mlua::prelude::LuaResult;
+use mlua::Function;
 use crate::scripting::engine_api::EngineApi;
 use crate::game::game::Game;
 use crate::scripting::script::ScriptId;
@@ -21,7 +25,14 @@ pub struct ScriptManager {
     #[serde(skip)]
     pub lua: Lua,
     #[serde(skip)]
+    /// ???
     pub engine_api: Arc<EngineApi>,
+    #[serde(skip)]
+    /// Maps `ScriptId`'s to their loaded lua `Table`.
+    pub tables: HashMap<ScriptId, Table>,
+    #[serde(skip)]
+    /// Maps ScriptId → optional update(dt) function TODO: is this necessary?
+    pub update_fns: HashMap<ScriptId, Function>,
     /// Persistent map of all sprite is to their paths.
     pub script_id_to_path: HashMap<ScriptId, PathBuf>,
     #[serde(skip)]
@@ -39,6 +50,8 @@ impl ScriptManager {
         let manager = Self {
             lua: Lua::new(),
             engine_api: Arc::new(EngineApi::default()),
+            tables: HashMap::new(),
+            update_fns: HashMap::new(),
             script_id_to_path: HashMap::new(),
             path_to_script_id: HashMap::new(),
             next_script_id: 1,
@@ -48,7 +61,67 @@ impl ScriptManager {
         manager
     }
 
-    pub fn load_table_from_id(&mut self, id: ScriptId) -> mlua::Result<Table> {
+    /// Load the Lua table and store it in the manager
+    pub fn load_script_table(&mut self, id: ScriptId) -> LuaResult<&Table> {
+        if self.tables.contains_key(&id) {
+            return Ok(self.tables.get(&id).unwrap());
+        }
+
+        let table = self.load_table_from_id(id)?;
+
+        if let Ok(update) = table.get::<_>("update") {
+            self.update_fns.insert(id, update);
+        }
+
+        self.tables.insert(id, table);
+        Ok(self.tables.get(&id).unwrap())
+    }
+
+    /// Get the table for a script.
+    pub fn get_table(&self, id: ScriptId) -> Option<&Table> {
+        self.tables.get(&id)
+    }
+
+    /// Get the update function for a script.
+    pub fn get_update_fn(&self, id: ScriptId) -> Option<&Function> {
+        self.update_fns.get(&id)
+    }
+
+    /// Sync ScriptData back into its Lua table.
+    pub fn sync_to_lua(&self, id: ScriptId, data: &ScriptData) -> LuaResult<()> {
+        let table = match self.tables.get(&id) {
+            Some(t) => t,
+            None => return Ok(()),
+        };
+
+        let public = table.get::<Option<Table>>("public")?
+            .unwrap_or_else(|| table.clone());
+
+        for (name, field) in &data.fields {
+            match field {
+                ScriptField::Bool(b) => public.set(name.clone(), *b)?,
+                ScriptField::Int(i) => public.set(name.clone(), *i)?,
+                ScriptField::Float(f) => public.set(name.clone(), *f)?,
+                ScriptField::Text(s) => public.set(name.clone(), s.clone())?,
+                ScriptField::Vec2(v) => {
+                    let t = self.lua.create_table()?;
+                    t.set(1, v[0])?;
+                    t.set(2, v[1])?;
+                    public.set(name.clone(), t)?;
+                }
+                ScriptField::Vec3(v) => {
+                    let t = self.lua.create_table()?;
+                    t.set(1, v[0])?;
+                    t.set(2, v[1])?;
+                    t.set(3, v[2])?;
+                    public.set(name.clone(), t)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn load_table_from_id(&mut self, id: ScriptId) -> LuaResult<Table> {
         let rel_path = self
             .script_id_to_path
             .get(&id)
@@ -153,5 +226,18 @@ impl ScriptManager {
             candidate += 1;
         }
         self.next_script_id = candidate;
+    }
+
+    pub fn reload(&mut self, id: ScriptId) -> LuaResult<&Table> {
+        self.tables.remove(&id);
+        self.update_fns.remove(&id);
+        self.load_script_table(id)
+    }
+
+    pub fn unload(&mut self, id: ScriptId) {
+        self.tables.remove(&id);
+        self.update_fns.remove(&id);
+        self.script_id_to_path.remove(&id);
+        self.path_to_script_id.retain(|_, &mut v| v != id);
     }
 }
