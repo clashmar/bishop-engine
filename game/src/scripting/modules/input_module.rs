@@ -1,11 +1,11 @@
 // game/src/scripting/modules/input_module.rs
 use crate::game_global::get_input_snapshot;
 use crate::input::input_snapshot::InputSnapshot;
-use engine_core::scripting::modules::lua_module::LuaModule;
+use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
-use engine_core::register_lua_module;
 use std::collections::HashMap;
 use mlua::prelude::LuaResult;
+use engine_core::*;
 use mlua::Function;
 use mlua::Table;
 use mlua::Lua;
@@ -59,3 +59,11 @@ where
         Ok(value)
     })
 }
+
+impl LuaApiModule for InputModule {
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        // TODO: impl
+    }
+}
+
+register_lua_api!(InputModule);

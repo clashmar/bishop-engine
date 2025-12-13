@@ -1,3 +1,12 @@
+# Lua api generation for both platforms
+[tasks.generate-lua-api]
+script = [
+    "cd ..",
+    "cargo run -p lua_api_gen",
+]
+
+# TODO: Copy _engine folder to editor package or embed
+
 # Mac
 [tasks.build-game-mac]
 script = [

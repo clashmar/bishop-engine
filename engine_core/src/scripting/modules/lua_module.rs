@@ -1,5 +1,6 @@
 // engine_core/src/scripting/modules/lua_module.rs
 use mlua::prelude::LuaResult;
+use std::fmt::Write;
 use mlua::Lua;
 
 /// Every system that wants to expose Lua functions implements this.
@@ -14,17 +15,97 @@ pub struct LuaModuleRegistry {
     pub ctor: fn() -> Box<dyn LuaModule>,
 }
 
-// Collect all descriptors into a slice that lives for the whole program.
+// Collect all modules into a slice that lives for the whole program.
 inventory::collect!(LuaModuleRegistry);
 
-/// Registers 
+/// Trait which ensures lua api is implemented for a module.
+pub trait LuaApiModule {
+    /// Emit Lua signatures.
+    fn emit_api(&self, out: &mut LuaApiWriter);
+}
+
+/// Writes the lua api for a module.
+pub struct LuaApiWriter {
+    pub buf: String,
+}
+
+impl LuaApiWriter {
+    pub fn new() -> Self {
+        Self { buf: String::new() }
+    }
+
+    pub fn line(&mut self, s: &str) {
+        self.buf.push_str(s);
+        self.buf.push('\n');
+    }
+
+    pub fn write(&mut self, args: std::fmt::Arguments) {
+        let _ = self.buf.write_fmt(args);
+    }
+}
+
+pub struct LuaApiRegistry {
+    pub name: &'static str,
+    pub ctor: fn() -> Box<dyn LuaApiModule>,
+}
+
+inventory::collect!(LuaApiRegistry);
+
+#[macro_export]
+macro_rules! register_lua_api {
+    ($ty:ty) => {
+        inventory::submit! {
+            $crate::scripting::modules::lua_module::LuaApiRegistry {
+                name: stringify!($ty),
+                ctor: || Box::new(<$ty>::default()),
+            }
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! register_lua_module {
     ($ty:ty) => {
         inventory::submit! {
             $crate::scripting::modules::lua_module::LuaModuleRegistry {
-                ctor: || Box::new(<$ty>::default()),
+                ctor: || {
+                    // Enforces each module to implement its api generation.
+                    fn _assert<T: $crate::scripting::modules::lua_module::LuaExposedModule>() {}
+                    _assert::<$ty>();
+                    Box::new(<$ty>::default())
+                },
             }
         }
     };
+}
+
+pub trait LuaExposedModule: LuaModule + LuaApiModule {}
+
+impl<T> LuaExposedModule for T
+where
+    T: LuaModule + LuaApiModule
+{}
+
+/// Writes the module api to a .lua file.
+pub fn generate_lua_api(out_dir: &std::path::Path) {
+    std::fs::create_dir_all(out_dir).unwrap();
+
+    for reg in inventory::iter::<LuaApiRegistry> {
+        let module = (reg.ctor)();
+        let mut writer = LuaApiWriter::new();
+        module.emit_api(&mut writer);
+
+        let name = std::any::type_name_of_val(&*module)
+            .rsplit("::")
+            .next()
+            .unwrap()
+            .to_lowercase();
+
+        std::fs::write(out_dir.join(format!("{name}.lua")), writer.buf).unwrap();
+    }
+}
+
+pub trait LuaSchema {
+    /// `(&field_name, &lua_type)` pairs for lua components.
+    const SCHEMA: &'static [(&'static str, &'static str)];
 }

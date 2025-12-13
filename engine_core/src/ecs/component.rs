@@ -119,7 +119,7 @@ ecs_component!(Player, [
     Velocity,
     ]);
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 #[serde(default)]
 pub struct Velocity {
     pub x: f32,

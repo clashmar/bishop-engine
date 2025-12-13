@@ -107,3 +107,29 @@ fn widget_hint(attrs: &[Attribute]) -> Option<String> {
     }
     None
 }
+
+fn rust_type_to_lua(ty: &syn::Type) -> &'static str {
+    // Very small helper – it only needs to recognise the identifiers we care about.
+    // All other types fall back to "table".
+    match ty {
+        syn::Type::Path(p) if p.path.is_ident("f32")
+            || p.path.is_ident("f64")
+            || p.path.is_ident("i8")
+            || p.path.is_ident("i16")
+            || p.path.is_ident("i32")
+            || p.path.is_ident("i64")
+            || p.path.is_ident("u8")
+            || p.path.is_ident("u16")
+            || p.path.is_ident("u32")
+            || p.path.is_ident("u64")
+            || p.path.is_ident("usize")
+            || p.path.is_ident("isize") => "number",
+        syn::Type::Path(p) if p.path.is_ident("bool") => "boolean",
+        syn::Type::Path(p) if p.path.is_ident("String") => "string",
+        syn::Type::Reference(r)
+            if matches!(r.elem.as_ref(),
+                syn::Type::Path(p) if p.path.is_ident("str")) => "string",
+        // add more special cases here (e.g. Vec2 → "vec2", SpriteId → "sprite")
+        _ => "table",
+    }
+}

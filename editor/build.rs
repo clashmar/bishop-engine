@@ -1,16 +1,17 @@
+// editor/build.rs
 use engine_core::ecs::component_registry::COMPONENTS;
 use std::path::PathBuf;
 use std::env;
 use std::fs;
 
 fn main() -> std::io::Result<()> {
-    generate_lua_source();
+    generate_lua_components();
 
     if cfg!(target_os = "windows") {
         let mut res = winres::WindowsResource::new();
         res.set("FileVersion", "1.0.0.0")
             .set_icon("windows/Icon.ico")
-            .set("FileDescription", "Bishop Engine: a cross platform 2D editor.")
+            .set("FileDescription", "Bishop Engine: a cross platform 2dD editor.")
             .set("ProductVersion", "1.0.0.0")
             .set("ProductName", "Bishop Engine")
             .set("OriginalFilename", "Bishop.exe")
@@ -27,29 +28,30 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn generate_lua_source() {
+fn generate_lua_components() {
     let out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
         .join("scripts")
         .join("_engine");
 
-    // Make sure the directory exists.
     fs::create_dir_all(&out_dir).expect("cannot create _engine folder");
 
-    // Generate the lua source
-    let mut lua = String::from(
-        "-- This file is auto-generated. Do not edit manually.\n\
-         ---@meta\n\
-         ---@class ComponentId\n\
-         local Component = {\n",
-    );
-    
-    for reg in COMPONENTS.iter() {
-        lua.push_str(&format!("    {} = {},\n", reg.type_name, reg.id));
-    }
-    
-    lua.push_str("}\nreturn Component\n");
+    let mut lua = String::from("-- Auto-generated. Do not edit.\n---@meta\n\n");
+    lua.push_str("---@class ComponentId\n");
 
-    // Write the file.
+    // Add @field annotations
+    for reg in COMPONENTS.iter() {
+        lua.push_str(&format!("---@field {} string\n", reg.type_name));
+    }
+
+    lua.push_str("\nlocal C = {}\n\n");
+
+    // Fill table assignments
+    for reg in COMPONENTS.iter() {
+        lua.push_str(&format!("C.{} = \"{}\"\n", reg.type_name, reg.type_name));
+    }
+
+    lua.push_str("\nreturn C\n");
+
     let target = out_dir.join("components.lua");
     fs::write(&target, lua).expect("Cannot write components.lua");
     println!("cargo:warning=generated {}", target.display());
