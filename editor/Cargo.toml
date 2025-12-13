@@ -33,6 +33,7 @@ winres-edit = "0.2.0"
 # For windows
 [build-dependencies]
 winres = "0.1.12"
+engine_core = { path = "../engine_core" }
 
 # Bundle for macOS
 [package.metadata.bundle]

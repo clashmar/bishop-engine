@@ -15,6 +15,8 @@ pub static COMPONENTS: Lazy<Vec<&'static ComponentRegistry>> = Lazy::new(|| {
 
 /// One entry for a concrete component type.
 pub struct ComponentRegistry {
+    /// Compile-time hash.
+    pub id: u32, 
     /// Human‑readable identifier that will appear in the save file.
     pub type_name: &'static str,
     /// The concrete `ComponentStore<T>`’s `TypeId`.
@@ -120,6 +122,7 @@ macro_rules! ecs_component {
         where
             $ty: 'static + Clone,
         {
+            pub const COMPONENT_ID: u32 = $crate::ecs::component_registry::fnv1a_32(Self::TYPE_NAME);
             pub const TYPE_NAME: &'static str = stringify!($ty);
 
             fn __factory(
@@ -180,6 +183,7 @@ macro_rules! ecs_component {
         // Register the component (default path)
         inventory::submit! {
             $crate::ecs::component_registry::ComponentRegistry {
+                id: <$ty>::COMPONENT_ID,
                 type_name: <$ty>::TYPE_NAME,
                 type_id: std::any::TypeId::of::<
                     $crate::ecs::component::ComponentStore<$ty>
@@ -240,6 +244,7 @@ macro_rules! ecs_component {
         where
             $ty: 'static + Clone,
         {
+            pub const COMPONENT_ID: u32 = $crate::ecs::component_registry::fnv1a_32(Self::TYPE_NAME);
             pub const TYPE_NAME: &'static str = stringify!($ty);
 
             fn __factory(
@@ -296,6 +301,7 @@ macro_rules! ecs_component {
         // Register the component
         inventory::submit! {
             $crate::ecs::component_registry::ComponentRegistry {
+                id: <$ty>::COMPONENT_ID,
                 type_name: <$ty>::TYPE_NAME,
                 type_id: std::any::TypeId::of::<
                     
@@ -361,3 +367,14 @@ pub struct StoredComponent {
 pub fn post_create(
     _any: &mut dyn Any,
 ) {}
+
+pub const fn fnv1a_32(s: &str) -> u32 {
+    let mut hash = 0x811c9dc5u32;
+    let mut i = 0;
+    while i < s.len() {
+        hash ^= s.as_bytes()[i] as u32;
+        hash = hash.wrapping_mul(0x01000193);
+        i += 1;
+    }
+    hash
+}
