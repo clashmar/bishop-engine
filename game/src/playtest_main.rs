@@ -1,10 +1,10 @@
 // game/src/playtest_main.rs
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::camera::camera_manager::CameraManager;
+use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::game_state::GameState;
 use engine_core::world::room::Room;
 use engine_core::game::game::Game;
-use game_lib::engine::LuaGameCtx;
 use engine_core::constants::*;
 use game_lib::engine::Engine;
 use macroquad::prelude::*;

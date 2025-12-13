@@ -1,7 +1,8 @@
 // game/src/scripting/modules/input_module.rs
 use crate::game_global::get_input_snapshot;
-use engine_core::input::input_snapshot::InputSnapshot;
+use crate::input::input_snapshot::InputSnapshot;
 use engine_core::scripting::modules::lua_module::LuaModule;
+use engine_core::scripting::lua_constants::*;
 use engine_core::register_lua_module;
 use std::collections::HashMap;
 use mlua::prelude::LuaResult;
@@ -25,14 +26,14 @@ impl LuaModule for InputModule {
         let released_fn = make_snapshot_query_fn(lua, |snap| &snap.released)?;
 
         // Assemble the `engine.input` table
-        let engine_tbl: Table = lua.globals().get("engine")?; // TODO: get rid of magic strings
+        let engine_tbl: Table = lua.globals().get(ENGINE)?;
         let input_tbl = lua.create_table()?;
         input_tbl.set(INPUT_IS_DOWN, is_down_fn)?;
         input_tbl.set(INPUT_PRESSED, pressed_fn)?;
         input_tbl.set(INPUT_RELEASED, released_fn)?;
 
         // Attach the sub‑module to the already existing global `engine` table
-        engine_tbl.set("input", input_tbl)?;
+        engine_tbl.set(INPUT, input_tbl)?;
 
         Ok(())
     }

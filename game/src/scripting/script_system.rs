@@ -1,6 +1,8 @@
 // engine_core/src/script/script_system.rs
+use crate::scripting::modules::entity_module::*;
 use crate::game_global::drain_commands;
 use crate::engine::Engine;
+use engine_core::scripting::lua_constants::*;
 use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
 use engine_core::scripting::script_manager::ScriptManager;
 use engine_core::scripting::script::Script;
@@ -41,7 +43,7 @@ impl ScriptSystem {
         let call_fn = lua.create_function(move |lua, args: Variadic<Value>| {
             engine_api.lua_call(lua, args)
         })?;
-        engine_mod.set("call", call_fn)?;
+        engine_mod.set(ENGINE_CALL, call_fn)?;
 
         // Convenience wrappers (engine.log, engine.wait, …)
         let engine_api = script_manager.engine_api.clone();
@@ -67,7 +69,7 @@ impl ScriptSystem {
                 .push(handler);
             Ok(())
         })?;
-        engine_mod.set("on", on_fn)?;
+        engine_mod.set(ENGINE_ON, on_fn)?;
 
         // engine.emit(event, …)
         let engine_api = script_manager.engine_api.clone();
@@ -82,10 +84,10 @@ impl ScriptSystem {
             }
             Ok(())
         })?;
-        engine_mod.set("emit", emit_fn)?;
+        engine_mod.set(ENGINE_EMIT, emit_fn)?;
 
-        lua.globals().set("engine", engine_mod.clone())?;
-        lua.register_module("engine", &engine_mod)?;
+        lua.globals().set(ENGINE, engine_mod.clone())?;
+        lua.register_module(ENGINE, &engine_mod)?;
         Ok(())
     }
 
@@ -120,16 +122,17 @@ pub fn load_scripts(
 pub fn run_scripts(
     dt: f32,
     world_ecs: &WorldEcs, 
-    script_manager: &ScriptManager
+    script_manager: &ScriptManager,
+    lua: &Lua,
 ) -> LuaResult<()> {
     let script_store = world_ecs.get_store::<Script>();
     for (entity, script) in script_store.data.iter() {
         if let Some(update) = script_manager.update_fns.get(&script.script_id) {
             let table = script_manager.tables.get(&script.script_id).unwrap();
-            table.set("entity", entity.0)?;
+            let handle = lua_entity_handle(lua, *entity)?;
+            table.set(ENTITY, handle)?;
             update.call::<()>((table, dt))?
         }
     }
-
     Ok(())
 }
