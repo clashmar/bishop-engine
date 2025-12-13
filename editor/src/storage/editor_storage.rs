@@ -1,32 +1,33 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
 use crate::scripting::script_manager::ScriptManager;
-use std::cell::RefCell;
-use std::sync::Arc;
-use std::sync::Mutex;
-use engine_core::scripting::script_manager;
-use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;
-use std::io::Write;
-use std::rc::Rc;
-use std::time::SystemTime;
-use std::io;
-use std::fs;
-use std::path::PathBuf;
-use engine_core::*;
+use engine_core::storage::editor_config::app_dir;
+use engine_core::scripting::script_manager;
+use engine_core::assets::asset_manager::*;
+use engine_core::game::game_map::GameMap;
+use engine_core::storage::path_utils::*;
 use engine_core::world::room::Room;
 use engine_core::ecs::component::*;
 use engine_core::ecs::world_ecs::*;
 use engine_core::world::world::*;
-use engine_core::game::game_map::GameMap;
-use engine_core::constants::*;
-use engine_core::assets::asset_manager::*;
-use engine_core::storage::path_utils::*;
 use engine_core::game::game::*;
+use engine_core::constants::*;
 use macroquad::prelude::*;
-use uuid::Uuid;
-use std::io::Error;
+use std::time::SystemTime;
+use crate::with_lua_async;
 use std::io::ErrorKind;
+use std::path::PathBuf;
+use std::cell::RefCell;
+use std::sync::Mutex;
+use engine_core::*;
+use std::sync::Arc;
+use std::io::Write;
+use std::io::Error;
+use std::rc::Rc;
+use uuid::Uuid;
+use std::io;
+use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
@@ -114,14 +115,20 @@ pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
     };
 
     // Parse the RON
-    match ron::from_str::<Game>(&ron_string) {
-        Ok(mut game) => {
-            game.initialize().await;
-            Ok(game)
-        },
-        // Corrupt file
-        Err(_) => Ok(create_new_game(name.to_string()).await),
-    }
+    let mut game = match ron::from_str::<Game>(&ron_string) {
+        Ok(game) => game,
+        Err(_) => return Ok(create_new_game(name.to_string()).await),
+    };
+
+    let game = with_lua_async(|lua| {
+        Box::pin(async move {
+            let mut game = game;
+            game.initialize(lua).await;
+            game
+        })
+    }).await;
+
+    Ok(game)
 }
 
 /// Return the name of the most recently modified game folder.

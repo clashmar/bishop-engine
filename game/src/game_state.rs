@@ -40,6 +40,8 @@ impl GameState {
             Err(e) => panic!("{e}")
         };
 
+        game.initialize(lua).await;
+
         // TODO: Get rid of expects
         let start_room_id = game.current_world().starting_room_id
             .or_else(|| game.worlds.first().map(|m| m.starting_room_id.expect("Game has no starting room.")))
@@ -75,7 +77,7 @@ impl GameState {
         // Allows the shared engine features to make decisions
         // set_engine_mode(EngineMode::Game); TODO: figure this out
 
-        game.initialize().await;
+        game.initialize(lua).await;
         let world_ecs = &game.current_world().world_ecs;
         let player_pos = world_ecs.get_player_position().position;
         *camera_manager = CameraManager::new(world_ecs, room.id, player_pos);

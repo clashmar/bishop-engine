@@ -1,8 +1,8 @@
 // engine_core/src/script/script.rs
 use crate::scripting::script_manager::ScriptManager;
+use ecs_component::ecs_component;
 use std::collections::HashMap;
 use mlua::prelude::LuaResult;
-use crate::ecs_component;
 use serde::Deserialize;
 use serde::Serialize;
 use mlua::Table;
@@ -31,6 +31,7 @@ pub struct ScriptData {
 }
 
 /// The script component that lives on an entity.
+#[ecs_component]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Script {
     /// Id stored by the script manager.
@@ -38,8 +39,6 @@ pub struct Script {
     /// The public fields that the inspector can edit.
     pub data: ScriptData,
 }
-
-ecs_component!(Script);
 
 impl Script {
     /// Loads the table from ScriptManager and updates ScriptData

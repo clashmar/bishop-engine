@@ -1,14 +1,15 @@
 // engine_core/src/game/game.rs
-use crate::scripting::script_manager::ScriptManager;
 use crate::{ecs::world_ecs::WorldEcs, world::room::Room};
+use crate::scripting::script_manager::ScriptManager;
+use crate::assets::asset_manager::AssetManager;
 use crate::engine_global::set_global_tile_size;
 use crate::game::game_map::GameMap;
+use crate::world::world::WorldId;
+use crate::world::world::World;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use uuid::Uuid;
-use crate::{assets::asset_manager::AssetManager, 
-    world::world::{World, WorldId}}
-;
+use mlua::Lua;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Default)]
@@ -160,9 +161,9 @@ impl Game {
     }
 
     /// Syncs all assets/scripts that belong to this game, sets the global tile size and inits input.
-    pub async fn initialize(&mut self) {
+    pub async fn initialize(&mut self, lua: &Lua) {
         set_global_tile_size(self.tile_size);
         AssetManager::init_manager(self).await;
-        ScriptManager::init_manager(self).await;
+        ScriptManager::init_manager(self, lua).await;
     }
 }

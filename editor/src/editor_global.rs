@@ -74,7 +74,7 @@ where
     fut.await
 }
 
-/// Gets immutable access to Lua VM.
+/// Gets immutable access to the Lua VM.
 pub fn with_lua<F, R>(f: F) -> R
 where
     F: FnOnce(&Lua) -> R,
@@ -83,6 +83,19 @@ where
         let lua = services.lua.borrow();
         f(&lua)
     })
+}
+
+/// Gets async immutable access to the Lua VM.
+pub async fn with_lua_async<R, F>(f: F) -> R
+where
+    F: for<'a> FnOnce(&'a Lua) -> Pin<Box<dyn Future<Output = R> + 'a>>,
+{
+    let services = EDITOR_SERVICES.with(|s| s.clone());
+    let lua_ref = services.lua.borrow();
+    
+    // Call the closure and await the future
+    let future = f(&*lua_ref);
+    future.await
 }
 
 /// Push an `EditorCommand` to the global command queue.

@@ -859,6 +859,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
+name = "ecs_component"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "editor"
 version = "0.1.0-alpha"
 dependencies = [
@@ -906,6 +915,7 @@ version = "0.1.0"
 dependencies = [
  "ctor 0.2.9",
  "directories-next",
+ "ecs_component",
  "erased-serde 0.3.31",
  "flexi_logger",
  "futures",

@@ -1,4 +1,5 @@
 // engine_core/src/ecs/component.rs
+use ecs_component::ecs_component;
 use reflect_derive::Reflect;
 use std::{any::Any, collections::HashMap};
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,6 @@ use crate::{
         entity::Entity, 
         world_ecs::WorldEcs
     },
-    ecs_component, 
     inspector_module, 
     world::room::RoomId
 }; 
@@ -87,6 +87,7 @@ pub trait PostCreate {
     );
 }
 
+#[ecs_component]
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -94,51 +95,46 @@ pub struct Position {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
 }
-ecs_component!(Position);
 
 /// Z layer of an entity.
+#[ecs_component]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 #[serde(default)]
 pub struct Layer {
     pub z: i32,
 }
-ecs_component!(Layer);
 inspector_module!(Layer);
 
 /// Component that stores the room identifier an entity belongs to.
+#[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct CurrentRoom(pub RoomId);
-ecs_component!(CurrentRoom);
 
 /// Marker component for the player entity.
+#[ecs_component(deps = [Collider, Velocity])]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Player;
-ecs_component!(Player, [
-    Collider, 
-    Velocity,
-    ]);
 
+#[ecs_component]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 #[serde(default)]
 pub struct Velocity {
     pub x: f32,
     pub y: f32,
 }
-ecs_component!(Velocity);
 
+#[ecs_component]
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct Grounded(#[serde(skip)] pub bool);
-ecs_component!(Grounded);
 
-
+#[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
 #[serde(default)]
 pub struct Collider {
     pub width: f32,
     pub height: f32,
 }
-ecs_component!(Collider);
 inspector_module!(Collider);
 
 impl Default for Collider {
@@ -151,27 +147,27 @@ impl Default for Collider {
 }
 
 /// Marker for participation in the physics system.
+#[ecs_component(deps = [Grounded])]
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct PhysicsBody;     
-ecs_component!(PhysicsBody, [Grounded]);
 
 /// Marker for entities that move by code.
+#[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Kinematic {}
-ecs_component!(Kinematic);
 
 // Tile components
+#[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);
-ecs_component!(Walkable);
 
+#[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Solid(pub bool);
-ecs_component!(Solid);
 
+#[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 pub struct Damage {
     pub amount: f32,
 }
-ecs_component!(Damage);
 
