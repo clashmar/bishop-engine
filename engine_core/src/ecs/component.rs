@@ -175,11 +175,3 @@ pub struct Damage {
 }
 ecs_component!(Damage);
 
-#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
-pub struct Bool {
-    pub active: bool,
-}
-ecs_component!(Bool);
-inspector_module!(Bool);
-
-
