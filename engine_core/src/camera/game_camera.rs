@@ -1,16 +1,16 @@
 // engine_core/src/camera/game_camera.rs
-use crate::engine_global::*;
-use crate::ecs::component::Position;
 use crate::ecs::component::CurrentRoom;
-use crate::ecs::entity::Entity;
+use crate::ecs::component::Position;
 use crate::ecs::world_ecs::WorldEcs;
+use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
-use crate::ecs_component;
-use std::fmt;
-use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
+use crate::engine_global::*;
 use serde_with::{serde_as, FromInto};
+use serde::{Deserialize, Serialize};
+use ecs_component::ecs_component;
 use strum_macros::EnumIter;
+use macroquad::prelude::*;
+use std::fmt;
 
 #[derive(Debug, Default)]
 pub struct GameCamera {
@@ -38,6 +38,7 @@ pub fn world_virtual_width() -> f32 { cam_tile_dims().0 * tile_size() }
 pub fn world_virtual_height() -> f32 { cam_tile_dims().1 * tile_size() }
 
 /// Component for a room camera used by the game.
+#[ecs_component]
 #[serde_as] 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
 #[serde(default)]
@@ -48,7 +49,6 @@ pub struct RoomCamera {
     pub zoom_mode: ZoomMode,
     pub camera_mode: CameraMode,
 }
-ecs_component!(RoomCamera);
 
 impl RoomCamera {
     pub fn new(room_id: RoomId) -> Self {

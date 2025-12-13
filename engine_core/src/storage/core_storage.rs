@@ -32,10 +32,7 @@ pub async fn load_game_from_folder(folder: &Path) -> io::Result<Game> {
 
     // Parse the RON
     match ron::from_str::<Game>(&ron_string) {
-        Ok(mut game) => {
-            game.initialize().await;
-            Ok(game)
-        },
+        Ok(game) => Ok(game),
         // Corrupt file
         Err(e) => Err(Error::new(ErrorKind::Other, e))
     }

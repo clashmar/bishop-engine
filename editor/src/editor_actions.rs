@@ -1,27 +1,26 @@
 // editor/src/editor_actions.rs
-use crate::storage::export::export_game;
-use engine_core::*;
-use engine_core::controls::controls::Controls;
-use engine_core::logging::logging::LAST_LOG;
-use engine_core::ui::prompt::StringPromptResult;
-use std::cell::RefCell;
-use engine_core::ui::prompt::StringPromptWidget;
-use engine_core::world::room::*;
-use macroquad::prelude::*;
-use engine_core::game::game::Game;
-use engine_core::rendering::render_system::RenderSystem;
-use engine_core::storage::path_utils::*;
-use engine_core::ui::toast::Toast;
 use crate::commands::game_editor_commands::RenameGameCmd;
-use crate::game::game_editor::GameEditor;
-use crate::editor_global::push_command;
-use crate::gui::modal::*;
-use crate::room::room_editor::RoomEditor;
 use crate::world::world_editor::WorldEditor;
-use crate::editor::*;
+use crate::room::room_editor::RoomEditor;
+use crate::game::game_editor::GameEditor;
+use crate::storage::export::export_game;
+use crate::editor_global::push_command;
 use crate::storage::editor_storage::*;
 use crate::gui::menu_bar::*;
 use crate::editor::Editor;
+use crate::gui::modal::*;
+use crate::editor::*;
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::controls::controls::Controls;
+use engine_core::logging::logging::LAST_LOG;
+use engine_core::storage::path_utils::*;
+use engine_core::ui::toast::Toast;
+use engine_core::game::game::Game;
+use engine_core::world::room::*;
+use engine_core::ui::prompt::*;
+use macroquad::prelude::*;
+use std::cell::RefCell;
+use engine_core::*;
 
 impl Default for Editor {
     fn default() -> Self {

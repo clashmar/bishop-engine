@@ -1,19 +1,18 @@
 // engine_core/src/animation/animation_system.rs
-use macroquad::prelude::*;
+use crate::animation::animation_clip::resolve_sprite_id;
+use crate::animation::animation_clip::Animation;
+use crate::assets::asset_manager::AssetManager;
+use crate::animation::animation_clip::ClipId;
+use crate::ecs::entity::entities_in_room;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::assets::sprite::SpriteId;
+use crate::ecs::entity::Entity;
+use crate::world::room::RoomId;
 use serde::{Deserialize, Serialize};
-use crate::{
-    animation::animation_clip::{
-        Animation, 
-        ClipId, resolve_sprite_id
-    }, assets::{asset_manager::AssetManager, sprite::SpriteId}, 
-    ecs::{
-        entity::{Entity, entities_in_room}, 
-        world_ecs::WorldEcs
-    }, 
-    ecs_component, 
-    world::room::RoomId
-};
+use ecs_component::ecs_component;
+use macroquad::prelude::*;
 
+#[ecs_component]
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct CurrentFrame {
     #[serde(skip)]
@@ -29,8 +28,6 @@ pub struct CurrentFrame {
     #[serde(skip)]
     pub frame_size: Vec2,
 }
-
-ecs_component!(CurrentFrame);
 
 pub async fn update_animation_sytem(
     world_ecs: &mut WorldEcs,

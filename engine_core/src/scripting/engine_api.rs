@@ -1,12 +1,12 @@
 // engine_core/src/script/engine_api.rs
-use mlua::Function;
-use mlua::prelude::LuaResult;
-use mlua::Value;
-use mlua::Variadic;
-use mlua::Lua;
 use std::collections::HashMap;
-use std::sync::Arc;
+use mlua::prelude::LuaResult;
 use std::sync::Mutex;
+use std::sync::Arc;
+use mlua::Function;
+use mlua::Variadic;
+use mlua::Value;
+use mlua::Lua;
 
 /// The type of a Rust callback that can be called from Lua.
 type EngineFn = Arc<dyn Fn(&Lua, Variadic<Value>) -> LuaResult<Value> + Send + Sync>;

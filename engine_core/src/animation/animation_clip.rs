@@ -1,20 +1,17 @@
 // engine_core/src/animation/animation_clip.rs
-use strum_macros::EnumIter;
-use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
+use crate::assets::asset_manager::AssetManager;
+use crate::engine_global::tile_size;
+use crate::assets::sprite::SpriteId;
 use std::{collections::HashMap, path::{Path, PathBuf}};
 use serde_with::{FromInto, serde_as};
+use serde::{Deserialize, Serialize};
+use ecs_component::ecs_component;
+use strum_macros::EnumIter;
+use macroquad::prelude::*;
 use std::fmt;
-use crate::{
-    assets::{
-        asset_manager::AssetManager, 
-        sprite::SpriteId
-    },
-    ecs_component, 
-    engine_global::tile_size
-};
 
 /// The animation component for an entity.
+#[ecs_component(post_create = post_create)]
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Animation {
@@ -32,8 +29,6 @@ pub struct Animation {
     #[serde(skip)]
     pub sprite_cache: HashMap<ClipId, SpriteId>,
 }
-
-ecs_component!(Animation, post_create = post_create);
 
 impl Animation {
     /// Call after deserialization or after a clip has been added/removed.

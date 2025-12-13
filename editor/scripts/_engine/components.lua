@@ -2,9 +2,7 @@
 ---@meta
 
 ---@class ComponentId
----@field Script string
----@field Animation string
----@field Light string
+---@field CurrentFrame string
 ---@field Damage string
 ---@field Solid string
 ---@field Walkable string
@@ -17,16 +15,16 @@
 ---@field CurrentRoom string
 ---@field Layer string
 ---@field Position string
----@field CurrentFrame string
----@field Glow string
+---@field Light string
 ---@field Sprite string
+---@field Script string
+---@field Glow string
+---@field Animation string
 ---@field RoomCamera string
 
 local C = {}
 
-C.Script = "Script"
-C.Animation = "Animation"
-C.Light = "Light"
+C.CurrentFrame = "CurrentFrame"
 C.Damage = "Damage"
 C.Solid = "Solid"
 C.Walkable = "Walkable"
@@ -39,9 +37,11 @@ C.Player = "Player"
 C.CurrentRoom = "CurrentRoom"
 C.Layer = "Layer"
 C.Position = "Position"
-C.CurrentFrame = "CurrentFrame"
-C.Glow = "Glow"
+C.Light = "Light"
 C.Sprite = "Sprite"
+C.Script = "Script"
+C.Glow = "Glow"
+C.Animation = "Animation"
 C.RoomCamera = "RoomCamera"
 
 return C
