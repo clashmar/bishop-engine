@@ -14,6 +14,7 @@ pub const ENGINE_ON: &str = "on";
 pub const ENGINE_EMIT: &str = "emit";
 pub const GLOBAL: &str = "global";
 pub const INPUT: &str = "input";
+pub const LOG: &str = "log";
 
 // Entity methods
 pub const UPDATE: &str = "update";

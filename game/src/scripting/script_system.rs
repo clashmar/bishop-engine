@@ -5,6 +5,7 @@ use crate::engine::Engine;
 use engine_core::scripting::lua_constants::*;
 use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
 use engine_core::scripting::script_manager::ScriptManager;
+use engine_core::storage::path_utils::scripts_folder;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::world_ecs::WorldEcs;
 use mlua::prelude::LuaResult;
@@ -19,6 +20,18 @@ pub struct ScriptSystem;
 impl ScriptSystem {
     /// Initialize the script system.
     pub fn init(lua: &Lua, script_manager: &mut ScriptManager) {
+        // Load the _engine.lua files to the package.path
+        let scripts_dir = scripts_folder(&script_manager.game_name);
+        let add_path = format!(
+            r#"
+            local p = package.path
+            package.path = p .. ';{dir}/?.lua;{dir}/?/init.lua'
+            "#,
+            dir = scripts_dir.to_string_lossy()
+        );
+        lua.load(&add_path).exec().expect("Cannot set package.path");
+
+
         if let Err(e) = Self::register_engine_module(lua, script_manager) {
             onscreen_error!("Error registering engine module: {e}")
         };

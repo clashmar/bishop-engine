@@ -1,11 +1,11 @@
 // game/src/scripting/modules/global_module.rs
 use crate::scripting::commands::lua_command::CallGlobalCmd;
 use crate::game_global::push_command;
-use engine_core::scripting::modules::lua_module::LuaModule;
+use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
-use engine_core::register_lua_module;
 use mlua::prelude::LuaResult;
 use std::sync::mpsc;
+use engine_core::*;
 use mlua::Variadic;
 use mlua::Value;
 use mlua::Lua;
@@ -67,3 +67,11 @@ impl LuaModule for GlobalModule {
         Ok(())
     }
 }
+
+impl LuaApiModule for GlobalModule {
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        // TODO: impl
+    }
+}
+
+register_lua_api!(GlobalModule);

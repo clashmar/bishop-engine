@@ -2,17 +2,16 @@
 use crate::scripting::commands::lua_command::*;
 use crate::scripting::lua_game_ctx::LuaGameCtx;
 use crate::game_global::push_command;
-use engine_core::scripting::lua_constants::ENTITY;
-use engine_core::scripting::modules::lua_module::LuaModule;
 use engine_core::ecs::component_registry::COMPONENTS;
+use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
 use engine_core::ecs::entity::Entity;
-use engine_core::register_lua_module;
 use mlua::prelude::LuaResult;
 use mlua::UserDataRegistry;
 use mlua::UserDataMethods;
 use mlua::Variadic;
 use mlua::UserData;
+use engine_core::*;
 use mlua::Value;
 use mlua::Lua;
 
@@ -149,4 +148,57 @@ impl UserData for EntityHandle {
         Self::add_methods(registry);
     }
 }
+
+// TODO: auto generate or tie to method and inject strings...
+impl LuaApiModule for EntityModule {
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("-- Auto-generated. Do not edit.");
+        out.line("---@meta");
+        out.line("");
+
+        // Entity class
+        out.line("---@class Entity");
+        out.line("---@field id integer");
+        out.line("local Entity = {}");
+        out.line("");
+
+        // get
+        out.line("---@param component string");
+        out.line("---@see ComponentId");
+        out.line("---@return table|nil");
+        out.line("function Entity:get(component) end");
+        out.line("");
+
+        // set
+        out.line("---@param component string");
+        out.line("---@see ComponentId");
+        out.line("---@param value table");
+        out.line("function Entity:set(component, value) end");
+        out.line("");
+
+        // has
+        out.line("---@param component string");
+        out.line("---@see ComponentId");
+        out.line("---@return boolean");
+        out.line("function Entity:has(component) end");
+        out.line("");
+
+        // has_any
+        out.line("---@param ... string");
+        out.line("---@see ComponentId");
+        out.line("---@return boolean");
+        out.line("function Entity:has_any(...) end");
+        out.line("");
+
+        // has_all
+        out.line("---@param ... string");
+        out.line("---@see ComponentId");
+        out.line("---@return boolean");
+        out.line("function Entity:has_all(...) end");
+        out.line("");
+
+        out.line("return Entity");
+    }
+}
+register_lua_api!(EntityModule);
 

@@ -1,7 +1,10 @@
 // game/src/scripting/modules/logging_module.rs
-use engine_core::{scripting::modules::lua_module::LuaModule, *};
+use engine_core::scripting::modules::lua_module::*;
+use engine_core::scripting::lua_constants::*;
+use engine_core::*;
 use mlua::Variadic;
 use mlua::Function;
+use mlua::Table;
 use mlua::Value;
 use mlua::Lua;
 
@@ -57,9 +60,17 @@ impl LuaModule for LoggingModule {
 
         // Attach the table to the global `engine` namespace
         let globals = lua.globals();
-        let engine_mod: mlua::Table = globals.get("engine")?;
-        engine_mod.set("log", log_tbl)?;
+        let engine_mod: Table = globals.get(ENGINE)?;
+        engine_mod.set(LOG, log_tbl)?;
 
         Ok(())
     }
 }
+
+impl LuaApiModule for LoggingModule {
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        // TODO: implement
+    }
+}
+
+register_lua_api!(LoggingModule);

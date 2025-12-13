@@ -1,0 +1,9 @@
+[package]
+name = "lua_api_gen"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+engine_core = { path = "../engine_core" }
+game = { path = "../game" } 
+inventory = "0.1"
