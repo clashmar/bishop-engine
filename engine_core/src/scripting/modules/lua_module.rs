@@ -1,10 +1,11 @@
 // engine_core/src/scripting/modules/lua_module.rs
+use mlua::prelude::LuaResult;
 use mlua::Lua;
 
 /// Every system that wants to expose Lua functions implements this.
 pub trait LuaModule {
     /// Registers the module’s functions, types and globals with the given Lua state.
-    fn register(&self, lua: &Lua) -> mlua::Result<()>;
+    fn register(&self, lua: &Lua) -> LuaResult<()>;
 }
 
 /// Registry that the inventory crate will collect.                  

@@ -4,7 +4,6 @@ use crate::scripting::script_manager::ScriptManager;
 use std::cell::RefCell;
 use std::sync::Arc;
 use std::sync::Mutex;
-use engine_core::input::input_snapshot::InputSnapshot;
 use engine_core::scripting::script_manager;
 use engine_core::storage::editor_config::app_dir;
 use crate::tilemap::tile_palette::TilePalette;

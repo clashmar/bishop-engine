@@ -12,11 +12,9 @@ use engine_core::rendering::render_room::*;
 use engine_core::ecs::component::Position;
 use engine_core::onscreen_error;
 use engine_core::constants::*;
-use mlua::prelude::LuaResult;
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use engine_core::*;
-use mlua::UserData;
 use std::rc::Rc;
 use mlua::Lua;
 
@@ -29,21 +27,6 @@ pub struct Engine {
     pub camera_manager: CameraManager,
     /// Rendering system for the game.
     pub render_system: RenderSystem,
-}
-
-#[derive(Clone)]
-pub struct LuaGameCtx {
-    pub game_state: Rc<RefCell<GameState>>,
-}
-
-impl UserData for LuaGameCtx {}
-
-impl LuaGameCtx {
-    pub fn set_lua_game_ctx(self, lua: &Lua) -> LuaResult<()> {
-        let globals = lua.globals();
-        globals.set("GameCtx", self)?;
-        Ok(())
-    }
 }
 
 impl Engine {
@@ -148,7 +131,7 @@ impl Engine {
             // Scripts CAN'T have mutable state
             let game_state = self.game_state.borrow();
             let ctx = game_state.game.ctx();
-            if let Err(e) = run_scripts(dt, ctx.cur_world_ecs, ctx.script_manager) {
+            if let Err(e) = run_scripts(dt, ctx.cur_world_ecs, ctx.script_manager, &self.lua) {
                 onscreen_error!("Error running scripts: {}", e);
             }
         }

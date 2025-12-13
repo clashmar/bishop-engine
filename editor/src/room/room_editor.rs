@@ -1,5 +1,5 @@
 // editor/src/room/room_editor.rs
-use engine_core::input::input_snapshot::get_omni_input_pressed;
+use engine_core::controls::controls::*;
 use engine_core::game::game::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;

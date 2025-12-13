@@ -1,8 +1,9 @@
 // game/src/scripting/modules/global_module.rs
 use crate::scripting::commands::lua_command::CallGlobalCmd;
 use crate::game_global::push_command;
-use engine_core::register_lua_module;
 use engine_core::scripting::modules::lua_module::LuaModule;
+use engine_core::scripting::lua_constants::*;
+use engine_core::register_lua_module;
 use mlua::prelude::LuaResult;
 use std::sync::mpsc;
 use mlua::Variadic;
@@ -18,7 +19,7 @@ register_lua_module!(GlobalModule);
 impl LuaModule for GlobalModule {
     fn register(&self, lua: &Lua) -> LuaResult<()> {
         // Get the existing engine table
-        let engine_tbl = lua.globals().get::<Table>("engine")?;
+        let engine_tbl = lua.globals().get::<Table>(ENGINE)?;
 
         // Global submodule
         let global_tbl = lua.create_table()?;
@@ -61,8 +62,8 @@ impl LuaModule for GlobalModule {
             })?
         };
 
-        global_tbl.set("call", call)?;
-        engine_tbl.set("global", global_tbl)?;
+        global_tbl.set(ENGINE_CALL, call)?;
+        engine_tbl.set(GLOBAL, global_tbl)?;
         Ok(())
     }
 }

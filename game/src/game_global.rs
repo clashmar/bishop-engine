@@ -1,7 +1,7 @@
 // game/game_global.rs
 use crate::scripting::commands::lua_command_manager::LuaCommandManager;
 use crate::scripting::commands::lua_command::LuaCommand;
-use engine_core::input::input_snapshot::InputSnapshot;
+use crate::input::input_snapshot::InputSnapshot;
 use std::vec::IntoIter;
 use std::cell::RefCell;
 use std::rc::Rc;

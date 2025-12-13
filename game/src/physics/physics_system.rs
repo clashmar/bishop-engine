@@ -85,7 +85,6 @@ pub fn update_physics(
         }
         {
             let vel_mut = world_ecs.get_mut::<Velocity>(entity).unwrap();
-            println!("{:?}", new_vel);
             *vel_mut = new_vel;
         }
     }

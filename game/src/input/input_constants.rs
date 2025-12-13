@@ -1,4 +1,4 @@
-// engine_core/src/input/input_constants.rs
+// game/src/input/input_constants.rs
 
 /// String constant for the mouse.
 pub const MOUSE_LEFT: &str = "mouse";

@@ -1,4 +1,5 @@
 // engine_core/src/script/script_manager.rs
+use crate::scripting::lua_constants::*;
 use crate::scripting::script::ScriptData;
 use crate::scripting::script::ScriptField;
 use mlua::prelude::LuaResult;
@@ -23,7 +24,7 @@ use serde::Serialize;
 #[derive(Serialize, Deserialize, Default)]
 pub struct ScriptManager {
     #[serde(skip)]
-    /// ???
+    /// Shared Engine API that Lua scripts call into.
     pub engine_api: Arc<EngineApi>,
     #[serde(skip)]
     /// Maps `ScriptId`'s to their loaded lua `Table`.
@@ -66,7 +67,7 @@ impl ScriptManager {
 
         let table = self.load_table_from_id(lua, id)?;
 
-        if let Ok(update) = table.get::<_>("update") {
+        if let Ok(update) = table.get::<_>(UPDATE) {
             self.update_fns.insert(id, update);
         }
 
@@ -91,7 +92,7 @@ impl ScriptManager {
             None => return Ok(()),
         };
 
-        let public = table.get::<Option<Table>>("public")?
+        let public = table.get::<Option<Table>>(PUBLIC)?
             .unwrap_or_else(|| table.clone());
 
         for (name, field) in &data.fields {
