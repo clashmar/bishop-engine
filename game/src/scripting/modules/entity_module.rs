@@ -2,6 +2,7 @@
 use crate::scripting::commands::lua_command::*;
 use crate::scripting::lua_game_ctx::LuaGameCtx;
 use crate::game_global::push_command;
+use crate::scripting::lua_helpers::*;
 use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
@@ -39,7 +40,7 @@ pub struct EntityHandle {
     pub entity: Entity,
 }
 
-/// Build a Lua userdata that wraps `entity`.
+/// Build a Lua userdata object that wraps `Entity`.
 pub fn lua_entity_handle<'lua>(lua: &'lua Lua, entity: Entity) -> LuaResult<Value> {
     // `EntityHandle` is `Clone`, so we can move it into the userdata.
     let handle = EntityHandle { entity };
@@ -82,6 +83,21 @@ impl UserData for EntityHandle {
             }));
             Ok(())
         });
+
+        // Typed setters for each component: entity:set_velocity(v)
+        for reg in COMPONENTS.iter() {
+            let comp_name = reg.type_name.to_string();
+            let method_name = format!("set_{}", to_snake_case(reg.type_name));
+
+            methods.add_method(method_name.as_str(), move |_lua, this, value: Value| {
+                push_command(Box::new(SetComponentCmd {
+                    entity: *this.entity,
+                    comp_name: comp_name.clone(),
+                    value,
+                }));
+                Ok(())
+            });
+        }
 
         // entity:has("Component")
         methods.add_method(HAS, |lua, this, comp_name: String| {
@@ -150,10 +166,14 @@ impl UserData for EntityHandle {
 }
 
 // TODO: auto generate or tie to method and inject strings...
-impl LuaApiModule for EntityModule {
+impl LuaApi for EntityModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
         out.line("-- Auto-generated. Do not edit.");
         out.line("---@meta");
+        out.line("");
+
+        out.line("---@type ComponentId");
+        out.line("local C = require(\"_engine.components\")");
         out.line("");
 
         // Entity class
@@ -162,19 +182,38 @@ impl LuaApiModule for EntityModule {
         out.line("local Entity = {}");
         out.line("");
 
-        // get
+        // Generate overloaded get methods for each component type
+        out.line("-- Component getters with proper return types");
+        for reg in COMPONENTS.iter() {
+            out.line(&format!("---@overload fun(self: Entity, component: \"{}\"): {}", 
+                reg.type_name, reg.type_name));
+        }
         out.line("---@param component string");
-        out.line("---@see ComponentId");
         out.line("---@return table|nil");
         out.line("function Entity:get(component) end");
         out.line("");
 
-        // set
+        // Generic set method
         out.line("---@param component string");
         out.line("---@see ComponentId");
         out.line("---@param value table");
         out.line("function Entity:set(component, value) end");
         out.line("");
+
+        // Setters for each component
+        out.line("-- Typed component setters");
+        for reg in COMPONENTS.iter() {
+            let type_name = reg.type_name;
+            let fn_name = to_snake_case(type_name);
+
+            out.line(&format!("---@param self Entity"));
+            out.line(&format!("---@param v {}", type_name));
+            out.line(&format!(
+                "function Entity:set_{}(v) end",
+                fn_name
+            ));
+            out.line("");
+        }
 
         // has
         out.line("---@param component string");

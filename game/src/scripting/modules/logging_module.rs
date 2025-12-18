@@ -67,7 +67,7 @@ impl LuaModule for LoggingModule {
     }
 }
 
-impl LuaApiModule for LoggingModule {
+impl LuaApi for LoggingModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
         // TODO: implement
     }

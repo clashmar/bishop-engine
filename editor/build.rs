@@ -35,15 +35,41 @@ fn generate_lua_components() {
 
     fs::create_dir_all(&out_dir).expect("cannot create _engine folder");
 
-    let mut lua = String::from("-- Auto-generated. Do not edit.\n---@meta\n\n");
+    let mut lua = String::from(
+        "-- Auto-generated. Do not edit.\n\
+        ---@meta\n\
+        ---@alias vec2 { x: number, y: number }\n\
+        ---@alias vec3 { x: number, y: number, z: number }\n\n"
+    );
+    
+    // Generate class definitions for each component with their schema
+    for reg in COMPONENTS.iter() {
+        let schema = (reg.lua_schema)();
+        
+        // Always generate a class definition, even for empty components
+        lua.push_str(&format!("---@class {}\n", reg.type_name));
+        
+        if schema.is_empty() {
+            // For marker/unit structs, add a comment
+            lua.push_str("--- Marker component\n");
+        } else {
+            // Add field annotations from the schema
+            for (field_name, field_type) in schema {
+                lua.push_str(&format!("---@field {} {}\n", field_name, field_type));
+            }
+        }
+        
+        lua.push_str("\n");
+    }
+    
+    // Generate the ComponentId class with all component names
     lua.push_str("---@class ComponentId\n");
-
-    // Add @field annotations
     for reg in COMPONENTS.iter() {
         lua.push_str(&format!("---@field {} string\n", reg.type_name));
     }
+    lua.push_str("\n");
 
-    lua.push_str("\nlocal C = {}\n\n");
+    lua.push_str("local C = {}\n\n");
 
     // Fill table assignments
     for reg in COMPONENTS.iter() {
