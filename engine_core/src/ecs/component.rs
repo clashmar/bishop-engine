@@ -1,19 +1,15 @@
 // engine_core/src/ecs/component.rs
+use crate::assets::asset_manager::AssetManager;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::world::room::RoomId;
+use crate::ecs::entity::Entity;
+use crate::inspector_module;
 use ecs_component::ecs_component;
 use reflect_derive::Reflect;
 use std::{any::Any, collections::HashMap};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
-use crate::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        world_ecs::WorldEcs
-    },
-    inspector_module, 
-    world::room::RoomId
-}; 
 
 /// Marker trait for components.
 pub trait Component: Send + Sync {

@@ -1,7 +1,5 @@
 // game/src/engine.rs
-use crate::scripting::script_system::run_scripts;
 use crate::scripting::script_system::ScriptSystem;
-use crate::scripting::script_system::load_scripts;
 use crate::physics::physics_system::*;
 use crate::game_state::GameState;
 use engine_core::rendering::render_system::RenderSystem;
@@ -98,7 +96,7 @@ impl Engine {
 
     pub async fn update_async(&mut self, dt: f32) {
         {
-            // Keep borrow in this scope
+            // Keep borrow_mut in this scope
             let mut game_state = self.game_state.borrow_mut();
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
@@ -118,26 +116,20 @@ impl Engine {
                 world_ecs,
                 asset_manager,
                 dt, 
-                current_room.id,
+                current_room.id,  
             ).await;
             
+            // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
             let ctx = game_state.game.ctx_mut();
-            if let Err(e) = load_scripts(&self.lua, ctx.cur_world_ecs, ctx.script_manager) {
+            if let Err(e) = ScriptSystem::load_scripts(&self.lua, ctx.cur_world_ecs, ctx.script_manager) {
                 onscreen_error!("Error loading scripts: {}", e);
             }
         }
 
-        {
-            // Scripts CAN'T have mutable state
-            let game_state = self.game_state.borrow();
-            let ctx = game_state.game.ctx();
-            if let Err(e) = run_scripts(dt, ctx.cur_world_ecs, ctx.script_manager, &self.lua) {
-                onscreen_error!("Error running scripts: {}", e);
-            }
+        // Run scripts outside borrow_mut scope
+        if let Err(e) = ScriptSystem::run_scripts(dt, self) {
+            onscreen_error!("Error running scripts: {}", e);
         }
-
-        // Process queued commands
-        ScriptSystem::process_commands(self);
     }
 
     pub fn render(&mut self, alpha: f32, cur_window_size: &mut (u32, u32)) {

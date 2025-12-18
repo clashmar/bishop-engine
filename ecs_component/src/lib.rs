@@ -1,4 +1,4 @@
-// reflect_derive/src/lib.rs
+// ecs_component/src/lib.rs
 extern crate proc_macro;
 use syn::punctuated::Punctuated;
 use proc_macro::TokenStream;
@@ -230,7 +230,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
                             .downcast_ref::<
                                 crate::ecs::component::ComponentStore<#name>
                             >()
-                            .expect("type mismatch in store");
+                            .expect("Type mismatch in store");
                         store
                             .get(entity)
                             .expect("has() returned true but component missing")
