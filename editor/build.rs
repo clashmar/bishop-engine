@@ -7,6 +7,7 @@ use std::env;
 use std::fs;
 
 fn main() -> std::io::Result<()> {
+    generate_lua_script();
     generate_lua_components();
     generate_lua_input();
 
@@ -129,5 +130,30 @@ fn generate_lua_input() {
     // Write the file
     let target = out_dir.join("input.lua");
     fs::write(&target, lua).expect("Cannot write input.lua");
+    println!("cargo:warning=generated {}", target.display());
+}
+
+fn generate_lua_script() {
+    let out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
+        .join("scripts")
+        .join("_engine");
+
+    fs::create_dir_all(&out_dir).expect("cannot create _engine folder");
+
+    // The exact snippet you asked for.
+    let lua = String::from(
+        "-- Auto-generated. Do not edit.\n\
+        ---@meta\n\
+        ---@class ScriptDef\n\
+        ---@field public table\n\
+        ---@field update fun(self: Script, dt: number)\n\
+        ---@class Script : ScriptDef\n\
+        ---@field entity Entity\n\
+        local Script = {}\n\
+        return Script\n"
+    );
+
+    let target = out_dir.join("script.lua");
+    fs::write(&target, lua).expect("Cannot write script.lua");
     println!("cargo:warning=generated {}", target.display());
 }
