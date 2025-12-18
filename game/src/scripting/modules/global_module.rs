@@ -68,7 +68,7 @@ impl LuaModule for GlobalModule {
     }
 }
 
-impl LuaApiModule for GlobalModule {
+impl LuaApi for GlobalModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
         // TODO: impl
     }

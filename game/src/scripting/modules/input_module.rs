@@ -60,7 +60,7 @@ where
     })
 }
 
-impl LuaApiModule for InputModule {
+impl LuaApi for InputModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
         // TODO: impl
     }

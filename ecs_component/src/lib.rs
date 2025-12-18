@@ -253,6 +253,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
 
 fn generate_lua_schema(fields: &Fields) -> proc_macro2::TokenStream {
     match fields {
+        // Normal struct { a: T, b: U }
         Fields::Named(named) => {
             let field_schemas = named.named.iter().map(|f| {
                 let name = f.ident.as_ref().unwrap().to_string();
@@ -262,12 +263,31 @@ fn generate_lua_schema(fields: &Fields) -> proc_macro2::TokenStream {
                     (#name, #lua_type)
                 }
             });
+
             quote! {
                 &[#(#field_schemas),*]
             }
         }
-        _ => {
-            // Unit or tuple structs return empty schema
+
+        // Tuple struct: struct Foo(T)
+        Fields::Unnamed(unnamed) => {
+            if unnamed.unnamed.len() == 1 {
+                let field = unnamed.unnamed.first().unwrap();
+                let lua_type = rust_type_to_lua(&field.ty);
+
+                quote! {
+                    &[("value", #lua_type)]
+                }
+            } else {
+                // Multi-field tuple structs are not supported
+                quote! {
+                    &[]
+                }
+            }
+        }
+
+        // Unit struct: struct Marker;
+        Fields::Unit => {
             quote! { &[] }
         }
     }
@@ -287,14 +307,25 @@ fn rust_type_to_lua(ty: &Type) -> &'static str {
             || p.path.is_ident("u64")
             || p.path.is_ident("usize")
             || p.path.is_ident("isize") => "number",
+        // Bools
         syn::Type::Path(p) if p.path.is_ident("bool") => "boolean",
+        // Strings
         syn::Type::Path(p) if p.path.is_ident("String") => "string",
         syn::Type::Reference(r)
             if matches!(r.elem.as_ref(),
                 syn::Type::Path(p) if p.path.is_ident("str")) => "string",
+        // Math / engine primitives
         syn::Type::Path(p) if p.path.is_ident("Vec2") => "vec2",
         syn::Type::Path(p) if p.path.is_ident("Vec3") => "vec3",
-        syn::Type::Path(p) if p.path.is_ident("SpriteId") => "sprite",
+        // Id types RoomId, SpriteId, etc.
+        syn::Type::Path(p) => {
+            let ident = p.path.segments.last().unwrap().ident.to_string();
+            if ident.ends_with("Id") {
+                "number"
+            } else {
+                "table"
+            }
+        }
         _ => "table",
     }
 }

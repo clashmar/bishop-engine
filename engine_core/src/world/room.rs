@@ -15,6 +15,19 @@ use crate::{constants::*};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct RoomId(pub usize);
 
+impl std::ops::Deref for RoomId {
+    type Target = usize;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for RoomId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(default)]

@@ -1,10 +1,10 @@
 // engine_core/src/assets/sprite.rs
-use ecs_component::ecs_component;
-use macroquad::prelude::*;
-use reflect_derive::Reflect;
-use serde::{Deserialize, Serialize};
-
 use crate::inspector_module;
+use serde::{Deserialize, Serialize};
+use ecs_component::ecs_component;
+use reflect_derive::Reflect;
+use macroquad::prelude::*;
+
 
 /// Opaque handle that the asset manager gives out. Default/Unset is 0.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]

@@ -19,7 +19,7 @@ pub struct LuaModuleRegistry {
 inventory::collect!(LuaModuleRegistry);
 
 /// Trait which ensures lua api is implemented for a module.
-pub trait LuaApiModule {
+pub trait LuaApi {
     /// Emit Lua signatures.
     fn emit_api(&self, out: &mut LuaApiWriter);
 }
@@ -46,7 +46,7 @@ impl LuaApiWriter {
 
 pub struct LuaApiRegistry {
     pub name: &'static str,
-    pub ctor: fn() -> Box<dyn LuaApiModule>,
+    pub ctor: fn() -> Box<dyn LuaApi>,
 }
 
 inventory::collect!(LuaApiRegistry);
@@ -79,11 +79,11 @@ macro_rules! register_lua_module {
     };
 }
 
-pub trait LuaExposedModule: LuaModule + LuaApiModule {}
+pub trait LuaExposedModule: LuaModule + LuaApi {}
 
 impl<T> LuaExposedModule for T
 where
-    T: LuaModule + LuaApiModule
+    T: LuaModule + LuaApi
 {}
 
 /// Writes the module api to a .lua file.
