@@ -1,6 +1,32 @@
-// game/src/input/key_table.rs
+// engine_core/src/input/key_table.rs
 use crate::input::input_constants::*;
 use macroquad::prelude::*;
+
+pub fn lua_key_name(s: &str) -> String {
+    let mut out = String::new();
+    let mut capitalize = true;
+
+    for ch in s.chars() {
+        if ch.is_ascii_alphanumeric() {
+            if capitalize {
+                out.push(ch.to_ascii_uppercase());
+                capitalize = false;
+            } else {
+                out.push(ch);
+            }
+        } else {
+            // Separators start a new word
+            capitalize = true;
+        }
+    }
+
+    // Fallback
+    if out.is_empty() {
+        s.replace(|c: char| !c.is_ascii_alphanumeric(), "_")
+    } else {
+        out
+    }
+}
 
 /// All key codes exposed by macroquad.
 pub static MOUSE_TABLE: &[(&str, MouseButton)] = &[

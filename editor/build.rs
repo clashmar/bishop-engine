@@ -1,11 +1,14 @@
 // editor/build.rs
 use engine_core::ecs::component_registry::COMPONENTS;
+use engine_core::input::input_table::*;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::env;
 use std::fs;
 
 fn main() -> std::io::Result<()> {
     generate_lua_components();
+    generate_lua_input();
 
     if cfg!(target_os = "windows") {
         let mut res = winres::WindowsResource::new();
@@ -80,5 +83,51 @@ fn generate_lua_components() {
 
     let target = out_dir.join("components.lua");
     fs::write(&target, lua).expect("Cannot write components.lua");
+    println!("cargo:warning=generated {}", target.display());
+}
+
+fn generate_lua_input() {
+    let out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
+        .join("scripts")
+        .join("_engine");
+
+    fs::create_dir_all(&out_dir).expect("cannot create _engine folder");
+
+    let mut lua = String::from(
+        "-- Auto-generated. Do not edit.\n\
+        ---@meta\n\n"
+    );
+
+    // Enum definition
+    lua.push_str("---@enum Input\nlocal Input = {\n");
+
+    // Avoids duplicates
+    let mut seen = HashSet::new();
+    
+    // Keyboard
+    for &(name, _code) in KEY_TABLE.iter() {
+        // Nmae is the literal string that should be used at runtime
+        if seen.insert(name) {
+            let key = lua_key_name(name);
+            lua.push_str(&format!("    {} = \"{}\",\n", key, name));
+        }
+    }
+
+    // Mouse
+    for &(name, _code) in MOUSE_TABLE.iter() {
+        if seen.insert(name) {
+            let key = lua_key_name(name);
+            lua.push_str(&format!("    {} = \"{}\",\n", key, name));
+        }
+    }
+    
+    lua.push_str("}\n");
+    
+    // Return the enum table
+    lua.push_str("\nreturn Input\n");
+
+    // Write the file
+    let target = out_dir.join("input.lua");
+    fs::write(&target, lua).expect("Cannot write input.lua");
     println!("cargo:warning=generated {}", target.display());
 }

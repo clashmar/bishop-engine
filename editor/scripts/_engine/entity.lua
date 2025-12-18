@@ -1,14 +1,11 @@
 -- Auto-generated. Do not edit.
 ---@meta
 
----@type ComponentId
-local C = require("_engine.components")
-
 ---@class Entity
 ---@field id integer
 local Entity = {}
 
--- Component getters with proper return types
+-- Component getters
 ---@overload fun(self: Entity, component: "Sprite"): Sprite
 ---@overload fun(self: Entity, component: "Animation"): Animation
 ---@overload fun(self: Entity, component: "Script"): Script
@@ -32,6 +29,7 @@ local Entity = {}
 ---@return table|nil
 function Entity:get(component) end
 
+-- Generic set method
 ---@param component string
 ---@see ComponentId
 ---@param value table

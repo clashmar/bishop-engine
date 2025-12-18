@@ -14,9 +14,13 @@ pub struct LuaModuleRegistry {
     /// Called once for every module during start‑up.
     pub ctor: fn() -> Box<dyn LuaModule>,
 }
-
-// Collect all modules into a slice that lives for the whole program.
 inventory::collect!(LuaModuleRegistry);
+
+/// Contract that a lua method has to implement.
+pub trait LuaMethod<T> {
+    fn register<M: mlua::UserDataMethods<T>>(&self, methods: &mut M);
+    fn emit_api(&self, out: &mut LuaApiWriter);
+}
 
 /// Trait which ensures lua api is implemented for a module.
 pub trait LuaApi {
@@ -45,21 +49,29 @@ impl LuaApiWriter {
 }
 
 pub struct LuaApiRegistry {
+    /// Type name of the module.
     pub name: &'static str,
+    /// Constructor for the concrete `LuaApi` implementation.
     pub ctor: fn() -> Box<dyn LuaApi>,
+    /// Target filename to write to.
+    pub filename: &'static str,
 }
-
 inventory::collect!(LuaApiRegistry);
 
 #[macro_export]
 macro_rules! register_lua_api {
-    ($ty:ty) => {
+    ($ty:ty, $file:expr) => {
         inventory::submit! {
             $crate::scripting::modules::lua_module::LuaApiRegistry {
                 name: stringify!($ty),
                 ctor: || Box::new(<$ty>::default()),
+                filename: $file,
             }
         }
+    };
+    // Fallback if filename isn't specified
+    ($ty:ty) => {
+        $crate::register_lua_api!($ty, concat!(stringify!($ty), ".lua"));
     };
 }
 

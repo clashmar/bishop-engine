@@ -1,5 +1,5 @@
 // game/src/input/input_snapshot.rs
-use crate::input::input_table::*;
+use engine_core::input::input_table::*;
 use std::collections::HashMap;
 use macroquad::prelude::*;
 

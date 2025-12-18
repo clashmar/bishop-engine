@@ -6,6 +6,7 @@ pub mod controls;
 pub mod ecs;
 pub mod engine_global;
 pub mod game;
+pub mod input;
 pub mod lighting;
 pub mod logging;
 pub mod physics;
