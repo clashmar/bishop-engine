@@ -60,10 +60,24 @@ where
     })
 }
 
+register_lua_api!(InputModule, ENGINE_FILE);
+
 impl LuaApi for InputModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
-        // TODO: impl
+        // input.is_down()
+        out.line("---@param input string");
+        out.line(&format!("function {}.{}.{}(input) end", ENGINE, INPUT, INPUT_IS_DOWN));
+        out.line("");
+
+        // input.is_pressed()
+        out.line("---@param input string");
+        out.line(&format!("function {}.{}.{}(input) end", ENGINE, INPUT, INPUT_PRESSED));
+        out.line("");
+
+        // input.is_released()
+        out.line("---@param input string");
+        out.line(&format!("function {}.{}.{}(input) end", ENGINE, INPUT, INPUT_RELEASED));
+        out.line("");
     }
 }
 
-register_lua_api!(InputModule);

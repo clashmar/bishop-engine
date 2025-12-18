@@ -1,9 +1,9 @@
-// game/src/input/input_constants.rs
+// engine_core/src/input/input_constants.rs
 
 /// String constant for the mouse.
-pub const MOUSE_LEFT: &str = "mouse";
-pub const MOUSE_MIDDLE: &str = "mouse";
-pub const MOUSE_RIGHT: &str = "mouse";
+pub const MOUSE_LEFT: &str = "mouse_left";
+pub const MOUSE_MIDDLE: &str = "mouse_middle";
+pub const MOUSE_RIGHT: &str = "mouse_right";
 
 /// String constants for every exposed key name.
 pub const SPACE: &str = "space";

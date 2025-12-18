@@ -67,10 +67,28 @@ impl LuaModule for LoggingModule {
     }
 }
 
+register_lua_api!(LoggingModule, ENGINE_FILE);
+
 impl LuaApi for LoggingModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
-        // TODO: implement
+        // log.info(msg: string)
+        out.line("---@param msg string");
+        out.line("function engine.log.info(msg) end");
+        out.line("");
+
+        // log.warn(msg: string)
+        out.line("---@param msg string");
+        out.line("function engine.log.warn(msg) end");
+        out.line("");
+
+        // log.error(msg: string)
+        out.line("---@param msg string");
+        out.line("function engine.log.error(msg) end");
+        out.line("");
+
+        // log.debug(msg: string)
+        out.line("---@param msg string");
+        out.line("function engine.log.debug(msg) end");
+        out.line("");
     }
 }
-
-register_lua_api!(LoggingModule);
