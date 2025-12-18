@@ -92,48 +92,81 @@ impl ScriptSystem {
         Ok(())
     }
 
-    /// Process all Lua commands to the `GameState`.
-    /// Called once per frame, before any Lua script runs.
+    /// Runs all lua scripts in the game.
+    pub fn run_scripts(
+        dt: f32,
+        engine: &mut Engine,
+    ) -> LuaResult<()> {
+        let entities_and_scripts: Vec<_> = {
+            let game_state = engine.game_state.borrow();
+            let ctx = game_state.game.ctx();
+            let world_ecs = ctx.cur_world_ecs;
+            let script_store = world_ecs.get_store::<Script>();
+            
+            // Collect all entities that have scripts
+            script_store.data.iter()
+                .map(|(entity, script)| (*entity, script.script_id.clone()))
+                .collect()
+        };
+
+
+
+        for (entity, script_id) in entities_and_scripts {
+            let (update, table) = {
+                let game_state = engine.game_state.borrow();
+                let ctx = game_state.game.ctx();
+                let script_manager = ctx.script_manager;
+                
+                if let Some(update) = script_manager.update_fns.get(&script_id) {
+                    let table = script_manager.tables.get(&script_id).unwrap();
+                    let handle = lua_entity_handle(&engine.lua, entity)?;
+                    table.set(ENTITY, handle)?;
+                    
+                    // Clone what we need before dropping the borrow
+                    (Some(update.clone()), Some(table.clone()))
+                } else {
+                    (None, None)
+                }
+            };
+            
+            // Make sure game_state borrow is dropped
+            if let (Some(update), Some(table)) = (update, table) {
+                // Execute the script's update function
+                update.call::<()>((table, dt))?;
+                
+                // Process commands immediately after this script completes
+                Self::process_commands(engine);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Process all Lua commands to the `Engine`.
     pub fn process_commands(engine: &mut Engine) {
         // Drain the command queue and apply each command
         for mut cmd in drain_commands() {
             cmd.execute(engine);
         }
     }
-}
 
-// Load all scripts for the given ecs.
-pub fn load_scripts(
-    lua: &Lua,
-    world_ecs: &mut WorldEcs, 
-    script_manager: &mut ScriptManager
-) -> LuaResult<()> {
-    let script_store = world_ecs.get_store_mut::<Script>();
+    // Load all scripts for the given ecs.
+    pub fn load_scripts(
+        lua: &Lua,
+        world_ecs: &mut WorldEcs, 
+        script_manager: &mut ScriptManager
+    ) -> LuaResult<()> {
+        let script_store = world_ecs.get_store_mut::<Script>();
 
-    for (_entity, script) in script_store.data.iter_mut() {
-        if !script_manager.tables.contains_key(&script.script_id) {
-            script.load(lua, script_manager)?
+        for (_entity, script) in script_store.data.iter_mut() {
+            if !script_manager.tables.contains_key(&script.script_id) {
+                script.load(lua, script_manager)?
+            }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }
 
-// Run all scripts for the given ecs.
-pub fn run_scripts(
-    dt: f32,
-    world_ecs: &WorldEcs, 
-    script_manager: &ScriptManager,
-    lua: &Lua,
-) -> LuaResult<()> {
-    let script_store = world_ecs.get_store::<Script>();
-    for (entity, script) in script_store.data.iter() {
-        if let Some(update) = script_manager.update_fns.get(&script.script_id) {
-            let table = script_manager.tables.get(&script.script_id).unwrap();
-            let handle = lua_entity_handle(lua, *entity)?;
-            table.set(ENTITY, handle)?;
-            update.call::<()>((table, dt))?
-        }
-    }
-    Ok(())
-}
+
+

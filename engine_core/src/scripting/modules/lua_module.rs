@@ -104,8 +104,3 @@ pub fn generate_lua_api(out_dir: &std::path::Path) {
         std::fs::write(out_dir.join(format!("{name}.lua")), writer.buf).unwrap();
     }
 }
-
-pub trait LuaSchema {
-    /// `(&field_name, &lua_type)` pairs for lua components.
-    const SCHEMA: &'static [(&'static str, &'static str)];
-}
