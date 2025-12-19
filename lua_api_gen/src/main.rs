@@ -29,6 +29,14 @@ fn main() {
             .or_insert_with(|| writer.buf);
     }
 
+    // Delete previous versions
+    for filename in per_file.keys() {
+        let path = out_dir.join(filename);
+        if path.exists() {
+            let _ = fs::remove_file(&path);
+        }
+    }
+
     // Write (or append) each file
     for (filename, content) in per_file {
         let path = out_dir.join(filename);

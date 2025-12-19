@@ -5,7 +5,7 @@ use crate::engine::Engine;
 use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
 use engine_core::scripting::script_manager::ScriptManager;
 use engine_core::scripting::lua_constants::*;
-use engine_core::scripting::script::Script;
+use engine_core::scripting::script::*;
 use engine_core::ecs::world_ecs::WorldEcs;
 use mlua::prelude::LuaResult;
 use engine_core::*;
@@ -109,30 +109,29 @@ impl ScriptSystem {
                 .collect()
         };
 
-
-
         for (entity, script_id) in entities_and_scripts {
-            let (update, table) = {
+            let (update, instance) = {
                 let game_state = engine.game_state.borrow();
                 let ctx = game_state.game.ctx();
                 let script_manager = ctx.script_manager;
                 
                 if let Some(update) = script_manager.update_fns.get(&script_id) {
-                    let table = script_manager.tables.get(&script_id).unwrap();
-                    let handle = lua_entity_handle(&engine.lua, entity)?;
-                    table.set(ENTITY, handle)?;
-                    
-                    // Clone what we need before dropping the borrow
-                    (Some(update.clone()), Some(table.clone()))
+                    // Instance should exist and be setup already
+                    if let Some(instance) = script_manager.instances.get(&(entity, script_id)) {
+                        // Clone before dropping the borrow
+                        (Some(update.clone()), Some(instance.clone()))
+                    } else {
+                        (None, None)
+                    }
                 } else {
                     (None, None)
                 }
             };
-            
+                
             // Make sure game_state borrow is dropped
-            if let (Some(update), Some(table)) = (update, table) {
+            if let (Some(update), Some(instance)) = (update, instance) {
                 // Execute the script's update function
-                update.call::<()>((table, dt))?;
+                update.call::<()>((instance, dt))?;
                 
                 // Process commands immediately after this script completes
                 Self::process_commands(engine);
@@ -158,9 +157,12 @@ impl ScriptSystem {
     ) -> LuaResult<()> {
         let script_store = world_ecs.get_store_mut::<Script>();
 
-        for (_entity, script) in script_store.data.iter_mut() {
+        for (entity, script) in script_store.data.iter_mut() {
             if !script_manager.tables.contains_key(&script.script_id) {
-                script.load(lua, script_manager)?
+                if let Some(instance) = script.load(lua, script_manager, *entity)? {
+                    let handle = lua_entity_handle(&lua, *entity)?;
+                    instance.set(ENTITY, handle)?;
+                }
             }
         }
 

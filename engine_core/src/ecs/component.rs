@@ -4,11 +4,11 @@ use crate::ecs::world_ecs::WorldEcs;
 use crate::world::room::RoomId;
 use crate::ecs::entity::Entity;
 use crate::inspector_module;
+use std::{any::Any, collections::HashMap};
+use serde_with::{serde_as, FromInto};
+use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use reflect_derive::Reflect;
-use std::{any::Any, collections::HashMap};
-use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, FromInto};
 use macroquad::prelude::*;
 
 /// Marker trait for components.
@@ -145,7 +145,7 @@ impl Default for Collider {
 /// Marker for participation in the physics system.
 #[ecs_component(deps = [Grounded])]
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
-pub struct PhysicsBody;     
+pub struct PhysicsBody;  
 
 /// Marker for entities that move by code.
 #[ecs_component]

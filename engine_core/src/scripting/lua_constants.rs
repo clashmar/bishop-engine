@@ -27,6 +27,8 @@ pub const SET: &str = "set";
 pub const HAS: &str = "has";
 pub const HAS_ANY: &str = "has_any";
 pub const HAS_ALL: &str = "has_all";
+pub const INTERACT: &str = "interact";
+pub const FIND_BEST_INTERACTABLE: &str = "find_best_interactable";
 
 // Entity fields
 pub const ID: &str = "id";

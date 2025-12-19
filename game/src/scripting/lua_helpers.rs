@@ -1,5 +1,4 @@
 // game/src/scripting/lua_helpers.rs
-
 pub fn to_snake_case(name: &str) -> String {
     let mut out = String::new();
     for (i, ch) in name.chars().enumerate() {

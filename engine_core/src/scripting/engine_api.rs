@@ -1,4 +1,5 @@
 // engine_core/src/script/engine_api.rs
+use crate::ecs::entity::Entity;
 use std::collections::HashMap;
 use mlua::prelude::LuaResult;
 use std::sync::Mutex;
@@ -7,6 +8,12 @@ use mlua::Function;
 use mlua::Variadic;
 use mlua::Value;
 use mlua::Lua;
+
+/// A lua wrapper that carries an Entity id.
+#[derive(Clone)]
+pub struct EntityHandle {
+    pub entity: Entity,
+}
 
 /// The type of a Rust callback that can be called from Lua.
 type EngineFn = Arc<dyn Fn(&Lua, Variadic<Value>) -> LuaResult<Value> + Send + Sync>;

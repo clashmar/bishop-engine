@@ -1,24 +1,24 @@
 // engine_core/src/script/script_manager.rs
-use crate::scripting::lua_constants::*;
-use crate::scripting::script::ScriptData;
-use crate::scripting::script::ScriptField;
-use mlua::prelude::LuaResult;
-use mlua::Function;
-use crate::scripting::engine_api::EngineApi;
-use crate::game::game::Game;
-use crate::scripting::script::ScriptId;
 use crate::storage::path_utils::scripts_folder;
+use crate::scripting::engine_api::EngineApi;
+use crate::scripting::lua_constants::*;
+use crate::ecs::entity::Entity;
+use crate::game::game::Game;
 use crate::*;
-use std::path::Path;
-use std::fs;
+use crate::scripting::script::*;
 use std::collections::HashSet;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::collections::HashMap;
-use mlua::Lua;
-use mlua::Table;
+use mlua::prelude::LuaResult;
+use std::path::PathBuf;
 use serde::Deserialize;
 use serde::Serialize;
+use std::path::Path;
+use std::sync::Arc;
+use mlua::Function;
+use mlua::Value;
+use mlua::Table;
+use mlua::Lua;
+use std::fs;
 
 /// Manages access to scripts and holds the Lua VM instance.
 #[derive(Serialize, Deserialize, Default)]
@@ -27,12 +27,15 @@ pub struct ScriptManager {
     /// Shared Engine API that Lua scripts call into.
     pub engine_api: Arc<EngineApi>,
     #[serde(skip)]
-    /// Maps `ScriptId`'s to their loaded lua `Table`.
+    /// Maps `ScriptId`'s to their `Table` definition.
     pub tables: HashMap<ScriptId, Table>,
+    /// Script instances (per entity).
     #[serde(skip)]
-    /// Maps ScriptId → optional update(dt) function TODO: is this necessary?
+    pub instances: HashMap<(Entity, ScriptId), Table>,
+    #[serde(skip)]
+    /// Maps ScriptId to optional update(dt) function TODO: is this necessary?
     pub update_fns: HashMap<ScriptId, Function>,
-    /// Persistent map of all sprite is to their paths.
+    /// Persistent map of all script ids to their paths.
     pub script_id_to_path: HashMap<ScriptId, PathBuf>,
     #[serde(skip)]
     pub path_to_script_id: HashMap<PathBuf, ScriptId>,
@@ -49,6 +52,7 @@ impl ScriptManager {
         let manager = Self {
             engine_api: Arc::new(EngineApi::default()),
             tables: HashMap::new(),
+            instances: HashMap::new(),
             update_fns: HashMap::new(),
             script_id_to_path: HashMap::new(),
             path_to_script_id: HashMap::new(),
@@ -59,7 +63,7 @@ impl ScriptManager {
         manager
     }
 
-    /// Load the Lua table and store it in the manager
+    /// Load the Lua table and store it in the manager.
     pub fn load_script_table(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
         if self.tables.contains_key(&id) {
             return Ok(self.tables.get(&id).unwrap());
@@ -75,6 +79,46 @@ impl ScriptManager {
         Ok(self.tables.get(&id).unwrap())
     }
 
+    pub fn get_or_create_instance(
+        &mut self,
+        lua: &Lua,
+        entity: Entity,
+        script_id: ScriptId,
+    ) -> LuaResult<Table> {
+        if let Some(t) = self.instances.get(&(entity, script_id)) {
+            return Ok(t.clone());
+        }
+
+        // Ensure table is loaded first
+        self.load_script_table(lua, script_id)?;
+
+        // Script definition
+        let def = self.tables.get(&script_id).ok_or_else(|| {
+            mlua::Error::RuntimeError("Script definition not loaded".into())
+        })?;
+
+        // Create instance table
+        let instance = lua.create_table()?;
+
+        // Clone `public` if present
+        if let Ok(public) = def.get::<Table>(PUBLIC) {
+            let public_copy = lua.create_table()?;
+            for pair in public.pairs::<Value, Value>() {
+                let (k, v) = pair?;
+                public_copy.set(k, v)?;
+            }
+            instance.set(PUBLIC, public_copy)?;
+        }
+
+        // instance.__index = def
+        let mt = lua.create_table()?;
+        mt.set("__index", def.clone())?;
+        instance.set_metatable(Some(mt))?;
+
+        self.instances.insert((entity, script_id), instance.clone());
+        Ok(instance)
+    }
+
     /// Get the table for a script.
     pub fn get_table(&self, id: ScriptId) -> Option<&Table> {
         self.tables.get(&id)
@@ -83,40 +127,6 @@ impl ScriptManager {
     /// Get the update function for a script.
     pub fn get_update_fn(&self, id: ScriptId) -> Option<&Function> {
         self.update_fns.get(&id)
-    }
-
-    /// Sync ScriptData back into its Lua table.
-    pub fn sync_to_lua(&self, lua: &Lua, id: ScriptId, data: &ScriptData) -> LuaResult<()> {
-        let table = match self.tables.get(&id) {
-            Some(t) => t,
-            None => return Ok(()),
-        };
-
-        let public = table.get::<Option<Table>>(PUBLIC)?
-            .unwrap_or_else(|| table.clone());
-
-        for (name, field) in &data.fields {
-            match field {
-                ScriptField::Bool(b) => public.set(name.clone(), *b)?,
-                ScriptField::Int(i) => public.set(name.clone(), *i)?,
-                ScriptField::Float(f) => public.set(name.clone(), *f)?,
-                ScriptField::Text(s) => public.set(name.clone(), s.clone())?,
-                ScriptField::Vec2(v) => {
-                    let t = lua.create_table()?;
-                    t.set(1, v[0])?;
-                    t.set(2, v[1])?;
-                    public.set(name.clone(), t)?;
-                }
-                ScriptField::Vec3(v) => {
-                    let t = lua.create_table()?;
-                    t.set(1, v[0])?;
-                    t.set(2, v[1])?;
-                    t.set(3, v[2])?;
-                    public.set(name.clone(), t)?;
-                }
-            }
-        }
-        Ok(())
     }
 
     pub fn load_table_from_id(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<Table> {
@@ -173,7 +183,7 @@ impl ScriptManager {
             return Ok(id);
         }
 
-        // Set and calculate the next texture id
+        // Set and calculate the next script id
         let id = ScriptId(self.next_script_id);
         self.restore_next_id();
 
@@ -246,6 +256,7 @@ impl ScriptManager {
         self.tables.remove(&id);
         self.update_fns.remove(&id);
         self.load_script_table(lua, id)
+        // TODO: remove instance
     }
 
     pub fn unload(&mut self, id: ScriptId) {
@@ -253,5 +264,6 @@ impl ScriptManager {
         self.update_fns.remove(&id);
         self.script_id_to_path.remove(&id);
         self.path_to_script_id.retain(|_, &mut v| v != id);
+        // TODO: remove instance
     }
 }

@@ -1,5 +1,7 @@
 // engine_core/src/script/script.rs
 use crate::scripting::script_manager::ScriptManager;
+use crate::scripting::lua_constants::PUBLIC;
+use crate::ecs::entity::Entity;
 use ecs_component::ecs_component;
 use std::collections::HashMap;
 use mlua::prelude::LuaResult;
@@ -30,6 +32,9 @@ pub struct ScriptData {
     pub fields: HashMap<String, ScriptField>,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct ScriptInstanceId(pub u32);
+
 /// The script component that lives on an entity.
 #[ecs_component]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -42,19 +47,24 @@ pub struct Script {
 
 impl Script {
     /// Loads the table from ScriptManager and updates ScriptData
-    pub fn load(&mut self, lua: &Lua, script_manager: &mut ScriptManager) -> LuaResult<()> {
+    pub fn load(
+        &mut self, lua: &Lua, 
+        script_manager: &mut ScriptManager, 
+        entity: Entity
+    ) -> LuaResult<Option<Table>> {
         if self.script_id.0 == 0 {
             // Script hasn't been set yet
             self.data.fields.clear();
-            return Ok(());
+            return Ok(None);
         }
 
-        let table = script_manager.load_script_table(lua, self.script_id)?;
+        // Get or create the per-entity instance
+        let instance = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
 
         // Determine the public fields table
-        let public: Table = match table.get::<Option<Table>>("public")? {
+        let public: Table = match instance.get::<Option<Table>>(PUBLIC)? {
             Some(t) => t,
-            None => table.clone(),
+            None => instance.clone(),
         };
 
         let mut fields = HashMap::new();
@@ -98,14 +108,45 @@ impl Script {
         }
 
         // Sync current values back to Lua
-        self.sync_to_lua(lua, script_manager)?;
+        self.sync_to_lua(lua, script_manager, entity)?;
 
-        Ok(())
+        Ok(Some(instance))
     }
 
      /// Sync the current ScriptData back to Lua table.
-    pub fn sync_to_lua(&self, lua: &Lua, script_manager: &ScriptManager) -> LuaResult<()> {
-        script_manager.sync_to_lua(lua, self.script_id, &self.data)
+    pub fn sync_to_lua(&self, lua: &Lua, script_manager: &mut ScriptManager, entity: Entity) -> LuaResult<()> {
+        if self.script_id.0 == 0 {
+            return Ok(());
+        }
+
+        // Get the instance for this entity
+        let instance = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
+
+        let public = instance.get::<Option<Table>>("public")?
+            .unwrap_or_else(|| instance.clone());
+
+        for (name, field) in &self.data.fields {
+            match field {
+                ScriptField::Bool(b) => public.set(name.clone(), *b)?,
+                ScriptField::Int(i) => public.set(name.clone(), *i)?,
+                ScriptField::Float(f) => public.set(name.clone(), *f)?,
+                ScriptField::Text(s) => public.set(name.clone(), s.clone())?,
+                ScriptField::Vec2(v) => {
+                    let t = lua.create_table()?;
+                    t.set(1, v[0])?;
+                    t.set(2, v[1])?;
+                    public.set(name.clone(), t)?;
+                }
+                ScriptField::Vec3(v) => {
+                    let t = lua.create_table()?;
+                    t.set(1, v[0])?;
+                    t.set(2, v[1])?;
+                    t.set(3, v[2])?;
+                    public.set(name.clone(), t)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
