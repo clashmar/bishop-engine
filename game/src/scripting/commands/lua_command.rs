@@ -1,8 +1,9 @@
 // game/src/scripting/commands/lua_command.rs
+use crate::engine::Engine;
 use engine_core::ecs::component_registry::COMPONENTS;
+use engine_core::scripting::script::Script;
 use engine_core::ecs::entity::Entity;
 use std::sync::mpsc::Sender;
-use crate::engine::Engine;
 use mlua::Function;
 use engine_core::*;
 use mlua::Value;
@@ -35,6 +36,53 @@ impl LuaCommand for SetComponentCmd {
             }
         } else {
             onscreen_error!("Unknown component '{}'", self.comp_name);
+        }
+    }
+}
+
+/// Calls a function on an entity.
+pub struct CallEntityFnCmd {
+    pub entity: Entity,
+    pub fn_name: String,
+    pub args: Vec<Value>,
+}
+
+// TODO: use this for updates?
+impl LuaCommand for CallEntityFnCmd {
+    fn execute(&mut self, engine: &mut Engine) {
+        let game_state = engine.game_state.borrow();
+        let world = &game_state.game.current_world().world_ecs;
+
+        let script = match world.get::<Script>(self.entity) {
+            Some(s) => s,
+            None => return,
+        };
+
+        let instance = match game_state
+            .game
+            .script_manager
+            .instances
+            .get(&(self.entity, script.script_id)) {
+                Some(t) => t,
+                None => return,
+            };
+
+        let Ok(func) = instance.get::<Function>(&*self.fn_name) else {
+            return;
+        };
+
+        let lua = &engine.lua;
+        // let handle = lua_entity_handle(lua, self.entity).unwrap();
+
+        let handle = Value::Table(instance.clone());
+
+        // TODO: pass in all args
+        // let mut call_args = Vec::with_capacity(self.args.len() + 1);
+        // call_args.push(handle);
+        // call_args.extend(self.args.clone());
+
+        if let Err(e) = func.call::<()>(handle) {
+            onscreen_error!("Lua call failed: {}", e);
         }
     }
 }

@@ -8,6 +8,7 @@ local Entity = {}
 -- Component getters
 ---@overload fun(self: Entity, component: "Sprite"): Sprite
 ---@overload fun(self: Entity, component: "Animation"): Animation
+---@overload fun(self: Entity, component: "Interactable"): Interactable
 ---@overload fun(self: Entity, component: "Script"): Script
 ---@overload fun(self: Entity, component: "Light"): Light
 ---@overload fun(self: Entity, component: "Glow"): Glow
@@ -43,6 +44,10 @@ function Entity:set_sprite(v) end
 ---@param self Entity
 ---@param v Animation
 function Entity:set_animation(v) end
+
+---@param self Entity
+---@param v Interactable
+function Entity:set_interactable(v) end
 
 ---@param self Entity
 ---@param v Script
@@ -126,5 +131,12 @@ function Entity:has_any(...) end
 ---@see ComponentId
 ---@return boolean
 function Entity:has_all(...) end
+
+---@vararg any Arguments passed to the entity's interact function
+---@return nil
+function Entity:interact(...) end
+
+---@return Entity|nil
+function Entity:find_best_interactable() end
 
 return Entity

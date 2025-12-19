@@ -4,6 +4,7 @@ use crate::scripting::lua_game_ctx::LuaGameCtx;
 use crate::game_global::push_command;
 use crate::scripting::lua_helpers::*;
 use engine_core::ecs::component_registry::COMPONENTS;
+use engine_core::scripting::interactable::find_best_interactable;
 use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
 use engine_core::ecs::entity::Entity;
@@ -34,6 +35,32 @@ impl LuaModule for EntityModule {
     }
 }
 
+register_lua_api!(EntityModule, ENTITY_FILE);
+
+impl LuaApi for EntityModule {
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        // Define entity class
+        out.line("---@class Entity");
+        out.line("---@field id integer");
+        out.line("local Entity = {}");
+        out.line("");
+
+        // Emit each registered method
+        let methods_vec = [
+            EntityHandleMethod::Get(GetMethod),
+            EntityHandleMethod::Set(SetMethod),
+            EntityHandleMethod::Has(HasMethod),
+            EntityHandleMethod::Interact(InteractMethod),
+            EntityHandleMethod::FindBestInteractable(FindBestInteractableMethod),
+        ];
+        for m in methods_vec.iter() {
+            m.emit_api(out);
+        }
+
+        out.line("return Entity");
+    }
+}
+
 /// A lua wrapper that carries an Entity id.
 #[derive(Clone)]
 pub struct EntityHandle {
@@ -42,7 +69,6 @@ pub struct EntityHandle {
 
 /// Build a Lua userdata object that wraps `Entity`.
 pub fn lua_entity_handle<'lua>(lua: &'lua Lua, entity: Entity) -> LuaResult<Value> {
-    // `EntityHandle` is `Clone`, so we can move it into the userdata.
     let handle = EntityHandle { entity };
     lua.create_userdata(handle).map(Value::UserData)
 }
@@ -53,6 +79,8 @@ impl UserData for EntityHandle {
             EntityHandleMethod::Get(GetMethod),
             EntityHandleMethod::Set(SetMethod),
             EntityHandleMethod::Has(HasMethod),
+            EntityHandleMethod::Interact(InteractMethod),
+            EntityHandleMethod::FindBestInteractable(FindBestInteractableMethod),
         ];
 
         for m in &methods_vec {
@@ -70,34 +98,12 @@ impl UserData for EntityHandle {
     }
 }
 
-register_lua_api!(EntityModule, ENTITY_FILE);
-
-impl LuaApi for EntityModule {
-    fn emit_api(&self, out: &mut LuaApiWriter) {
-        // Define entity class
-        out.line("---@class Entity");
-        out.line("---@field id integer");
-        out.line("local Entity = {}");
-        out.line("");
-
-        // Emit each registered method
-        let methods_vec = [
-            EntityHandleMethod::Get(GetMethod),
-            EntityHandleMethod::Set(SetMethod),
-            EntityHandleMethod::Has(HasMethod),
-        ];
-        for m in methods_vec.iter() {
-            m.emit_api(out);
-        }
-
-        out.line("return Entity");
-    }
-}
-
 pub enum EntityHandleMethod {
     Get(GetMethod),
     Set(SetMethod),
     Has(HasMethod),
+    Interact(InteractMethod),
+    FindBestInteractable(FindBestInteractableMethod),
 }
 
 impl LuaMethod<EntityHandle> for EntityHandleMethod {
@@ -106,6 +112,8 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::Get(m) => m.register(methods),
             EntityHandleMethod::Set(m) => m.register(methods),
             EntityHandleMethod::Has(m) => m.register(methods),
+            EntityHandleMethod::Interact(m) => m.register(methods),
+            EntityHandleMethod::FindBestInteractable(m) => m.register(methods),
         }
     }
 
@@ -114,6 +122,8 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::Get(m) => m.emit_api(out),
             EntityHandleMethod::Set(m) => m.emit_api(out),
             EntityHandleMethod::Has(m) => m.emit_api(out),
+            EntityHandleMethod::Interact(m) => m.emit_api(out),
+            EntityHandleMethod::FindBestInteractable(m) => m.emit_api(out),
         }
     }
 }
@@ -271,6 +281,50 @@ impl LuaMethod<EntityHandle> for HasMethod {
         out.line("---@see ComponentId");
         out.line("---@return boolean");
         out.line(&format!("function Entity:{}(...) end", HAS_ALL));
+        out.line("");
+    }
+}
+
+/// Method: `entity:interact()`
+pub struct InteractMethod;
+impl LuaMethod<EntityHandle> for InteractMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(INTERACT, |_lua, this, args: Variadic<Value>| {
+            push_command(Box::new(CallEntityFnCmd {
+                entity: this.entity,
+                fn_name: INTERACT.to_string(),
+                args: args.to_vec(),
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("---@vararg any Arguments passed to the entity's interact function");
+        out.line("---@return nil");
+        out.line(&format!("function Entity:{}(...) end", INTERACT));
+        out.line("");
+    }
+}
+
+pub struct FindBestInteractableMethod;
+impl LuaMethod<EntityHandle> for FindBestInteractableMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(FIND_BEST_INTERACTABLE, |lua, _this, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let world_ecs = &game_state.game.current_world().world_ecs;
+            if let Some(entity) = find_best_interactable(world_ecs) {
+                lua_entity_handle(lua, entity)
+            } else {
+                Ok(Value::Nil)
+            }
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("---@return Entity|nil");
+        out.line(&format!("function Entity:{}() end", FIND_BEST_INTERACTABLE));
         out.line("");
     }
 }

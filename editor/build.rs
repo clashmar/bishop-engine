@@ -46,6 +46,7 @@ fn generate_lua_components() {
         ---@alias vec3 { x: number, y: number, z: number }\n\n"
     );
     
+    // TODO: convert to enum
     // Generate class definitions for each component with their schema
     for reg in COMPONENTS.iter() {
         let schema = (reg.lua_schema)();
