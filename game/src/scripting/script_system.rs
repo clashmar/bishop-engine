@@ -158,12 +158,11 @@ impl ScriptSystem {
         let script_store = world_ecs.get_store_mut::<Script>();
 
         for (entity, script) in script_store.data.iter_mut() {
-            if !script_manager.tables.contains_key(&script.script_id) {
-                if let Some(instance) = script.load(lua, script_manager, *entity)? {
-                    let handle = lua_entity_handle(&lua, *entity)?;
-                    instance.set(ENTITY, handle)?;
-                }
-            }
+            script.load(lua, script_manager, *entity)?; // TODO: load every frame?
+            if let Some(instance) = script_manager.instances.get(&(*entity, script.script_id)) {
+                let handle = lua_entity_handle(&lua, *entity)?;
+                instance.set(ENTITY, handle)?; // TODO: Can this be done automatically?
+            } 
         }
 
         Ok(())

@@ -1,17 +1,18 @@
 // engine_core/src/ui/widgets.rs
-use crate::*;
-use crate::scripting::script::ScriptId;
 use crate::scripting::script_manager::ScriptManager;
-use std::borrow::Cow;
 use crate::assets::asset_manager::AssetManager;
+use crate::scripting::script::ScriptId;
 use crate::assets::sprite::SpriteId;
+use crate::ecs::entity::Entity;
 use crate::ui::text::*;
-use macroquad::prelude::*;
+use crate::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::HashMap;
+use macroquad::prelude::*;
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::borrow::Cow;
 
 /// Opaque, never‑changing identifier for a logical UI widget.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -1110,15 +1111,16 @@ pub fn gui_sprite_picker(
 /// Returns true if the sprite was updated.
 pub fn gui_script_picker(
     rect: Rect,
-    id: &mut ScriptId,
+    entity: Entity,
+    script_id: &mut ScriptId,
     script_manager: &mut ScriptManager,
 ) -> bool {
-    let btn_label: Cow<str> = if id.0 == 0 {
+    let btn_label: Cow<str> = if script_id.0 == 0 {
         Cow::Borrowed("[Pick File]")
     } else {
         let filename = script_manager
             .script_id_to_path
-            .get(id)
+            .get(script_id)
             .and_then(|p| p.file_name())
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "???".to_string());
@@ -1149,7 +1151,7 @@ pub fn gui_script_picker(
                 let normalized = script_manager.normalize_path(path);
                 match script_manager.get_or_load(&normalized) {
                     Some(new_id) => {
-                        *id = new_id;
+                        *script_id = new_id;
                         changed = true;
                     }
                     None => {
@@ -1160,8 +1162,9 @@ pub fn gui_script_picker(
         }
     }
 
-    if gui_button(remove_rect, "x") && id.0 != 0 {
-        *id = ScriptId(0);
+    if gui_button(remove_rect, "x") && script_id.0 != 0 {
+        *script_id = ScriptId(0);
+        script_manager.unload(entity);
         changed = true;
     }
 

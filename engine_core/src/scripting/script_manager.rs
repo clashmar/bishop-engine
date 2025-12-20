@@ -33,7 +33,7 @@ pub struct ScriptManager {
     #[serde(skip)]
     pub instances: HashMap<(Entity, ScriptId), Table>,
     #[serde(skip)]
-    /// Maps ScriptId to optional update(dt) function TODO: is this necessary?
+    /// Maps ScriptId to optional update(dt) function.
     pub update_fns: HashMap<ScriptId, Function>,
     /// Persistent map of all script ids to their paths.
     pub script_id_to_path: HashMap<ScriptId, PathBuf>,
@@ -84,9 +84,10 @@ impl ScriptManager {
         lua: &Lua,
         entity: Entity,
         script_id: ScriptId,
-    ) -> LuaResult<Table> {
-        if let Some(t) = self.instances.get(&(entity, script_id)) {
-            return Ok(t.clone());
+    ) -> LuaResult<&Table> {
+        // Check if instance already exists
+        if self.instances.contains_key(&(entity, script_id)) {
+            return Ok(self.instances.get(&(entity, script_id)).unwrap());
         }
 
         // Ensure table is loaded first
@@ -95,12 +96,12 @@ impl ScriptManager {
         // Script definition
         let def = self.tables.get(&script_id).ok_or_else(|| {
             mlua::Error::RuntimeError("Script definition not loaded".into())
-        })?;
+        })?.clone(); // Clone here to end borrow
 
         // Create instance table
         let instance = lua.create_table()?;
 
-        // Clone `public` if present
+        // Clone `public` values that can vary per instance
         if let Ok(public) = def.get::<Table>(PUBLIC) {
             let public_copy = lua.create_table()?;
             for pair in public.pairs::<Value, Value>() {
@@ -110,13 +111,14 @@ impl ScriptManager {
             instance.set(PUBLIC, public_copy)?;
         }
 
-        // instance.__index = def
+        // Setup instance metatable, this makes sure that scripts 
+        // will check the script def for data not on the instance
         let mt = lua.create_table()?;
-        mt.set("__index", def.clone())?;
+        mt.set("__index", def)?;
         instance.set_metatable(Some(mt))?;
 
-        self.instances.insert((entity, script_id), instance.clone());
-        Ok(instance)
+        self.instances.insert((entity, script_id), instance);
+        Ok(self.instances.get(&(entity, script_id)).unwrap())
     }
 
     /// Get the table for a script.
@@ -252,18 +254,15 @@ impl ScriptManager {
         self.next_script_id = candidate;
     }
 
-    pub fn reload(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
+    pub fn reload(&mut self, lua: &Lua, entity: Entity, id: ScriptId) -> LuaResult<&Table> {
         self.tables.remove(&id);
+        self.instances.remove(&(entity, id));
         self.update_fns.remove(&id);
         self.load_script_table(lua, id)
-        // TODO: remove instance
     }
 
-    pub fn unload(&mut self, id: ScriptId) {
-        self.tables.remove(&id);
-        self.update_fns.remove(&id);
-        self.script_id_to_path.remove(&id);
-        self.path_to_script_id.retain(|_, &mut v| v != id);
-        // TODO: remove instance
+    pub fn unload(&mut self, entity: Entity) {
+        self.instances.retain(|(ent, _script_id), _table| *ent != entity);
+        // TODO: track if this needs to be removed from defs or the system
     }
 }

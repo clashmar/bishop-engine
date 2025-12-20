@@ -41,7 +41,7 @@ pub trait InspectorModule {
 
     /// Called when the user clicks the remove component button.
     /// Default implementation does nothing.
-    fn remove(&mut self, _ecs: &mut WorldEcs, _entity: Entity) {}
+    fn remove(&mut self, _game_ctx: &mut GameCtxMut, _entity: Entity) {}
 }
 
 /// Generic wrapper that adds a collapsible header around any concrete
@@ -92,8 +92,6 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let world_ecs = &mut game_ctx.cur_world_ecs;
-
         // Background for the header
         draw_rectangle(rect.x, rect.y, rect.w, Self::HEADER_HEIGHT, Color::new(0., 0., 0., 0.4));
         draw_text_ui(
@@ -123,10 +121,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_H,
             );
             if gui_button(btn_rect, "x") {
-
-
-
-                self.inner.remove(world_ecs, entity);
+                self.inner.remove(game_ctx, entity);
                 return; // Don't draw the rest of the module
             }
         }
