@@ -4,11 +4,12 @@ use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::entity::Entity;
 use std::sync::mpsc::Sender;
+use mlua::MultiValue;
 use mlua::Function;
 use engine_core::*;
 use mlua::Value;
 
-/// All Lua actions implement this.
+/// All mutating Lua actions implement this.
 pub trait LuaCommand {
     /// Execute the command, mutating the supplied `GameState`.
     fn execute(&mut self, engine: &mut Engine);
@@ -57,31 +58,27 @@ impl LuaCommand for CallEntityFnCmd {
             Some(s) => s,
             None => return,
         };
-
+        
         let instance = match game_state
-            .game
-            .script_manager
-            .instances
-            .get(&(self.entity, script.script_id)) {
-                Some(t) => t,
-                None => return,
-            };
-
+        .game
+        .script_manager
+        .instances
+        .get(&(self.entity, script.script_id)) {
+            Some(t) => t,
+            None => return,
+        };
+        
         let Ok(func) = instance.get::<Function>(&*self.fn_name) else {
             return;
         };
 
-        let lua = &engine.lua;
-        // let handle = lua_entity_handle(lua, self.entity).unwrap();
-
         let handle = Value::Table(instance.clone());
 
-        // TODO: pass in all args
-        // let mut call_args = Vec::with_capacity(self.args.len() + 1);
-        // call_args.push(handle);
-        // call_args.extend(self.args.clone());
+        let mut call_args = Vec::with_capacity(self.args.len() + 1);
+        call_args.push(handle);
+        call_args.extend(self.args.clone());
 
-        if let Err(e) = func.call::<()>(handle) {
+        if let Err(e) = func.call::<()>(MultiValue::from_vec(call_args)) {
             onscreen_error!("Lua call failed: {}", e);
         }
     }

@@ -32,9 +32,6 @@ pub struct ScriptData {
     pub fields: HashMap<String, ScriptField>,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct ScriptInstanceId(pub u32);
-
 /// The script component that lives on an entity.
 #[ecs_component]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -46,16 +43,16 @@ pub struct Script {
 }
 
 impl Script {
-    /// Loads the table from ScriptManager and updates ScriptData
+    /// Loads the table from ScriptManager and updates ScriptData.
     pub fn load(
         &mut self, lua: &Lua, 
         script_manager: &mut ScriptManager, 
         entity: Entity
-    ) -> LuaResult<Option<Table>> {
+    ) -> LuaResult<()> {
         if self.script_id.0 == 0 {
             // Script hasn't been set yet
             self.data.fields.clear();
-            return Ok(None);
+            return Ok(());
         }
 
         // Get or create the per-entity instance
@@ -110,7 +107,7 @@ impl Script {
         // Sync current values back to Lua
         self.sync_to_lua(lua, script_manager, entity)?;
 
-        Ok(Some(instance))
+        Ok(())
     }
 
      /// Sync the current ScriptData back to Lua table.
@@ -122,7 +119,7 @@ impl Script {
         // Get the instance for this entity
         let instance = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
 
-        let public = instance.get::<Option<Table>>("public")?
+        let public = instance.get::<Option<Table>>(PUBLIC)?
             .unwrap_or_else(|| instance.clone());
 
         for (name, field) in &self.data.fields {

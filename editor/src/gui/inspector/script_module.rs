@@ -35,9 +35,9 @@ impl InspectorModule for ScriptModule {
 
     fn removable(&self) -> bool { true }
 
-    fn remove(&mut self, world_ecs: &mut WorldEcs, entity: Entity) {
-        world_ecs.get_store_mut::<Script>().remove(entity);
-        // TODO: unload script when removed...
+    fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
+        game_ctx.cur_world_ecs.get_store_mut::<Script>().remove(entity);
+        game_ctx.script_manager.unload(entity);
     }
 
     fn draw(
@@ -87,7 +87,7 @@ impl InspectorModule for ScriptModule {
         );
 
         // Script picker
-        if gui_script_picker(picker_rect, &mut script_comp.script_id, script_manager) {
+        if gui_script_picker(picker_rect, entity, &mut script_comp.script_id, script_manager) {
             with_lua(|lua| {
                 if let Err(e) = script_comp.load(lua, script_manager, entity) {
                     onscreen_error!("Failed to load script: {}", e);
@@ -102,7 +102,7 @@ impl InspectorModule for ScriptModule {
             }
 
             with_lua(|lua | {
-                if let Err(e) = script_manager.reload(lua, script_comp.script_id) {
+                if let Err(e) = script_manager.reload(lua, entity, script_comp.script_id) {
                     onscreen_error!("Failed to reload script: {}", e);
                 } else if let Err(e) = script_comp.load(lua, script_manager, entity) {
                     onscreen_error!("Failed to reload script data: {}", e);
