@@ -31,7 +31,7 @@ impl CameraManager {
         }
     }
 
-    /// Picks the best camera and updates it if necessary.
+    /// Picks the best camera and update it if necessary.
     pub fn update_active(
         &mut self, 
         world_ecs: &WorldEcs, 

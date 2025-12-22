@@ -1,26 +1,17 @@
 // game/src/physics/physics_system.rs
-use engine_core::world::room::RoomId;
+use crate::physics::collision::sweep_move;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::ecs::component::*;
+use engine_core::world::room::*;
+use crate::constants::GRAVITY;
 use macroquad::prelude::Vec2;
-use engine_core::{
-    ecs::{
-        component::{Collider, PhysicsBody, Position, Velocity}, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, world::room::Room
-};
-use crate::{
-    constants::*, 
-    physics::collision::sweep_move, 
-    world::world_helpers::*
-};
 
 /// Applies physics to all entities with a `PhysicsBody` component.
-/// Returns `Some((entity, exit_id, position))` when an entity crosses an exit, otherwise `None`.
 pub fn update_physics(
     world_ecs: &mut WorldEcs,
     room: &Room,
     dt: f32,
-) -> Option<(Entity, RoomId, Vec2)> {
+) {
     let tilemap = &room.variants[0].tilemap;
     let entities: Vec<_> = world_ecs
         .get_store::<PhysicsBody>()
@@ -51,6 +42,7 @@ pub fn update_physics(
             pos_cur,
             delta,
             collider,
+            &room.exits
         );
 
         let new_pos = pos_cur + sweep.allowed_delta;
@@ -63,30 +55,13 @@ pub fn update_physics(
             new_vel.y = 0.0;
         }
 
-        // Exit check
-        if let Some(target_id) = crossed_exit(new_pos, delta, &collider, room) {
-            {
-                let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
-                pos_mut.position = new_pos;
-            }
-            {
-                let vel_mut = world_ecs.get_mut::<Velocity>(entity).unwrap();
-                *vel_mut = new_vel;
-            }
-            return Some((entity, target_id, new_pos));
-        }
-
-        // Clamp to room
-        let clamped = clamp_to_room(new_pos, &collider, room);
-
         {
             let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
-            pos_mut.position = clamped;
+            pos_mut.position = new_pos;
         }
         {
             let vel_mut = world_ecs.get_mut::<Velocity>(entity).unwrap();
             *vel_mut = new_vel;
         }
     }
-    None
 }

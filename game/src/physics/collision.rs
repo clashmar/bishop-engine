@@ -1,13 +1,12 @@
 // game/src/physics/collision.rs
+use engine_core::tiles::tile::TileComponent;
+use engine_core::engine_global::tile_size;
+use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::tiles::tilemap::TileMap;
+use engine_core::ecs::component::*;
+use engine_core::world::room::Exit;
+use std::collections::HashSet;
 use macroquad::prelude::*;
-use engine_core::{
-    ecs::{
-        component::{Collider, Position, Solid},
-        world_ecs::WorldEcs,
-    }, 
-    engine_global::tile_size, 
-    tiles::{tile::TileComponent, tilemap::TileMap}
-};
 
 const OVERLAP_EPS: f32 = 0.0001; 
 
@@ -102,6 +101,7 @@ pub fn sweep_move(
     entity_position: Vec2,                 
     desired_delta: Vec2,
     collider: Collider,
+    exits: &[Exit],
 ) -> SweepResult {
     // Gather every solid AABB to test against
     let mut obstacles: Vec<(Vec2, Vec2)> = Vec::new();
@@ -117,6 +117,9 @@ pub fn sweep_move(
             obstacles.push(tile_aabb);
         }
     }
+
+    // Create an invisible border around the edge of the room except where exits are placed
+    add_border_obstacles(&mut obstacles, room_origin, tilemap, exits);
 
     // Other solid entities
     // Iterate over every Collider component in the world, skip the moving one
@@ -144,10 +147,6 @@ pub fn sweep_move(
         }
     }
 
-    obstacles.extend(
-        room_bounds_aabbs(room_origin, tilemap.width, tilemap.height)
-    );
-
     // Sweep X axis, then Y axis
     let (allowed_x, blocked_x) = resolve_axis(
         entity_position,
@@ -174,23 +173,46 @@ pub fn sweep_move(
     }
 }
 
-/// Returns four AABBs that represent the four borders of a rectangular room.
-fn room_bounds_aabbs(origin: Vec2, map_width: usize, map_height: usize) -> Vec<(Vec2, Vec2)> {
-    let width = map_width as f32 * tile_size();
-    let height = map_height as f32 * tile_size();
+fn add_border_obstacles(
+    obstacles: &mut Vec<(Vec2, Vec2)>,
+    room_origin: Vec2,
+    tilemap: &TileMap,
+    exits: &[Exit],
+) {
+    let ts = tile_size();
+    let w = tilemap.width as i32;
+    let h = tilemap.height as i32;
 
-    let thickness = 0.1_f32;
+    let mut outer_exits: HashSet<(i32, i32)> = HashSet::with_capacity(exits.len());
+    for e in exits {
+        outer_exits.insert((e.position.x as i32, e.position.y as i32));
+    }
 
-    // Left wall
-    let left = (origin - vec2(thickness, 0.0), origin + vec2(0.0, height));
+    for gx in 0..w {
+        if !outer_exits.contains(&(gx, -1)) {
+            let min = room_origin + vec2(gx as f32 * ts, -ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 
-    // Right wall
-    let right = (origin + vec2(width, 0.0), origin + vec2(width + thickness, height));
+    for gx in 0..w {
+        if !outer_exits.contains(&(gx, h)) {
+            let min = room_origin + vec2(gx as f32 * ts, h as f32 * ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 
-    // Ignore top wall (we don't need to jump of it... yet)
+    for gy in 0..h {
+        if !outer_exits.contains(&(-1, gy)) {
+            let min = room_origin + vec2(-ts, gy as f32 * ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 
-    // Bottom wall
-    let bottom = (origin + vec2(0.0, height), origin + vec2(width, height + thickness));
-
-    vec![left, right, bottom]
+    for gy in 0..h {
+        if !outer_exits.contains(&(w, gy)) {
+            let min = room_origin + vec2(w as f32 * ts, gy as f32 * ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 }

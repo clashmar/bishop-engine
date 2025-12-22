@@ -6,4 +6,4 @@ pub mod input;
 pub mod modes;
 pub mod physics;
 pub mod scripting;
-pub mod world;
+pub mod transitions;
