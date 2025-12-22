@@ -2,12 +2,11 @@
 use crate::scripting::script_system::ScriptSystem;
 use crate::physics::physics_system::*;
 use crate::game_state::GameState;
+use crate::transitions::transition_manager::TransitionManager;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::animation::animation_system::*;
-use engine_core::ecs::component::CurrentRoom;
 use engine_core::rendering::render_room::*;
-use engine_core::ecs::component::Position;
 use engine_core::onscreen_error;
 use engine_core::constants::*;
 use macroquad::prelude::*;
@@ -21,7 +20,7 @@ pub struct Engine {
     pub game_state: Rc<RefCell<GameState>>,
     /// Single Lua VM.
     pub lua: Lua,
-    /// Camera that follows the player.
+    /// Camera manager for the game.
     pub camera_manager: CameraManager,
     /// Rendering system for the game.
     pub render_system: RenderSystem,
@@ -66,42 +65,25 @@ impl Engine {
         let world_ecs = game_ctx.cur_world_ecs;
         let current_room = game_ctx.cur_room;
 
-        let player = world_ecs.get_player_entity();
-
-        // If an entity exits the current room TODO: Decouple room transitions from physics
-        if let Some((exiting_entity, target_id, new_pos)) = 
-            update_physics(
-                world_ecs, 
-                current_room, 
-                dt
-            ) {
-            // let new_room = game_state.game.current_world()
-            //     .rooms
-            //     .iter()
-            //     .find(|r| r.id == target_id)
-            //     .expect("Target room not found");
-
-            // // Only update the game current room if the player exits
-            // if exiting_entity == player {
-            //     game_state.current_room = new_room.clone();
-            // }
-
-            let cur_room_mut = world_ecs.get_mut::<CurrentRoom>(exiting_entity).unwrap();
-            // cur_room_mut.0 = new_room.id;
-
-            let pos_mut = world_ecs.get_mut::<Position>(exiting_entity).unwrap();
-            pos_mut.position = new_pos;
-        }
+        update_physics(
+            world_ecs, 
+            current_room, 
+            dt
+        ) 
     }
 
     pub async fn update_async(&mut self, dt: f32) {
         {
             // Keep borrow_mut in this scope
             let mut game_state = self.game_state.borrow_mut();
+
+            TransitionManager::handle_transitions(&mut game_state);
+
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let world_ecs = game_ctx.cur_world_ecs;
             let current_room = game_ctx.cur_room;
+            // HERE: current room does not update here....
             
             let player_pos = world_ecs.get_player_position().position;
             

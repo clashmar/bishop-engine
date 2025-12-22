@@ -1,10 +1,9 @@
 // engine_core/src/world/room.rs
-use crate::{
-    camera::game_camera::RoomCamera, ecs::{
-        component::{CurrentRoom, Position}, 
-        world_ecs::WorldEcs
-    }, engine_global::tile_size, tiles::tilemap::TileMap
-};
+use crate::camera::game_camera::RoomCamera;
+use crate::engine_global::tile_size;
+use crate::ecs::world_ecs::WorldEcs;
+use crate::tiles::tilemap::TileMap;
+use crate::ecs::component::*;
 use serde_with::FromInto;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -68,16 +67,6 @@ impl Room {
 
         room
     }
-
-    // pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
-    //     let path = PathBuf::from(GAME_SAVE_ROOT)
-    //         .join(world_name)
-    //         .join("rooms")
-    //         .join(format!("{}.ron", self.id));
-
-    //     let data = std::fs::read_to_string(path)?;
-    //     ron::de::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-    // }
 
     pub fn link_exits(&mut self, other_rooms: &[&Room]) {
         let epsilon = 0.01; // tolerance for floating-point comparisons

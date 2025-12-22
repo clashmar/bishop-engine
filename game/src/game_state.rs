@@ -1,6 +1,5 @@
 // game/src/game_state.rs
 use crate::scripting::script_system::ScriptSystem;
-// use engine_core::world::transition_manager::TransitionManager;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::storage::core_storage::load_game_ron;
 use engine_core::ecs::component::CurrentRoom;
@@ -19,11 +18,7 @@ use mlua::Lua;
 pub struct GameState {
     /// The whole game.
     pub game: Game,
-    /// Manages transitions between rooms.
-    // transition_manager: TransitionManager,
-    /// Current room
-    pub current_room: Room,
-    /// TODO: ???
+    /// TODO:
     pub global_modules: RefCell<HashMap<String, Value>>,
     /// Holds the Position of every entity rendered in the previous frame.
     pub prev_positions: HashMap<Entity, Vec2>,
@@ -61,8 +56,6 @@ impl GameState {
 
         Self {
             game,
-            // transition_manager: TransitionManager::new(),
-            current_room,
             global_modules: RefCell::new(HashMap::new()),
             prev_positions: HashMap::new(),
         }
@@ -86,8 +79,6 @@ impl GameState {
 
         Self {
             game,
-            // transition_manager: TransitionManager::new(),
-            current_room: room,
             global_modules: RefCell::new(HashMap::new()),
             prev_positions: HashMap::new(),
         }
@@ -106,7 +97,7 @@ impl GameState {
         self.prev_positions = pos_store.data
             .iter()
             .filter_map(|(entity, pos)| {
-                room_store.get(*entity).filter(|cr| cr.0 == self.current_room.id)
+                room_store.get(*entity).filter(|cr| cr.0 == current_world.current_room_id.unwrap()) // TODO: handle unwrap
                     .map(|_| (*entity, pos.position))
             })
             .collect();
