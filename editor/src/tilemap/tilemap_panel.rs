@@ -1,14 +1,13 @@
 // editor/src/tilemap/tilemap_panel.rs
-use crate::{gui::gui_constants::*, tilemap::{
-    background_module::BackgroundModule, 
-    tile_palette::{TilePalette, TilePaletteUi, TilePaletteUiMode}
-}};
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::world_ecs::WorldEcs, tiles::tilemap::TileMap
-};
-use macroquad::prelude::*;
+use crate::tilemap::background_module::BackgroundModule;
+use crate::assets::asset_manager::AssetManager;
+use crate::tilemap::tile_palette::TilePalette;
+use crate::tilemap::tile_palette::*;
+use crate::tiles::tilemap::TileMap;
+use crate::gui::gui_constants::*;
+use crate::ecs::ecs::Ecs;
 use engine_core::ui::widgets::*;
+use macroquad::prelude::*;
 
 const INSET: f32 = 10.0;
 const BTN_HEIGHT: f32 = 30.0;
@@ -43,7 +42,7 @@ impl TilemapPanel {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut WorldEcs
+        world_ecs: &mut Ecs
     ) {
         self.palette.update(world_ecs).await;
     }
@@ -57,7 +56,7 @@ impl TilemapPanel {
     pub async fn draw(
         &mut self,
         asset_manager: &mut AssetManager,
-        world_ecs: &WorldEcs,
+        world_ecs: &Ecs,
         map: &mut TileMap,
     ) {
         self.active_rects.clear();

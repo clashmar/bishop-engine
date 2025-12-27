@@ -1,14 +1,14 @@
 // engine_core/src/tiles/tilemap.rs
-use std::collections::HashMap;
-use serde_with::{serde_as, FromInto};
 use crate::assets::asset_manager::{AssetManager};
-use crate::ecs::world_ecs::WorldEcs;
+use crate::world::room::{Exit, ExitDirection};
 use crate::engine_global::tile_size;
 use crate::tiles::tile::TileDefId;
-use crate::world::room::{Exit, ExitDirection};
 use crate::world::world::GridPos;
-use macroquad::prelude::*;
+use crate::ecs::ecs::Ecs;
+use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use macroquad::prelude::*;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -34,7 +34,7 @@ impl TileMap {
     pub fn draw(
         &self,
         exits: &Vec<Exit>,
-        world_ecs: &WorldEcs,
+        world_ecs: &Ecs,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
     ) {
@@ -155,7 +155,7 @@ impl TileMap {
     pub fn remove_tile(
         &mut self,
         grid_position: (usize, usize),
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) {
         if let Some(_tile_def_id) = self.tiles.remove(&grid_position) {
             // TODO: Handle sprite and ecs

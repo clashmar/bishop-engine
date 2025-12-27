@@ -1,10 +1,10 @@
 // engine_core/src/camera/game_camera.rs
 use crate::ecs::component::CurrentRoom;
 use crate::ecs::component::Position;
-use crate::ecs::world_ecs::WorldEcs;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::engine_global::*;
+use crate::ecs::ecs::Ecs;
 use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
@@ -146,7 +146,7 @@ pub fn game_render_target() -> RenderTarget {
 }
 
 /// Returns every `GameCamera` for a room from its id.
-pub fn get_room_cameras(world_ecs: &WorldEcs, room_id: RoomId) -> Vec<(Entity, RoomCamera)> {
+pub fn get_room_cameras(world_ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)> {
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
 
@@ -165,7 +165,7 @@ pub fn get_room_cameras(world_ecs: &WorldEcs, room_id: RoomId) -> Vec<(Entity, R
 
 /// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
 pub fn room_to_game_camera(
-    world_ecs: &WorldEcs, 
+    world_ecs: &Ecs, 
     entity: &Entity, 
     room_camera: &RoomCamera,
     player_pos: Vec2, 
@@ -196,7 +196,7 @@ pub fn room_to_game_camera(
 }
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
-pub fn get_room_camera(world_ecs: &WorldEcs, room_id: RoomId) -> Option<GameCamera> {
+pub fn get_room_camera(world_ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
     let pos_store = world_ecs.get_store::<Position>();
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let room_store = world_ecs.get_store::<CurrentRoom>();

@@ -1,29 +1,28 @@
 // engine_core/src/ecs/world_ecs.rs
-use std::{any::{Any, TypeId}, collections::HashMap};
-use once_cell::sync::Lazy;
-use crate::{
-    ecs::{
-        component::*, 
-        component_registry::{ComponentRegistry, StoredComponent}, 
-        entity::{Entity, EntityBuilder}, has_any::HasAny
-    }, 
-    tiles::tile::{TileDef, TileDefId}
-}; 
-use serde::{Deserialize, Serialize};
+use crate::ecs::component_registry::*;
+use crate::ecs::has_any::HasAny;
+use crate::ecs::component::*;
+use crate::ecs::entity::*;
+use crate::tiles::tile::*;
 use serde::ser::{SerializeStruct, Serializer};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use serde::de::Deserializer;
+use once_cell::sync::Lazy;
 use macroquad::prelude::*;
+use std::any::TypeId;
+use std::any::Any;
 
 
 #[derive(Default, Debug)]
-pub struct WorldEcs {
+pub struct Ecs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
-    pub tile_defs: HashMap<TileDefId, TileDef>,
+    pub tile_defs: HashMap<TileDefId, TileDef>, // TODO: should tile defs live somewhere else?
     next_entity_id: usize,
     next_tile_def_id: usize,
 }
 
-impl WorldEcs {
+impl Ecs {
     /// Allocate a fresh id and return a builder.
     pub fn create_entity(&mut self) -> EntityBuilder {
         // This ensures id will always start from 1 
@@ -175,7 +174,7 @@ impl WorldEcs {
     }
 }
 
-impl Serialize for WorldEcs {
+impl Serialize for Ecs {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -212,7 +211,7 @@ impl Serialize for WorldEcs {
         }
 
         // Serialize the whole world
-        let mut state = serializer.serialize_struct("WorldEcs", 2)?;
+        let mut state = serializer.serialize_struct("Ecs", 2)?;
         state.serialize_field("components", &components)?;
         state.serialize_field("tile_defs", &self.tile_defs)?;
         state.serialize_field("next_entity_id", &self.next_entity_id)?;
@@ -220,7 +219,7 @@ impl Serialize for WorldEcs {
     }
 }
 
-impl<'de> Deserialize<'de> for WorldEcs {
+impl<'de> Deserialize<'de> for Ecs {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -259,7 +258,7 @@ impl<'de> Deserialize<'de> for WorldEcs {
         }
 
          // Next tile id is reset in restore runtime
-        let mut world_ecs = WorldEcs {
+        let mut world_ecs = Ecs {
             stores,
             tile_defs: helper.tile_defs,
             next_entity_id: helper.next_entity_id,

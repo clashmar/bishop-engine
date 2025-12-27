@@ -1,10 +1,10 @@
 // game/src/physics/collision.rs
 use engine_core::tiles::tile::TileComponent;
 use engine_core::engine_global::tile_size;
-use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::tiles::tilemap::TileMap;
 use engine_core::ecs::component::*;
 use engine_core::world::room::Exit;
+use engine_core::ecs::ecs::Ecs;
 use std::collections::HashSet;
 use macroquad::prelude::*;
 
@@ -95,7 +95,7 @@ fn resolve_axis(
 
 /// Sweep the requested movement and return the maximal safe delta.
 pub fn sweep_move(
-    world_ecs: &mut WorldEcs,
+    world_ecs: &mut Ecs,
     tilemap: &TileMap,
     room_origin: Vec2,               
     entity_position: Vec2,                 
@@ -173,6 +173,7 @@ pub fn sweep_move(
     }
 }
 
+/// Creates solid tiles around the edge of the tilemap to constrain movement.
 fn add_border_obstacles(
     obstacles: &mut Vec<(Vec2, Vec2)>,
     room_origin: Vec2,

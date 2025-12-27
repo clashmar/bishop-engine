@@ -1,14 +1,14 @@
 // engine_core/src/world/room.rs
 use crate::camera::game_camera::RoomCamera;
 use crate::engine_global::tile_size;
-use crate::ecs::world_ecs::WorldEcs;
 use crate::tiles::tilemap::TileMap;
 use crate::ecs::component::*;
-use serde_with::FromInto;
-use macroquad::prelude::*;
+use crate::ecs::ecs::Ecs;
+use crate::constants::*;
 use serde::{Deserialize, Serialize};
+use macroquad::prelude::*;
+use serde_with::FromInto;
 use serde_with::serde_as;
-use crate::{constants::*};
 
 /// Identifier for a room.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -44,7 +44,7 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn default(world_ecs: &mut WorldEcs) -> Self {
+    pub fn default(world_ecs: &mut Ecs) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
@@ -120,7 +120,7 @@ impl Room {
         }).collect()
     }
 
-    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: RoomId) {
+    pub fn create_room_camera(&self, world_ecs: &mut Ecs, room_id: RoomId) {
         let _camera = world_ecs.create_entity()
             .with(Position { position: self.position })
             .with(RoomCamera::new(room_id))

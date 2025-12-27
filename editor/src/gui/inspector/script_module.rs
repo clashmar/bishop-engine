@@ -5,9 +5,9 @@ use engine_core::ecs::reflect_field::parse_field_name;
 use engine_core::scripting::script::ScriptField;
 use engine_core::scripting::script::ScriptId;
 use engine_core::scripting::script::Script;
-use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::widgets::*;
+use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use std::collections::HashMap;
 use engine_core::ui::text::*;
@@ -29,7 +29,7 @@ const MIN_WIDGET_WIDTH: f32 = 80.0;
 const LABEL_PADDING: f32 = 10.0;
 
 impl InspectorModule for ScriptModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
         world_ecs.get::<Script>(entity).is_some()
     }
 

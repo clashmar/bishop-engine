@@ -1,16 +1,17 @@
 // editor/src/tilemap/tile_palette.rs
+use crate::assets::asset_manager::AssetManager;
+use crate::tiles::tile::TileComponent;
+use crate::assets::sprite::SpriteId;
+use crate::engine_global::tile_size;
+use crate::ui::text::draw_text_ui;
+use crate::tiles::tile::TileDef;
+use crate::ui::widgets::*;
+use crate::ecs::ecs::Ecs;
+use engine_core::tiles::tile::TileDefId;
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
-use engine_core::{engine_global::tile_size, ui::{text::draw_text_ui, widgets::*}};
 use serde_with::serde_as;
-use engine_core::{
-    assets::{asset_manager::AssetManager, sprite::SpriteId},
-    ecs::world_ecs::WorldEcs,
-    tiles::{
-        tile::{TileComponent, TileDef, TileDefId}
-    },
-};
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
@@ -62,7 +63,7 @@ impl TilePalette {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) {
         while let Some(cmd) = self.command_queue.pop_front() {
             match cmd {
@@ -84,7 +85,7 @@ impl TilePalette {
         &mut self,
         rect: Rect,
         asset_manager: &mut AssetManager,
-        world_ecs: &WorldEcs,
+        world_ecs: &Ecs,
     ) {
         // Draw grid
         for i in 0..self.entries.len() {
@@ -151,7 +152,7 @@ impl TilePalette {
         false
     }
 
-    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager, world_ecs: &WorldEcs) {
+    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager, world_ecs: &Ecs) {
         if !self.ui.open {
             return;
         }
@@ -264,7 +265,7 @@ impl TilePalette {
 
     pub async fn create_tile(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) {
         // Build TileDef
         let mut comps = vec![
@@ -297,7 +298,7 @@ impl TilePalette {
 
     pub async fn edit_tile(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) {
         // Build TileDef
         let mut comps = vec![
@@ -320,7 +321,7 @@ impl TilePalette {
         self.entries[self.ui.edit_index] = *entry;
     }
 
-    pub async fn delete_tile(&mut self, idx: usize, world_ecs: &mut WorldEcs) {
+    pub async fn delete_tile(&mut self, idx: usize, world_ecs: &mut Ecs) {
         // Remove the definition from the world
         let def_id = self.entries[idx];
         world_ecs.tile_defs.remove(&def_id);

@@ -1,12 +1,12 @@
 // engine_core/src/ecs/entity.rs
-use std::any::TypeId;
-use std::collections::HashSet;
-use inventory::iter;
-use serde::{Deserialize, Serialize};
 use crate::ecs::component::{Component, ComponentStore, CurrentRoom};
 use crate::ecs::component_registry::ComponentRegistry;
-use crate::ecs::world_ecs::WorldEcs;
 use crate::world::room::RoomId;  
+use crate::ecs::ecs::Ecs;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::any::TypeId;
+use inventory::iter;
 
 // TODO: Add name?
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
@@ -34,7 +34,7 @@ impl std::ops::DerefMut for Entity {
 
 pub struct EntityBuilder<'a> {
     pub id: Entity,
-    pub world_ecs: &'a mut WorldEcs,
+    pub world_ecs: &'a mut Ecs,
 }
 
 impl<'a> EntityBuilder<'a> {
@@ -65,7 +65,7 @@ impl<'a> EntityBuilder<'a> {
 }
 
 // Returns a HashSet of all entities in the current room.
-pub fn entities_in_room(world_ecs: &mut WorldEcs, room_id: RoomId) -> HashSet<Entity> {
+pub fn entities_in_room(world_ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
     let room_store = world_ecs.get_store::<CurrentRoom>();
     room_store
         .data

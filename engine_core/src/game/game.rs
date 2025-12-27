@@ -1,5 +1,5 @@
 // engine_core/src/game/game.rs
-use crate::{ecs::world_ecs::WorldEcs, world::room::Room};
+use crate::{ecs::ecs::Ecs, world::room::Room};
 use crate::scripting::script_manager::ScriptManager;
 use crate::assets::asset_manager::AssetManager;
 use crate::engine_global::set_global_tile_size;
@@ -38,7 +38,7 @@ pub struct Game {
 /// immutable systems that are usually needed at the same time.
 pub struct GameCtx<'a> {
     // TODO: wrap in options
-    pub cur_world_ecs: &'a WorldEcs,
+    pub cur_world_ecs: &'a Ecs,
     pub cur_room: &'a Room,
     pub asset_manager: &'a AssetManager,
     pub script_manager: &'a ScriptManager,
@@ -48,7 +48,7 @@ pub struct GameCtx<'a> {
 /// mutable systems that are usually needed at the same time.
 pub struct GameCtxMut<'a> {
     // TODO: wrap in options
-    pub cur_world_ecs: &'a mut WorldEcs,
+    pub cur_world_ecs: &'a mut Ecs,
     pub cur_room: &'a mut Room,
     pub asset_manager: &'a mut AssetManager,
     pub script_manager: &'a mut ScriptManager,

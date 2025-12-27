@@ -111,7 +111,7 @@ impl TransitionManager {
 
 /// Return the id of the room whose bounds contain the entity’s AABB.
 pub fn room_of_entity(pos: Vec2, rooms: &[Room]) -> Option<RoomId> {
-    // TODO: work out position based on collider after we've worked out drawing
+    // TODO: work out position based on collider?
     for room in rooms {
         let min = room.position;
         let max = room.position + room.size * tile_size();

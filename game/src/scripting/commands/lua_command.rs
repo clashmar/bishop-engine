@@ -3,7 +3,6 @@ use crate::engine::Engine;
 use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::entity::Entity;
-use std::sync::mpsc::Sender;
 use mlua::MultiValue;
 use mlua::Function;
 use engine_core::*;
@@ -81,36 +80,5 @@ impl LuaCommand for CallEntityFnCmd {
         if let Err(e) = func.call::<()>(MultiValue::from_vec(call_args)) {
             onscreen_error!("Lua call failed: {}", e);
         }
-    }
-}
-
-/// Call a method on a global module.
-pub struct CallGlobalCmd {
-    pub name: String,
-    pub method: String,
-    pub args: Vec<Value>,
-    pub responder: Sender<mlua::Result<Value>>,
-}
-
-impl LuaCommand for CallGlobalCmd {
-    fn execute(&mut self, engine: &mut Engine) {
-        let game_state = engine.game_state.borrow_mut();
-        let result = game_state
-            .global_modules
-            .borrow()
-            .get(&self.name)
-            .cloned()
-            .ok_or_else(|| mlua::Error::RuntimeError(format!("global '{}' not found", self.name)))
-            .and_then(|val| match val {
-                Value::Table(tbl) => {
-                    let func: Function = tbl.get(&*self.method).unwrap();
-                    func.call::<_>(self.args.clone())
-                }
-                _ => Err(mlua::Error::RuntimeError(format!(
-                    "global '{}' is not a table",
-                    self.name
-                ))),
-            });
-        let _ = self.responder.send(result);
     }
 }

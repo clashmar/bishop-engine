@@ -1,15 +1,15 @@
 // editor/src/gui/inspector/player_module.rs
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::world_ecs::WorldEcs;
-use engine_core::ecs::module::InspectorModule;
 use engine_core::{ecs::component::Player, game::game::GameCtxMut, ui::{text::*, widgets::*}};
+use engine_core::ecs::module::InspectorModule;
+use engine_core::ecs::entity::Entity;
+use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::*;
 
 #[derive(Default)]
 pub struct PlayerModule {}
 
 impl InspectorModule for PlayerModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
         world_ecs.get::<Player>(entity).is_some()
     }
 

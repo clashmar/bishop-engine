@@ -1,8 +1,8 @@
 // engine_core/src/ecs/component.rs
 use crate::assets::asset_manager::AssetManager;
-use crate::ecs::world_ecs::WorldEcs;
-use crate::world::room::RoomId;
 use crate::ecs::entity::Entity;
+use crate::world::room::RoomId;
+use crate::ecs::ecs::Ecs;
 use crate::inspector_module;
 use std::{any::Any, collections::HashMap};
 use serde_with::{serde_as, FromInto};
@@ -13,12 +13,12 @@ use macroquad::prelude::*;
 
 /// Marker trait for components.
 pub trait Component: Send + Sync {
-    fn store_mut(world: &mut WorldEcs)
+    fn store_mut(world: &mut Ecs)
         -> &mut ComponentStore<Self>
     where
         Self: Sized;
         
-    fn store(world: &WorldEcs)
+    fn store(world: &Ecs)
         -> &ComponentStore<Self>
     where
         Self: Sized;
@@ -77,7 +77,7 @@ impl Clone for ComponentEntry {
 pub trait PostCreate {
     fn post_create(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
         entity: Entity,
         asset_manager: &mut AssetManager,
     );

@@ -1,6 +1,6 @@
 pub mod component;
 pub mod entity;
-pub mod world_ecs;
+pub mod ecs;
 pub mod reflect_field;
 pub mod component_registry;
 pub mod module_factory;

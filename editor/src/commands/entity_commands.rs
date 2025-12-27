@@ -1,17 +1,16 @@
 // editor/src/commands/entity_commands.rs
+use crate::commands::editor_command_manager::EditorCommand;
+use crate::ecs::component_registry::ComponentRegistry;
+use crate::ecs::capture::capture_entity;
+use crate::ecs::component::Position;
+use crate::ecs::entity::Entity;
 use crate::editor::EditorMode;
-use engine_core::{ecs::{
-    capture::capture_entity, 
-    component::Position, 
-    component_registry::ComponentRegistry, 
-    entity::Entity, 
-    world_ecs::WorldEcs
-}, world::room::RoomId};
+use crate::EDITOR_SERVICES;
+use crate::ecs::ecs::Ecs;
+use crate::with_editor;
+use engine_core::world::room::RoomId;
 use macroquad::prelude::*;
-use crate::{
-    commands::editor_command_manager::EditorCommand, 
-    editor_global::*
-};
+
 
 #[derive(Debug)]
 pub struct DeleteEntityCmd {
@@ -46,7 +45,7 @@ impl EditorCommand for DeleteEntityCmd {
 }
 
 fn restore_entity(
-    world_ecs: &mut WorldEcs,
+    world_ecs: &mut Ecs,
     entity: Entity,
     bag: Vec<(String, String)>,
 ) {
@@ -68,7 +67,7 @@ fn restore_entity(
 }
 
 /// Copy a snapshot of the entity to the global entity clipboard.
-pub fn copy_entity(world_ecs: &mut WorldEcs, entity: Entity) {
+pub fn copy_entity(world_ecs: &mut Ecs, entity: Entity) {
     let snapshot = capture_entity(world_ecs, entity);
     EDITOR_SERVICES.with(|s| {
         *s.entity_clipboard.borrow_mut() = Some(snapshot);
@@ -177,7 +176,7 @@ impl MoveEntityCmd {
     }
 
     /// Helper that writes a concrete position into the world.
-    fn set_position(world_ecs: &mut WorldEcs, entity: Entity, position: Vec2) {
+    fn set_position(world_ecs: &mut Ecs, entity: Entity, position: Vec2) {
         if let Some(pos) = world_ecs
             .get_store_mut::<Position>()
             .get_mut(entity)

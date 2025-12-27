@@ -1,5 +1,5 @@
 // engine_core/src/ecs/component_registry.rs 
-use crate::ecs::{entity::Entity, world_ecs::WorldEcs}; 
+use crate::ecs::{entity::Entity, ecs::Ecs}; 
 use crate::ecs::component::Component;
 use serde::{Deserialize, Serialize};
 use std::any::{Any, TypeId};
@@ -31,15 +31,15 @@ pub struct ComponentRegistry {
     /// Convert a `String` back into a boxed concrete store.
     pub from_ron: fn(String) -> Box<dyn Any + Send + Sync>,
     /// Factory that creates the component (and its dependencies) for an entity.
-    pub factory: fn(&mut WorldEcs, Entity),
+    pub factory: fn(&mut Ecs, Entity),
     /// Returns true if the supplied entity already owns this component.
-    pub has: fn(&WorldEcs, Entity) -> bool,
+    pub has: fn(&Ecs, Entity) -> bool,
     // Removes the component for `entity` from the concrete store.
-    pub remove: fn(&mut WorldEcs, Entity),
+    pub remove: fn(&mut Ecs, Entity),
     /// Function that knows how to write a boxed component back into the world.
-    pub inserter: fn(&mut WorldEcs, Entity, Box<dyn Any>),
+    pub inserter: fn(&mut Ecs, Entity, Box<dyn Any>),
     /// Clones the concrete component for `entity` and returns it boxed as `dyn Any`.
-    pub clone: fn(&WorldEcs, Entity) -> Box<dyn Any>,
+    pub clone: fn(&Ecs, Entity) -> Box<dyn Any>,
     /// Serialize a single component.
     pub to_ron_component: fn(&dyn Any) -> String,
     /// Deserialize a single component.
@@ -55,7 +55,7 @@ pub struct ComponentRegistry {
 }
 
 /// Factory that works for any component that implements `Component + Default`.
-pub fn generic_factory<T>(world_ecs: &mut WorldEcs, entity: Entity)
+pub fn generic_factory<T>(world_ecs: &mut Ecs, entity: Entity)
 where
     T: Component + Default + 'static,
 {
@@ -63,7 +63,7 @@ where
     world_ecs.get_store_mut::<T>().insert(entity, T::default());
 }
 
-pub fn has_component<T>(world: &WorldEcs, entity: Entity) -> bool
+pub fn has_component<T>(world: &Ecs, entity: Entity) -> bool
 where
     T: Component + 'static,
 {
@@ -71,7 +71,7 @@ where
 }
 
 /// Helper that erases an entity from a concrete `ComponentStore<T>`.
-pub fn erase_from_store<T>(world_ecs: &mut WorldEcs, entity: Entity)
+pub fn erase_from_store<T>(world_ecs: &mut Ecs, entity: Entity)
 where
     T: Component + 'static,
 {
@@ -79,7 +79,7 @@ where
 }
 
 /// Inserts a concrete component that has been boxed as `dyn Any`.
-pub fn generic_inserter<T>(world_ecs: &mut WorldEcs, entity: Entity, boxed: Box<dyn Any>)
+pub fn generic_inserter<T>(world_ecs: &mut Ecs, entity: Entity, boxed: Box<dyn Any>)
 where
     T: Component + 'static,
 {

@@ -1,25 +1,25 @@
 // editor/src/editor.rs
-use crate::gui::modal::Modal;
-use engine_core::*;
-use engine_core::ui::toast::Toast;
-use engine_core::ui::widgets::input_is_focused;
-use engine_core::world::world::WorldId;
-use engine_core::world::room::*;
-use engine_core::physics::collider_system;
-use engine_core::rendering::render_system::RenderSystem;
-use std::io;
-use macroquad::prelude::*;
-use engine_core::game::game::*;
-use crate::gui::menu_bar::MenuBar;
-use engine_core::controls::controls::Controls;
-use crate::playtest::room_playtest::*;
-use crate::tilemap::tile_palette::TilePalette;
 use crate::editor_camera_controller::EditorCameraController;
-use crate::storage::editor_storage;
-use crate::Camera2D;
-use crate::room::room_editor::RoomEditor;
+use crate::tilemap::tile_palette::TilePalette;
 use crate::world::world_editor::WorldEditor;
+use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
+use crate::playtest::room_playtest::*;
+use crate::storage::editor_storage;
+use crate::gui::menu_bar::MenuBar;
+use crate::gui::modal::Modal;
+use crate::Camera2D;
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::ui::widgets::input_is_focused;
+use engine_core::controls::controls::Controls;
+use engine_core::physics::collider_system;
+use engine_core::world::world::WorldId;
+use engine_core::ui::toast::Toast;
+use engine_core::world::room::*;
+use engine_core::game::game::*;
+use macroquad::prelude::*;
+use engine_core::*;
+use std::io;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum EditorMode {

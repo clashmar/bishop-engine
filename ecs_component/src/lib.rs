@@ -128,12 +128,12 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
         // Component trait implementation
         impl #generics crate::ecs::component::Component for #name #generics {
             fn store_mut(
-                world: &mut crate::ecs::world_ecs::WorldEcs,
+                world: &mut crate::ecs::ecs::Ecs,
             ) -> &mut crate::ecs::component::ComponentStore<Self> {
                 world.get_or_create_store::<Self>()
             }
             fn store(
-                world: &crate::ecs::world_ecs::WorldEcs,
+                world: &crate::ecs::ecs::Ecs,
             ) -> &crate::ecs::component::ComponentStore<Self> {
                 world.get_store::<Self>()
             }
@@ -153,7 +153,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
             pub const TYPE_NAME: &'static str = stringify!(#name);
 
             fn __factory(
-                world: &mut crate::ecs::world_ecs::WorldEcs,
+                world: &mut crate::ecs::ecs::Ecs,
                 entity: crate::ecs::entity::Entity,
             ) {
                 world.get_store_mut::<#name>()
@@ -217,7 +217,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
                 has: crate::ecs::component_registry::has_component::<#name>,
                 remove: crate::ecs::component_registry::erase_from_store::<#name>,
                 inserter: crate::ecs::component_registry::generic_inserter::<#name>,
-                clone: |world: &crate::ecs::world_ecs::WorldEcs,
+                clone: |world: &crate::ecs::ecs::Ecs,
                          entity: crate::ecs::entity::Entity| {
                     let store_any = world
                         .stores

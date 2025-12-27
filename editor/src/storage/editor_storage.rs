@@ -9,10 +9,10 @@ use engine_core::game::game_map::GameMap;
 use engine_core::storage::path_utils::*;
 use engine_core::world::room::Room;
 use engine_core::ecs::component::*;
-use engine_core::ecs::world_ecs::*;
 use engine_core::world::world::*;
 use engine_core::game::game::*;
 use engine_core::constants::*;
+use engine_core::ecs::ecs::*;
 use macroquad::prelude::*;
 use std::time::SystemTime;
 use crate::with_lua_async;
@@ -177,7 +177,7 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
 pub fn create_new_world() -> World {
     let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
-    let mut world_ecs = WorldEcs::default();
+    let mut world_ecs = Ecs::default();
     let first_room = Room::default(&mut world_ecs);
     let room_id = first_room.id;
     let starting_position = vec2(1.0, 1.0);
