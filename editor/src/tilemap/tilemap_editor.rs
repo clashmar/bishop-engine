@@ -1,12 +1,12 @@
 // editor/src/tilemap/tilemap_editor.rs
 use crate::gui::ui_element::DynamicTilemapUiElement;
+use crate::tilemap::tilemap_panel::TilemapPanel;
 use crate::assets::asset_manager::AssetManager;
 use crate::gui::menu_bar::draw_top_panel_full;
 use crate::gui::resize_button::ResizeButton;
 use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
 use crate::ecs::ecs::Ecs;
-use crate::tilemap::tilemap_panel::TilemapPanel;
 use engine_core::world::world::GridPos;
 use engine_core::world::room::*;
 use macroquad::prelude::*;
@@ -39,6 +39,7 @@ impl TileMapEditor  {
 
     pub async fn update(
         &mut self, 
+        asset_manager: &mut AssetManager,
         camera: &mut Camera2D,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
@@ -50,7 +51,7 @@ impl TileMapEditor  {
             self.initialized = true;
         }
 
-        self.tilemap_panel.update(world_ecs).await;
+        self.tilemap_panel.update(asset_manager).await;
 
         self.dynamic_ui.clear();
 
@@ -64,8 +65,7 @@ impl TileMapEditor  {
                 TilemapEditorMode::Tiles => self.handle_tile_placement(
                     camera, 
                     mouse_pos, 
-                    &mut room.variants[0].tilemap, 
-                    world_ecs, 
+                    &mut room.variants[0].tilemap,
                     room.position
                 ),
                 TilemapEditorMode::Exits => self.handle_exit_placement(
@@ -124,7 +124,6 @@ impl TileMapEditor  {
         camera: &Camera2D, 
         mouse_pos: Vec2, 
         map: &mut TileMap,
-        world_ecs: &mut Ecs,
         room_position: Vec2,
     ) {
         let mouse_over_ui = self.is_mouse_over_ui(camera, mouse_pos);
@@ -135,7 +134,7 @@ impl TileMapEditor  {
 
         // Remove
         if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
-            if let Some(old_tile) = map.tiles.remove(&(x, y)) {
+            if let Some(_old_tile) = map.tiles.remove(&(x, y)) {
                 // TODO: Handle ecs/ sprite
             }
             return;
@@ -180,17 +179,16 @@ impl TileMapEditor  {
     pub async fn draw(
         &mut self, 
         camera: &Camera2D, 
-        map: &mut TileMap, 
+        tilemap: &mut TileMap, 
         exits: &Vec<Exit>,
-        world_ecs: &Ecs,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
     ) {
         clear_background(BLACK);
         set_camera(camera);
-        map.draw(exits, world_ecs, asset_manager, room_position);
-        self.draw_hover_highlight(camera, map, room_position);
-        self.draw_ui(camera, asset_manager, world_ecs, map).await;
+        tilemap.draw(exits, asset_manager, room_position);
+        self.draw_hover_highlight(camera, tilemap, room_position);
+        self.draw_ui(camera, asset_manager, tilemap).await;
     }
 
     fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) {
@@ -225,8 +223,7 @@ impl TileMapEditor  {
         &mut self, 
         camera: &Camera2D, 
         asset_manager: &mut AssetManager,
-        world_ecs: &Ecs,
-        map: &mut TileMap,
+        tilemap: &mut TileMap,
     ) {
         // Draw scaling UI
         for element in &self.dynamic_ui {
@@ -240,7 +237,7 @@ impl TileMapEditor  {
         draw_top_panel_full();
 
         // Draw inspector panel
-        self.tilemap_panel.draw(asset_manager, world_ecs, map).await;
+        self.tilemap_panel.draw(asset_manager, tilemap).await;
     }
 
     fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2) -> Option<GridPos> {

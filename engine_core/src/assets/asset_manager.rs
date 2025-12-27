@@ -1,16 +1,23 @@
 // engine_core/src/assets/asset_manager.rs
-use crate::{assets::sprite::Sprite, game::game::Game, lighting::glow::Glow};
-use std::{collections::HashSet, path::{Path, PathBuf}, sync::LazyLock};
-use futures::executor::block_on;
-use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::animation::animation_clip::Animation;
-use crate::assets::sprite::SpriteId;
 use crate::storage::path_utils::assets_folder;
+use crate::lighting::glow::Glow;
+use crate::assets::sprite::*;
+use crate::game::game::Game;
+use crate::tiles::tile::*;
+use serde::{Deserialize, Serialize};
+use futures::executor::block_on;
+use std::collections::HashSet;
+use std::collections::HashMap;
+use macroquad::prelude::*;
+use std::sync::LazyLock;
+use std::path::PathBuf;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct AssetManager {
+    /// Name of the game for the file system to use.
+    pub game_name: String,
     #[serde(skip)]
     textures: HashMap<SpriteId, Texture2D>,
     /// Persistent map of all sprite is to their paths.
@@ -20,8 +27,10 @@ pub struct AssetManager {
     #[serde(skip)]
     /// Counter for sprite ids. Starts from 1.
     next_sprite_id: usize,
-    /// Name of the game for the file system to use.
-    pub game_name: String,
+    /// Maps `TileDefIds` to `TileDef`.
+    pub tile_defs: HashMap<TileDefId, TileDef>, 
+    /// Counter for tile def ids. Starts from 1.
+    next_tile_def_id: usize,
 }
 
 /// Empty guard texture.
@@ -31,11 +40,13 @@ impl AssetManager {
     /// Initializes a new asset manager.
     pub async fn new(game_name: String) -> Self {
         Self {
+            game_name,
             textures: HashMap::new(),
             path_to_sprite_id: HashMap::new(),
             sprite_id_to_path: HashMap::new(),
             next_sprite_id: 1,
-            game_name,
+            tile_defs: HashMap::new(),
+            next_tile_def_id: 1,
         }
     }
 
@@ -59,7 +70,7 @@ impl AssetManager {
 
         // Set and calculate the next texture id
         let id = SpriteId(self.next_sprite_id);
-        self.restore_next_id();
+        self.restore_next_sprite_id();
 
         // Store everything
         self.textures.insert(id, texture);
@@ -140,7 +151,7 @@ impl AssetManager {
     /// Initialize all assets for the game.
     pub async fn init_manager(game: &mut Game) {
         // Calculate the next id from the existing map
-        game.asset_manager.restore_next_id();
+        game.asset_manager.restore_next_sprite_id();
 
         let _purged = Self::purge_unused_assets(game);
 
@@ -209,8 +220,8 @@ impl AssetManager {
             })
     }
 
-    /// Calculates the next sprite id 
-    pub fn restore_next_id(&mut self) {
+    /// Calculates the next sprite id.
+    pub fn restore_next_sprite_id(&mut self) {
         let used: HashSet<_> = self.sprite_id_to_path
             .keys()
             .map(|sid| sid.0)
@@ -226,6 +237,14 @@ impl AssetManager {
         self.next_sprite_id = candidate;
     }
 
+    /// Inserts a TileDef and returns its id.
+    pub fn insert_tile_def(&mut self, def: TileDef) -> TileDefId {
+        let id = TileDefId(self.next_tile_def_id);
+        self.next_tile_def_id += 1;
+        self.tile_defs.insert(id, def);
+        id
+    }
+
     /// Removes all sprite ids that are no longer referenced by any loaded world.
     /// Returns the number of ids that were purged. 
     /// Only call this on program init/close to protect the undo/redo stack.
@@ -235,16 +254,16 @@ impl AssetManager {
 
         // TODO purge all other assets from the game when they exist
 
+        // Tiles
+        for tile_def in game.asset_manager.tile_defs.values() {
+            if tile_def.sprite_id.0 != 0 {
+                used_ids.insert(tile_def.sprite_id);
+            }
+        }
+
         for world in &game.worlds {
             if let Some(id) = world.meta.sprite_id {
                 used_ids.insert(id);
-            }
-
-            // Tiles
-            for tile_def in world.world_ecs.tile_defs.values() {
-                if tile_def.sprite_id.0 != 0 {
-                    used_ids.insert(tile_def.sprite_id);
-                }
             }
 
             // Sprite components
@@ -290,7 +309,7 @@ impl AssetManager {
         game.asset_manager.sprite_id_to_path.retain(|id, _| keep(id));
 
         // Calculate the next free id
-        game.asset_manager.restore_next_id();
+        game.asset_manager.restore_next_sprite_id();
 
         // Return the number of purged ids
         previous - game.asset_manager.sprite_id_to_path.len()

@@ -17,9 +17,7 @@ use std::any::Any;
 #[derive(Default, Debug)]
 pub struct Ecs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
-    pub tile_defs: HashMap<TileDefId, TileDef>, // TODO: should tile defs live somewhere else?
     next_entity_id: usize,
-    next_tile_def_id: usize,
 }
 
 impl Ecs {
@@ -135,14 +133,6 @@ impl Ecs {
         self.get_store_mut::<T>().insert(entity, component);
     }
 
-    /// Inserts a TileDef and returns its id.
-    pub fn insert_tile_def(&mut self, def: TileDef) -> TileDefId {
-        let id = TileDefId(self.next_tile_def_id);
-        self.next_tile_def_id += 1;
-        self.tile_defs.insert(id, def);
-        id
-    }
-
     /// Returns the player Entity.
     pub fn get_player_entity(&self) -> Entity {
         // There should only ever be one player
@@ -164,14 +154,14 @@ impl Ecs {
             .expect("Player should always have a Position component.")
     }
 
-    /// Restores runtime state for the ECS (next ids etc).
-    pub fn restore_runtime(&mut self) {
-        if let Some(max_id) = self.tile_defs.keys().map(|id| id.0).max() {
-            self.next_tile_def_id = max_id + 1;
-        } else {
-            self.next_tile_def_id = 1;
-        }
-    }
+    // /// Restores runtime state for the ECS (next ids etc).
+    // pub fn restore_runtime(&mut self) {
+    //     if let Some(max_id) = self.tile_defs.keys().map(|id| id.0).max() {
+    //         self.next_tile_def_id = max_id + 1;
+    //     } else {
+    //         self.next_tile_def_id = 1;
+    //     }
+    // }
 }
 
 impl Serialize for Ecs {
@@ -213,7 +203,6 @@ impl Serialize for Ecs {
         // Serialize the whole world
         let mut state = serializer.serialize_struct("Ecs", 2)?;
         state.serialize_field("components", &components)?;
-        state.serialize_field("tile_defs", &self.tile_defs)?;
         state.serialize_field("next_entity_id", &self.next_entity_id)?;
         state.end()
     }
@@ -228,7 +217,6 @@ impl<'de> Deserialize<'de> for Ecs {
         #[derive(Deserialize)]
         struct Helper {
             pub components: Vec<StoredComponent>,
-            pub tile_defs: HashMap<TileDefId, TileDef>,
             pub next_entity_id: usize,
         }
 
@@ -258,15 +246,13 @@ impl<'de> Deserialize<'de> for Ecs {
         }
 
          // Next tile id is reset in restore runtime
-        let mut world_ecs = Ecs {
+        let world_ecs = Ecs {
             stores,
-            tile_defs: helper.tile_defs,
             next_entity_id: helper.next_entity_id,
-            next_tile_def_id: 0,
         };
 
         // Restore the runtime state
-        world_ecs.restore_runtime();
+        // world_ecs.restore_runtime();
 
         Ok(world_ecs)
     }

@@ -42,7 +42,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut Ecs,
+        _world_ecs: &mut Ecs,
     ) {
         let mouse_world_pos = camera.screen_to_world(mouse_pos);
         if !self.button.is_clicked(mouse_world_pos) {
@@ -96,7 +96,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             ResizeAction::RemoveTop => {
                 if map.height > 1 {
                     for x in 0..map.width {
-                        map.remove_tile((x, 0), world_ecs);
+                        map.remove_tile((x, 0));
                     }
                     map.height -= 1;
                     shift_tiles(map, 0, -1);
@@ -127,7 +127,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 if map.height > 1 {
                     let bottom = map.height - 1;
                     for x in 0..map.width {
-                        map.remove_tile((x, bottom), world_ecs);
+                        map.remove_tile((x, bottom));
                     }
                     map.height -= 1;
                     for exit in &mut room.exits {
@@ -148,7 +148,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             ResizeAction::RemoveLeft => {
                 if map.width > 1 {
                     for y in 0..map.height {
-                        map.remove_tile((0, y), world_ecs);
+                        map.remove_tile((0, y));
                     }
                     map.width -= 1;
                     shift_tiles(map, -1, 0);
@@ -171,7 +171,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 if map.width > 1 {
                     let right = map.width - 1;
                     for y in 0..map.height {
-                        map.remove_tile((right, y), world_ecs);
+                        map.remove_tile((right, y));
                     }
                     map.width -= 1;
 

@@ -60,12 +60,13 @@ impl Engine {
         // Store the current positions for the next frame
         game_state.store_previous_positions(&mut self.camera_manager);
 
-        // let mut game_state = self.game_state.borrow_mut();
         let game_ctx = game_state.game.ctx_mut();
         let world_ecs = game_ctx.cur_world_ecs;
         let current_room = game_ctx.cur_room;
+        let asset_manager = game_ctx.asset_manager;
 
         update_physics(
+            asset_manager,
             world_ecs, 
             current_room, 
             dt

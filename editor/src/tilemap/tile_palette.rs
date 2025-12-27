@@ -6,7 +6,6 @@ use crate::engine_global::tile_size;
 use crate::ui::text::draw_text_ui;
 use crate::tiles::tile::TileDef;
 use crate::ui::widgets::*;
-use crate::ecs::ecs::Ecs;
 use engine_core::tiles::tile::TileDefId;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -63,13 +62,13 @@ impl TilePalette {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut Ecs,
+        asset_manager: &mut AssetManager,
     ) {
         while let Some(cmd) = self.command_queue.pop_front() {
             match cmd {
-                PaletteCmd::Create => self.create_tile(world_ecs).await,
-                PaletteCmd::Edit => self.edit_tile(world_ecs).await,
-                PaletteCmd::Delete(i) => self.delete_tile(i, world_ecs).await,
+                PaletteCmd::Create => self.create_tile(asset_manager).await,
+                PaletteCmd::Edit => self.edit_tile(asset_manager).await,
+                PaletteCmd::Delete(i) => self.delete_tile(i, asset_manager).await,
             }
         }
     }
@@ -85,7 +84,6 @@ impl TilePalette {
         &mut self,
         rect: Rect,
         asset_manager: &mut AssetManager,
-        world_ecs: &Ecs,
     ) {
         // Draw grid
         for i in 0..self.entries.len() {
@@ -102,7 +100,7 @@ impl TilePalette {
 
             let x = rect.x + col as f32 * self.tile_size;
 
-            let sprite_id = world_ecs.tile_defs.get(&self.entries[i])
+            let sprite_id = asset_manager.tile_defs.get(&self.entries[i])
                 .expect("Could not find tile definition.")
                 .sprite_id;
 
@@ -123,7 +121,7 @@ impl TilePalette {
             }
         }
 
-        self.draw_tile_dialog(asset_manager, world_ecs).await;
+        self.draw_tile_dialog(asset_manager).await;
     }
 
     /// Called from `TileMapEditor::handle_ui_click` when the mouse
@@ -152,7 +150,7 @@ impl TilePalette {
         false
     }
 
-    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager, world_ecs: &Ecs) {
+    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager) {
         if !self.ui.open {
             return;
         }
@@ -160,7 +158,7 @@ impl TilePalette {
         if self.ui.edit_initialized {
             let entry = &self.entries[self.ui.edit_index];
             
-            let tile_def = world_ecs.tile_defs
+            let tile_def = asset_manager.tile_defs
                 .get(&entry)
                 .expect("Could not find tile definition.");
 
@@ -265,7 +263,7 @@ impl TilePalette {
 
     pub async fn create_tile(
         &mut self,
-        world_ecs: &mut Ecs,
+        asset_manager: &mut AssetManager,
     ) {
         // Build TileDef
         let mut comps = vec![
@@ -283,7 +281,7 @@ impl TilePalette {
         };
 
         // Insert the definition into the world ecs tile_def map
-        let def_id = world_ecs.insert_tile_def(tile_def);
+        let def_id = asset_manager.insert_tile_def(tile_def);
 
         // Persist the palette entry
         self.entries.push(def_id);
@@ -298,7 +296,7 @@ impl TilePalette {
 
     pub async fn edit_tile(
         &mut self,
-        world_ecs: &mut Ecs,
+        asset_manager: &mut AssetManager,
     ) {
         // Build TileDef
         let mut comps = vec![
@@ -315,16 +313,16 @@ impl TilePalette {
 
         // Overwrite the existing definition.
         let entry = &self.entries[self.ui.edit_index];
-        world_ecs.tile_defs.insert(*entry, def);
+        asset_manager.tile_defs.insert(*entry, def);
 
         // Update the palette entry.
         self.entries[self.ui.edit_index] = *entry;
     }
 
-    pub async fn delete_tile(&mut self, idx: usize, world_ecs: &mut Ecs) {
+    pub async fn delete_tile(&mut self, idx: usize, asset_manager: &mut AssetManager) {
         // Remove the definition from the world
         let def_id = self.entries[idx];
-        world_ecs.tile_defs.remove(&def_id);
+        asset_manager.tile_defs.remove(&def_id);
 
         // Remove palette entry and sprite id
         self.entries.remove(idx);
