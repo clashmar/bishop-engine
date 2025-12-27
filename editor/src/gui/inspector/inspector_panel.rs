@@ -1,23 +1,23 @@
 // editor/src/gui/inspector/inspector_panel.rs
-use engine_core::ecs::world_ecs::WorldEcs;
-use engine_core::ecs::component_registry::*;
-use engine_core::game::game::*;
-use engine_core::ecs::module_factory::MODULES;
-use engine_core::ecs::module::*;
-use engine_core::ecs::entity::Entity;
-use engine_core::camera::game_camera::RoomCamera;
-use engine_core::ecs::component::*;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
-use engine_core::ui::widgets::*;
-use engine_core::controls::controls::Controls;
-use crate::commands::entity_commands::*;
-use crate::editor_global::push_command;
-use crate::gui::gui_constants::*;
-use crate::gui::inspector::player_module::PlayerModule;
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::inspector::transform_module::TransformModule;
+use crate::gui::inspector::player_module::PlayerModule;
+use crate::commands::entity_commands::*;
+use crate::editor_global::push_command;
 use crate::gui::menu_bar::menu_button;
+use crate::gui::gui_constants::*;
+use engine_core::camera::game_camera::RoomCamera;
+use engine_core::ecs::module_factory::MODULES;
+use engine_core::controls::controls::Controls;
+use engine_core::ecs::component_registry::*;
+use engine_core::ecs::entity::Entity;
+use engine_core::ecs::component::*;
+use engine_core::ui::widgets::*;
+use engine_core::ecs::module::*;
+use engine_core::ecs::ecs::Ecs;
+use engine_core::game::game::*;
+use engine_core::ui::text::*;
+use macroquad::prelude::*;
 
 const SCROLL_SPEED: f32 = 5.0; 
 
@@ -307,7 +307,7 @@ impl InspectorPanel {
     }
 
     /// Draw the drop‑down list that appears under the Add Component button
-    fn draw_add_component_menu(&mut self, button_rect: Rect, world_ecs: &mut WorldEcs) {
+    fn draw_add_component_menu(&mut self, button_rect: Rect, world_ecs: &mut Ecs) {
         let entity = match self.target {
             Some(e) => e,
             None => return,
@@ -397,7 +397,7 @@ impl InspectorPanel {
 
     /// Returns true if the currently selected entity can receive at least one
     /// component that is not already present
-    fn can_show_any_component(&self, world_ecs: &WorldEcs) -> bool {
+    fn can_show_any_component(&self, world_ecs: &Ecs) -> bool {
         let entity = match self.target {
             Some(e) => e,
             None => return false,
@@ -425,7 +425,7 @@ impl InspectorPanel {
         || (self.rect.contains(mouse_screen) && self.target.is_some())
     }
 
-    fn total_content_height(&self, world_ecs: &WorldEcs, entity: Entity) -> f32 {
+    fn total_content_height(&self, world_ecs: &Ecs, entity: Entity) -> f32 {
         let mut total_content_h = 0.0;
         for module in &self.modules {
             if module.visible(world_ecs, entity) {
@@ -490,7 +490,7 @@ impl InspectorPanel {
 
 /// Utility function used by both the panel and the menu
 fn entity_has_component(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     entity: Entity,
     reg: &ComponentRegistry,
 ) -> bool {

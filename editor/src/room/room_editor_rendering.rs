@@ -1,25 +1,25 @@
 // editor/src/room/room_editor_actions.rs
+use crate::editor_camera_controller::*;
+use crate::gui::gui_constants::*;
+use crate::room::room_editor::*;
+use crate::gui::menu_bar::*;
+use crate::world::coord;
 use engine_core::animation::animation_clip::Animation;
-use engine_core::game::game::GameCtxMut;
-use engine_core::lighting::glow::Glow;
+use engine_core::assets::asset_manager::AssetManager;
+use engine_core::camera::game_camera::RoomCamera;
+use engine_core::rendering::render_room::*;
 use engine_core::lighting::light::Light;
 use engine_core::assets::sprite::Sprite;
-use engine_core::ecs::component::*;
-use engine_core::rendering::render_room::*;
-use engine_core::camera::game_camera::RoomCamera;
+use engine_core::game::game::GameCtxMut;
+use engine_core::lighting::glow::Glow;
 use engine_core::ecs::entity::Entity;
-use engine_core::ui::text::*;
-use engine_core::world::room::*;
-use engine_core::ecs::world_ecs::WorldEcs;
-use engine_core::assets::asset_manager::AssetManager;
+use engine_core::ecs::component::*;
 use engine_core::engine_global::*;
-use macroquad::prelude::*;
 use engine_core::ui::widgets::*;
-use crate::gui::gui_constants::*;
-use crate::gui::menu_bar::*;
-use crate::editor_camera_controller::*;
-use crate::room::room_editor::*;
-use crate::world::coord;
+use engine_core::world::room::*;
+use engine_core::ecs::ecs::Ecs;
+use engine_core::ui::text::*;
+use macroquad::prelude::*;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
 fn thickness() -> f32 { (tile_size() * 0.175).max(1.0) }
@@ -91,7 +91,7 @@ impl RoomEditor {
     pub fn draw_camera_viewport(
         &self,
         editor_cam: &Camera2D,
-        world_ecs: &WorldEcs,
+        world_ecs: &Ecs,
         selected: Entity,
     ) {
         let pos = match world_ecs.get_store::<Position>().get(selected) {
@@ -135,7 +135,7 @@ impl RoomEditor {
 
 /// Draw the outline of the collider for an entity if it has one.
 pub fn draw_collider(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     entity: Entity,
 ) {
     if let Some((width, height)) = world_ecs
@@ -158,7 +158,7 @@ pub fn entity_hitbox(
     entity: Entity,
     position: Vec2,
     camera: &Camera2D,
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     asset_manager: &mut AssetManager,
 ) -> Rect {
     let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
@@ -185,7 +185,7 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: RoomId) {
+pub fn draw_camera_placeholders(world_ecs: &Ecs, room_id: RoomId) {
     let cam_store = world_ecs.get_store::<RoomCamera>();
     let pos_store = world_ecs.get_store::<Position>();
     let room_store = world_ecs.get_store::<CurrentRoom>();
@@ -242,7 +242,7 @@ pub fn draw_camera_placeholders(world_ecs: &WorldEcs, room_id: RoomId) {
 
 /// Draw an icon for a `Light` that has no other visual component.
 pub fn draw_light_placeholders(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     room_id: RoomId,
 ) {
     let room_store = world_ecs.get_store::<CurrentRoom>();
@@ -294,7 +294,7 @@ pub fn draw_light_placeholders(
 
 /// Draw a placeholder for a `Glow` that has no other visual component.
 pub fn draw_glow_placeholders(
-    world_ecs: &WorldEcs, 
+    world_ecs: &Ecs, 
     asset_manager: &mut AssetManager,
     room_id: RoomId,
 ) {

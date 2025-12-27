@@ -1,19 +1,19 @@
 // editor/src/gui/inspector/animation_module.rs
-use engine_core::ecs::module::CollapsibleModule;
+use crate::gui::gui_constants::*;
+use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use engine_core::ui::text::*;
-use engine_core::game::game::*;
+use engine_core::ecs::module::CollapsibleModule;
 use engine_core::animation::animation_system::*;
 use engine_core::animation::animation_clip::*;
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::ecs::module::InspectorModule;
+use engine_core::ecs::entity::Entity;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::*;
-use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
+use engine_core::ecs::ecs::Ecs;
+use engine_core::game::game::*;
+use engine_core::ui::text::*;
 use strum::IntoEnumIterator;
 use macroquad::prelude::*;
-use crate::gui::gui_constants::*;
 
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;
@@ -40,7 +40,7 @@ pub struct AnimationModule {
 }
 
 impl InspectorModule for AnimationModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
         world_ecs.get::<Animation>(entity).is_some()
     }
 
@@ -373,7 +373,7 @@ fn existing_clip_ids(clips: &HashMap<ClipId, ClipDef>) -> Vec<ClipId> {
 }
 
 /// Adds every possible `ClipId` to the supplied Vec.
-pub fn fill_all_clip_ids(world_ecs: &WorldEcs, out: &mut Vec<ClipId>) {
+pub fn fill_all_clip_ids(world_ecs: &Ecs, out: &mut Vec<ClipId>) {
     // Built‑in IDs
     let mut ids: Vec<ClipId> = ClipId::iter()
         .filter(|id| !matches!(id, ClipId::New | ClipId::Custom(_)))

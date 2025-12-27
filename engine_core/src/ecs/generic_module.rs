@@ -2,7 +2,7 @@
 use crate::ecs::reflect_field::*;
 use crate::game::game::*;
 use crate::ecs::entity::Entity;
-use crate::ecs::world_ecs::WorldEcs;
+use crate::ecs::ecs::Ecs;
 use crate::ecs::component::Component;
 use crate::ecs::reflect_field::Reflect;
 use crate::ecs::module::InspectorModule;
@@ -38,7 +38,7 @@ impl<T> InspectorModule for GenericModule<T>
 where
     T: Reflect + Component + Default + 'static,
 {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
         // Use the new `get_store` helper
         world_ecs.get_store::<T>().contains(entity)
     }

@@ -1,37 +1,37 @@
 // editor/src/room/room_editor.rs
-use engine_core::controls::controls::*;
-use engine_core::game::game::*;
-use crate::gui::modal::is_modal_open;
-use crate::gui::mode_selector::*;
+use crate::editor_camera_controller::EditorCameraController;
+use crate::gui::inspector::inspector_panel::InspectorPanel;
+use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
 use crate::commands::entity_commands::*;
+use crate::gui::modal::is_modal_open;
+use crate::gui::mode_selector::*;
 use crate::editor_global::*;
-use crate::gui::inspector::inspector_panel::InspectorPanel;
-use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::world::coord;
 use crate::canvas::grid;
-use crate::editor_camera_controller::EditorCameraController;
-use engine_core::controls::controls::Controls;
-use engine_core::world::world::World;
-use macroquad::miniquad::CursorIcon;
-use macroquad::miniquad::window::set_mouse_cursor;
-use engine_core::ui::widgets::*;
-use engine_core::animation::animation_system::*;
-use engine_core::rendering::render_room::*;
-use engine_core::world::room::*;
-use engine_core::engine_global::*;
-use engine_core::camera::game_camera::*;
-use macroquad::prelude::*;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::world_ecs::WorldEcs;
-use engine_core::ecs::entity::Entity;
 use engine_core::rendering::render_system::RenderSystem;
-use engine_core::ecs::component::*;
+use engine_core::assets::asset_manager::AssetManager;
+use macroquad::miniquad::window::set_mouse_cursor;
+use engine_core::animation::animation_system::*;
+use engine_core::controls::controls::Controls;
+use engine_core::rendering::render_room::*;
 use engine_core::lighting::light::Light;
-use once_cell::sync::Lazy;
+use engine_core::camera::game_camera::*;
+use engine_core::controls::controls::*;
+use engine_core::world::world::World;
+use engine_core::ecs::entity::Entity;
+use macroquad::miniquad::CursorIcon;
+use engine_core::ecs::component::*;
+use engine_core::engine_global::*;
+use engine_core::world::room::*;
+use engine_core::ui::widgets::*;
+use engine_core::ecs::ecs::Ecs;
+use engine_core::game::game::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use macroquad::prelude::*;
+use once_cell::sync::Lazy;
 
 #[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum RoomEditorMode {
@@ -314,7 +314,7 @@ impl RoomEditor {
         &mut self,
         room_id: RoomId,
         camera: &Camera2D,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
         asset_manager: &mut AssetManager,
         mouse_screen: Vec2,
         ui_was_clicked: bool,
@@ -398,7 +398,7 @@ impl RoomEditor {
     /// Moves the currently selected entity by one pixel.
     fn handle_keyboard_move(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
         room_id: RoomId,
     ) {
         // Only act when an entity is selected and no drag is in progress
@@ -523,7 +523,7 @@ impl RoomEditor {
 }
 
 pub fn can_select_entity_in_room(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     entity: Entity,
     room_id: RoomId,
 ) -> bool {

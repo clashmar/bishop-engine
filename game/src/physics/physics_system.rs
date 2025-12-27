@@ -1,14 +1,14 @@
 // game/src/physics/physics_system.rs
 use crate::physics::collision::sweep_move;
-use engine_core::ecs::world_ecs::WorldEcs;
+use crate::constants::GRAVITY;
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
-use crate::constants::GRAVITY;
+use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::Vec2;
 
 /// Applies physics to all entities with a `PhysicsBody` component.
 pub fn update_physics(
-    world_ecs: &mut WorldEcs,
+    world_ecs: &mut Ecs,
     room: &Room,
     dt: f32,
 ) {

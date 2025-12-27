@@ -1,23 +1,22 @@
 // engine_core/src/rendering/render_room.rs
-use crate::{
-    animation::animation_system::CurrentFrame, assets::{
-        asset_manager::AssetManager, 
-        sprite::Sprite
-    }, camera::game_camera::RoomCamera, ecs::{
-        component::*, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, engine_global::tile_size, lighting::{
-        glow::Glow, 
-        light::Light,
-    }, rendering::render_system::RenderSystem, world::room::Room
-};
+use crate::animation::animation_system::CurrentFrame;
+use crate::rendering::render_system::RenderSystem;
+use crate::assets::asset_manager::AssetManager;
+use crate::camera::game_camera::RoomCamera;
+use crate::engine_global::tile_size;
+use crate::assets::sprite::Sprite;
+use crate::lighting::light::Light;
+use crate::lighting::glow::Glow;
+use crate::ecs::entity::Entity;
+use crate::ecs::ecs::Ecs;
+use crate::ecs::component::*;
+use crate::world::room::Room;
 use std::collections::{BTreeMap, HashMap};
 use macroquad::prelude::*;
 
 /// Draws everything needed for the given room.
 pub fn render_room(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     room: &Room,
     asset_manager: &mut AssetManager,
     render_system: &mut RenderSystem,
@@ -100,7 +99,7 @@ pub fn render_room(
 }
 
 fn draw_entity(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     asset_manager: &mut AssetManager,
     frame_store: &ComponentStore<CurrentFrame>,
     sprite_store: &ComponentStore<Sprite>,
@@ -161,7 +160,7 @@ fn draw_entity(
 }
 
 pub fn highlight_selected_entity(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     entity: Entity,
     asset_manager: &mut AssetManager,
     color: Color
@@ -177,7 +176,7 @@ pub fn highlight_selected_entity(
 }
 
 pub fn entity_dimensions(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     asset_manager: &AssetManager,
     entity: Entity,
 ) -> (f32, f32) {
@@ -219,7 +218,7 @@ pub fn draw_entity_placeholder(pos: Vec2) {
 /// Sorts entites by their z-layer, filters out entities that should not be 
 /// drawn and interpolates the draw positions. BTreeMap automatically sorts keys.
 fn collect_interpolated_layer_map<'a>(
-    world_ecs: &'a WorldEcs,
+    world_ecs: &'a Ecs,
     room: &Room,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
@@ -278,7 +277,7 @@ fn collect_interpolated_layer_map<'a>(
 }
 
 fn collect_lights(
-    world_ecs: &WorldEcs,
+    world_ecs: &Ecs,
     room: &Room, 
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,

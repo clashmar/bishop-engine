@@ -1,15 +1,14 @@
 // engine_core/src/world/world.rs
 use crate::assets::sprite::SpriteId;
-use crate::world::room::RoomId;
 use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
-use crate::ecs::{world_ecs::WorldEcs};
-use serde_with::FromInto;
-use uuid::Uuid;
-use crate::{world::room::{Room}};
-use macroquad::prelude::*;
+use crate::world::room::*;
+use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
+use macroquad::prelude::*;
+use serde_with::FromInto;
 use serde_with::serde_as;
+use uuid::Uuid;
 
 /// Identifier for a world.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -20,7 +19,7 @@ pub struct WorldId(pub Uuid);
 pub struct World {
     pub id: WorldId,
     pub name: String,
-    pub world_ecs: WorldEcs,
+    pub world_ecs: Ecs,
     pub rooms: Vec<Room>,
     pub current_room_id: Option<RoomId>,
     pub starting_room_id: Option<RoomId>,

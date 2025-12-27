@@ -2,11 +2,11 @@
 use engine_core::ecs::module::InspectorModule;
 use engine_core::ecs::component::Position;
 use engine_core::ecs::entity::Entity;
-use engine_core::ecs::world_ecs::WorldEcs;
 use engine_core::game::game::GameCtxMut;
+use engine_core::ui::widgets::*;
+use engine_core::ecs::ecs::Ecs;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
-use engine_core::ui::widgets::*;
 
 #[derive(Default)]
 pub struct TransformModule {
@@ -14,12 +14,13 @@ pub struct TransformModule {
     pub y_id: WidgetId,
 }
 
+// TODO: Add rotation
 impl TransformModule {
     /// Draw the two numeric fields that edit the position
     fn draw_position_fields(
         &self,
         rect: Rect,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
         entity: Entity,
     ) {
         let pos = world_ecs.get_mut::<Position>(entity).expect("Position must exist");
@@ -70,7 +71,7 @@ impl TransformModule {
 }
 
 impl InspectorModule for TransformModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
         world_ecs.get::<Position>(entity).is_some()
     }
 

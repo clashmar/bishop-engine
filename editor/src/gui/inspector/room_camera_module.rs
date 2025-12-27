@@ -1,14 +1,14 @@
 // editor/src/gui/inspector/camera_module.rs
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::world_ecs::WorldEcs;
-use engine_core::ecs::module::InspectorModule;
-use engine_core::game::game::GameCtxMut;
-use strum::IntoEnumIterator;
+use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use engine_core::{camera::game_camera::*, ui::text::*};
 use engine_core::ecs::module::CollapsibleModule;
-use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use macroquad::prelude::*;
+use engine_core::ecs::module::InspectorModule;
+use engine_core::game::game::GameCtxMut;
+use engine_core::ecs::entity::Entity;
 use engine_core::ui::widgets::*;
+use engine_core::ecs::ecs::Ecs;
+use strum::IntoEnumIterator;
+use macroquad::prelude::*;
 
 pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 
@@ -21,7 +21,7 @@ pub struct RoomCameraModule {
 }
 
 impl InspectorModule for RoomCameraModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
         world_ecs.get::<RoomCamera>(entity).is_some()
     }
 

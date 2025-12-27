@@ -5,13 +5,13 @@
 #[macro_export]
 macro_rules! impl_capture_entity {
     () => {
-        use $crate::ecs::world_ecs::WorldEcs;
+        use $crate::ecs::ecs::Ecs;
         use $crate::ecs::entity::Entity;
         use $crate::ecs::component_registry::ComponentRegistry;
 
         /// Walks the component registry and extracts every component the entity owns
         pub fn capture_entity(
-            world_ecs: &mut WorldEcs,
+            world_ecs: &mut Ecs,
             entity: Entity,
         ) -> Vec<(String, String)>{
             let mut bag = Vec::new();

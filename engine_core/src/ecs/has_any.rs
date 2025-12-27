@@ -1,10 +1,10 @@
 // engine_core/src/ecs/has_any.rs
-use crate::ecs::{entity::Entity, world_ecs::WorldEcs};
+use crate::ecs::{entity::Entity, ecs::Ecs};
 
 /// Trait that can test if an entity has any given component types.
 pub trait HasAny {
     /// Returns `true` if the entity has at least one of the supplied component types.
-    fn has_any(world_ecs: &WorldEcs, entity: Entity) -> bool;
+    fn has_any(world_ecs: &Ecs, entity: Entity) -> bool;
 }
 
 macro_rules! impl_has_any_for_tuples {
@@ -12,7 +12,7 @@ macro_rules! impl_has_any_for_tuples {
     () => {
         impl HasAny for () {
             #[inline]
-            fn has_any(_world_ecs: &WorldEcs, _entity: Entity) -> bool { false }
+            fn has_any(_world_ecs: &Ecs, _entity: Entity) -> bool { false }
         }
     };
 
@@ -23,7 +23,7 @@ macro_rules! impl_has_any_for_tuples {
             $head: crate::ecs::component::Component + 'static,
         {
             #[inline]
-            fn has_any(world_ecs: &WorldEcs, entity: Entity) -> bool {
+            fn has_any(world_ecs: &Ecs, entity: Entity) -> bool {
                 world_ecs.has::<$head>(entity)
             }
         }
@@ -37,7 +37,7 @@ macro_rules! impl_has_any_for_tuples {
             $( $tail: crate::ecs::component::Component + 'static, )+
         {
             #[inline]
-            fn has_any(world_ecs: &WorldEcs, entity: Entity) -> bool {
+            fn has_any(world_ecs: &Ecs, entity: Entity) -> bool {
                 if world_ecs.has::<$head>(entity) {
                     true
                 } else {

@@ -1,23 +1,15 @@
 // editor/src/tilemap/tilemap_editor.rs
+use crate::gui::ui_element::DynamicTilemapUiElement;
+use crate::assets::asset_manager::AssetManager;
+use crate::gui::menu_bar::draw_top_panel_full;
+use crate::gui::resize_button::ResizeButton;
+use crate::engine_global::tile_size;
+use crate::tiles::tilemap::TileMap;
+use crate::ecs::ecs::Ecs;
+use crate::tilemap::tilemap_panel::TilemapPanel;
+use engine_core::world::world::GridPos;
+use engine_core::world::room::*;
 use macroquad::prelude::*;
-use crate::{gui::{
-    menu_bar::draw_top_panel_full, resize_button::ResizeButton, ui_element::DynamicTilemapUiElement
-}, tilemap::tilemap_panel::TilemapPanel};
-
-use engine_core::{
-    assets::asset_manager::AssetManager,
-    ecs::
-        world_ecs::{WorldEcs}
-    ,
-    engine_global::tile_size,
-    tiles::{
-        tilemap::TileMap,
-    },
-    world::{
-        room::{Exit, ExitDirection, Room},
-        world::GridPos,
-    },
-};
 
 pub enum TilemapEditorMode {
     Tiles,
@@ -50,7 +42,7 @@ impl TileMapEditor  {
         camera: &mut Camera2D,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) 
         {
         if !self.initialized {
@@ -103,7 +95,7 @@ impl TileMapEditor  {
         mouse_pos: Vec2,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) {
         if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
 
@@ -132,7 +124,7 @@ impl TileMapEditor  {
         camera: &Camera2D, 
         mouse_pos: Vec2, 
         map: &mut TileMap,
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
         room_position: Vec2,
     ) {
         let mouse_over_ui = self.is_mouse_over_ui(camera, mouse_pos);
@@ -190,7 +182,7 @@ impl TileMapEditor  {
         camera: &Camera2D, 
         map: &mut TileMap, 
         exits: &Vec<Exit>,
-        world_ecs: &WorldEcs,
+        world_ecs: &Ecs,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
     ) {
@@ -233,7 +225,7 @@ impl TileMapEditor  {
         &mut self, 
         camera: &Camera2D, 
         asset_manager: &mut AssetManager,
-        world_ecs: &WorldEcs,
+        world_ecs: &Ecs,
         map: &mut TileMap,
     ) {
         // Draw scaling UI

@@ -3,13 +3,13 @@ use crate::game::game::GameCtxMut;
 use crate::ui::text::*;
 use crate::ui::widgets::*;
 use macroquad::prelude::*;
-use crate::ecs::world_ecs::WorldEcs;
+use crate::ecs::ecs::Ecs;
 use crate::ecs::entity::Entity;
 
 /// Every inspector sub‑module implements this trait.
 pub trait InspectorModule {
     /// Return true when the module should be shown for the given entity.
-    fn visible(&self, ecs: &WorldEcs, entity: Entity) -> bool;
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool;
 
     // TODO: Make this async
     /// Draw the UI for the module inside the supplied rectangle.
@@ -82,7 +82,7 @@ impl<T: InspectorModule> CollapsibleModule<T> {
 }
 
 impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
-    fn visible(&self, ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         self.inner.visible(ecs, entity)
     }
 

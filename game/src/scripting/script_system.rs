@@ -6,7 +6,7 @@ use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
 use engine_core::scripting::script_manager::ScriptManager;
 use engine_core::scripting::lua_constants::*;
 use engine_core::scripting::script::*;
-use engine_core::ecs::world_ecs::WorldEcs;
+use engine_core::ecs::ecs::Ecs;
 use mlua::prelude::LuaResult;
 use engine_core::*;
 use mlua::Function;
@@ -152,7 +152,7 @@ impl ScriptSystem {
     // Load all scripts for the given ecs.
     pub fn load_scripts(
         lua: &Lua,
-        world_ecs: &mut WorldEcs, 
+        world_ecs: &mut Ecs, 
         script_manager: &mut ScriptManager
     ) -> LuaResult<()> {
         let script_store = world_ecs.get_store_mut::<Script>();

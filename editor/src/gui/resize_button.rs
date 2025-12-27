@@ -1,21 +1,12 @@
 // editor/src/gui/resize_button.rs
+use crate::gui::ui_element::DynamicTilemapUiElement;
+use crate::gui::text_button::TextButton;
+use crate::engine_global::tile_size;
+use crate::tiles::tilemap::*;
+use crate::ecs::ecs::Ecs;
+use crate::world::coord;
+use engine_core::world::room::Room;
 use macroquad::prelude::*;
-use engine_core::{
-    ecs::world_ecs::WorldEcs, 
-    engine_global::tile_size, 
-    tiles::tilemap::{
-        TileMap, 
-        shift_tiles
-    }, 
-    world::room::Room
-};
-use crate::{
-    gui::{
-        text_button::TextButton, 
-        ui_element::DynamicTilemapUiElement
-    }, 
-    world::coord
-};
 
 pub struct ResizeButton {
     pub action: ResizeAction,
@@ -51,7 +42,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut WorldEcs,
+        world_ecs: &mut Ecs,
     ) {
         let mouse_world_pos = camera.screen_to_world(mouse_pos);
         if !self.button.is_clicked(mouse_world_pos) {

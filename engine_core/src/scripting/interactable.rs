@@ -1,8 +1,9 @@
 // engine_core/src/scripting/interactable.rs
-use crate::{ecs::component::CurrentRoom, inspector_module};
-use crate::ecs::world_ecs::WorldEcs;
 use crate::ecs::component::Position;
 use crate::ecs::entity::Entity;
+use crate::ecs::component::*;
+use crate::inspector_module;
+use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use reflect_derive::Reflect;
@@ -22,7 +23,7 @@ pub struct Interactable {
 inspector_module!(Interactable);
 
 /// Returns the best interactable entity candidate for the player in the `CurrentRoom` or `None`.
-pub fn find_best_interactable(world_ecs: &WorldEcs) -> Option<Entity> {
+pub fn find_best_interactable(world_ecs: &Ecs) -> Option<Entity> {
     let player = world_ecs.get_player_entity();
     let player_pos = world_ecs.get_player_position().position;
 

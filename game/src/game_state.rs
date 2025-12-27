@@ -10,16 +10,12 @@ use engine_core::engine_global::*;
 use engine_core::game::game::*;
 use std::collections::HashMap;
 use macroquad::prelude::*;
-use std::cell::RefCell;
-use mlua::Value;
 use mlua::Lua;
 
 /// Top level orchestrator of the game and systems.
 pub struct GameState {
     /// The whole game.
     pub game: Game,
-    /// TODO:
-    pub global_modules: RefCell<HashMap<String, Value>>,
     /// Holds the Position of every entity rendered in the previous frame.
     pub prev_positions: HashMap<Entity, Vec2>,
 }
@@ -56,7 +52,6 @@ impl GameState {
 
         Self {
             game,
-            global_modules: RefCell::new(HashMap::new()),
             prev_positions: HashMap::new(),
         }
     }
@@ -79,7 +74,6 @@ impl GameState {
 
         Self {
             game,
-            global_modules: RefCell::new(HashMap::new()),
             prev_positions: HashMap::new(),
         }
     }

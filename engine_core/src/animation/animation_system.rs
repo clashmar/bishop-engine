@@ -1,13 +1,11 @@
 // engine_core/src/animation/animation_system.rs
-use crate::animation::animation_clip::resolve_sprite_id;
-use crate::animation::animation_clip::Animation;
 use crate::assets::asset_manager::AssetManager;
-use crate::animation::animation_clip::ClipId;
 use crate::ecs::entity::entities_in_room;
-use crate::ecs::world_ecs::WorldEcs;
+use crate::animation::animation_clip::*;
 use crate::assets::sprite::SpriteId;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
+use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use macroquad::prelude::*;
@@ -30,7 +28,7 @@ pub struct CurrentFrame {
 }
 
 pub async fn update_animation_sytem(
-    world_ecs: &mut WorldEcs,
+    world_ecs: &mut Ecs,
     asset_manager: &mut AssetManager,
     dt: f32,
     room_id: RoomId,
