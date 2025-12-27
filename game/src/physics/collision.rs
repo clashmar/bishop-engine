@@ -1,3 +1,4 @@
+use engine_core::assets::asset_manager::{self, AssetManager};
 // game/src/physics/collision.rs
 use engine_core::tiles::tile::TileComponent;
 use engine_core::engine_global::tile_size;
@@ -95,6 +96,7 @@ fn resolve_axis(
 
 /// Sweep the requested movement and return the maximal safe delta.
 pub fn sweep_move(
+    asset_manager: &AssetManager,
     world_ecs: &mut Ecs,
     tilemap: &TileMap,
     room_origin: Vec2,               
@@ -109,7 +111,7 @@ pub fn sweep_move(
     // Tiles
     // Only tiles that carry a Solid component are obstacles
     for ((x, y), tile_def_id) in tilemap.tiles.iter() {
-        let Some(tile_def) = world_ecs.tile_defs.get(tile_def_id) else {continue};
+        let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) else {continue};
 
         if tile_def.components.contains(&TileComponent::Solid(true)) {
             let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());

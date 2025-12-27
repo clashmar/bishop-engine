@@ -5,7 +5,6 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::tilemap::tile_palette::*;
 use crate::tiles::tilemap::TileMap;
 use crate::gui::gui_constants::*;
-use crate::ecs::ecs::Ecs;
 use engine_core::ui::widgets::*;
 use macroquad::prelude::*;
 
@@ -42,9 +41,9 @@ impl TilemapPanel {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut Ecs
+        asset_manager: &mut AssetManager,
     ) {
-        self.palette.update(world_ecs).await;
+        self.palette.update(asset_manager).await;
     }
 
     /// Called by the editor each frame to place the panel
@@ -56,8 +55,7 @@ impl TilemapPanel {
     pub async fn draw(
         &mut self,
         asset_manager: &mut AssetManager,
-        world_ecs: &Ecs,
-        map: &mut TileMap,
+        tilemap: &mut TileMap,
     ) {
         self.active_rects.clear();
 
@@ -103,13 +101,13 @@ impl TilemapPanel {
         self.palette.set_columns_for_width(inner.w - 20.0);
         let height = self.palette.height();
         let palette_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.palette.draw(palette_rect, asset_manager, world_ecs).await;
+        self.palette.draw(palette_rect, asset_manager).await;
 
         y += height + 20.0; // Create gap for next module
 
         // Background module
         let background_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.background.draw(background_rect, map);
+        self.background.draw(background_rect, tilemap);
 
         // Draw create button
         if gui_button(create_rect, create_label) {

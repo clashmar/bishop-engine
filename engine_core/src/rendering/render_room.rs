@@ -53,7 +53,7 @@ pub fn render_room(
 
         // Draw the tilemap as the first layer
         if first_pass {
-            tilemap.draw(&room.exits, world_ecs, asset_manager, room.position);
+            tilemap.draw(&room.exits, asset_manager, room.position);
             first_pass = false;
         }
 

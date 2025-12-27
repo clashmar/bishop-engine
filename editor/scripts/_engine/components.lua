@@ -3,6 +3,13 @@
 ---@alias vec2 { x: number, y: number }
 ---@alias vec3 { x: number, y: number, z: number }
 
+---@class Script
+---@field script_id number
+---@field data table
+
+---@class Sprite
+---@field sprite number
+
 ---@class CurrentFrame
 ---@field clip_id number
 ---@field col number
@@ -49,6 +56,29 @@
 ---@class Position
 ---@field position vec2
 
+---@class RoomCamera
+---@field zoom vec2
+---@field room_id number
+---@field zoom_mode table
+---@field camera_mode table
+
+---@class Glow
+---@field color vec3
+---@field intensity number
+---@field brightness number
+---@field emission number
+---@field sprite_id number
+
+---@class Animation
+---@field clips table
+---@field variant table
+---@field current table
+---@field states table
+---@field sprite_cache table
+
+---@class Interactable
+---@field range number
+
 ---@class Light
 ---@field pos vec2
 ---@field color vec3
@@ -58,37 +88,9 @@
 ---@field alpha number
 ---@field brightness number
 
----@class Sprite
----@field sprite number
-
----@class Script
----@field script_id number
----@field data table
-
----@class Glow
----@field color vec3
----@field intensity number
----@field brightness number
----@field emission number
----@field sprite_id number
-
----@class Interactable
----@field range number
-
----@class Animation
----@field clips table
----@field variant table
----@field current table
----@field states table
----@field sprite_cache table
-
----@class RoomCamera
----@field zoom vec2
----@field room_id number
----@field zoom_mode table
----@field camera_mode table
-
 ---@class ComponentId
+---@field Script string
+---@field Sprite string
 ---@field CurrentFrame string
 ---@field Damage string
 ---@field Solid string
@@ -102,16 +104,16 @@
 ---@field CurrentRoom string
 ---@field Layer string
 ---@field Position string
----@field Light string
----@field Sprite string
----@field Script string
----@field Glow string
----@field Interactable string
----@field Animation string
 ---@field RoomCamera string
+---@field Glow string
+---@field Animation string
+---@field Interactable string
+---@field Light string
 
 local C = {}
 
+C.Script = "Script"
+C.Sprite = "Sprite"
 C.CurrentFrame = "CurrentFrame"
 C.Damage = "Damage"
 C.Solid = "Solid"
@@ -125,12 +127,10 @@ C.Player = "Player"
 C.CurrentRoom = "CurrentRoom"
 C.Layer = "Layer"
 C.Position = "Position"
-C.Light = "Light"
-C.Sprite = "Sprite"
-C.Script = "Script"
-C.Glow = "Glow"
-C.Interactable = "Interactable"
-C.Animation = "Animation"
 C.RoomCamera = "RoomCamera"
+C.Glow = "Glow"
+C.Animation = "Animation"
+C.Interactable = "Interactable"
+C.Light = "Light"
 
 return C

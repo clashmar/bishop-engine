@@ -149,6 +149,7 @@ impl RoomEditor {
         match self.mode {
             RoomEditorMode::Tilemap => {
                 self.tilemap_editor.update(
+                    asset_manager,
                     camera,
                     room, 
                     &other_bounds,
@@ -235,8 +236,7 @@ impl RoomEditor {
                 self.tilemap_editor.draw(
                     camera, 
                     tilemap, 
-                    exits, 
-                    world_ecs,
+                    exits,
                     asset_manager,
                     room.position,
                 ).await;

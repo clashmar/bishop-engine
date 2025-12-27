@@ -1,6 +1,7 @@
 // game/src/physics/physics_system.rs
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY;
+use engine_core::assets::asset_manager::{self, AssetManager};
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use engine_core::ecs::ecs::Ecs;
@@ -8,6 +9,7 @@ use macroquad::prelude::Vec2;
 
 /// Applies physics to all entities with a `PhysicsBody` component.
 pub fn update_physics(
+    asset_manager: &AssetManager,
     world_ecs: &mut Ecs,
     room: &Room,
     dt: f32,
@@ -36,6 +38,7 @@ pub fn update_physics(
         let delta = Vec2::new(vel_cur.x * dt, vel_cur.y * dt);
 
         let sweep = sweep_move(
+            asset_manager,
             world_ecs,
             tilemap,
             room.position,
