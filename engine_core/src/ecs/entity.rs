@@ -64,6 +64,7 @@ impl<'a> EntityBuilder<'a> {
     }
 }
 
+// TODO: does this belong here?
 // Returns a HashSet of all entities in the current room.
 pub fn entities_in_room(world_ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
     let room_store = world_ecs.get_store::<CurrentRoom>();

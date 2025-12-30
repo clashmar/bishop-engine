@@ -38,6 +38,8 @@ pub const DEFAULT_CHECKBOX_DIMS: f32 = 20.0;
 // Colours
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
+pub const HOVER_COLOR: Color = Color::new(0.2, 0.2, 0.2, 0.8);
+pub const HOVER_COLOR_PLAIN: Color = Color::new(0.2, 0.2, 0.2, 0.8);
 
 const HOLD_INITIAL_DELAY: f64 = 0.50;
 const HOLD_REPEAT_RATE: f64 = 0.05;
@@ -483,17 +485,22 @@ pub enum ButtonStyle {
 
 /// Rectangular button with background and outline. Returns `true` on click.
 pub fn gui_button(rect: Rect, label: &str) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO)
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO, HOVER_COLOR)
 }
 
 /// Rectangular button with no background or outline. Returns `true` on click.
-pub fn gui_button_plain(rect: Rect, label: &str, text_color: Color) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO)
+pub fn gui_button_plain_default(rect: Rect, label: &str, text_color: Color) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, HOVER_COLOR_PLAIN)
+}
+
+/// Rectangular button with no background or outline. Returns `true` on click.
+pub fn gui_button_plain_hover(rect: Rect, label: &str, text_color: Color, hover_color: Color) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, hover_color)
 }
 
 /// Default button with text offset. Returns `true` on click.
 pub fn gui_button_y_offset(rect: Rect, label: &str, text_offset: Vec2) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset)
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset, HOVER_COLOR)
 }
 
 fn gui_button_impl(
@@ -502,43 +509,36 @@ fn gui_button_impl(
     style: ButtonStyle, 
     text_color: Color,
     text_offset: Vec2,
+    hover_color: Color
 ) -> bool {
     let mouse = mouse_position();
-    let mut hovered = rect.contains(vec2(mouse.0, mouse.1));
+    let hovered = rect.contains(vec2(mouse.0, mouse.1));
 
     // Common text layout
     let txt_dims = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0);
     let txt_y = rect.y + rect.h * 0.7;
-    let mut txt_x = rect.x;
+    let txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
 
     match style {
         ButtonStyle::Default => {
             // Background, Outline & Hover
             let hovered = rect.contains(vec2(mouse.0, mouse.1));
             let background = if hovered && !is_dropdown_open() {
-                Color::new(0.2, 0.2, 0.2, 0.8)
+                hover_color
             } else {
                 FIELD_BACKGROUND_COLOR
             };
             draw_rectangle(rect.x, rect.y, rect.w, rect.h, background);
             draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
-            txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
         }
         ButtonStyle::Plain => {
-            // Hover only
-            let width = txt_dims.width + WIDGET_PADDING * 2.0;
-            txt_x = txt_x + WIDGET_PADDING;
-
-            hovered = Rect::new(rect.x, rect.y, width, rect.h)
-                .contains(vec2(mouse.0, mouse.1));
-
             if hovered && !is_dropdown_open() {
                 draw_rectangle(
                     rect.x,
                     rect.y,
-                    width,
+                    rect.w,
                     rect.h,
-                    Color::new(0.0, 0.0, 0.0, 0.5),
+                    hover_color,
                 );
             }
         }
@@ -733,7 +733,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
             gui_button(rect, label)
         }
         DropDownStyle::Plain => {
-            gui_button_plain(rect, label, text_color)
+            gui_button_plain_default(rect, label, text_color)
         }
     };
 

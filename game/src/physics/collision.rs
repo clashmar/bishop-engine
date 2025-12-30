@@ -1,5 +1,5 @@
-use engine_core::assets::asset_manager::{self, AssetManager};
 // game/src/physics/collision.rs
+use engine_core::assets::asset_manager::AssetManager;
 use engine_core::tiles::tile::TileComponent;
 use engine_core::engine_global::tile_size;
 use engine_core::tiles::tilemap::TileMap;

@@ -7,6 +7,7 @@ use crate::game::game_editor::GameEditor;
 use crate::playtest::room_playtest::*;
 use crate::storage::editor_storage;
 use crate::gui::menu_bar::MenuBar;
+use crate::with_panel_manager;
 use crate::gui::modal::Modal;
 use crate::Camera2D;
 use engine_core::rendering::render_system::RenderSystem;
@@ -247,6 +248,11 @@ impl Editor {
 
     async fn draw_ui(&mut self) {
         set_default_camera();
+
+        // Draw all panels
+        with_panel_manager(|panel_manager| {
+            panel_manager.draw(self.mode, self);
+        });
 
         // Global menu options
         self.draw_menu_bar().await;

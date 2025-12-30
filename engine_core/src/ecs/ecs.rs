@@ -3,7 +3,6 @@ use crate::ecs::component_registry::*;
 use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
 use crate::ecs::entity::*;
-use crate::tiles::tile::*;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,6 +16,7 @@ use std::any::Any;
 #[derive(Default, Debug)]
 pub struct Ecs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
+    // TODO: make this global
     next_entity_id: usize,
 }
 
@@ -57,7 +57,6 @@ impl Ecs {
         self.get_store::<T>().contains(entity)
     }
 
-    #[inline]
     /// Check whether an entity has any components in tuple `T`.
     pub fn has_any<T>(&self, entity: Entity) -> bool
     where
@@ -133,7 +132,7 @@ impl Ecs {
         self.get_store_mut::<T>().insert(entity, component);
     }
 
-    /// Returns the player Entity.
+    /// Returns the player Entity. // TODO wrap in option and move out of here
     pub fn get_player_entity(&self) -> Entity {
         // There should only ever be one player
         let player = self.get_store::<Player>().data
@@ -153,15 +152,6 @@ impl Ecs {
             .cloned()
             .expect("Player should always have a Position component.")
     }
-
-    // /// Restores runtime state for the ECS (next ids etc).
-    // pub fn restore_runtime(&mut self) {
-    //     if let Some(max_id) = self.tile_defs.keys().map(|id| id.0).max() {
-    //         self.next_tile_def_id = max_id + 1;
-    //     } else {
-    //         self.next_tile_def_id = 1;
-    //     }
-    // }
 }
 
 impl Serialize for Ecs {
@@ -245,14 +235,10 @@ impl<'de> Deserialize<'de> for Ecs {
             stores.insert(type_id, any_box);
         }
 
-         // Next tile id is reset in restore runtime
         let world_ecs = Ecs {
             stores,
             next_entity_id: helper.next_entity_id,
         };
-
-        // Restore the runtime state
-        // world_ecs.restore_runtime();
 
         Ok(world_ecs)
     }

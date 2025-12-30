@@ -1,7 +1,7 @@
 // game/src/physics/physics_system.rs
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY;
-use engine_core::assets::asset_manager::{self, AssetManager};
+use engine_core::assets::asset_manager::AssetManager;
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use engine_core::ecs::ecs::Ecs;

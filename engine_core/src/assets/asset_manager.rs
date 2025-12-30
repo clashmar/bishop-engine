@@ -153,6 +153,13 @@ impl AssetManager {
         // Calculate the next id from the existing map
         game.asset_manager.restore_next_sprite_id();
 
+        // Restore next tile def id
+        if let Some(max_id) = game.asset_manager.tile_defs.keys().map(|id| id.0).max() {
+            game.asset_manager.next_tile_def_id = max_id + 1;
+        } else {
+            game.asset_manager.next_tile_def_id = 1;
+        }
+
         let _purged = Self::purge_unused_assets(game);
 
         let sprites: Vec<(SpriteId, PathBuf)> = game.asset_manager

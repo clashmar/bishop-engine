@@ -2,6 +2,7 @@
 #![allow(unused)]
 use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
+use crate::with_lua_async;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
 use engine_core::assets::asset_manager::*;
@@ -15,7 +16,6 @@ use engine_core::constants::*;
 use engine_core::ecs::ecs::*;
 use macroquad::prelude::*;
 use std::time::SystemTime;
-use crate::with_lua_async;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::cell::RefCell;
@@ -49,6 +49,7 @@ pub async fn create_new_game(name: String) -> Game {
         save_version: 1,
         id: Uuid::new_v4(),
         name,
+        global_ecs: Ecs::default(),
         worlds: vec![world],
         asset_manager,
         script_manager,
