@@ -20,6 +20,8 @@ pub struct Game {
     pub id: Uuid,
     /// Human readable name of the game.
     pub name: String,
+    /// Stores the global Ecs.
+    pub global_ecs: Ecs,
     /// All worlds belonging to this game instance.
     pub worlds: Vec<World>,
     /// Asset manager for the game.
@@ -38,6 +40,7 @@ pub struct Game {
 /// immutable systems that are usually needed at the same time.
 pub struct GameCtx<'a> {
     // TODO: wrap in options
+    pub global_ecs: &'a Ecs,
     pub cur_world_ecs: &'a Ecs,
     pub cur_room: &'a Room,
     pub asset_manager: &'a AssetManager,
@@ -48,6 +51,7 @@ pub struct GameCtx<'a> {
 /// mutable systems that are usually needed at the same time.
 pub struct GameCtxMut<'a> {
     // TODO: wrap in options
+    pub global_ecs: &'a mut Ecs,
     pub cur_world_ecs: &'a mut Ecs,
     pub cur_room: &'a mut Room,
     pub asset_manager: &'a mut AssetManager,
@@ -74,6 +78,7 @@ impl Game {
             .expect("Room not found.");
 
         GameCtx {
+            global_ecs: &self.global_ecs,
             cur_world_ecs,
             cur_room,
             asset_manager: &self.asset_manager,
@@ -102,6 +107,7 @@ impl Game {
             .expect("Room not found.");
 
         GameCtxMut {
+            global_ecs: &mut self.global_ecs,
             cur_world_ecs,
             cur_room,
             asset_manager: &mut self.asset_manager,

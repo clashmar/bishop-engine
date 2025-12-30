@@ -29,9 +29,12 @@ impl RoomEditor {
     pub fn draw_ui(
         &mut self, 
         game_ctx: &mut GameCtxMut,
+        camera: &Camera2D,
     ) {
         // Reset to static camera
         set_default_camera();
+
+        self.draw_coordinates(camera, game_ctx.cur_room);
 
         match self.mode {
             RoomEditorMode::Tilemap => {

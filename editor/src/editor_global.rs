@@ -1,6 +1,7 @@
 // editor/src/editor_global.rs
 use crate::commands::editor_command_manager::EditorCommandManager;
 use crate::commands::editor_command_manager::EditorCommand;
+use crate::gui::panels::panel_manager::PanelManager;
 use std::cell::RefCell;
 use std::future::Future;
 use std::cell::Cell;
@@ -17,6 +18,7 @@ pub struct EditorServices {
     pub pending_undo: Cell<bool>,
     pub pending_redo: Cell<bool>,
     pub entity_clipboard: RefCell<Option<Vec<(String, String)>>>,
+    pub panel_manager: RefCell<PanelManager>,
 }
 
 impl EditorServices {
@@ -28,6 +30,7 @@ impl EditorServices {
             pending_undo: Cell::new(false),
             pending_redo: Cell::new(false),
             entity_clipboard: RefCell::new(None), 
+            panel_manager: RefCell::new(PanelManager::new()),
         })
     }
 }
@@ -129,4 +132,28 @@ pub fn request_undo() {
 /// Requests an redo for the current frame.
 pub fn request_redo() {
     EDITOR_SERVICES.with(|s| s.pending_redo.set(true));
+}
+
+/// Gets mutable access to the `PanelManager`.
+pub fn with_panel_manager<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut PanelManager) -> R,
+{
+    EDITOR_SERVICES.with(|services| {
+        let mut pm = services.panel_manager.borrow_mut();
+        f(&mut pm)
+    })
+}
+
+/// Gets async mutable access to the `PanelManager`.
+pub async fn with_panel_manager_async<R, F>(f: F) -> R
+where
+    F: for<'a> FnOnce(&'a mut PanelManager) -> Pin<Box<dyn Future<Output = R> + 'a>>,
+{
+    let services = EDITOR_SERVICES.with(|s| s.clone());
+    let mut pm_ref = services.panel_manager.borrow_mut();
+    
+    // Call the closure and await the future
+    let future = f(&mut*pm_ref);
+    future.await
 }

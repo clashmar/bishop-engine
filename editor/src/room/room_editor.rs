@@ -2,8 +2,10 @@
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::tilemap::tilemap_editor::TileMapEditor;
+use crate::gui::panels::hierarchy_panel::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
+use crate::gui::panels::generic_panel::*;
 use crate::commands::entity_commands::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
@@ -80,6 +82,15 @@ pub struct RoomEditor {
 impl RoomEditor {
     pub fn new() -> Self {
         let mode = RoomEditorMode::Scene;
+
+        // Register room specific panels
+        with_panel_manager(|panel_manager| {
+            panel_manager.register(
+                GenericPanel::new(HierarchyPanel::new()),
+                vec![crate::editor::EditorMode::Room(RoomId(0))], // match any room
+            );
+        });
+
         Self {
             mode: RoomEditorMode::Scene,
             mode_selector: ModeSelector {
@@ -305,8 +316,8 @@ impl RoomEditor {
         }
 
         // Scene UI
-        self.draw_coordinates(camera, room);
-        self.draw_ui(&mut game_ctx);
+        // self.draw_coordinates(camera, room);
+        self.draw_ui(&mut game_ctx, camera);
     }
 
     /// Handles mouse selection / movement.
@@ -434,6 +445,7 @@ impl RoomEditor {
         }
     }
 
+    /// Sets the selected entity for the room editor.
     pub fn set_selected_entity(&mut self, entity: Option<Entity>) {
         self.selected_entity = entity;
         self.inspector.set_target(entity);
@@ -474,6 +486,12 @@ impl RoomEditor {
 
                 if Controls::paste() {
                     push_command(Box::new(PasteEntityCmd::new()));
+                }
+
+                if Controls::h() {
+                    with_panel_manager(|panel_manager| {
+                        panel_manager.toggle(HIERARCHY_PANEL);
+                    });
                 }
             }
         }

@@ -84,6 +84,10 @@ pub trait PostCreate {
 }
 
 #[ecs_component]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+pub struct Global {}
+
+#[ecs_component]
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(default)]

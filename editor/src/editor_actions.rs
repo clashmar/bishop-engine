@@ -1,11 +1,12 @@
 // editor/src/editor_actions.rs
+use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
 use crate::commands::game_editor_commands::RenameGameCmd;
 use crate::world::world_editor::WorldEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
 use crate::storage::export::export_game;
-use crate::editor_global::push_command;
 use crate::storage::editor_storage::*;
+use crate::editor_global::*;
 use crate::gui::menu_bar::*;
 use crate::editor::Editor;
 use crate::gui::modal::*;
@@ -86,7 +87,7 @@ impl Editor {
             }
         };
 
-        if let Some(action) = self.menu_bar.draw(&menu_title) {
+        if let Some(action) = self.menu_bar.draw(&menu_title, self.mode) {
             match action {
                 MenuAction::Rename => {
                     self.open_rename_modal();
@@ -175,6 +176,11 @@ impl Editor {
                             ));
                         }
                     }
+                }
+                MenuAction::ViewHierarchyPanel => {
+                    with_panel_manager(|panel_manager| {
+                        panel_manager.toggle(HIERARCHY_PANEL);
+                    });
                 }
             }
         }
