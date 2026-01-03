@@ -1,10 +1,10 @@
 // engine_core/src/ecs/module.rs
 use crate::game::game::GameCtxMut;
-use crate::ui::text::*;
-use crate::ui::widgets::*;
-use macroquad::prelude::*;
-use crate::ecs::ecs::Ecs;
 use crate::ecs::entity::Entity;
+use crate::ui::widgets::*;
+use crate::ecs::ecs::Ecs;
+use crate::ui::text::*;
+use macroquad::prelude::*;
 
 /// Every inspector sub‑module implements this trait.
 pub trait InspectorModule {
@@ -15,6 +15,7 @@ pub trait InspectorModule {
     /// Draw the UI for the module inside the supplied rectangle.
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,
@@ -88,6 +89,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,
@@ -105,7 +107,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
         // Toggle button (‑ when open, ＋ when closed)
         let btn = Rect::new(rect.x + 4.0, rect.y + 4.0, 16.0, 16.0);
         let symbol = if self.expanded { "-" } else { "+" };
-        if gui_button_y_offset(btn, symbol, vec2(-0.3, 1.5)) {
+        if gui_button_y_offset(btn, symbol, vec2(-0.3, 1.5), blocked) {
             self.expanded = !self.expanded;
         }
 
@@ -120,7 +122,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_W,
                 BTN_H,
             );
-            if gui_button(btn_rect, "x") {
+            if gui_button(btn_rect, "x", blocked) {
                 self.inner.remove(game_ctx, entity);
                 return; // Don't draw the rest of the module
             }
@@ -135,7 +137,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 rect.w - 8.0,
                 rect.h - Self::HEADER_HEIGHT - 8.0,
             );
-            self.inner.draw(body_rect, game_ctx, entity);
+            self.inner.draw(blocked, body_rect, game_ctx, entity);
         }
     }
 

@@ -1,5 +1,5 @@
 // editor/src/gui/inspector/script_module.rs
-use engine_core::ecs::module::{CollapsibleModule, InspectorModule};
+use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use engine_core::ecs::reflect_field::parse_field_name;
 use engine_core::scripting::script::ScriptField;
@@ -29,8 +29,8 @@ const MIN_WIDGET_WIDTH: f32 = 80.0;
 const LABEL_PADDING: f32 = 10.0;
 
 impl InspectorModule for ScriptModule {
-    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
-        world_ecs.get::<Script>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<Script>(entity).is_some()
     }
 
     fn removable(&self) -> bool { true }
@@ -42,6 +42,7 @@ impl InspectorModule for ScriptModule {
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,
@@ -87,7 +88,7 @@ impl InspectorModule for ScriptModule {
         );
 
         // Script picker
-        if gui_script_picker(picker_rect, entity, &mut script_comp.script_id, script_manager) {
+        if gui_script_picker(picker_rect, entity, &mut script_comp.script_id, script_manager, blocked) {
             with_lua(|lua| {
                 if let Err(e) = script_comp.load(lua, script_manager, entity) {
                     onscreen_error!("Failed to load script: {}", e);
@@ -96,7 +97,7 @@ impl InspectorModule for ScriptModule {
         }
 
         // Refresh button
-        if gui_button(refresh_rect, "R") {
+        if gui_button(refresh_rect, "R", blocked) {
             if script_comp.script_id == ScriptId(0) {
                 return;
             }
@@ -174,26 +175,26 @@ impl InspectorModule for ScriptModule {
                         DEFAULT_CHECKBOX_DIMS,
                         DEFAULT_CHECKBOX_DIMS,
                     );
-                    if gui_checkbox(cb_rect, v) {
+                    if gui_checkbox(cb_rect, v) && !blocked {
                         changed = true;
                     }
                 }
                 ScriptField::Int(ref mut v) => {
-                    let new = gui_input_number_i32(base_id, widget_rect, *v as i32) as i64;
+                    let new = gui_input_number_i32(base_id, widget_rect, *v as i32, blocked) as i64;
                     if new != *v {
                         *v = new;
                         changed = true;
                     }
                 }
                 ScriptField::Float(ref mut v) => {
-                    let new = gui_input_number_f32(base_id, widget_rect, *v as f32) as f64;
+                    let new = gui_input_number_f32(base_id, widget_rect, *v as f32, blocked) as f64;
                     if new != *v {
                         *v = new;
                         changed = true;
                     }
                 }
                 ScriptField::Text(ref mut s) => {
-                    let (txt, _) = gui_input_text_default(base_id, widget_rect, s);
+                    let (txt, _) = gui_input_text_default(base_id, widget_rect, s, blocked);
                     if txt != *s {
                         *s = txt;
                         changed = true;
@@ -214,7 +215,7 @@ impl InspectorModule for ScriptModule {
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v[0]);
+                    let new_x = gui_input_number_f32(id_x, rect_x, v[0], blocked);
                     if (new_x - v[0]).abs() > f32::EPSILON {
                         v[0] = new_x;
                         changed = true;
@@ -228,7 +229,7 @@ impl InspectorModule for ScriptModule {
                         widget_rect.h,
                     );
 
-                    let new_y = gui_input_number_f32(id_y, rect_y, v[0]);
+                    let new_y = gui_input_number_f32(id_y, rect_y, v[0], blocked);
                     if (new_y - v[0]).abs() > f32::EPSILON {
                         v[0] = new_y;
                         changed = true;
@@ -254,7 +255,7 @@ impl InspectorModule for ScriptModule {
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v[0]);
+                    let new_x = gui_input_number_f32(id_x, rect_x, v[0], blocked);
                     if (new_x - v[0]).abs() > f32::EPSILON {
                         v[0] = new_x;
                         changed = true;
@@ -268,7 +269,7 @@ impl InspectorModule for ScriptModule {
                         widget_rect.h,
                     );
 
-                    let new_y = gui_input_number_f32(id_y, rect_y, v[0]);
+                    let new_y = gui_input_number_f32(id_y, rect_y, v[0], blocked);
                     if (new_y - v[0]).abs() > f32::EPSILON {
                         v[0] = new_y;
                         changed = true;
@@ -282,7 +283,7 @@ impl InspectorModule for ScriptModule {
                         widget_rect.h,
                     );
 
-                    let new_z = gui_input_number_f32(id_z, rect_z, v[0]);
+                    let new_z = gui_input_number_f32(id_z, rect_z, v[0], blocked);
                     if (new_z - v[0]).abs() > f32::EPSILON {
                         v[0] = new_z;
                         changed = true;

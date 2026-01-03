@@ -1,11 +1,9 @@
 // engine_core/src/ecs/module_factory.rs
-use once_cell::sync::Lazy;
-use crate::ecs::{
-    generic_module::GenericModule,
-    module::{CollapsibleModule, InspectorModule},
-};
-use crate::ecs::component::Component;
+use crate::ecs::generic_module::GenericModule;
 use crate::ecs::reflect_field::Reflect;
+use crate::ecs::component::Component;
+use crate::ecs::inpsector_module::*;
+use once_cell::sync::Lazy;
 
 /// Human‑readable names of all components that have been registered with `ecs_component!`.
 pub static MODULES: Lazy<Vec<&'static ModuleFactoryEntry>> = Lazy::new(|| {

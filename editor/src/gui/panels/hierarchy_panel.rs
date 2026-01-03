@@ -1,5 +1,6 @@
 // editor/src/gui/panels/hierarchy_panel.rs
 use crate::gui::panels::generic_panel::PanelDefinition;
+use crate::gui::gui_constants::*;
 use crate::Editor;
 use engine_core::ecs::component::{CurrentRoom, Global};
 use engine_core::ui::text::draw_text_ui;
@@ -37,11 +38,11 @@ impl PanelDefinition for HierarchyPanel {
 
         // Add global entity
         let add_rect = Rect::new(rect.x + 6., y, rect.w - 12., 26.);
-        if gui_button(add_rect, "+ Global") {
+        if gui_button(add_rect, "+ Global", false) {
             editor.game.ecs.create_entity().with(Global::default());
         }
 
-        y += 32.;
+        y += add_rect.h + SPACING * 2.;
 
         // Global entities
         draw_text_ui("Global", rect.x + 6., y, 14., GRAY);
@@ -107,7 +108,7 @@ fn draw_entity_node(
         22.,
     );
 
-    let label = format!("Entity {:?}", entity);
+    let label = format!("{:?}", entity);
 
     // Highlight if selected
     let is_selected = editor.room_editor.selected_entity == Some(entity);
@@ -122,7 +123,7 @@ fn draw_entity_node(
         );
     }
 
-    if gui_button_plain_hover(row_rect, &label, WHITE, GRAY) {
+    if gui_button_plain_hover(row_rect, &label, WHITE, GRAY, false) {
         editor.room_editor.set_selected_entity(Some(entity))
     }
 

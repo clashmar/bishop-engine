@@ -1,8 +1,10 @@
 // editor/src/gui/panels/panel_manager.rs
 use crate::gui::panels::generic_panel::*;
+use crate::with_panel_manager;
 use crate::editor::EditorMode;
 use crate::Editor;
 use std::collections::HashMap;
+use macroquad::prelude::*;
 
 pub struct PanelManager {
     panels: HashMap<PanelId, GenericPanel>,
@@ -39,4 +41,12 @@ impl PanelManager {
             p.visible = !p.visible;
         }
     }
+}
+
+pub fn is_mouse_over_panel() -> bool {
+    with_panel_manager(|pm| {
+        let mouse_screen: Vec2 = mouse_position().into();
+        pm.panels.values()
+            .any(|p| p.visible && p.rect.contains(mouse_screen))
+    })
 }

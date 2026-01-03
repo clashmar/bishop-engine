@@ -1,6 +1,6 @@
 // editor/src/gui/inspector/player_module.rs
 use engine_core::{ecs::component::Player, game::game::GameCtxMut, ui::{text::*, widgets::*}};
-use engine_core::ecs::module::InspectorModule;
+use engine_core::ecs::inpsector_module::InspectorModule;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::*;
@@ -9,12 +9,13 @@ use macroquad::prelude::*;
 pub struct PlayerModule {}
 
 impl InspectorModule for PlayerModule {
-    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
-        world_ecs.get::<Player>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<Player>(entity).is_some()
     }
 
     fn draw(
         &mut self,
+        _blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,

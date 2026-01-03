@@ -5,7 +5,7 @@ use crate::ecs::entity::Entity;
 use crate::ecs::ecs::Ecs;
 use crate::ecs::component::Component;
 use crate::ecs::reflect_field::Reflect;
-use crate::ecs::module::InspectorModule;
+use crate::ecs::inpsector_module::InspectorModule;
 use crate::ui::text::*;
 use crate::ui::widgets::*;
 use macroquad::prelude::*;
@@ -38,13 +38,14 @@ impl<T> InspectorModule for GenericModule<T>
 where
     T: Reflect + Component + Default + 'static,
 {
-    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         // Use the new `get_store` helper
-        world_ecs.get_store::<T>().contains(entity)
+        ecs.get_store::<T>().contains(entity)
     }
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,
@@ -96,22 +97,22 @@ where
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
                 (FieldValue::SpriteId(id), _) => {
-                    gui_sprite_picker(widget_rect, id, game_ctx.asset_manager);
+                    gui_sprite_picker(widget_rect, id, game_ctx.asset_manager, blocked);
                 }
                 (FieldValue::Text(txt), _) => {
-                    let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());
+                    let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str(), blocked);
                     if new != *txt {
                         *txt = new;
                     }
                 }
                 (FieldValue::Float(f), _) => {
-                    let new = gui_input_number_f32(base_id, widget_rect, *f);
+                    let new = gui_input_number_f32(base_id, widget_rect, *f, blocked);
                     if (new - *f).abs() > f32::EPSILON {
                         *f = new;
                     }
                 }
                 (FieldValue::Int(i), _) => {
-                    let new = gui_input_number_i32(base_id, widget_rect, *i);
+                    let new = gui_input_number_i32(base_id, widget_rect, *i, blocked);
                     if new != *i {
                         *i = new;
                     }
@@ -124,7 +125,7 @@ where
                         DEFAULT_CHECKBOX_DIMS,
                     );
                     let mut v = *b;
-                    if gui_checkbox(cb_rect, &mut v) {
+                    if gui_checkbox(cb_rect, &mut v) && !blocked {
                         *b = v;
                     }
                 }
@@ -143,7 +144,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v.x);
+                    let new_x = gui_input_number_f32(id_x, rect_x, v.x, blocked);
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -154,7 +155,7 @@ where
                         half - 2.0,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number_f32(id_y, rect_y, v.y);
+                    let new_y = gui_input_number_f32(id_y, rect_y, v.y, blocked);
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -177,7 +178,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v.x);
+                    let new_x = gui_input_number_f32(id_x, rect_x, v.x, blocked);
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -188,7 +189,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number_f32(id_y, rect_y, v.y);
+                    let new_y = gui_input_number_f32(id_y, rect_y, v.y, blocked);
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -199,7 +200,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_z = gui_input_number_f32(id_z, rect_z, v.z);
+                    let new_z = gui_input_number_f32(id_z, rect_z, v.z, blocked);
                     if (new_z - v.z).abs() > f32::EPSILON {
                         v.z = new_z;
                     }

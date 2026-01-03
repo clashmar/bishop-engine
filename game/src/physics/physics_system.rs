@@ -10,12 +10,12 @@ use macroquad::prelude::Vec2;
 /// Applies physics to all entities with a `PhysicsBody` component.
 pub fn update_physics(
     asset_manager: &AssetManager,
-    world_ecs: &mut Ecs,
+    ecs: &mut Ecs,
     room: &Room,
     dt: f32,
 ) {
     let tilemap = &room.variants[0].tilemap;
-    let entities: Vec<_> = world_ecs
+    let entities: Vec<_> = ecs
         .get_store::<PhysicsBody>()
         .data
         .keys()
@@ -24,9 +24,9 @@ pub fn update_physics(
 
     for entity in entities {
         let (pos_cur, mut vel_cur, collider) = {
-            let p = world_ecs.get::<Position>(entity).unwrap();
-            let v = world_ecs.get::<Velocity>(entity).unwrap();
-            let c = world_ecs
+            let p = ecs.get::<Position>(entity).unwrap();
+            let v = ecs.get::<Velocity>(entity).unwrap();
+            let c = ecs
                 .get::<Collider>(entity)
                 .cloned()
                 .unwrap_or_default();
@@ -39,7 +39,7 @@ pub fn update_physics(
 
         let sweep = sweep_move(
             asset_manager,
-            world_ecs,
+            ecs,
             tilemap,
             room.position,
             pos_cur,
@@ -59,11 +59,11 @@ pub fn update_physics(
         }
 
         {
-            let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
+            let pos_mut = ecs.get_mut::<Position>(entity).unwrap();
             pos_mut.position = new_pos;
         }
         {
-            let vel_mut = world_ecs.get_mut::<Velocity>(entity).unwrap();
+            let vel_mut = ecs.get_mut::<Velocity>(entity).unwrap();
             *vel_mut = new_vel;
         }
     }

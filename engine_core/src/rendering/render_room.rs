@@ -16,7 +16,7 @@ use macroquad::prelude::*;
 
 /// Draws everything needed for the given room.
 pub fn render_room(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     room: &Room,
     asset_manager: &mut AssetManager,
     render_system: &mut RenderSystem,
@@ -25,11 +25,11 @@ pub fn render_room(
     prev_positions: Option<&HashMap<Entity, Vec2>>, 
 ) {
     // Cache the needed stores
-    let sprite_store = world_ecs.get_store::<Sprite>();
-    let frame_store = world_ecs.get_store::<CurrentFrame>();
+    let sprite_store = ecs.get_store::<Sprite>();
+    let frame_store = ecs.get_store::<CurrentFrame>();
 
     // Organize entities by layer
-    let mut layer_map = collect_interpolated_layer_map(world_ecs, room, alpha, prev_positions);
+    let mut layer_map = collect_interpolated_layer_map(ecs, room, alpha, prev_positions);
 
     if layer_map.is_empty() {
         layer_map.insert(0, (Vec::new(), Vec::new()));
@@ -60,7 +60,7 @@ pub fn render_room(
         // Draw all entities
         for (entity, pos) in entities {
             draw_entity(
-            world_ecs,
+            ecs,
             asset_manager,
             frame_store,
             sprite_store,
@@ -87,7 +87,7 @@ pub fn render_room(
     }
 
     // Lighting pass
-    let lights = collect_lights(world_ecs, room, alpha, prev_positions);
+    let lights = collect_lights(ecs, room, alpha, prev_positions);
     render_system.run_spotlight_pass(
         render_cam, 
         lights, 
@@ -99,14 +99,14 @@ pub fn render_room(
 }
 
 fn draw_entity(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     asset_manager: &mut AssetManager,
     frame_store: &ComponentStore<CurrentFrame>,
     sprite_store: &ComponentStore<Sprite>,
     entity: Entity,
     pos: Vec2,
 ) {
-    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity);
 
     // Animate/Draw sprite
     if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
@@ -151,7 +151,7 @@ fn draw_entity(
     }
 
     // Don't draw placeholders for these components
-    if world_ecs.has_any::<(Light, Glow)>(entity) {
+    if ecs.has_any::<(Light, Glow)>(entity) {
         return;
     }
 
@@ -160,40 +160,40 @@ fn draw_entity(
 }
 
 pub fn highlight_selected_entity(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     entity: Entity,
     asset_manager: &mut AssetManager,
     color: Color
 ) {
-    let pos = match world_ecs.get_store::<Position>().get(entity) {
+    let pos = match ecs.get_store::<Position>().get(entity) {
         Some(p) => p,
         None => return,
     };
 
-    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity);
 
     draw_rectangle_lines(pos.position.x, pos.position.y, width, height, 2.0, color);
 }
 
 pub fn entity_dimensions(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     asset_manager: &AssetManager,
     entity: Entity,
 ) -> (f32, f32) {
-    let from_anim = world_ecs
+    let from_anim = ecs
         .get_store::<CurrentFrame>()
         .get(entity)
         .map(|cf| (cf.frame_size.x, cf.frame_size.y));
 
     let from_sprite = || {
-        world_ecs
+        ecs
             .get_store::<Sprite>()
             .get(entity)
             .and_then(|sprite| asset_manager.texture_size(sprite.sprite))
     };
 
     let from_glow = || {
-        world_ecs
+        ecs
             .get_store::<Glow>()
             .get(entity)
             .and_then(|glow| asset_manager.texture_size(glow.sprite_id))
@@ -218,18 +218,18 @@ pub fn draw_entity_placeholder(pos: Vec2) {
 /// Sorts entites by their z-layer, filters out entities that should not be 
 /// drawn and interpolates the draw positions. BTreeMap automatically sorts keys.
 fn collect_interpolated_layer_map<'a>(
-    world_ecs: &'a Ecs,
+    ecs: &'a Ecs,
     room: &Room,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
     let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
-    let pos_store = world_ecs.get_store::<Position>();
-    let cam_store = world_ecs.get_store::<RoomCamera>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
-    let layer_store = world_ecs.get_store::<Layer>();
-    let glow_store = world_ecs.get_store::<Glow>();
+    let pos_store = ecs.get_store::<Position>();
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let room_store = ecs.get_store::<CurrentRoom>();
+    let layer_store = ecs.get_store::<Layer>();
+    let glow_store = ecs.get_store::<Glow>();
 
     for (entity, pos) in &pos_store.data {
         // Skip camera
@@ -277,16 +277,16 @@ fn collect_interpolated_layer_map<'a>(
 }
 
 fn collect_lights(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     room: &Room, 
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> Vec<(Vec2, Light)> {
     let mut lights: Vec<(Vec2, Light)> = Vec::new();
 
-    let light_store = world_ecs.get_store::<Light>();
-    let pos_store = world_ecs.get_store::<Position>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+    let light_store = ecs.get_store::<Light>();
+    let pos_store = ecs.get_store::<Position>();
+    let room_store = ecs.get_store::<CurrentRoom>();
 
     for (entity, light) in &light_store.data {
         // Filter by current room

@@ -55,12 +55,12 @@ pub struct ComponentRegistry {
 }
 
 /// Factory that works for any component that implements `Component + Default`.
-pub fn generic_factory<T>(world_ecs: &mut Ecs, entity: Entity)
+pub fn generic_factory<T>(ecs: &mut Ecs, entity: Entity)
 where
     T: Component + Default + 'static,
 {
     // Directly insert the default component into its typed store.
-    world_ecs.get_store_mut::<T>().insert(entity, T::default());
+    ecs.get_store_mut::<T>().insert(entity, T::default());
 }
 
 pub fn has_component<T>(world: &Ecs, entity: Entity) -> bool
@@ -71,22 +71,22 @@ where
 }
 
 /// Helper that erases an entity from a concrete `ComponentStore<T>`.
-pub fn erase_from_store<T>(world_ecs: &mut Ecs, entity: Entity)
+pub fn erase_from_store<T>(ecs: &mut Ecs, entity: Entity)
 where
     T: Component + 'static,
 {
-    world_ecs.get_store_mut::<T>().remove(entity);
+    ecs.get_store_mut::<T>().remove(entity);
 }
 
 /// Inserts a concrete component that has been boxed as `dyn Any`.
-pub fn generic_inserter<T>(world_ecs: &mut Ecs, entity: Entity, boxed: Box<dyn Any>)
+pub fn generic_inserter<T>(ecs: &mut Ecs, entity: Entity, boxed: Box<dyn Any>)
 where
     T: Component + 'static,
 {
     let concrete = *boxed
         .downcast::<T>()
         .expect("ComponentEntry contains wrong type");
-    world_ecs.get_store_mut::<T>().insert(entity, concrete);
+    ecs.get_store_mut::<T>().insert(entity, concrete);
 }
 
 #[derive(Serialize, Deserialize, Clone)]

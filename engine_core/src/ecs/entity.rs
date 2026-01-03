@@ -34,7 +34,7 @@ impl std::ops::DerefMut for Entity {
 
 pub struct EntityBuilder<'a> {
     pub id: Entity,
-    pub world_ecs: &'a mut Ecs,
+    pub ecs: &'a mut Ecs,
 }
 
 impl<'a> EntityBuilder<'a> {
@@ -51,9 +51,9 @@ impl<'a> EntityBuilder<'a> {
 
         // Run the factory. This inserts `T` and every
         // component listed in the macro’s requirement list.
-        (reg.factory)(self.world_ecs, self.id);
+        (reg.factory)(self.ecs, self.id);
 
-        T::store_mut(self.world_ecs).insert(self.id, comp);
+        T::store_mut(self.ecs).insert(self.id, comp);
 
         self
     }
@@ -66,8 +66,8 @@ impl<'a> EntityBuilder<'a> {
 
 // TODO: does this belong here?
 // Returns a HashSet of all entities in the current room.
-pub fn entities_in_room(world_ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+pub fn entities_in_room(ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
+    let room_store = ecs.get_store::<CurrentRoom>();
     room_store
         .data
         .iter()

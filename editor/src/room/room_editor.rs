@@ -1,7 +1,8 @@
 // editor/src/room/room_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
-use crate::gui::inspector::inspector_panel::InspectorPanel;
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::tilemap::tilemap_editor::TileMapEditor;
+use crate::gui::inspector::inspector::Inspector;
 use crate::gui::panels::hierarchy_panel::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
@@ -66,7 +67,7 @@ pub struct RoomEditor {
     pub mode: RoomEditorMode,
     pub mode_selector: ModeSelector<RoomEditorMode>,
     pub tilemap_editor: TileMapEditor,
-    pub inspector: InspectorPanel,
+    pub inspector: Inspector,
     pub selected_entity: Option<Entity>,
     active_rects: Vec<Rect>,
     show_grid: bool,
@@ -98,7 +99,7 @@ impl RoomEditor {
                 options: *ALL_MODES,
             },
             tilemap_editor: TileMapEditor::new(),
-            inspector: InspectorPanel::new(),
+            inspector: Inspector::new(),
             selected_entity: None,
             active_rects: Vec::new(),
             show_grid: true,
@@ -315,7 +316,6 @@ impl RoomEditor {
         }
 
         // Scene UI
-        // self.draw_coordinates(camera, room);
         self.draw_ui(&mut game_ctx, camera);
     }
 
@@ -324,7 +324,7 @@ impl RoomEditor {
         &mut self,
         room_id: RoomId,
         camera: &Camera2D,
-        world_ecs: &mut Ecs,
+        ecs: &mut Ecs,
         asset_manager: &mut AssetManager,
         mouse_screen: Vec2,
         ui_was_clicked: bool,
@@ -334,16 +334,16 @@ impl RoomEditor {
             && !self.dragging
         {
             self.selected_entity = None;
-            for (entity, pos) in world_ecs.get_store::<Position>().data.iter() {
+            for (entity, pos) in ecs.get_store::<Position>().data.iter() {
                 // Skip tiles, UI etc
-                if !can_select_entity_in_room(world_ecs, *entity, room_id) {
+                if !can_select_entity_in_room(ecs, *entity, room_id) {
                     continue;
                 }
                 let hitbox = entity_hitbox(
                     *entity,
                     pos.position,
                     camera,
-                    world_ecs,
+                    ecs,
                     asset_manager,
                 );
                 if hitbox.contains(mouse_screen) {
@@ -360,8 +360,8 @@ impl RoomEditor {
         // Execute the drag while the button is held
         if self.dragging {
             if let Some(entity) = self.selected_entity {
-                let (w, h) = entity_dimensions(world_ecs, asset_manager, entity);
-                if let Some(position) = world_ecs
+                let (w, h) = entity_dimensions(ecs, asset_manager, entity);
+                if let Some(position) = ecs
                     .get_store_mut::<Position>()
                     .get_mut(entity)
                 {
@@ -385,7 +385,7 @@ impl RoomEditor {
                     (self.selected_entity, self.drag_start_position.take())
                 {
                     // Final position after the drag
-                    if let Some(final_pos) = world_ecs
+                    if let Some(final_pos) = ecs
                         .get_store::<Position>()
                         .get(entity)
                         .map(|p| p.position)
@@ -408,7 +408,7 @@ impl RoomEditor {
     /// Moves the currently selected entity by one pixel.
     fn handle_keyboard_move(
         &mut self,
-        world_ecs: &mut Ecs,
+        ecs: &mut Ecs,
         room_id: RoomId,
     ) {
         // Only act when an entity is selected and no drag is in progress
@@ -428,11 +428,11 @@ impl RoomEditor {
         let entity = self.selected_entity.unwrap();
 
         // Make sure the entity is moveable
-        if !can_select_entity_in_room(world_ecs, entity, room_id) {
+        if !can_select_entity_in_room(ecs, entity, room_id) {
             return;
         }
 
-        if let Some(position) = world_ecs.get_store_mut::<Position>().get_mut(entity) {
+        if let Some(position) = ecs.get_store_mut::<Position>().get_mut(entity) {
             let old = position.position;
             position.position += step;
 
@@ -508,6 +508,7 @@ impl RoomEditor {
         || self.inspector.is_mouse_over() // Inspector has its own check
         || is_dropdown_open()
         || is_modal_open()
+        || is_mouse_over_panel()
     }
 
     fn ui_was_clicked(&self) -> bool {
@@ -540,12 +541,12 @@ impl RoomEditor {
 }
 
 pub fn can_select_entity_in_room(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     entity: Entity,
     room_id: RoomId,
 ) -> bool {
     // Make sure the entity is in the requested room
-    match world_ecs.get_store::<CurrentRoom>().get(entity) {
+    match ecs.get_store::<CurrentRoom>().get(entity) {
         Some(CurrentRoom(id)) => *id == room_id,
         None => false,
     }

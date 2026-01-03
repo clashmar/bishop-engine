@@ -1,3 +1,4 @@
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 // editor/src/tilemap/tilemap_panel.rs
 use crate::tilemap::background_module::BackgroundModule;
 use crate::assets::asset_manager::AssetManager;
@@ -97,6 +98,8 @@ impl TilemapPanel {
         // Layout the modules vertically
         let mut y = inner.y + 10.0;
 
+        let blocked = is_mouse_over_panel();
+
         // Palette
         self.palette.set_columns_for_width(inner.w - 20.0);
         let height = self.palette.height();
@@ -107,10 +110,10 @@ impl TilemapPanel {
 
         // Background module
         let background_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.background.draw(background_rect, tilemap);
+        self.background.draw(background_rect, tilemap, blocked);
 
         // Draw create button
-        if gui_button(create_rect, create_label) {
+        if gui_button(create_rect, create_label, blocked) {
             if self.palette.ui.open && self.palette.ui.mode == TilePaletteUiMode::Create {
                 self.palette.ui.open = false; // Hide dialog
             } else {
@@ -127,7 +130,7 @@ impl TilemapPanel {
             let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
             let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
 
-            if gui_button(edit_rect, edit_label) {
+            if gui_button(edit_rect, edit_label, blocked) {
                 self.palette.ui.mode = TilePaletteUiMode::Edit;
                 self.palette.ui.edit_index = self.palette.selected_index;
                 self.palette.ui.edit_initialized = true;

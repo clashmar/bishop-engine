@@ -20,9 +20,9 @@ pub struct CameraManager {
 
 impl CameraManager {
     /// Initialise with the player’s starting room.
-    pub fn new(world_ecs: &Ecs, room_id: RoomId, player_pos: Vec2) -> Self {
-        let room_cameras = get_room_cameras(&world_ecs, room_id);
-        let (active_camera, _) = Self::find_best_camera_for_room(&world_ecs, &room_cameras, player_pos)
+    pub fn new(ecs: &Ecs, room_id: RoomId, player_pos: Vec2) -> Self {
+        let room_cameras = get_room_cameras(&ecs, room_id);
+        let (active_camera, _) = Self::find_best_camera_for_room(&ecs, &room_cameras, player_pos)
             .expect("Room must contain at least one camera.");
 
         Self { 
@@ -36,19 +36,19 @@ impl CameraManager {
     /// Picks the best camera and update it if necessary.
     pub fn update_active(
         &mut self, 
-        world_ecs: &Ecs, 
+        ecs: &Ecs, 
         room: &Room,
         player_pos: Vec2) 
         {
         // If the player moved to another room get the new cameras
         if self.current_room != Some(room.id) {
             self.current_room = Some(room.id);
-            self.room_cameras = get_room_cameras(world_ecs, self.current_room.unwrap());
+            self.room_cameras = get_room_cameras(ecs, self.current_room.unwrap());
         }
 
         // Pick the best camera
         if let Some((best_cam, mode)) = Self::find_best_camera_for_room(
-            world_ecs, 
+            ecs, 
             &self.room_cameras, player_pos
         ) {
             // Prevent interpolation with the previous camera
@@ -66,7 +66,7 @@ impl CameraManager {
 
     /// Finds the most suitable camera for a given room and player position.
     pub fn find_best_camera_for_room(
-        world_ecs: &Ecs,
+        ecs: &Ecs,
         room_cameras: &[(Entity, RoomCamera)],
         player_pos: Vec2,
     ) -> Option<(GameCamera, CameraMode)> {
@@ -74,7 +74,7 @@ impl CameraManager {
         let mut closest: Option<(f32, GameCamera, CameraMode)> = None;
 
         for &(entity, ref cam) in room_cameras.iter() {
-            let game_cam = room_to_game_camera(world_ecs, &entity, cam, player_pos);
+            let game_cam = room_to_game_camera(ecs, &entity, cam, player_pos);
             match cam.camera_mode {
                 CameraMode::Fixed => {
                     if Self::point_in_camera_view(&game_cam, player_pos) {

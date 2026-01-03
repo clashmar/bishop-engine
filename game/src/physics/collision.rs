@@ -97,7 +97,7 @@ fn resolve_axis(
 /// Sweep the requested movement and return the maximal safe delta.
 pub fn sweep_move(
     asset_manager: &AssetManager,
-    world_ecs: &mut Ecs,
+    ecs: &mut Ecs,
     tilemap: &TileMap,
     room_origin: Vec2,               
     entity_position: Vec2,                 
@@ -125,10 +125,10 @@ pub fn sweep_move(
 
     // Other solid entities
     // Iterate over every Collider component in the world, skip the moving one
-    for (other_entity, other_coll) in world_ecs.get_store::<Collider>().data.iter() {
+    for (other_entity, other_coll) in ecs.get_store::<Collider>().data.iter() {
         // Do not test against ourselves
         if let Some(other_pos) =
-            world_ecs.get::<Position>(*other_entity)
+            ecs.get::<Position>(*other_entity)
         {
             if (other_pos.position - entity_position).length() < 0.001 {
                 // Same entity
@@ -137,10 +137,10 @@ pub fn sweep_move(
         }
 
         // Only solid entities block movement
-        if let Some(solid) = world_ecs.get::<Solid>(*other_entity) {
+        if let Some(solid) = ecs.get::<Solid>(*other_entity) {
             if solid.0 {
                 if let Some(other_pos) =
-                    world_ecs.get::<Position>(*other_entity)
+                    ecs.get::<Position>(*other_entity)
                 {
                     let aabb = aabb(other_pos.position, *other_coll);
                     obstacles.push(aabb);

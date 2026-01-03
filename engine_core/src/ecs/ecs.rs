@@ -1,4 +1,4 @@
-// engine_core/src/ecs/world_ecs.rs
+// engine_core/src/ecs/ecs.rs
 use crate::ecs::component_registry::*;
 use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
@@ -27,7 +27,7 @@ impl Ecs {
         self.next_entity_id += 1;
         EntityBuilder {
             id: Entity(self.next_entity_id),
-            world_ecs: self,
+            ecs: self,
         }
     }
 
@@ -235,12 +235,12 @@ impl<'de> Deserialize<'de> for Ecs {
             stores.insert(type_id, any_box);
         }
 
-        let world_ecs = Ecs {
+        let ecs = Ecs {
             stores,
             next_entity_id: helper.next_entity_id,
         };
 
-        Ok(world_ecs)
+        Ok(ecs)
     }
 }
 
