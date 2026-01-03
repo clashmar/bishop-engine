@@ -49,11 +49,11 @@ where
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let ecs = &mut game_ctx.ecs;
 
         // Grab a mutable reference to the component instance
         let component = {
-            match world_ecs
+            match ecs
                 .get_store_mut::<T>()
                 .get_mut(entity)
             {
@@ -223,6 +223,6 @@ where
     fn removable(&self) -> bool { true }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
-        game_ctx.cur_world_ecs.get_store_mut::<T>().remove(entity);
+        game_ctx.ecs.get_store_mut::<T>().remove(entity);
     }
 }

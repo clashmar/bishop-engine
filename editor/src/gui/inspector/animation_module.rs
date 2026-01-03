@@ -47,8 +47,8 @@ impl InspectorModule for AnimationModule {
     fn removable(&self) -> bool { true }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
-        game_ctx.cur_world_ecs.get_store_mut::<Animation>().remove(entity);
-        game_ctx.cur_world_ecs.get_store_mut::<CurrentFrame>().remove(entity);
+        game_ctx.ecs.get_store_mut::<Animation>().remove(entity);
+        game_ctx.ecs.get_store_mut::<CurrentFrame>().remove(entity);
     }
 
     fn draw(
@@ -57,15 +57,15 @@ impl InspectorModule for AnimationModule {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let ecs = &mut game_ctx.ecs;
 
         let asset_manager = &mut game_ctx.asset_manager;
 
         let mut variant_changed = false;
         let mut all_ids: Vec<ClipId> = vec![];
-        fill_all_clip_ids(world_ecs, &mut all_ids);
+        fill_all_clip_ids(ecs, &mut all_ids);
         
-        let animation = world_ecs
+        let animation = ecs
             .get_mut::<Animation>(entity)
             .expect("Animation must exist");
 

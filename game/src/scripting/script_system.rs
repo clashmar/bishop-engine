@@ -100,8 +100,8 @@ impl ScriptSystem {
         let entities_and_scripts: Vec<_> = {
             let game_state = engine.game_state.borrow();
             let ctx = game_state.game.ctx();
-            let world_ecs = ctx.cur_world_ecs;
-            let script_store = world_ecs.get_store::<Script>();
+            let ecs = ctx.ecs;
+            let script_store = ecs.get_store::<Script>();
             
             // Collect all entities that have scripts
             script_store.data.iter()
@@ -152,10 +152,10 @@ impl ScriptSystem {
     // Load all scripts for the given ecs.
     pub fn load_scripts(
         lua: &Lua,
-        world_ecs: &mut Ecs, 
+        ecs: &mut Ecs, 
         script_manager: &mut ScriptManager
     ) -> LuaResult<()> {
-        let script_store = world_ecs.get_store_mut::<Script>();
+        let script_store = ecs.get_store_mut::<Script>();
 
         for (entity, script) in script_store.data.iter_mut() {
             script.load(lua, script_manager, *entity)?; // TODO: load every frame?

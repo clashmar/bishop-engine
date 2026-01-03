@@ -116,6 +116,7 @@ impl RoomEditor {
         &mut self, 
         camera: &mut Camera2D,
         room_id: RoomId,
+        ecs: &mut Ecs,
         current_world: &mut World,
         asset_manager: &mut AssetManager,
     ) {
@@ -124,8 +125,6 @@ impl RoomEditor {
             .filter(|r| r.id != room_id)
             .map(|r| (r.position, r.size))
             .collect();
-
-        let world_ecs = &mut current_world.world_ecs;
         
         let room = current_world.rooms
             .iter_mut()
@@ -151,7 +150,7 @@ impl RoomEditor {
         let delta_time = get_frame_time();
         
         update_animation_sytem(
-            world_ecs,
+            ecs,
             asset_manager,
             delta_time, 
             room.id
@@ -164,7 +163,7 @@ impl RoomEditor {
                     camera,
                     room, 
                     &other_bounds,
-                    world_ecs,
+                    ecs,
                 ).await;
             }
             RoomEditorMode::Scene => {
@@ -175,27 +174,27 @@ impl RoomEditor {
                 let drag_handled = self.handle_selection(
                     room.id,
                     camera,
-                    world_ecs,
+                    ecs,
                     asset_manager,
                     mouse_screen,
                     ui_was_clicked,
                 );
 
                 if !drag_handled {
-                    self.handle_keyboard_move(world_ecs, room.id);
+                    self.handle_keyboard_move(ecs, room.id);
                 }
 
                 // Create a new entity if create was pressed
                 if self.create_entity_requested && self.inspector.target.is_none() {
                     // Build the entity
-                    let entity = &mut current_world.world_ecs
+                    let entity = ecs
                         .create_entity()
                         .with(Position { position: room.position })
                         .with(CurrentRoom(room.id))
                         .finish();
 
                     // Immediately select it so the inspector shows the newly‑created entity
-                    self.selected_entity = Some(*entity);
+                    self.selected_entity = Some(entity);
                     self.create_entity_requested = false;
                 }
 
@@ -226,7 +225,7 @@ impl RoomEditor {
         self.active_rects.clear();
 
         let mut game_ctx = game.ctx_mut();
-        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let ecs = &mut game_ctx.ecs;
         let room = &mut game_ctx.cur_room;
         let asset_manager = &mut game_ctx.asset_manager;
 
@@ -259,7 +258,7 @@ impl RoomEditor {
             }
             RoomEditorMode::Scene => {
                 // TODO: Pick best camera for preview from room cameras
-                let room_camera = get_room_camera(world_ecs, room_id)
+                let room_camera = get_room_camera(ecs, room_id)
                     .expect("This room should have at least one camera.");
 
                 let render_cam = if self.view_preview {
@@ -272,7 +271,7 @@ impl RoomEditor {
 
                 // Draws everything in the room. Same implementation as the game.
                 render_room(
-                    world_ecs, 
+                    ecs, 
                     room, 
                     asset_manager,
                     render_system,
@@ -299,17 +298,17 @@ impl RoomEditor {
                         grid::draw_grid(camera);
                     }
                     
-                    draw_camera_placeholders(&world_ecs, room_id);
-                    draw_light_placeholders(world_ecs, room_id);
-                    draw_glow_placeholders(world_ecs, asset_manager, room_id);
+                    draw_camera_placeholders(&ecs, room_id);
+                    draw_light_placeholders(ecs, room_id);
+                    draw_glow_placeholders(ecs, asset_manager, room_id);
 
                     if let Some(selected_entity) = self.selected_entity {
-                        if !world_ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
-                            highlight_selected_entity(world_ecs, selected_entity, asset_manager, YELLOW);
+                        if !ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
+                            highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW);
                         }
 
-                        draw_collider(world_ecs, selected_entity);
-                        self.draw_camera_viewport(camera, world_ecs, selected_entity);
+                        draw_collider(ecs, selected_entity);
+                        self.draw_camera_viewport(camera, ecs, selected_entity);
                     }
                 }
             }

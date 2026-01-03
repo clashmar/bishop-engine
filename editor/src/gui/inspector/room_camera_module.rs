@@ -31,9 +31,9 @@ impl InspectorModule for RoomCameraModule {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let ecs = &mut game_ctx.ecs;
 
-        let cam = world_ecs
+        let cam = ecs
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
 

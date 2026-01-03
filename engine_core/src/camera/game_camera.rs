@@ -196,10 +196,10 @@ pub fn room_to_game_camera(
 }
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
-pub fn get_room_camera(world_ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
-    let pos_store = world_ecs.get_store::<Position>();
-    let cam_store = world_ecs.get_store::<RoomCamera>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+pub fn get_room_camera(ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
+    let pos_store = ecs.get_store::<Position>();
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let room_store = ecs.get_store::<CurrentRoom>();
 
     for (entity, room_cam) in cam_store.data.iter() {
         if let Some(current_room) = room_store.get(*entity) {

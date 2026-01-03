@@ -20,8 +20,8 @@ pub struct Game {
     pub id: Uuid,
     /// Human readable name of the game.
     pub name: String,
-    /// Stores the global Ecs.
-    pub global_ecs: Ecs,
+    /// Stores the game ECS.
+    pub ecs: Ecs,
     /// All worlds belonging to this game instance.
     pub worlds: Vec<World>,
     /// Asset manager for the game.
@@ -40,8 +40,7 @@ pub struct Game {
 /// immutable systems that are usually needed at the same time.
 pub struct GameCtx<'a> {
     // TODO: wrap in options
-    pub global_ecs: &'a Ecs,
-    pub cur_world_ecs: &'a Ecs,
+    pub ecs: &'a Ecs,
     pub cur_room: &'a Room,
     pub asset_manager: &'a AssetManager,
     pub script_manager: &'a ScriptManager,
@@ -51,8 +50,7 @@ pub struct GameCtx<'a> {
 /// mutable systems that are usually needed at the same time.
 pub struct GameCtxMut<'a> {
     // TODO: wrap in options
-    pub global_ecs: &'a mut Ecs,
-    pub cur_world_ecs: &'a mut Ecs,
+    pub ecs: &'a mut Ecs,
     pub cur_room: &'a mut Room,
     pub asset_manager: &'a mut AssetManager,
     pub script_manager: &'a mut ScriptManager,
@@ -61,16 +59,14 @@ pub struct GameCtxMut<'a> {
 impl Game {
     /// Returns an immutable game context.
     pub fn ctx<'a>(&'a self) -> GameCtx<'a> {
-        let world = self
+        let cur_world = self
             .worlds
             .iter()
             .find(|w| w.id == self.current_world_id)
             .expect("There must be a current world.");
 
-        let cur_world_ecs = &world.world_ecs;
-        let rooms = &world.rooms;
-
-        let room_id = world.current_room_id.expect("Room id not found.");
+        let rooms = &cur_world.rooms;
+        let room_id = cur_world.current_room_id.expect("Room id not found.");
 
         let cur_room = rooms
             .iter()
@@ -78,8 +74,7 @@ impl Game {
             .expect("Room not found.");
 
         GameCtx {
-            global_ecs: &self.global_ecs,
-            cur_world_ecs,
+            ecs: &self.ecs,
             cur_room,
             asset_manager: &self.asset_manager,
             script_manager: &self.script_manager,
@@ -94,11 +89,7 @@ impl Game {
             .find(|w| w.id == self.current_world_id)
             .expect("There must be a current world.");
 
-        // First borrow into separate disjoint fields
-        let cur_world_ecs = &mut world.world_ecs;
         let rooms = &mut world.rooms;
-
-        // Now you can borrow a room
         let room_id = world.current_room_id.expect("Room id not found.");
 
         let cur_room = rooms
@@ -107,8 +98,7 @@ impl Game {
             .expect("Room not found.");
 
         GameCtxMut {
-            global_ecs: &mut self.global_ecs,
-            cur_world_ecs,
+            ecs: &mut self.ecs,
             cur_room,
             asset_manager: &mut self.asset_manager,
             script_manager: &mut self.script_manager,
@@ -164,6 +154,15 @@ impl Game {
                 .map(|w| w.id)
                 .unwrap_or(WorldId(Uuid::nil()));
         }
+    }
+
+    /// Gets mutable references to both ECS and a specific world.
+    pub fn get_ecs_and_world_mut(&mut self, world_id: WorldId) -> (&mut Ecs, &mut World) {
+        let world = self.worlds
+            .iter_mut()
+            .find(|w| w.id == world_id)
+            .expect("World id not present in game.");
+        (&mut self.ecs, world)
     }
 
     /// Syncs all assets/scripts that belong to this game, sets the global tile size and inits input.

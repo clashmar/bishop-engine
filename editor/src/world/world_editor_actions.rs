@@ -1,21 +1,22 @@
 // editor/src/world/world_editor_actions.rs
-use engine_core::ecs::component::CurrentRoom;
-use engine_core::ui::text::*;
-use engine_core::ui::widgets::DEFAULT_FONT_SIZE_16;
-use engine_core::world::room::RoomId;
-use engine_core::{ 
-    engine_global::tile_size, 
-    tiles::tilemap::TileMap
-};
-use engine_core::{world::{room::{Room, RoomVariant}, world::World}};
-use crate::world::coord;
-use macroquad::prelude::*;
+use crate::ui::widgets::DEFAULT_FONT_SIZE_16;
 use crate::world::world_editor::WorldEditor;
+use crate::engine_global::tile_size;
+use crate::tiles::tilemap::TileMap;
+use crate::ecs::ecs::Ecs;
+use crate::world::coord;
+use engine_core::ecs::component::CurrentRoom;
+use engine_core::world::room::RoomVariant;
+use engine_core::world::world::World;
+use engine_core::world::room::*;
+use engine_core::ui::text::*;
+use macroquad::prelude::*;
 
 impl WorldEditor {
     /// Create a new room and return its id.
     pub fn create_room(
         &mut self,
+        ecs: &mut Ecs,
         world: &mut World,
         name: &str,
         position: Vec2,
@@ -42,7 +43,7 @@ impl WorldEditor {
                 darkness: 0.
             };
             
-            let _camera = room.create_room_camera(&mut world.world_ecs, id);
+            let _camera = room.create_room_camera(ecs, id);
 
             world.rooms.push(room);
             id
@@ -65,7 +66,12 @@ impl WorldEditor {
     }
 
     /// Delete a room by its RoomId.
-    pub fn delete_room(&mut self, world: &mut World, room_id: RoomId) {
+    pub fn delete_room(
+        &mut self, 
+        ecs: &mut Ecs,
+        world: &mut World, 
+        room_id: RoomId
+    ) {
         // Find the index of the room we want to remove
         let idx = match world.rooms.iter().position(|m| m.id == room_id) {
             Some(i) => i,
@@ -97,7 +103,7 @@ impl WorldEditor {
         // Gather all entities from the current room.
         let mut entities_to_remove = Vec::new();
         {
-            let current_room_store = world.world_ecs.get_store::<CurrentRoom>();
+            let current_room_store = ecs.get_store::<CurrentRoom>();
             for (&entity, &CurrentRoom(room)) in current_room_store.data.iter() {
                 if room == room_id {
                     entities_to_remove.push(entity);
@@ -107,19 +113,20 @@ impl WorldEditor {
 
         // Delete the entities
         for entity in entities_to_remove {
-            world.world_ecs.remove_entity(entity);
+            ecs.remove_entity(entity);
         }
     }
 
     /// Helper used by the UI when the user finishes a drag‑to‑place.
     pub fn place_room_from_drag(
         &mut self,
+        ecs: &mut Ecs,
         world: &mut World,
         top_left: Vec2,
         size: Vec2,
     ) -> RoomId {
         let origin_in_pixels = top_left * tile_size();
-        let new_id = self.create_room(world, "untitled", origin_in_pixels, size);
+        let new_id = self.create_room(ecs, world, "untitled", origin_in_pixels, size);
         new_id
     }
 

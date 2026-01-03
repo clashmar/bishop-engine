@@ -37,9 +37,10 @@ pub async fn create_new_game(name: String) -> Game {
 
     // Ensure the folder structure exists.
     create_game_folders(&name);
-
+    
     // Build the game
-    let world = create_new_world();
+    let mut ecs = Ecs::default();
+    let world = create_new_world(&mut ecs);
     let current_id = world.id;
 
     let asset_manager = AssetManager::new(name.clone()).await;
@@ -49,7 +50,7 @@ pub async fn create_new_game(name: String) -> Game {
         save_version: 1,
         id: Uuid::new_v4(),
         name,
-        global_ecs: Ecs::default(),
+        ecs: ecs,
         worlds: vec![world],
         asset_manager,
         script_manager,
@@ -175,18 +176,16 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
 }
 
 /// Create a fresh world with a single default room.
-pub fn create_new_world() -> World {
+pub fn create_new_world(ecs: &mut Ecs) -> World {
     let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
-    let mut world_ecs = Ecs::default();
-    let first_room = Room::default(&mut world_ecs);
+    let first_room = Room::default(ecs);
     let room_id = first_room.id;
     let starting_position = vec2(1.0, 1.0);
 
     let mut world = World {
         id,
         name: name.clone(),
-        world_ecs,
         rooms: vec![first_room],
         current_room_id: None,
         starting_room_id: Some(room_id),
@@ -194,7 +193,7 @@ pub fn create_new_world() -> World {
         meta: WorldMeta::default()
     };
 
-    let _player = world.world_ecs
+    let _player = ecs
         .create_entity()
         .with(Player)
         .with(Position { position: starting_position })

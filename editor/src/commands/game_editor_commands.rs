@@ -1,14 +1,14 @@
 // editor/src/commands/game_editor_commands.rs
-use engine_core::ui::toast::Toast;
-use crate::storage::editor_storage::*;
-use engine_core::assets::sprite::SpriteId;
-use engine_core::world::world::World;
-use crate::with_editor;
-use crate::editor::EditorMode;
-use engine_core::game::game::Game;
-use engine_core::world::world::WorldId;
-use macroquad::prelude::*;
 use crate::commands::editor_command_manager::EditorCommand;
+use crate::storage::editor_storage::*;
+use crate::editor::EditorMode;
+use crate::with_editor;
+use engine_core::assets::sprite::SpriteId;
+use engine_core::world::world::WorldId;
+use engine_core::world::world::World;
+use engine_core::ui::toast::Toast;
+use engine_core::game::game::Game;
+use macroquad::prelude::*;
 
 /// Undo-able move‑entity command.
 #[derive(Debug)]
@@ -127,7 +127,7 @@ impl EditorCommand for CreateWorldCmd {
     fn execute(&mut self) {
         with_editor(|editor| {
             let game = &mut editor.game;
-            let world = create_new_world();
+            let world = create_new_world(&mut game.ecs);
             self.world_id = Some(world.id);
             game.add_world(world);
         });

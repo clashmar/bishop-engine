@@ -81,10 +81,10 @@ impl InspectorModule for TransformModule {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let ecs = &mut game_ctx.ecs;
 
         // Show the current world position
-        if let Some(_pos) = world_ecs.get::<Position>(entity) {
+        if let Some(_pos) = ecs.get::<Position>(entity) {
             let readout = format!("World position :");
             draw_text_ui(&readout, rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
@@ -96,6 +96,6 @@ impl InspectorModule for TransformModule {
             rect.w,
             40.0,
         );
-        self.draw_position_fields(edit_rect, world_ecs, entity);
+        self.draw_position_fields(edit_rect, ecs, entity);
     }
 }

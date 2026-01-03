@@ -144,16 +144,3 @@ where
         f(&mut pm)
     })
 }
-
-/// Gets async mutable access to the `PanelManager`.
-pub async fn with_panel_manager_async<R, F>(f: F) -> R
-where
-    F: for<'a> FnOnce(&'a mut PanelManager) -> Pin<Box<dyn Future<Output = R> + 'a>>,
-{
-    let services = EDITOR_SERVICES.with(|s| s.clone());
-    let mut pm_ref = services.panel_manager.borrow_mut();
-    
-    // Call the closure and await the future
-    let future = f(&mut*pm_ref);
-    future.await
-}

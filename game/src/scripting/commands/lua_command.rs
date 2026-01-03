@@ -27,7 +27,7 @@ impl LuaCommand for SetComponentCmd {
         if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == self.comp_name) {
             if let Ok(boxed) = (reg.from_lua)(&engine.lua, self.value.clone()) {
                 (reg.inserter)(
-                    &mut game_state.game.current_world_mut().world_ecs,
+                    &mut game_state.game.ecs,
                     Entity(self.entity),
                     boxed,
                 );
@@ -51,9 +51,9 @@ pub struct CallEntityFnCmd {
 impl LuaCommand for CallEntityFnCmd {
     fn execute(&mut self, engine: &mut Engine) {
         let game_state = engine.game_state.borrow();
-        let world = &game_state.game.current_world().world_ecs;
+        let ecs = &game_state.game.ecs;
 
-        let script = match world.get::<Script>(self.entity) {
+        let script = match ecs.get::<Script>(self.entity) {
             Some(s) => s,
             None => return,
         };

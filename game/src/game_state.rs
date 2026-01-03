@@ -44,9 +44,9 @@ impl GameState {
             .expect("Missing id for the starting room")
             .clone();
 
-        let world_ecs = &game.current_world().world_ecs;
-        let player_pos = world_ecs.get_player_position().position;
-        *camera_manager = CameraManager::new(world_ecs, current_room.id, player_pos);
+        let ecs = &game.ecs;
+        let player_pos = ecs.get_player_position().position;
+        *camera_manager = CameraManager::new(ecs, current_room.id, player_pos);
 
         ScriptSystem::init(lua, &mut game.script_manager);
 
@@ -66,9 +66,9 @@ impl GameState {
         // set_engine_mode(EngineMode::Game); TODO: figure this out
 
         game.initialize(lua).await;
-        let world_ecs = &game.current_world().world_ecs;
-        let player_pos = world_ecs.get_player_position().position;
-        *camera_manager = CameraManager::new(world_ecs, room.id, player_pos);
+        let ecs = &game.ecs;
+        let player_pos = ecs.get_player_position().position;
+        *camera_manager = CameraManager::new(ecs, room.id, player_pos);
 
         ScriptSystem::init(lua, &mut game.script_manager);
 
@@ -80,10 +80,9 @@ impl GameState {
 
     /// Updates the previous position for all entities in the active room.
     pub fn store_previous_positions(&mut self, camera_manager: &mut CameraManager) {
-        let current_world = self.game.current_world_mut();
-
-        let pos_store = current_world.world_ecs.get_store::<Position>();
-        let room_store = current_world.world_ecs.get_store::<CurrentRoom>();
+        let ecs = &self.game.ecs;
+        let pos_store = ecs.get_store::<Position>();
+        let room_store = ecs.get_store::<CurrentRoom>();
 
         // Store the camera target
         camera_manager.previous_position = Some(camera_manager.active.camera.target);
@@ -91,7 +90,7 @@ impl GameState {
         self.prev_positions = pos_store.data
             .iter()
             .filter_map(|(entity, pos)| {
-                room_store.get(*entity).filter(|cr| cr.0 == current_world.current_room_id.unwrap()) // TODO: handle unwrap
+                room_store.get(*entity).filter(|cr| cr.0 == self.game.current_world().current_room_id.unwrap()) // TODO: handle unwrap
                     .map(|_| (*entity, pos.position))
             })
             .collect();

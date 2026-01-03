@@ -98,10 +98,13 @@ impl Editor {
                 }
             }
             EditorMode::World(world_id) => {
+                let (ecs, world) = self.game.get_ecs_and_world_mut(world_id);
+
                 // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
-                    &mut self.game.get_world_mut(world_id)
+                    ecs,
+                    world,
                 ).await {
                     self.current_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
@@ -137,12 +140,13 @@ impl Editor {
                     self.room_editor.update(
                         &mut self.camera, 
                         room_id,
+                        &mut self.game.ecs,
                         current_world,
                         &mut self.game.asset_manager,
                     ).await;
 
                     collider_system::update_colliders_from_sprites(
-                        &mut current_world.world_ecs,
+                        &mut self.game.ecs,
                         &mut self.game.asset_manager,
                     );
 

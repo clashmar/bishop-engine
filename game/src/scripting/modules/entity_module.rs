@@ -135,12 +135,12 @@ impl LuaMethod<EntityHandle> for GetMethod {
         methods.add_method(GET, |lua, this, comp_name: String| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_state = ctx.game_state.borrow();
-            let world_ecs = &game_state.game.current_world().world_ecs;
+            let ecs = &game_state.game.ecs;
             let entity = this.entity;
 
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
-                if (reg.has)(world_ecs, entity) {
-                    let boxed = (reg.clone)(world_ecs, entity);
+                if (reg.has)(ecs, entity) {
+                    let boxed = (reg.clone)(ecs, entity);
                     (reg.to_lua)(lua, &*boxed)
                 } else {
                     Err(mlua::Error::RuntimeError(format!(
@@ -227,19 +227,19 @@ impl LuaMethod<EntityHandle> for HasMethod {
         // entity:has
         methods.add_method(HAS, |lua, this, comp_name: String| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let binding = ctx.game_state.borrow();
-            let world_ecs = &binding.game.current_world().world_ecs;
-            Ok(COMPONENTS.iter().find(|r| r.type_name == comp_name).map_or(false, |r| (r.has)(world_ecs, this.entity)))
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+            Ok(COMPONENTS.iter().find(|r| r.type_name == comp_name).map_or(false, |r| (r.has)(ecs, this.entity)))
         });
 
         // entity:has_any
         methods.add_method(HAS_ANY, |lua, this, comps: Variadic<String>| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let binding = ctx.game_state.borrow();
-            let world_ecs = &binding.game.current_world().world_ecs;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
             for comp_name in comps.iter() {
                 if let Some(r) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
-                    if (r.has)(world_ecs, this.entity) {
+                    if (r.has)(ecs, this.entity) {
                         return Ok(true);
                     }
                 }
@@ -250,11 +250,11 @@ impl LuaMethod<EntityHandle> for HasMethod {
         // entity:has_all
         methods.add_method(HAS_ALL, |lua, this, comps: Variadic<String>| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let binding = ctx.game_state.borrow();
-            let world_ecs = &binding.game.current_world().world_ecs;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
             for comp_name in comps.iter() {
                 if let Some(r) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
-                    if !(r.has)(world_ecs, this.entity) { return Ok(false); }
+                    if !(r.has)(ecs, this.entity) { return Ok(false); }
                 } else { return Ok(false); }
             }
             Ok(true)
@@ -313,8 +313,8 @@ impl LuaMethod<EntityHandle> for FindBestInteractableMethod {
         methods.add_method(FIND_BEST_INTERACTABLE, |lua, _this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_state = ctx.game_state.borrow();
-            let world_ecs = &game_state.game.current_world().world_ecs;
-            if let Some(entity) = find_best_interactable(world_ecs) {
+            let ecs = &game_state.game.ecs;
+            if let Some(entity) = find_best_interactable(ecs) {
                 lua_entity_handle(lua, entity)
             } else {
                 Ok(Value::Nil)
