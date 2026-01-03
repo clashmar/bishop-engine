@@ -62,11 +62,9 @@ impl TransitionManager {
     pub fn handle_transitions(
         game_state: &mut GameState,
     ) {
-        let world = game_state.game.current_world_mut();
-        let rooms = world.rooms.clone();
-        let world_ecs = &mut world.world_ecs;
+        let rooms = game_state.game.current_world().rooms.clone();
         
-        let entities: Vec<_> = world_ecs
+        let entities: Vec<_> = game_state.game.ecs
             .get_store::<Position>()
             .data
             .keys()
@@ -75,11 +73,11 @@ impl TransitionManager {
 
         for entity in entities {
             let (pos, _coll) = {
-                let p = match world_ecs.get::<Position>(entity) {
+                let p = match game_state.game.ecs.get::<Position>(entity) {
                     Some(v) => v.position,
                     None => continue,           
                 };
-                let c = match world_ecs.get::<Collider>(entity) {
+                let c = match game_state.game.ecs.get::<Collider>(entity) {
                     Some(v) => v,
                     None => continue,           
                 };
@@ -92,7 +90,7 @@ impl TransitionManager {
                 None => return,
             }; 
 
-            if let Some(comp) = world_ecs.get_mut::<CurrentRoom>(entity) {
+            if let Some(comp) = game_state.game.ecs.get_mut::<CurrentRoom>(entity) {
                 if comp.0 == target_id {
                     return;
                 } else {
@@ -100,9 +98,9 @@ impl TransitionManager {
                 }
             }
 
-            if world_ecs.get_player_entity() == entity {
+            if game_state.game.ecs.get_player_entity() == entity {
                 if let Some(new_room) = rooms.iter().find(|r| r.id == target_id) {
-                    world.current_room_id = Some(new_room.id);
+                    game_state.game.current_world_mut().current_room_id = Some(new_room.id);
                 }
             }
         }

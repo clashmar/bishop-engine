@@ -1,5 +1,7 @@
 // engine_core/src/engine_global.rs
-use crate::{constants::*, ecs::component::Position, game::game::Game};
+use crate::ecs::component::Position;
+use crate::game::game::Game;
+use crate::constants::*;
 use std::sync::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -62,10 +64,10 @@ pub fn update_tile_size(game: &mut Game, old_size: f32, new_size: f32) {
         for room in &mut world.rooms {
             room.position *= sf;
         }
+    }
 
-        let pos_store = world.world_ecs.get_store_mut::<Position>();
-        for (_entity, pos) in &mut pos_store.data {
-            pos.position *= sf;
-        }
+    let pos_store = game.ecs.get_store_mut::<Position>();
+    for (_entity, pos) in &mut pos_store.data {
+        pos.position *= sf;
     }
 }

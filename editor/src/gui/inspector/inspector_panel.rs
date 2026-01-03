@@ -106,7 +106,7 @@ impl InspectorPanel {
         // When an entity is selected we show “Remove” and “Add Component”
         if let Some(entity) = self.target {
             if Controls::copy() {
-                copy_entity(game_ctx.cur_world_ecs, entity);
+                copy_entity(game_ctx.ecs, entity);
             }
 
             // Labels
@@ -133,7 +133,7 @@ impl InspectorPanel {
 
             // Draw the drop‑down menu when in add mode
             if self.add_mode {
-                self.draw_add_component_menu(add_rect, game_ctx.cur_world_ecs);
+                self.draw_add_component_menu(add_rect, game_ctx.ecs);
             }
 
             // Normal inspector UI (hidden while add_mode is true)
@@ -158,7 +158,7 @@ impl InspectorPanel {
                     Color::new(0., 0., 0., 0.6),
                 );
 
-                let total_content_h = self.total_content_height(&game_ctx.cur_world_ecs, entity);
+                let total_content_h = self.total_content_height(&game_ctx.ecs, entity);
 
                 if inner.contains(mouse_position().into()) {
                     let (_, dy) = mouse_wheel();
@@ -172,7 +172,7 @@ impl InspectorPanel {
                 // Render modules inside the scroll‑view
                 let mut y = inner.y + INSET - self.scroll_offset;
                 for module in &mut self.modules {
-                    if module.visible(game_ctx.cur_world_ecs, entity) {
+                    if module.visible(game_ctx.ecs, entity) {
                         let h = module.height();
                         
                         // Only draw when the module intersects the visible area
@@ -211,14 +211,14 @@ impl InspectorPanel {
             // Draw buttons at the top after the covers
             // Add entity
             if menu_button(add_rect, add_label, false) {
-                if self.can_show_any_component(game_ctx.cur_world_ecs) {
+                if self.can_show_any_component(game_ctx.ecs) {
                     self.add_mode = !self.add_mode;
                 }
             }
 
             // Remove button
             // Don't show remove for player entity
-            if !(game_ctx.cur_world_ecs.get_store::<Player>().contains(entity)) {
+            if !(game_ctx.ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
                 if menu_button(remove_rect, remove_label, false) || Controls::delete() && !input_is_focused() {
@@ -256,7 +256,7 @@ impl InspectorPanel {
 
             if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
-                let _ = game_ctx.cur_world_ecs
+                let _ = game_ctx.ecs
                     .create_entity()
                     .with(RoomCamera::new(game_ctx.cur_room.id))
                     .with(Position { position: game_ctx.cur_room.position })
@@ -298,7 +298,7 @@ impl InspectorPanel {
         // Process pending component addition
         if let (Some(name), Some(entity)) = (self.pending_add.take(), self.target) {
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == name) {
-                (reg.factory)(game_ctx.cur_world_ecs, entity);
+                (reg.factory)(game_ctx.ecs, entity);
             } else {
                 eprintln!("Component `{}` not found in registry", name);
             }

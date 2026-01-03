@@ -173,15 +173,12 @@ impl AssetManager {
             let _ = game.asset_manager.reload_texture(&id, &path).await;
         }
 
-        for world in &mut game.worlds {
-            let world_ecs = &mut world.world_ecs;
-
-            // Load and initialize all animations
-            for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
-                animation.refresh_sprite_cache(&mut game.asset_manager).await;
-                animation.init_runtime();
-            }
+        // Load and initialize all animations
+        for animation in game.ecs.get_store_mut::<Animation>().data.values_mut() {
+            animation.refresh_sprite_cache(&mut game.asset_manager).await;
+            animation.init_runtime();
         }
+        
     }
 
     /// Returns a path normalized relative to the game's assets folder.
@@ -272,33 +269,34 @@ impl AssetManager {
             if let Some(id) = world.meta.sprite_id {
                 used_ids.insert(id);
             }
+        }
 
-            // Sprite components
-            let sprite_store = world.world_ecs.get_store::<Sprite>();
-            for sprite in sprite_store.data.values() {
-                if sprite.sprite.0 != 0 {
-                    used_ids.insert(sprite.sprite);
-                }
+        // Sprite components
+        let sprite_store = game.ecs.get_store::<Sprite>();
+        for sprite in sprite_store.data.values() {
+            if sprite.sprite.0 != 0 {
+                used_ids.insert(sprite.sprite);
             }
+        }
 
-            // Glow components
-            let glow_store = world.world_ecs.get_store::<Glow>();
-            for glow in glow_store.data.values() {
-                if glow.sprite_id.0 != 0 {
-                    used_ids.insert(glow.sprite_id);
-                }
+        // Glow components
+        let glow_store = game.ecs.get_store::<Glow>();
+        for glow in glow_store.data.values() {
+            if glow.sprite_id.0 != 0 {
+                used_ids.insert(glow.sprite_id);
             }
+        }
 
-            // Animation component caches (should be full after initialization)
-            let anim_store = world.world_ecs.get_store::<Animation>();
-            for anim in anim_store.data.values() {
-                for &id in anim.sprite_cache.values() {
-                    if id.0 != 0 {
-                        used_ids.insert(id);
-                    }
+        // Animation component caches (should be full after initialization)
+        let anim_store = game.ecs.get_store::<Animation>();
+        for anim in anim_store.data.values() {
+            for &id in anim.sprite_cache.values() {
+                if id.0 != 0 {
+                    used_ids.insert(id);
                 }
             }
         }
+        
 
         // Capture the current number of sprite ids
         let previous = game.asset_manager.sprite_id_to_path.len();

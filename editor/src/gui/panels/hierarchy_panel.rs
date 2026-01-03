@@ -1,4 +1,3 @@
-use crate::gui::gui_constants::PANEL_COLOR;
 // editor/src/gui/panels/hierarchy_panel.rs
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::Editor;
@@ -39,7 +38,7 @@ impl PanelDefinition for HierarchyPanel {
         // Add global entity
         let add_rect = Rect::new(rect.x + 6., y, rect.w - 12., 26.);
         if gui_button(add_rect, "+ Global") {
-            editor.game.global_ecs.create_entity().with(Global::default());
+            editor.game.ecs.create_entity().with(Global::default());
         }
 
         y += 32.;
@@ -50,7 +49,7 @@ impl PanelDefinition for HierarchyPanel {
 
         // Handle globals
         let global_entities: Vec<Entity> = {
-            let store = editor.game.global_ecs.get_store::<Global>();
+            let store = editor.game.ecs.get_store::<Global>();
             store.data.keys().copied().collect()
         };
 
@@ -74,7 +73,7 @@ impl PanelDefinition for HierarchyPanel {
         // Handle room entities
         let room_entities: Vec<Entity> = {
             let ctx = editor.game.ctx();
-            let store = ctx.cur_world_ecs.get_store::<CurrentRoom>();
+            let store = ctx.ecs.get_store::<CurrentRoom>();
             store.data.keys().copied().collect()
         };
 

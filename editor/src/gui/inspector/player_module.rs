@@ -19,9 +19,9 @@ impl InspectorModule for PlayerModule {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let world_ecs = &mut game_ctx.cur_world_ecs;
+        let ecs = &mut game_ctx.ecs;
 
-        if let Some(_player) = world_ecs.get::<Player>(entity) {
+        if let Some(_player) = ecs.get::<Player>(entity) {
             draw_text_ui("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
     }

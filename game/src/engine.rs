@@ -61,13 +61,13 @@ impl Engine {
         game_state.store_previous_positions(&mut self.camera_manager);
 
         let game_ctx = game_state.game.ctx_mut();
-        let world_ecs = game_ctx.cur_world_ecs;
+        let ecs = game_ctx.ecs;
         let current_room = game_ctx.cur_room;
         let asset_manager = game_ctx.asset_manager;
 
         update_physics(
             asset_manager,
-            world_ecs, 
+            ecs, 
             current_room, 
             dt
         ) 
@@ -77,26 +77,24 @@ impl Engine {
         {
             // Keep borrow_mut in this scope
             let mut game_state = self.game_state.borrow_mut();
-
             TransitionManager::handle_transitions(&mut game_state);
 
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
-            let world_ecs = game_ctx.cur_world_ecs;
+            let ecs = game_ctx.ecs;
             let current_room = game_ctx.cur_room;
-            // HERE: current room does not update here....
             
-            let player_pos = world_ecs.get_player_position().position;
+            let player_pos = ecs.get_player_position().position;
             
             // Update the camera
             self.camera_manager.update_active(
-                world_ecs,
+                ecs,
                 current_room,
                 player_pos,
             );
             
             update_animation_sytem(
-                world_ecs,
+                ecs,
                 asset_manager,
                 dt, 
                 current_room.id,  
@@ -104,7 +102,7 @@ impl Engine {
             
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
             let ctx = game_state.game.ctx_mut();
-            if let Err(e) = ScriptSystem::load_scripts(&self.lua, ctx.cur_world_ecs, ctx.script_manager) {
+            if let Err(e) = ScriptSystem::load_scripts(&self.lua, ctx.ecs, ctx.script_manager) {
                 onscreen_error!("Error loading scripts: {}", e);
             }
         }
@@ -129,7 +127,7 @@ impl Engine {
         let prev_positions = &game_state.prev_positions.clone();
         let game_ctx = game_state.game.ctx_mut();
         let asset_manager = game_ctx.asset_manager;
-        let world_ecs = game_ctx.cur_world_ecs;
+        let ecs = game_ctx.ecs;
         let current_room = game_ctx.cur_room;
 
         let interpolated_target = lerp(
@@ -146,7 +144,7 @@ impl Engine {
         };
 
         render_room(
-            world_ecs, 
+            ecs, 
             current_room, 
             asset_manager,
             &mut self.render_system,
