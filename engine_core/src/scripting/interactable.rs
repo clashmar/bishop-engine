@@ -23,17 +23,17 @@ pub struct Interactable {
 inspector_module!(Interactable);
 
 /// Returns the best interactable entity candidate for the player in the `CurrentRoom` or `None`.
-pub fn find_best_interactable(world_ecs: &Ecs) -> Option<Entity> {
-    let player = world_ecs.get_player_entity();
-    let player_pos = world_ecs.get_player_position().position;
+pub fn find_best_interactable(ecs: &Ecs) -> Option<Entity> {
+    let player = ecs.get_player_entity();
+    let player_pos = ecs.get_player_position().position;
 
-    let player_room = world_ecs
+    let player_room = ecs
         .get::<CurrentRoom>(player)
         .map(|r| r.0)?;
 
-    let interactables = world_ecs.get_store::<Interactable>();
-    let positions = world_ecs.get_store::<Position>();
-    let rooms = world_ecs.get_store::<CurrentRoom>();
+    let interactables = ecs.get_store::<Interactable>();
+    let positions = ecs.get_store::<Position>();
+    let rooms = ecs.get_store::<CurrentRoom>();
 
     let mut best: Option<(Entity, f32)> = None;
 

@@ -44,7 +44,7 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn default(world_ecs: &mut Ecs) -> Self {
+    pub fn default(ecs: &mut Ecs) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
@@ -63,7 +63,7 @@ impl Room {
         darkness: 0.,
         };
 
-        let _camera = room.create_room_camera(world_ecs, id);
+        let _camera = room.create_room_camera(ecs, id);
 
         room
     }
@@ -120,8 +120,8 @@ impl Room {
         }).collect()
     }
 
-    pub fn create_room_camera(&self, world_ecs: &mut Ecs, room_id: RoomId) {
-        let _camera = world_ecs.create_entity()
+    pub fn create_room_camera(&self, ecs: &mut Ecs, room_id: RoomId) {
+        let _camera = ecs.create_entity()
             .with(Position { position: self.position })
             .with(RoomCamera::new(room_id))
             .with(CurrentRoom(self.id));

@@ -28,15 +28,15 @@ pub struct CurrentFrame {
 }
 
 pub async fn update_animation_sytem(
-    world_ecs: &mut Ecs,
+    ecs: &mut Ecs,
     asset_manager: &mut AssetManager,
     dt: f32,
     room_id: RoomId,
 ) {
     // Gather the ids of all entities that are in the current room
-    let entities = entities_in_room(world_ecs, room_id);
+    let entities = entities_in_room(ecs, room_id);
 
-    let anim_store = world_ecs.get_store_mut::<Animation>();
+    let anim_store = ecs.get_store_mut::<Animation>();
 
     let mut frames: Vec<(Entity, CurrentFrame)> = vec![];
 
@@ -95,7 +95,7 @@ pub async fn update_animation_sytem(
     
 
     for (entity, frame) in frames {
-        world_ecs.add_component_to_entity(entity, frame)
+        ecs.add_component_to_entity(entity, frame)
     }
 }
 

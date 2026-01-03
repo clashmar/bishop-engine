@@ -42,7 +42,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
-        _world_ecs: &mut Ecs,
+        _ecs: &mut Ecs,
     ) {
         let mouse_world_pos = camera.screen_to_world(mouse_pos);
         if !self.button.is_clicked(mouse_world_pos) {

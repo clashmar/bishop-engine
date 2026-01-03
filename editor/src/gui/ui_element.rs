@@ -12,6 +12,6 @@ pub trait DynamicTilemapUiElement {
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut Ecs,
+        ecs: &mut Ecs,
     );
 }

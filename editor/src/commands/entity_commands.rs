@@ -44,7 +44,7 @@ impl EditorCommand for DeleteEntityCmd {
 }
 
 fn restore_entity(
-    world_ecs: &mut Ecs,
+    ecs: &mut Ecs,
     entity: Entity,
     bag: Vec<(String, String)>,
 ) {
@@ -61,13 +61,13 @@ fn restore_entity(
         (component_reg.post_create)(&mut *boxed);
 
         // Insert it into the (already‑existing) entity.
-        (component_reg.inserter)(world_ecs, entity, boxed);
+        (component_reg.inserter)(ecs, entity, boxed);
     }
 }
 
 /// Copy a snapshot of the entity to the global entity clipboard.
-pub fn copy_entity(world_ecs: &mut Ecs, entity: Entity) {
-    let snapshot = capture_entity(world_ecs, entity);
+pub fn copy_entity(ecs: &mut Ecs, entity: Entity) {
+    let snapshot = capture_entity(ecs, entity);
     EDITOR_SERVICES.with(|s| {
         *s.entity_clipboard.borrow_mut() = Some(snapshot);
     });
@@ -175,8 +175,8 @@ impl MoveEntityCmd {
     }
 
     /// Helper that writes a concrete position into the world.
-    fn set_position(world_ecs: &mut Ecs, entity: Entity, position: Vec2) {
-        if let Some(pos) = world_ecs
+    fn set_position(ecs: &mut Ecs, entity: Entity, position: Vec2) {
+        if let Some(pos) = ecs
             .get_store_mut::<Position>()
             .get_mut(entity)
         {

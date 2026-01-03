@@ -9,14 +9,14 @@ use crate::ecs::entity::Entity;
 use crate::ecs::ecs::Ecs;
 
 /// Set the collider for every entity that has a sprite and an unset collider
-pub fn update_colliders_from_sprites(world_ecs: &mut Ecs, assets: &mut AssetManager) {
+pub fn update_colliders_from_sprites(ecs: &mut Ecs, assets: &mut AssetManager) {
     let mut pending: Vec<(Entity, Collider)> = Vec::new();
 
     {
         // Immutable access to the two stores.
-        let sprite_store = world_ecs.get_store::<Sprite>();
-        let current_frame_store = world_ecs.get_store::<CurrentFrame>();
-        let collider_store = world_ecs.get_store::<Collider>();
+        let sprite_store = ecs.get_store::<Sprite>();
+        let current_frame_store = ecs.get_store::<CurrentFrame>();
+        let collider_store = ecs.get_store::<Collider>();
 
         // Only update entities with colliders
         for (entity, collider) in collider_store.data.iter() {
@@ -48,7 +48,7 @@ pub fn update_colliders_from_sprites(world_ecs: &mut Ecs, assets: &mut AssetMana
         return;
     }
 
-    let collider_store = world_ecs.get_store_mut::<Collider>();
+    let collider_store = ecs.get_store_mut::<Collider>();
 
     for (entity, col) in pending {
         if let Some(collider) = collider_store.get_mut(entity) {

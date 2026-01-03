@@ -1,5 +1,5 @@
 // editor/src/gui/inspector/transform_module.rs
-use engine_core::ecs::module::InspectorModule;
+use engine_core::ecs::inpsector_module::InspectorModule;
 use engine_core::ecs::component::Position;
 use engine_core::ecs::entity::Entity;
 use engine_core::game::game::GameCtxMut;
@@ -19,11 +19,12 @@ impl TransformModule {
     /// Draw the two numeric fields that edit the position
     fn draw_position_fields(
         &self,
+        blocked: bool,
         rect: Rect,
-        world_ecs: &mut Ecs,
+        ecs: &mut Ecs,
         entity: Entity,
     ) {
-        let pos = world_ecs.get_mut::<Position>(entity).expect("Position must exist");
+        let pos = ecs.get_mut::<Position>(entity).expect("Position must exist.");
 
         // Layout constants
         let label_w = 20.0;
@@ -42,7 +43,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_x = gui_input_number_f32(self.x_id, x_field, pos.position.x);
+        let new_x = gui_input_number_f32(self.x_id, x_field, pos.position.x, blocked);
 
         // Y
         let y_label = Rect::new(
@@ -58,10 +59,10 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_y = gui_input_number_f32(self.y_id, y_field, pos.position.y);
+        let new_y = gui_input_number_f32(self.y_id, y_field, pos.position.y, blocked);
 
         // Write back only if something changed
-        if (new_x - pos.position.x).abs() > f32::EPSILON
+        if !blocked && (new_x - pos.position.x).abs() > f32::EPSILON
             || (new_y - pos.position.y).abs() > f32::EPSILON
         {
             pos.position.x = new_x;
@@ -71,12 +72,13 @@ impl TransformModule {
 }
 
 impl InspectorModule for TransformModule {
-    fn visible(&self, world_ecs: &Ecs, entity: Entity) -> bool {
-        world_ecs.get::<Position>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<Position>(entity).is_some()
     }
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,
@@ -96,6 +98,6 @@ impl InspectorModule for TransformModule {
             rect.w,
             40.0,
         );
-        self.draw_position_fields(edit_rect, ecs, entity);
+        self.draw_position_fields(blocked, edit_rect, ecs, entity);
     }
 }

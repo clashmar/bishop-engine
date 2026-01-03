@@ -437,7 +437,7 @@ impl WorldEditor {
             30.0,                 
         );
         
-        let new_size = gui_input_number_f32(self.tile_size_id, tile_size_rect, game.tile_size);
+        let new_size = gui_input_number_f32(self.tile_size_id, tile_size_rect, game.tile_size, false);
         if new_size != game.tile_size {
             let old_size = game.tile_size;
             engine_global::update_tile_size(game, old_size, new_size);

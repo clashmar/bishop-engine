@@ -1,4 +1,4 @@
-// editor/src/gui/inspector/inspector_panel.rs
+// editor/src/gui/inspector/inspector.rs
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::inspector::transform_module::TransformModule;
 use crate::gui::inspector::player_module::PlayerModule;
@@ -6,6 +6,7 @@ use crate::commands::entity_commands::*;
 use crate::editor_global::push_command;
 use crate::gui::menu_bar::menu_button;
 use crate::gui::gui_constants::*;
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use engine_core::camera::game_camera::RoomCamera;
 use engine_core::ecs::module_factory::MODULES;
 use engine_core::controls::controls::Controls;
@@ -13,7 +14,7 @@ use engine_core::ecs::component_registry::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
 use engine_core::ui::widgets::*;
-use engine_core::ecs::module::*;
+use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
@@ -22,7 +23,7 @@ use macroquad::prelude::*;
 const SCROLL_SPEED: f32 = 5.0; 
 
 /// The panel that lives on the right‑hand side of the room editor window
-pub struct InspectorPanel {
+pub struct Inspector {
     /// Geometry of the panel
     rect: Rect,
     /// Currently inspected entity
@@ -45,7 +46,7 @@ pub struct WidgetIds {
     pub darkness_slider_id: WidgetId
 }
 
-impl InspectorPanel {
+impl Inspector {
     /// Create a fresh panel with the default set of modules
     pub fn new() -> Self {
         let mut modules: Vec<Box<dyn InspectorModule>> = Vec::new();
@@ -171,6 +172,7 @@ impl InspectorPanel {
 
                 // Render modules inside the scroll‑view
                 let mut y = inner.y + INSET - self.scroll_offset;
+                let blocked = self.is_blocked();
                 for module in &mut self.modules {
                     if module.visible(game_ctx.ecs, entity) {
                         let h = module.height();
@@ -178,7 +180,7 @@ impl InspectorPanel {
                         // Only draw when the module intersects the visible area
                         if y + h > inner.y && y < inner.y + inner.h {
                             let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
-                            module.draw(sub_rect, game_ctx, entity);
+                            module.draw(blocked, sub_rect, game_ctx, entity);
                         }
 
                         y += h + WIDGET_SPACING;
@@ -235,7 +237,7 @@ impl InspectorPanel {
             }
         } else {
             // No entity selected
-            let create_label = "Create Entity";
+            let create_label = "+";
             let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
             let create_btn = Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - (WIDGET_PADDING * 2.0),
@@ -306,8 +308,12 @@ impl InspectorPanel {
         false
     }
 
+    fn is_blocked(&self) -> bool {
+        is_mouse_over_panel()
+    }
+
     /// Draw the drop‑down list that appears under the Add Component button
-    fn draw_add_component_menu(&mut self, button_rect: Rect, world_ecs: &mut Ecs) {
+    fn draw_add_component_menu(&mut self, button_rect: Rect, ecs: &mut Ecs) {
         let entity = match self.target {
             Some(e) => e,
             None => return,
@@ -322,7 +328,7 @@ impl InspectorPanel {
                 continue;
             }
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
-                if !entity_has_component(world_ecs, entity, reg) {
+                if !entity_has_component(ecs, entity, reg) {
                     shown.push(reg);
                 }
             } else {
@@ -388,7 +394,7 @@ impl InspectorPanel {
                 menu_rect.w - 10.0,
                 25.0,
             );
-            if gui_button(entry_rect, reg.type_name) {
+            if gui_button(entry_rect, reg.type_name, false) {
                 self.pending_add = Some(reg.type_name.to_string());
                 self.add_mode = false;
             }
@@ -397,7 +403,7 @@ impl InspectorPanel {
 
     /// Returns true if the currently selected entity can receive at least one
     /// component that is not already present
-    fn can_show_any_component(&self, world_ecs: &Ecs) -> bool {
+    fn can_show_any_component(&self, ecs: &Ecs) -> bool {
         let entity = match self.target {
             Some(e) => e,
             None => return false,
@@ -405,7 +411,7 @@ impl InspectorPanel {
         for entry in MODULES.iter() {
             let type_name = entry.title;
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
-                if !entity_has_component(world_ecs, entity, reg) {
+                if !entity_has_component(ecs, entity, reg) {
                     return true;
                 }
             }
@@ -425,10 +431,10 @@ impl InspectorPanel {
         || (self.rect.contains(mouse_screen) && self.target.is_some())
     }
 
-    fn total_content_height(&self, world_ecs: &Ecs, entity: Entity) -> f32 {
+    fn total_content_height(&self, ecs: &Ecs, entity: Entity) -> f32 {
         let mut total_content_h = 0.0;
         for module in &self.modules {
-            if module.visible(world_ecs, entity) {
+            if module.visible(ecs, entity) {
                 total_content_h += module.height() + WIDGET_SPACING;
             }
         }
@@ -490,10 +496,10 @@ impl InspectorPanel {
 
 /// Utility function used by both the panel and the menu
 fn entity_has_component(
-    world_ecs: &Ecs,
+    ecs: &Ecs,
     entity: Entity,
     reg: &ComponentRegistry,
 ) -> bool {
-    (reg.has)(world_ecs, entity)
+    (reg.has)(ecs, entity)
 }
 

@@ -454,7 +454,7 @@ pub fn menu_button(
     let mouse = mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    if (hovered || is_dropdown_open) && !is_modal_open() {
+    if (hovered || is_dropdown_open) && !is_modal_open() && !is_mouse_button_down(MouseButton::Left) {
         draw_rectangle(
             rect.x,
             rect.y,

@@ -146,9 +146,9 @@ pub fn game_render_target() -> RenderTarget {
 }
 
 /// Returns every `GameCamera` for a room from its id.
-pub fn get_room_cameras(world_ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)> {
-    let cam_store = world_ecs.get_store::<RoomCamera>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+pub fn get_room_cameras(ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)> {
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let room_store = ecs.get_store::<CurrentRoom>();
 
     cam_store
         .data
@@ -165,12 +165,12 @@ pub fn get_room_cameras(world_ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCa
 
 /// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
 pub fn room_to_game_camera(
-    world_ecs: &Ecs, 
+    ecs: &Ecs, 
     entity: &Entity, 
     room_camera: &RoomCamera,
     player_pos: Vec2, 
 ) -> GameCamera {
-    let pos_store  = world_ecs.get_store::<Position>();
+    let pos_store  = ecs.get_store::<Position>();
 
     // If the camera is a Follow cam user the player as the target
     let target = match room_camera.camera_mode {

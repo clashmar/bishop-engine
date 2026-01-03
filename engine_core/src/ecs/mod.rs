@@ -5,6 +5,6 @@ pub mod reflect_field;
 pub mod component_registry;
 pub mod module_factory;
 pub mod generic_module;
-pub mod module;
+pub mod inpsector_module;
 pub mod capture;
 pub mod has_any;

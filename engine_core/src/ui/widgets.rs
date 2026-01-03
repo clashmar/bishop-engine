@@ -26,16 +26,17 @@ impl Default for WidgetId {
     }
 }
 
+// Sizing
 pub const WIDGET_PADDING: f32 = 10.0; 
 pub const WIDGET_SPACING: f32 = 10.0;   
 pub const DEFAULT_FONT_SIZE_16: f32 = 16.0;
 pub const HEADER_FONT_SIZE_20: f32 = 20.0;
 pub const FIELD_TEXT_SIZE_16: f32 = 16.0; 
-pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const DEFAULT_FIELD_HEIGHT: f32 = 30.0;
 pub const DEFAULT_CHECKBOX_DIMS: f32 = 20.0;
 
 // Colours
+pub const FIELD_TEXT_COLOR: Color = WHITE;
 pub const OUTLINE_COLOR: Color = WHITE;
 pub const FIELD_BACKGROUND_COLOR: Color = Color::new(0., 0., 0., 1.0);
 pub const HOVER_COLOR: Color = Color::new(0.2, 0.2, 0.2, 0.8);
@@ -81,33 +82,34 @@ pub fn is_dropdown_open() -> bool {
 /// Editable text field. Returns the current contents.
 /// The widget keeps focus until the user clicks outside the rectangle
 /// or presses Esc and shows a blinking cursor while active.
-pub fn gui_input_text_default(id: WidgetId, rect: Rect, current: &str) -> (String, bool) {
-    gui_input_text(id, rect, current, false, None)
+pub fn gui_input_text_default(id: WidgetId, rect: Rect, current: &str, blocked: bool) -> (String, bool) {
+    gui_input_text_impl(id, rect, current, false, None, blocked)
 }
 
 /// Editable text field that starts focused. Returns the current contents.
 /// The widget keeps focus until the user clicks outside the rectangle
 /// or presses Esc and shows a blinking cursor while active.
-pub fn gui_input_text_focused(id: WidgetId, rect: Rect, current: &str) -> (String, bool) {
-    gui_input_text(id, rect, current, true, None)
+pub fn gui_input_text_focused(id: WidgetId, rect: Rect, current: &str, blocked: bool) -> (String, bool) {
+    gui_input_text_impl(id, rect, current, true, None, blocked)
 }
 
 /// Same as `gui_input_text_default` but clamps the text to `max_len`.
-pub fn gui_input_text_clamped(id: WidgetId, rect: Rect, current: &str, max_len: usize) -> (String, bool) {
-    gui_input_text(id, rect, current, false, Some(max_len))
+pub fn gui_input_text_clamped(id: WidgetId, rect: Rect, current: &str, max_len: usize, blocked: bool) -> (String, bool) {
+    gui_input_text_impl(id, rect, current, false, Some(max_len), blocked)
 }
 
 /// Same as `gui_input_text_focused` but clamps the text to `max_len`.
-pub fn gui_input_text_clamped_focused(id: WidgetId, rect: Rect, current: &str, max_len: usize) -> (String, bool) {
-    gui_input_text(id, rect, current, true, Some(max_len))
+pub fn gui_input_text_clamped_focused(id: WidgetId, rect: Rect, current: &str, max_len: usize, blocked: bool) -> (String, bool) {
+    gui_input_text_impl(id, rect, current, true, Some(max_len), blocked)
 }
 
-fn gui_input_text(
+fn gui_input_text_impl(
     id: WidgetId,
     rect: Rect, 
     current: &str, 
     start_focused: bool,
     max_len: Option<usize>,
+    blocked: bool,
 ) -> (String, bool) {
     let mut just_gained_focus = false;
 
@@ -159,7 +161,7 @@ fn gui_input_text(
         if !focused && mouse_over {
             just_gained_focus = true;
         }
-        focused = mouse_over;
+        focused = mouse_over && !blocked;
 
         if !focused {
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
@@ -275,12 +277,12 @@ pub fn gui_input_text_reset(id: WidgetId) {
     });
 }
 
-pub fn gui_input_number_i32(id: WidgetId, rect: Rect, current: i32) -> i32 {
-    gui_input_number_generic(id, rect, current)
+pub fn gui_input_number_i32(id: WidgetId, rect: Rect, current: i32, blocked: bool) -> i32 {
+    gui_input_number_generic(id, rect, current, blocked)
 }
 
-pub fn gui_input_number_f32(id: WidgetId, rect: Rect, current: f32) -> f32 {
-    gui_input_number_generic(id, rect, current)
+pub fn gui_input_number_f32(id: WidgetId, rect: Rect, current: f32, blocked: bool) -> f32 {
+    gui_input_number_generic(id, rect, current, blocked)
 }
 
 /// Generic numeric widget.
@@ -288,6 +290,7 @@ pub fn gui_input_number_generic<T>(
     id: WidgetId,
     rect: Rect,
     current: T,
+    blocked: bool,
 ) -> T
 where
     T: FromStr + Display + Default + Copy + PartialEq,
@@ -326,15 +329,16 @@ where
 
     draw_input_field_text(display, rect);
 
-    // Abort input handling if a dropdown blocks interaction
+    // Stop input handling if a dropdown is open
     if is_dropdown_open() {
         return current;
     }
 
     let mouse = mouse_position();
     let mouse_over = rect.contains(vec2(mouse.0, mouse.1));
+
     if is_mouse_button_pressed(MouseButton::Left) {
-        focused = mouse_over;
+        focused = mouse_over && !blocked;
     }
 
     if focused {
@@ -484,23 +488,23 @@ pub enum ButtonStyle {
 }
 
 /// Rectangular button with background and outline. Returns `true` on click.
-pub fn gui_button(rect: Rect, label: &str) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO, HOVER_COLOR)
+pub fn gui_button(rect: Rect, label: &str, blocked: bool) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO, HOVER_COLOR, blocked)
 }
 
 /// Rectangular button with no background or outline. Returns `true` on click.
-pub fn gui_button_plain_default(rect: Rect, label: &str, text_color: Color) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, HOVER_COLOR_PLAIN)
+pub fn gui_button_plain_default(rect: Rect, label: &str, text_color: Color, blocked: bool) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, HOVER_COLOR_PLAIN, blocked)
 }
 
 /// Rectangular button with no background or outline. Returns `true` on click.
-pub fn gui_button_plain_hover(rect: Rect, label: &str, text_color: Color, hover_color: Color) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, hover_color)
+pub fn gui_button_plain_hover(rect: Rect, label: &str, text_color: Color, hover_color: Color, blocked: bool) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, hover_color, blocked)
 }
 
 /// Default button with text offset. Returns `true` on click.
-pub fn gui_button_y_offset(rect: Rect, label: &str, text_offset: Vec2) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset, HOVER_COLOR)
+pub fn gui_button_y_offset(rect: Rect, label: &str, text_offset: Vec2, blocked: bool) -> bool {
+    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset, HOVER_COLOR, blocked)
 }
 
 fn gui_button_impl(
@@ -509,7 +513,8 @@ fn gui_button_impl(
     style: ButtonStyle, 
     text_color: Color,
     text_offset: Vec2,
-    hover_color: Color
+    hover_color: Color,
+    blocked: bool,
 ) -> bool {
     let mouse = mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
@@ -523,7 +528,7 @@ fn gui_button_impl(
         ButtonStyle::Default => {
             // Background, Outline & Hover
             let hovered = rect.contains(vec2(mouse.0, mouse.1));
-            let background = if hovered && !is_dropdown_open() {
+            let background = if hovered && !is_dropdown_open() && !blocked && !is_mouse_button_down(MouseButton::Left) {
                 hover_color
             } else {
                 FIELD_BACKGROUND_COLOR
@@ -532,7 +537,7 @@ fn gui_button_impl(
             draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
         }
         ButtonStyle::Plain => {
-            if hovered && !is_dropdown_open() {
+            if hovered && !is_dropdown_open() && !blocked && !is_mouse_button_down(MouseButton::Left) {
                 draw_rectangle(
                     rect.x,
                     rect.y,
@@ -548,6 +553,7 @@ fn gui_button_impl(
 
     is_mouse_button_pressed(MouseButton::Left) 
     && hovered 
+    && !blocked
     && !is_dropdown_open()
 }
 
@@ -668,6 +674,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     label: &str,
     options: &[T],
     to_string: impl Fn(&T) -> String,
+    blocked: bool,
 ) -> Option<T> {
     gui_dropdown_impl(
         id, 
@@ -678,6 +685,7 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
         DropDownStyle::Default, 
         WHITE,
         0.0,
+        blocked,
     )
 }
 
@@ -700,7 +708,8 @@ pub fn gui_dropdown_plain<T: Clone + PartialEq + Display>(
         to_string, 
         DropDownStyle::Plain, 
         text_color,
-        y_offset
+        y_offset,
+        false,
     )
 }
 
@@ -713,6 +722,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
     style: DropDownStyle,
     text_color: Color,
     y_offset: f32,
+    blocked: bool,
 ) -> Option<T> {
     const MAX_VISIBLE_ROWS: usize = 8;
     const SCROLL_SPEED: f32 = 5.0;
@@ -730,10 +740,10 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
 
     let button_clicked = match style {
         DropDownStyle::Default => {
-            gui_button(rect, label)
+            gui_button(rect, label, blocked) && !blocked
         }
         DropDownStyle::Plain => {
-            gui_button_plain_default(rect, label, text_color)
+            gui_button_plain_default(rect, label, text_color, blocked) && !blocked
         }
     };
 
@@ -968,6 +978,7 @@ pub fn gui_stepper(
     label: &str,
     steps: &[f32],
     current: f32,
+    blocked: bool,
 ) -> f32 {
     let mut idx = steps
         .iter()
@@ -1027,7 +1038,7 @@ pub fn gui_stepper(
         btn_w,
     );
 
-    if gui_button(decrease_rect, "-") && idx > 0 {
+    if gui_button(decrease_rect, "-", blocked) && idx > 0 {
         idx -= 1;
     }
 
@@ -1038,7 +1049,7 @@ pub fn gui_stepper(
         btn_w,
         btn_w,
     );
-    if gui_button(increase_rect, "+") && idx + 1 < steps.len() {
+    if gui_button(increase_rect, "+", blocked) && idx + 1 < steps.len() {
         idx += 1;
     }
 
@@ -1051,6 +1062,7 @@ pub fn gui_sprite_picker(
     rect: Rect,
     id: &mut SpriteId,
     asset_manager: &mut AssetManager,
+    blocked: bool,
 ) -> bool {
     let btn_label: Cow<str> = if id.0 == 0 {
         Cow::Borrowed("[Pick File]")
@@ -1078,7 +1090,7 @@ pub fn gui_sprite_picker(
 
     let mut changed = false;
 
-    if gui_button(picker_rect, &btn_label) {
+    if gui_button(picker_rect, &btn_label, blocked) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -1099,7 +1111,7 @@ pub fn gui_sprite_picker(
         }
     }
 
-    if gui_button(remove_rect, "x") && id.0 != 0 {
+    if gui_button(remove_rect, "x", blocked) && id.0 != 0 {
         *id = SpriteId(0);
         changed = true;
     }
@@ -1114,6 +1126,7 @@ pub fn gui_script_picker(
     entity: Entity,
     script_id: &mut ScriptId,
     script_manager: &mut ScriptManager,
+    blocked: bool,
 ) -> bool {
     let btn_label: Cow<str> = if script_id.0 == 0 {
         Cow::Borrowed("[Pick File]")
@@ -1141,7 +1154,7 @@ pub fn gui_script_picker(
 
     let mut changed = false;
 
-    if gui_button(picker_rect, &btn_label) {
+    if gui_button(picker_rect, &btn_label, blocked) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -1162,7 +1175,7 @@ pub fn gui_script_picker(
         }
     }
 
-    if gui_button(remove_rect, "x") && script_id.0 != 0 {
+    if gui_button(remove_rect, "x", blocked) && script_id.0 != 0 {
         *script_id = ScriptId(0);
         script_manager.unload(entity);
         changed = true;

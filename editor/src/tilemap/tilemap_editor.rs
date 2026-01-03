@@ -43,7 +43,7 @@ impl TileMapEditor  {
         camera: &mut Camera2D,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut Ecs,
+        ecs: &mut Ecs,
     ) 
         {
         if !self.initialized {
@@ -58,7 +58,7 @@ impl TileMapEditor  {
         ResizeButton::build_all(&room.variants[0].tilemap, &mut self.dynamic_ui, room.position);
         
         let mouse_pos = mouse_position().into();
-        self.consume_ui_click(camera, mouse_pos, room, other_bounds, world_ecs);
+        self.consume_ui_click(camera, mouse_pos, room, other_bounds, ecs);
 
         if !self.ui_was_clicked {
             match self.mode {
@@ -95,7 +95,7 @@ impl TileMapEditor  {
         mouse_pos: Vec2,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut Ecs,
+        ecs: &mut Ecs,
     ) {
         if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
 
@@ -106,7 +106,7 @@ impl TileMapEditor  {
 
             for element in &mut self.dynamic_ui {
                 if element.is_mouse_over(mouse_pos, camera) {
-                    element.on_click(room, mouse_pos, camera, other_bounds, world_ecs);
+                    element.on_click(room, mouse_pos, camera, other_bounds, ecs);
                     self.ui_was_clicked = true;
                     break;
                 }
