@@ -11,14 +11,16 @@ use engine_core::camera::game_camera::RoomCamera;
 use engine_core::ecs::module_factory::MODULES;
 use engine_core::controls::controls::Controls;
 use engine_core::ecs::component_registry::*;
+use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
+use engine_core::onscreen_error;
 use engine_core::ui::widgets::*;
-use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
+use engine_core::*;
 
 const SCROLL_SPEED: f32 = 5.0; 
 
@@ -47,7 +49,7 @@ pub struct WidgetIds {
 }
 
 impl Inspector {
-    /// Create a fresh panel with the default set of modules
+    /// Create a fresh panel with the default set of modules.
     pub fn new() -> Self {
         let mut modules: Vec<Box<dyn InspectorModule>> = Vec::new();
 
@@ -56,14 +58,33 @@ impl Inspector {
             PlayerModule::default(),
         ));
 
+        // Transform will be at the top (under Name)
         modules.push(Box::new(
             CollapsibleModule::new(TransformModule::default()).with_title("Transform"),
         ));
 
-        // Add generic modules here
+        // Collect generic modules here, with Name first
+        let mut name_module: Option<Box<dyn InspectorModule>> = None;
+        let mut other_modules: Vec<Box<dyn InspectorModule>> = Vec::new();
+
         for entry in MODULES.iter() {
-            modules.push((entry.factory)());
+            let module = (entry.factory)();
+            
+            // Check if this is the Name module
+            if entry.title == comp_type_name::<Name>() {
+                name_module = Some(module);
+            } else {
+                other_modules.push(module);
+            }
         }
+
+        // Add Name module (after player module) if it exists
+        if let Some(name_mod) = name_module {
+            modules.insert(1, name_mod);
+        }
+
+        // Add all other generic modules
+        modules.extend(other_modules);
 
         let widget_ids = WidgetIds {
             darkness_slider_id: WidgetId::default(),
@@ -237,7 +258,7 @@ impl Inspector {
             }
         } else {
             // No entity selected
-            let create_label = "+";
+            let create_label = "+ Entity";
             let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
             let create_btn = Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - (WIDGET_PADDING * 2.0),
@@ -246,7 +267,7 @@ impl Inspector {
                 BTN_HEIGHT,
             );
 
-            let add_cam_label = "Add Camera";
+            let add_cam_label = "+ Camera";
             let txt_cam = measure_text_ui(add_cam_label, HEADER_FONT_SIZE_20, 1.0);
             let cam_btn_w = txt_cam.width + WIDGET_PADDING * 2.0;
             let cam_btn = Rect::new(
@@ -258,12 +279,9 @@ impl Inspector {
 
             if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
-                let _ = game_ctx.ecs
-                    .create_entity()
-                    .with(RoomCamera::new(game_ctx.cur_room.id))
-                    .with(Position { position: game_ctx.cur_room.position })
-                    .with(CurrentRoom(game_ctx.cur_room.id))
-                    .finish();
+                let ecs = &mut game_ctx.ecs;
+                let cur_room = &game_ctx.cur_room;
+                let _ = cur_room.create_room_camera(ecs, cur_room.id);
             }
 
             // Darkness slider
@@ -302,7 +320,7 @@ impl Inspector {
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == name) {
                 (reg.factory)(game_ctx.ecs, entity);
             } else {
-                eprintln!("Component `{}` not found in registry", name);
+                onscreen_error!("Component `{}` not found in registry", name);
             }
         }
         false
@@ -332,7 +350,7 @@ impl Inspector {
                     shown.push(reg);
                 }
             } else {
-                eprintln!("Module `{}` has no ComponentReg entry", type_name);
+                onscreen_error!("Module `{}` has no ComponentReg entry", type_name);
             }
         }
         

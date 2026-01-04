@@ -199,6 +199,7 @@ pub fn create_new_world(ecs: &mut Ecs) -> World {
         .with(Position { position: starting_position })
         .with(PhysicsBody)
         .with(CurrentRoom(room_id))
+        .with(Name(format!("Player")))
         .finish();
 
     world

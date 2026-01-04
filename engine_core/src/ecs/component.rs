@@ -4,12 +4,15 @@ use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
 use crate::inspector_module;
-use std::{any::Any, collections::HashMap};
 use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
+use std::collections::HashMap;
 use reflect_derive::Reflect;
 use macroquad::prelude::*;
+use std::ops::DerefMut;
+use std::ops::Deref;
+use std::any::Any;
 
 /// Marker trait for components.
 pub trait Component: Send + Sync {
@@ -83,10 +86,40 @@ pub trait PostCreate {
     );
 }
 
+/// Returns the type name of a component.
+#[inline]
+pub fn comp_type_name<T>() -> &'static str {
+    std::any::type_name::<T>()
+        .rsplit("::")
+        .next()
+        .unwrap_or_else(|| std::any::type_name::<T>())
+}
+
+/// The human readable name of the entity.
+#[ecs_component]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Reflect)]
+pub struct Name(pub String);
+inspector_module!(Name, removable = false);
+
+impl Deref for Name {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Name {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// Marker trait for global components.
 #[ecs_component]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Global {}
 
+/// World position of the entity.
 #[ecs_component]
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]

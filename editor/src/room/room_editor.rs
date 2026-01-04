@@ -192,6 +192,7 @@ impl RoomEditor {
                         .create_entity()
                         .with(Position { position: room.position })
                         .with(CurrentRoom(room.id))
+                        .with(Name(format!("Entity")))
                         .finish();
 
                     // Immediately select it so the inspector shows the newly‑created entity

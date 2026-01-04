@@ -16,7 +16,6 @@ use std::any::Any;
 #[derive(Default, Debug)]
 pub struct Ecs {
     pub stores: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
-    // TODO: make this global
     next_entity_id: usize,
 }
 

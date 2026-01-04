@@ -1,6 +1,6 @@
 // engine_core/src/animation/animation_system.rs
 use crate::assets::asset_manager::AssetManager;
-use crate::ecs::entity::entities_in_room;
+use crate::world::room::entities_in_room;
 use crate::animation::animation_clip::*;
 use crate::assets::sprite::SpriteId;
 use crate::ecs::entity::Entity;
