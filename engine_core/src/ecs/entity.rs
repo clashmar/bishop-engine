@@ -1,14 +1,11 @@
 // engine_core/src/ecs/entity.rs
-use crate::ecs::component::{Component, ComponentStore, CurrentRoom};
 use crate::ecs::component_registry::ComponentRegistry;
-use crate::world::room::RoomId;  
+use crate::ecs::component::*;
 use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::any::TypeId;
 use inventory::iter;
 
-// TODO: Add name?
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize, Default)]
 pub struct Entity(pub usize);
 
@@ -49,12 +46,9 @@ impl<'a> EntityBuilder<'a> {
             // TODO handle expect
             .expect("Component not registered.");
 
-        // Run the factory. This inserts `T` and every
-        // component listed in the macro’s requirement list.
+        // Insert `T` and every component listed in the macro’s requirement list.
         (reg.factory)(self.ecs, self.id);
-
         T::store_mut(self.ecs).insert(self.id, comp);
-
         self
     }
 
@@ -62,22 +56,5 @@ impl<'a> EntityBuilder<'a> {
     pub fn finish(self) -> Entity {
         self.id
     }
-}
-
-// TODO: does this belong here?
-// Returns a HashSet of all entities in the current room.
-pub fn entities_in_room(ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
-    let room_store = ecs.get_store::<CurrentRoom>();
-    room_store
-        .data
-        .iter()
-        .filter_map(|(entity, cur_room)| {
-            if cur_room.0 == room_id {
-                Some(*entity)
-            } else {
-                None
-            }
-        })
-        .collect()
 }
 

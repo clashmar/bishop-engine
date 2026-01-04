@@ -2,15 +2,17 @@
 use crate::camera::game_camera::RoomCamera;
 use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
+use crate::ecs::entity::Entity;
 use crate::ecs::component::*;
 use crate::ecs::ecs::Ecs;
 use crate::constants::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use macroquad::prelude::*;
 use serde_with::FromInto;
 use serde_with::serde_as;
 
-/// Identifier for a room.
+/// Identifier for a room. TODO: Make sure this is unique across worlds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct RoomId(pub usize);
 
@@ -121,10 +123,37 @@ impl Room {
     }
 
     pub fn create_room_camera(&self, ecs: &mut Ecs, room_id: RoomId) {
-        let _camera = ecs.create_entity()
+        const CAMERA_PREFIX: &str = "Camera ";
+        let name_store = ecs.get_store::<Name>();
+        let cur_room_store = ecs.get_store::<CurrentRoom>();
+
+        let mut used: HashSet<usize> = HashSet::new();
+
+        for (entity, name) in name_store.data.iter() {
+            if let Some(cur_room) = cur_room_store.get(*entity) {
+                if cur_room.0 != self.id {
+                    continue;
+                }
+                if let Some(num_str) = name.strip_prefix(CAMERA_PREFIX) {
+                    if let Ok(num) = num_str.parse::<usize>() {
+                        if num > 0 {
+                            used.insert(num);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut next_idx = 1;
+        while used.contains(&next_idx) {
+            next_idx += 1;
+        }
+
+        ecs.create_entity()
             .with(Position { position: self.position })
             .with(RoomCamera::new(room_id))
-            .with(CurrentRoom(self.id));
+            .with(CurrentRoom(self.id))
+            .with(Name(format!("{}{}", CAMERA_PREFIX, next_idx)));
     }
 
     /// Returns the axis‑aligned rectangle that a room occupies in world space.
@@ -139,6 +168,22 @@ impl Room {
     pub fn current_variant(&self) -> &RoomVariant {
         &self.variants[0]
     }
+}
+
+/// Returns a HashSet of all entities in the current room.
+pub fn entities_in_room(ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
+    let room_store = ecs.get_store::<CurrentRoom>();
+    room_store
+        .data
+        .iter()
+        .filter_map(|(entity, cur_room)| {
+            if cur_room.0 == room_id {
+                Some(*entity)
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

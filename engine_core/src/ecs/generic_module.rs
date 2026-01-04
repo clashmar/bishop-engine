@@ -1,16 +1,15 @@
 // engine_core/src/ecs/generic_module.rs
-use crate::ecs::reflect_field::*;
-use crate::game::game::*;
-use crate::ecs::entity::Entity;
-use crate::ecs::ecs::Ecs;
-use crate::ecs::component::Component;
-use crate::ecs::reflect_field::Reflect;
 use crate::ecs::inpsector_module::InspectorModule;
-use crate::ui::text::*;
+use crate::ecs::component::Component;
+use crate::ecs::reflect_field::*;
+use crate::ecs::entity::Entity;
 use crate::ui::widgets::*;
-use macroquad::prelude::*;
+use crate::game::game::*;
+use crate::ecs::ecs::Ecs;
+use crate::ui::text::*;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use macroquad::prelude::*;
 
 const TOP_PADDING: f32 = 10.0;
 const SPACING: f32 = 5.0;
@@ -23,6 +22,7 @@ const FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 pub struct GenericModule<T> {
     _phantom: PhantomData<T>,
     field_ids: HashMap<String, WidgetId>,
+    removable: bool,
 }
 
 impl<T> Default for GenericModule<T> {
@@ -30,6 +30,17 @@ impl<T> Default for GenericModule<T> {
         Self { 
             _phantom: PhantomData,
             field_ids: HashMap::new(),
+            removable: true,
+        }
+    }
+}
+
+impl<T> GenericModule<T> {
+    pub fn new(removable: bool) -> Self {
+        Self {
+            _phantom: PhantomData,
+            field_ids: HashMap::new(),
+            removable,
         }
     }
 }
@@ -221,7 +232,9 @@ where
         TOP_PADDING + field_count * (DEFAULT_FIELD_HEIGHT + SPACING)
     }
 
-    fn removable(&self) -> bool { true }
+    fn removable(&self) -> bool { 
+        self.removable 
+    }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
         game_ctx.ecs.get_store_mut::<T>().remove(entity);

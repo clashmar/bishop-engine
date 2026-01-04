@@ -82,13 +82,16 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
     let fields = &struct_data.fields;
     let deps = &args.deps;
 
-    // Build the struct definition with proper semicolon handling
+    // Build the struct definition - preserve all attributes including derives
     let struct_def = match fields {
         Fields::Named(_) => {
             quote! { #(#attrs)* #vis struct #name #generics #fields }
         }
-        Fields::Unnamed(_) | Fields::Unit => {
+        Fields::Unnamed(_) => {
             quote! { #(#attrs)* #vis struct #name #generics #fields; }
+        }
+        Fields::Unit => {
+            quote! { #(#attrs)* #vis struct #name #generics; }
         }
     };
 
@@ -279,9 +282,17 @@ fn generate_lua_schema(fields: &Fields) -> proc_macro2::TokenStream {
                     &[("value", #lua_type)]
                 }
             } else {
-                // Multi-field tuple structs are not supported
+                // Multi-field tuple structs: generate field_0, field_1, etc.
+                let field_schemas = unnamed.unnamed.iter().enumerate().map(|(i, f)| {
+                    let name = format!("field_{}", i);
+                    let lua_type = rust_type_to_lua(&f.ty);
+                    quote! {
+                        (#name, #lua_type)
+                    }
+                });
+
                 quote! {
-                    &[]
+                    &[#(#field_schemas),*]
                 }
             }
         }
