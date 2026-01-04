@@ -1,11 +1,10 @@
-// editor/src/gui/panels/hierarchy_panel.rs
 use crate::gui::panels::generic_panel::PanelDefinition;
+use crate::room::room_editor::RoomEditor;
 use crate::gui::gui_constants::*;
 use crate::ecs::component::Name;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::Editor;
-use crate::room::room_editor::RoomEditor;
 use engine_core::ui::text::draw_text_ui;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
@@ -13,10 +12,19 @@ use engine_core::ui::widgets::*;
 use std::collections::HashSet;
 use macroquad::prelude::*;
 
+const ROW_HEIGHT: f32 = 22.0;
+const HEADER_HEIGHT: f32 = 18.0;
+const ADD_BUTTON_HEIGHT: f32 = 26.0;
+const SCROLL_SPEED: f32 = 24.0;
+const SCROLLBAR_W: f32 = 6.0;
+const TOP_PADDING: f32 = 8.0;
+const BOTTOM_PADDING: f32 = 8.0;
+
 pub struct HierarchyPanel {
     expanded: HashSet<Entity>,
     dragging: Option<Entity>,
     drag_offset: Vec2,
+    scroll_y: f32,
 }
 
 impl HierarchyPanel {
@@ -25,11 +33,11 @@ impl HierarchyPanel {
             expanded: HashSet::new(),
             dragging: None,
             drag_offset: Vec2::ZERO,
+            scroll_y: 0.0,
         }
     }
 }
 
-/// Title/id of the panel.
 pub const HIERARCHY_PANEL: &'static str = "Hierarchy";
 
 impl PanelDefinition for HierarchyPanel {
@@ -42,32 +50,83 @@ impl PanelDefinition for HierarchyPanel {
     }
 
     fn draw(&mut self, rect: Rect, editor: &mut Editor) {
-        let mut y = rect.y + 6.;
+        let mouse: Vec2 = mouse_position().into();
 
-        // Add global entity
-        let add_rect = Rect::new(rect.x + 6., y, rect.w - 12., 26.);
-        if gui_button(add_rect, "+ Global", false) {
-            editor.game.ecs.create_entity()
-                .with(Global::default())
-                .with(Name(format!("Global Entity")));
+        // Scroll input
+        if rect.contains(mouse) {
+            let (_, wheel_y) = mouse_wheel();
+            self.scroll_y += wheel_y * SCROLL_SPEED;
         }
 
-        y += add_rect.h + SPACING * 2.;
+        let ecs = &mut editor.game.ecs;
+        let room_editor = &mut editor.room_editor;
 
-        // Global entities
-        draw_text_ui("Global", rect.x + 6., y, 14., GRAY);
-        y += 18.;
-
-        let global_entities: Vec<Entity> = {
-            let store = editor.game.ecs.get_store::<Global>();
-            let all_globals: Vec<Entity> = store.data.keys().copied().collect();
-            get_root_entities(&editor.game.ecs, &all_globals)
+        let global_entities = {
+            let store = ecs.get_store::<Global>();
+            let all: Vec<Entity> = store.data.keys().copied().collect();
+            get_root_entities(ecs, &all)
+        };
+        let room_entities = {
+            let store = ecs.get_store::<CurrentRoom>();
+            let all: Vec<Entity> = store.data.keys().copied().collect();
+            get_root_entities(ecs, &all)
         };
 
-        // Grab references to parts needed for each tree
-        let room_editor = &mut editor.room_editor;
-        let ecs = &mut editor.game.ecs;
+        // Layout pass 
+        let mut layout_y = 0.0;
 
+        layout_y += TOP_PADDING;                                  
+        layout_y += ADD_BUTTON_HEIGHT + SPACING * 2.0;             
+        layout_y += HEADER_HEIGHT;      
+
+        for e in &global_entities {
+            layout_entity_tree(*e, &mut layout_y, &self.expanded, ecs);
+        }
+        layout_y += 10.0;                                       
+        layout_y += HEADER_HEIGHT;  
+
+        for e in &room_entities {
+            layout_entity_tree(*e, &mut layout_y, &self.expanded, ecs);
+        }
+        layout_y += BOTTOM_PADDING;                             
+
+        let content_height = layout_y;
+        let scroll_range = (content_height - rect.h).max(0.0);
+        self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
+
+        // Draw pass 
+        let mut y = rect.y + self.scroll_y + TOP_PADDING;
+
+        // Add global button
+        let btn_w = inner_width(rect, scroll_range);
+        draw_block(
+            Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
+            rect,
+            || {
+                if gui_button(
+                    Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
+                    "+ Global",
+                    false,
+                ) {
+                    ecs.create_entity()
+                        .with(Global::default())
+                        .with(Name("Global Entity".into()));
+                }
+            },
+        );
+        y += ADD_BUTTON_HEIGHT + SPACING * 2.0;
+
+        // Global header
+        draw_block(
+            Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
+            rect,
+            || {
+                draw_text_ui("Global", rect.x + 6., y + 14., 14., GRAY);
+            },
+        );
+        y += HEADER_HEIGHT;
+
+        // Global entities
         for entity in global_entities {
             draw_entity_tree(
                 entity,
@@ -79,21 +138,23 @@ impl PanelDefinition for HierarchyPanel {
                 &mut self.drag_offset,
                 room_editor,
                 ecs,
+                scroll_range,
             );
         }
 
-        y += 10.;
+        y += 10.0;
+
+        // Room header
+        draw_block(
+            Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
+            rect,
+            || {
+                draw_text_ui("Room", rect.x + 6., y + 14., 14., GRAY);
+            },
+        );
+        y += HEADER_HEIGHT;
 
         // Room entities
-        draw_text_ui("Room", rect.x + 6., y, 14., GRAY);
-        y += 18.;
-
-        let room_entities: Vec<Entity> = {
-            let store = ecs.get_store::<CurrentRoom>();
-            let all_room: Vec<Entity> = store.data.keys().copied().collect();
-            get_root_entities(ecs, &all_room)
-        };
-
         for entity in room_entities {
             draw_entity_tree(
                 entity,
@@ -105,33 +166,51 @@ impl PanelDefinition for HierarchyPanel {
                 &mut self.drag_offset,
                 room_editor,
                 ecs,
+                scroll_range,
             );
         }
 
-        // Handle dragging
-        if let Some(dragged) = self.dragging {
-            let mouse_pos = mouse_position();
-            
-            // Get name for ghost
-            let entity_name = get_entity_name(&editor.game.ecs, dragged);
-            
+        // Scrollbar
+        if scroll_range > 0.0 {
+            let ratio = rect.h / content_height;
+            let bar_h = rect.h * ratio;
+            let t = (-self.scroll_y) / scroll_range;
+            let bar_x = rect.x + rect.w - SCROLLBAR_W - 2.0;
+            let bar_y = rect.y + t * (rect.h - bar_h);
             draw_rectangle(
-                mouse_pos.0 - self.drag_offset.x,
-                mouse_pos.1 - self.drag_offset.y,
+                bar_x,
+                rect.y,
+                SCROLLBAR_W,
+                rect.h,
+                Color::new(0.15, 0.15, 0.15, 0.6),
+            );
+            draw_rectangle(
+                bar_x,
+                bar_y,
+                SCROLLBAR_W,
+                bar_h,
+                Color::new(0.7, 0.7, 0.7, 0.9),
+            );
+        }
+
+        // Drag ghost
+        if let Some(dragged) = self.dragging {
+            let (mx, my) = mouse_position();
+            let name = get_entity_name(ecs, dragged);
+            draw_rectangle(
+                mx - self.drag_offset.x,
+                my - self.drag_offset.y,
                 150.0,
-                22.0,
+                ROW_HEIGHT,
                 Color::new(0.3, 0.5, 0.7, 0.5),
             );
-            
             draw_text_ui(
-                &entity_name,
-                mouse_pos.0 - self.drag_offset.x + 4.0,
-                mouse_pos.1 - self.drag_offset.y + 16.0,
+                &name,
+                mx - self.drag_offset.x + 4.0,
+                my - self.drag_offset.y + 16.0,
                 14.0,
                 WHITE,
             );
-
-            // Release drag
             if is_mouse_button_released(MouseButton::Left) {
                 self.dragging = None;
             }
@@ -139,10 +218,18 @@ impl PanelDefinition for HierarchyPanel {
     }
 }
 
-fn get_entity_name(ecs: &Ecs, entity: Entity) -> String {
-    ecs.get::<Name>(entity)
-        .map(|n| n.to_string())
-        .unwrap_or_else(|| format!("{:?}", entity))
+fn layout_entity_tree(
+    entity: Entity,
+    y: &mut f32,
+    expanded: &HashSet<Entity>,
+    ecs: &Ecs,
+) {
+    *y += ROW_HEIGHT;
+    if expanded.contains(&entity) && has_children(ecs, entity) {
+        for child in get_children(ecs, entity) {
+            layout_entity_tree(child, y, expanded, ecs);
+        }
+    }
 }
 
 fn draw_entity_tree(
@@ -155,96 +242,92 @@ fn draw_entity_tree(
     drag_offset: &mut Vec2,
     room_editor: &mut RoomEditor,
     ecs: &mut Ecs,
+    scroll_range: f32,
 ) {
+    // Width that respects the scrollbar
+    let usable_w = inner_width(panel_rect, scroll_range);
     let indent = depth as f32 * 16.0;
-    let has_children = has_children(ecs, entity);
-    let is_expanded = expanded.contains(&entity);
-
-    // Expand/collapse button area
-    let expand_btn_rect = Rect::new(
+    let row_rect = Rect::new(
         panel_rect.x + 6. + indent,
         *y,
-        14.,
-        22.,
+        usable_w - indent,
+        ROW_HEIGHT,
     );
 
-    let row_rect = Rect::new(
-        panel_rect.x + 6. + indent + (if has_children { 16.0 } else { 0.0 }),
-        *y,
-        panel_rect.w - 12. - indent - (if has_children { 16.0 } else { 0.0 }),
-        22.,
-    );
+    draw_block(row_rect, panel_rect, || {
+        let has_children = has_children(ecs, entity);
+        let is_expanded = expanded.contains(&entity);
+        let mouse: Vec2 = mouse_position().into();
+        let mouse_over = row_rect.contains(mouse);
 
-    let entity_name = get_entity_name(ecs, entity);
-
-    // Highlight if selected
-    let is_selected = room_editor.selected_entity == Some(entity);
-
-    if is_selected {
-        draw_rectangle(
-            panel_rect.x + 6. + indent,
-            row_rect.y,
-            panel_rect.w - 12. - indent,
-            row_rect.h,
-            Color::new(0.25, 0.45, 0.85, 0.35),
-        );
-    }
-
-    // Draw expand/collapse buttons
-    if has_children {
-        let symbol = if is_expanded { "-" } else { "+" };
-        if gui_button_plain_hover(expand_btn_rect, symbol, WHITE, GRAY, false) {
-            if is_expanded {
-                expanded.remove(&entity);
-            } else {
-                expanded.insert(entity);
-            }
-        }
-    }
-
-    let mouse: Vec2 = mouse_position().into();
-    let mouse_over = row_rect.contains(mouse);
-
-    // Handle click for selection (do this first)
-    if mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
-        room_editor.set_selected_entity(Some(entity));
-    }
-
-    // Start drag 
-    if mouse_over && is_mouse_button_down(MouseButton::Left) && dragging.is_none() {
-        *dragging = Some(entity);
-        *drag_offset = Vec2::new(mouse.x - row_rect.x, mouse.y - row_rect.y);
-    }
-
-    // Drop target highlight
-    if let Some(dragged_entity) = *dragging {
-        if dragged_entity != entity && mouse_over && !is_ancestor(ecs, dragged_entity, entity) {
+        // Selection highlight
+        if room_editor.selected_entity == Some(entity) {
             draw_rectangle(
                 row_rect.x,
                 row_rect.y,
                 row_rect.w,
                 row_rect.h,
-                Color::new(0.3, 0.7, 0.3, 0.3),
+                Color::new(0.25, 0.45, 0.85, 0.35),
             );
+        }
 
-            // Drop to make parent
-            if is_mouse_button_released(MouseButton::Left) {
-                set_parent(ecs, dragged_entity, entity);
-                expanded.insert(entity);
-                *dragging = None;
+        // Expand/collapse buttons
+        if has_children {
+            let btn = Rect::new(row_rect.x, row_rect.y, 14.0, ROW_HEIGHT);
+            let symbol = if is_expanded { "-" } else { "+" };
+            if gui_button_plain_hover(btn, symbol, WHITE, GRAY, false) {
+                if is_expanded {
+                    expanded.remove(&entity);
+                } else {
+                    expanded.insert(entity);
+                }
             }
         }
-    }
 
-    // Draw entity name
-    draw_text_ui(&entity_name, row_rect.x + 4.0, row_rect.y + 16.0, 14.0, WHITE);
+        // Selection
+        if mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
+            room_editor.set_selected_entity(Some(entity));
+        }
 
-    *y += 22.;
+        // Start drag
+        if mouse_over && is_mouse_button_down(MouseButton::Left) && dragging.is_none() {
+            *dragging = Some(entity);
+            *drag_offset = mouse - row_rect.point();
+        }
 
-    // Draw children recursively if expanded
-    if is_expanded && has_children {
-        let children = get_children(ecs, entity);
-        for child in children {
+        // Drop target to parent
+        if let Some(dragged) = *dragging {
+            if dragged != entity && mouse_over && !is_ancestor(ecs, dragged, entity) {
+                draw_rectangle(
+                    row_rect.x,
+                    row_rect.y,
+                    row_rect.w,
+                    row_rect.h,
+                    Color::new(0.3, 0.7, 0.3, 0.3),
+                );
+                if is_mouse_button_released(MouseButton::Left) {
+                    set_parent(ecs, dragged, entity);
+                    expanded.insert(entity);
+                    *dragging = None;
+                }
+            }
+        }
+
+        // Entity name
+        draw_text_ui(
+            &get_entity_name(ecs, entity),
+            row_rect.x + 18.0,
+            row_rect.y + 16.0,
+            14.0,
+            WHITE,
+        );
+    });
+
+    *y += ROW_HEIGHT;
+
+    // Recursively draw children
+    if expanded.contains(&entity) && has_children(ecs, entity) {
+        for child in get_children(ecs, entity) {
             draw_entity_tree(
                 child,
                 depth + 1,
@@ -255,20 +338,39 @@ fn draw_entity_tree(
                 drag_offset,
                 room_editor,
                 ecs,
+                scroll_range,
             );
         }
     }
 
-    // Drag outside panel to unparent
-    if let Some(dragged_entity) = *dragging {
-        if dragged_entity == entity {
+    // Unparent by dragging outside panel
+    if let Some(dragged) = *dragging {
+        if dragged == entity {
             let mouse: Vec2 = mouse_position().into();
-            let outside_panel = !panel_rect.contains(mouse);
-            
-            if outside_panel && is_mouse_button_released(MouseButton::Left) {
-                remove_parent(ecs, dragged_entity);
+            if !panel_rect.contains(mouse) && is_mouse_button_released(MouseButton::Left) {
+                remove_parent(ecs, dragged);
                 *dragging = None;
             }
         }
     }
+}
+
+fn inner_width(panel: Rect, scroll_range: f32) -> f32 {
+    if scroll_range > 0.0 {
+        panel.w - 12.0 - SCROLLBAR_W 
+    } else {
+        panel.w - 12.0
+    }
+}
+
+fn draw_block<F: FnOnce()>(block: Rect, clip: Rect, f: F) {
+    if block.y >= clip.y && block.y + block.h <= clip.y + clip.h {
+        f();
+    }
+}
+
+fn get_entity_name(ecs: &Ecs, entity: Entity) -> String {
+    ecs.get::<Name>(entity)
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| format!("{:?}", entity))
 }
