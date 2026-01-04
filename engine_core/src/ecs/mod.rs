@@ -1,10 +1,11 @@
+pub mod capture;
 pub mod component;
+pub mod component_registry;
 pub mod entity;
 pub mod ecs;
-pub mod reflect_field;
-pub mod component_registry;
-pub mod module_factory;
 pub mod generic_module;
-pub mod inpsector_module;
-pub mod capture;
 pub mod has_any;
+pub mod inpsector_module;
+pub mod module_factory;
+pub mod position;
+pub mod reflect_field;

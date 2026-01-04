@@ -1,6 +1,6 @@
 // engine_core/src/camera/game_camera.rs
 use crate::ecs::component::CurrentRoom;
-use crate::ecs::component::Position;
+use crate::ecs::position::Position;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::engine_global::*;

@@ -1,8 +1,8 @@
 // editor/src/gui/inspector/transform_module.rs
 use engine_core::ecs::inpsector_module::InspectorModule;
-use engine_core::ecs::component::Position;
-use engine_core::ecs::entity::Entity;
+use engine_core::ecs::position::Position;
 use engine_core::game::game::GameCtxMut;
+use engine_core::ecs::entity::Entity;
 use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::ui::text::*;

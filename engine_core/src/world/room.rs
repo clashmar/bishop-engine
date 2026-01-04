@@ -2,6 +2,7 @@
 use crate::camera::game_camera::RoomCamera;
 use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
+use crate::ecs::position::Position;
 use crate::ecs::entity::Entity;
 use crate::ecs::component::*;
 use crate::ecs::ecs::Ecs;

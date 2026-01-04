@@ -3,18 +3,29 @@
 ---@alias vec2 { x: number, y: number }
 ---@alias vec3 { x: number, y: number, z: number }
 
----@class Glow
----@field color vec3
----@field intensity number
----@field brightness number
----@field emission number
----@field sprite_id number
+---@class Script
+---@field script_id number
+---@field data table
 
----@class RoomCamera
----@field zoom vec2
----@field room_id number
----@field zoom_mode table
----@field camera_mode table
+---@class Sprite
+---@field sprite number
+
+---@class CurrentFrame
+---@field clip_id number
+---@field col number
+---@field row number
+---@field offset vec2
+---@field sprite_id number
+---@field frame_size vec2
+
+---@class Children
+---@field entities table
+
+---@class Parent
+---@field value table
+
+---@class Position
+---@field position vec2
 
 ---@class Damage
 ---@field amount number
@@ -51,27 +62,24 @@
 ---@class Layer
 ---@field z number
 
----@class Position
----@field position vec2
-
 ---@class Global
 --- Marker component
 
 ---@class Name
 ---@field value string
 
----@class Script
----@field script_id number
----@field data table
+---@class RoomCamera
+---@field zoom vec2
+---@field room_id number
+---@field zoom_mode table
+---@field camera_mode table
 
----@class Light
----@field pos vec2
+---@class Glow
 ---@field color vec3
 ---@field intensity number
----@field radius number
----@field spread number
----@field alpha number
 ---@field brightness number
+---@field emission number
+---@field sprite_id number
 
 ---@class Animation
 ---@field clips table
@@ -83,20 +91,22 @@
 ---@class Interactable
 ---@field range number
 
----@class CurrentFrame
----@field clip_id number
----@field col number
----@field row number
----@field offset vec2
----@field sprite_id number
----@field frame_size vec2
-
----@class Sprite
----@field sprite number
+---@class Light
+---@field pos vec2
+---@field color vec3
+---@field intensity number
+---@field radius number
+---@field spread number
+---@field alpha number
+---@field brightness number
 
 ---@class ComponentId
----@field Glow string
----@field RoomCamera string
+---@field Script string
+---@field Sprite string
+---@field CurrentFrame string
+---@field Children string
+---@field Parent string
+---@field Position string
 ---@field Damage string
 ---@field Solid string
 ---@field Walkable string
@@ -108,20 +118,22 @@
 ---@field Player string
 ---@field CurrentRoom string
 ---@field Layer string
----@field Position string
 ---@field Global string
 ---@field Name string
----@field Script string
----@field Light string
+---@field RoomCamera string
+---@field Glow string
 ---@field Animation string
 ---@field Interactable string
----@field CurrentFrame string
----@field Sprite string
+---@field Light string
 
 local C = {}
 
-C.Glow = "Glow"
-C.RoomCamera = "RoomCamera"
+C.Script = "Script"
+C.Sprite = "Sprite"
+C.CurrentFrame = "CurrentFrame"
+C.Children = "Children"
+C.Parent = "Parent"
+C.Position = "Position"
 C.Damage = "Damage"
 C.Solid = "Solid"
 C.Walkable = "Walkable"
@@ -133,14 +145,12 @@ C.Velocity = "Velocity"
 C.Player = "Player"
 C.CurrentRoom = "CurrentRoom"
 C.Layer = "Layer"
-C.Position = "Position"
 C.Global = "Global"
 C.Name = "Name"
-C.Script = "Script"
-C.Light = "Light"
+C.RoomCamera = "RoomCamera"
+C.Glow = "Glow"
 C.Animation = "Animation"
 C.Interactable = "Interactable"
-C.CurrentFrame = "CurrentFrame"
-C.Sprite = "Sprite"
+C.Light = "Light"
 
 return C

@@ -1,5 +1,6 @@
 // engine_core/src/ecs/ecs.rs
 use crate::ecs::component_registry::*;
+use crate::ecs::position::Position;
 use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
 use crate::ecs::entity::*;
@@ -11,7 +12,6 @@ use once_cell::sync::Lazy;
 use macroquad::prelude::*;
 use std::any::TypeId;
 use std::any::Any;
-
 
 #[derive(Default, Debug)]
 pub struct Ecs {
@@ -64,8 +64,23 @@ impl Ecs {
         T::has_any(self, entity)
     }
 
-    /// Remove all component data that belongs to `entity`.
+    /// Remove an entity and all of its descendants.
     pub fn remove_entity(&mut self, entity: Entity) {
+        // Detach from parent (if any)
+        if let Some(parent) = self.get::<Parent>(entity).map(|p| p.0) {
+            if let Some(children) = self.get_mut::<Children>(parent) {
+                children.remove(entity);
+                if children.entities.is_empty() {
+                    self.get_store_mut::<Children>().remove(parent);
+                }
+            }
+        }
+
+        let children = get_children(self, entity);
+        for child in children {
+            self.remove_entity(child);
+        }
+
         for reg in inventory::iter::<ComponentRegistry> {
             (reg.remove)(self, entity);
         }

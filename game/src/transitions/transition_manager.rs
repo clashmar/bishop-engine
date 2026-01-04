@@ -1,6 +1,7 @@
 // engine_core/src/world/transition_manager.rs
 use crate::game_state::GameState;
 use engine_core::engine_global::tile_size;
+use engine_core::ecs::position::Position;
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use macroquad::prelude::*;

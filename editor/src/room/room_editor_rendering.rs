@@ -1,5 +1,6 @@
 // editor/src/room/room_editor_actions.rs
 use crate::editor_camera_controller::*;
+use crate::ecs::position::Position;
 use crate::gui::gui_constants::*;
 use crate::room::room_editor::*;
 use crate::gui::menu_bar::*;

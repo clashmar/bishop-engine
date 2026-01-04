@@ -7,7 +7,6 @@ use crate::editor_global::push_command;
 use crate::gui::menu_bar::menu_button;
 use crate::gui::gui_constants::*;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use engine_core::camera::game_camera::RoomCamera;
 use engine_core::ecs::module_factory::MODULES;
 use engine_core::controls::controls::Controls;
 use engine_core::ecs::component_registry::*;

@@ -2,6 +2,7 @@
 use engine_core::assets::asset_manager::AssetManager;
 use engine_core::tiles::tile::TileComponent;
 use engine_core::engine_global::tile_size;
+use engine_core::ecs::position::Position;
 use engine_core::tiles::tilemap::TileMap;
 use engine_core::ecs::component::*;
 use engine_core::world::room::Exit;

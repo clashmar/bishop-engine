@@ -9,10 +9,12 @@ use crate::room::room_editor_rendering::*;
 use crate::gui::panels::generic_panel::*;
 use crate::commands::entity_commands::*;
 use crate::gui::modal::is_modal_open;
+use crate::ecs::position::Position;
 use crate::gui::mode_selector::*;
 use crate::editor_global::*;
 use crate::world::coord;
 use crate::canvas::grid;
+use engine_core::ecs::position::update_entity_position;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::assets::asset_manager::AssetManager;
 use macroquad::miniquad::window::set_mouse_cursor;
@@ -362,22 +364,17 @@ impl RoomEditor {
         if self.dragging {
             if let Some(entity) = self.selected_entity {
                 let (w, h) = entity_dimensions(ecs, asset_manager, entity);
-                if let Some(position) = ecs
-                    .get_store_mut::<Position>()
-                    .get_mut(entity)
-                {
-                    let mouse_world = coord::mouse_world_pos(camera);
-                    let mut new_pos = mouse_world + self.drag_offset;
+                let mouse_world = coord::mouse_world_pos(camera);
+                let mut new_pos = mouse_world + self.drag_offset;
 
-                    // Snap to grid while S is held
-                    if is_key_down(KeyCode::S) {
-                        let tile = (mouse_world / tile_size()).floor();
-                        let tile_center_x = tile.x * tile_size() + tile_size() * 0.5;
-                        let tile_bottom_y = tile.y * tile_size() + tile_size();
-                        new_pos = vec2(tile_center_x - w * 0.5, tile_bottom_y - h);
-                    }
-                    position.position = new_pos;
+                // Snap to grid while S is held
+                if is_key_down(KeyCode::S) {
+                    let tile = (mouse_world / tile_size()).floor();
+                    let tile_center_x = tile.x * tile_size() + tile_size() * 0.5;
+                    let tile_bottom_y = tile.y * tile_size() + tile_size();
+                    new_pos = vec2(tile_center_x - w * 0.5, tile_bottom_y - h);
                 }
+                update_entity_position(ecs, entity, new_pos);
             }
 
             // Finish the drag when the button is released
