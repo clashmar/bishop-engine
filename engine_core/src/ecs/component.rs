@@ -4,7 +4,6 @@ use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
 use crate::inspector_module;
-use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use std::collections::HashMap;
@@ -119,16 +118,6 @@ impl DerefMut for Name {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Global {}
 
-/// World position of the entity.
-#[ecs_component]
-#[serde_as]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct Position {
-    #[serde_as(as = "FromInto<[f32; 2]>")]
-    pub position: Vec2,
-}
-
 /// Z layer of an entity.
 #[ecs_component]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
@@ -203,4 +192,3 @@ pub struct Solid(pub bool);
 pub struct Damage {
     pub amount: f32,
 }
-

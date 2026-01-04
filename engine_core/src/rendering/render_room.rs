@@ -4,6 +4,7 @@ use crate::rendering::render_system::RenderSystem;
 use crate::assets::asset_manager::AssetManager;
 use crate::camera::game_camera::RoomCamera;
 use crate::engine_global::tile_size;
+use crate::ecs::position::Position;
 use crate::assets::sprite::Sprite;
 use crate::lighting::light::Light;
 use crate::lighting::glow::Glow;

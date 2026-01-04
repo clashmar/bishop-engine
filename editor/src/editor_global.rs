@@ -2,11 +2,12 @@
 use crate::commands::editor_command_manager::EditorCommandManager;
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::gui::panels::panel_manager::PanelManager;
+use crate::ecs::entity::Entity;
+use crate::Editor;
 use std::cell::RefCell;
 use std::future::Future;
 use std::cell::Cell;
 use std::pin::Pin;
-use crate::Editor;
 use std::rc::Rc;
 use mlua::Lua;
 
@@ -17,7 +18,7 @@ pub struct EditorServices {
     pub command_manager: RefCell<EditorCommandManager>,
     pub pending_undo: Cell<bool>,
     pub pending_redo: Cell<bool>,
-    pub entity_clipboard: RefCell<Option<Vec<(String, String)>>>,
+    pub entity_clipboard: RefCell<Option<Vec<(Entity, Vec<(String, String)>)>>>,
     pub panel_manager: RefCell<PanelManager>,
 }
 

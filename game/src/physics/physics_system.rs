@@ -2,6 +2,7 @@
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY;
 use engine_core::assets::asset_manager::AssetManager;
+use engine_core::ecs::position::{Position, update_entity_position};
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use engine_core::ecs::ecs::Ecs;
@@ -58,10 +59,8 @@ pub fn update_physics(
             new_vel.y = 0.0;
         }
 
-        {
-            let pos_mut = ecs.get_mut::<Position>(entity).unwrap();
-            pos_mut.position = new_pos;
-        }
+        update_entity_position(ecs, entity, new_pos);
+        
         {
             let vel_mut = ecs.get_mut::<Velocity>(entity).unwrap();
             *vel_mut = new_vel;

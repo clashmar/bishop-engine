@@ -2,6 +2,7 @@
 #![allow(unused)]
 use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
+use crate::ecs::position::Position;
 use crate::with_lua_async;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;

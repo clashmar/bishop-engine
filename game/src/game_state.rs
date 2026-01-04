@@ -3,7 +3,7 @@ use crate::scripting::script_system::ScriptSystem;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::storage::core_storage::load_game_ron;
 use engine_core::ecs::component::CurrentRoom;
-use engine_core::ecs::component::Position;
+use engine_core::ecs::position::Position;
 use engine_core::ecs::entity::Entity;
 use engine_core::world::room::Room;
 use engine_core::engine_global::*;

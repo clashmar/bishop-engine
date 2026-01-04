@@ -1,5 +1,5 @@
 // engine_core/src/scripting/interactable.rs
-use crate::ecs::component::Position;
+use crate::ecs::position::Position;
 use crate::ecs::entity::Entity;
 use crate::ecs::component::*;
 use crate::inspector_module;
