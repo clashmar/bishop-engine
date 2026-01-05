@@ -149,7 +149,7 @@ impl ScriptSystem {
         }
     }
 
-    // Load all scripts for the given ecs.
+    // Load all scripts for the given ecs. TODO: handle scope correctly
     pub fn load_scripts(
         lua: &Lua,
         ecs: &mut Ecs, 
@@ -158,11 +158,13 @@ impl ScriptSystem {
         let script_store = ecs.get_store_mut::<Script>();
 
         for (entity, script) in script_store.data.iter_mut() {
-            script.load(lua, script_manager, *entity)?; // TODO: load every frame?
-            if let Some(instance) = script_manager.instances.get(&(*entity, script.script_id)) {
-                let handle = lua_entity_handle(&lua, *entity)?;
-                instance.set(ENTITY, handle)?; // TODO: Can this be done automatically?
-            } 
+            match script_manager.get_or_create_instance(lua, *entity, script.script_id) {
+                Ok(instance) => {
+                    let handle = lua_entity_handle(&lua, *entity)?;
+                    instance.set(ENTITY, handle)?; // TODO: Can this be done automatically?
+                }
+                Err(e) => return Err(e)
+            }
         }
 
         Ok(())
