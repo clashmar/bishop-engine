@@ -110,7 +110,7 @@ impl Script {
         Ok(())
     }
 
-     /// Sync the current ScriptData back to Lua table.
+    /// Sync the current ScriptData back to Lua table.
     pub fn sync_to_lua(&self, lua: &Lua, script_manager: &mut ScriptManager, entity: Entity) -> LuaResult<()> {
         if self.script_id.0 == 0 {
             return Ok(());

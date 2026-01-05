@@ -8,6 +8,7 @@ local Entity = {}
 -- Component getters
 ---@overload fun(self: Entity, component: "Sprite"): Sprite
 ---@overload fun(self: Entity, component: "Animation"): Animation
+---@overload fun(self: Entity, component: "Position"): Position
 ---@overload fun(self: Entity, component: "Interactable"): Interactable
 ---@overload fun(self: Entity, component: "Script"): Script
 ---@overload fun(self: Entity, component: "Light"): Light
@@ -24,8 +25,11 @@ local Entity = {}
 ---@overload fun(self: Entity, component: "Player"): Player
 ---@overload fun(self: Entity, component: "CurrentRoom"): CurrentRoom
 ---@overload fun(self: Entity, component: "Layer"): Layer
----@overload fun(self: Entity, component: "Position"): Position
+---@overload fun(self: Entity, component: "Global"): Global
+---@overload fun(self: Entity, component: "Name"): Name
 ---@overload fun(self: Entity, component: "RoomCamera"): RoomCamera
+---@overload fun(self: Entity, component: "Children"): Children
+---@overload fun(self: Entity, component: "Parent"): Parent
 ---@param component string
 ---@return table|nil
 function Entity:get(component) end
@@ -44,6 +48,10 @@ function Entity:set_sprite(v) end
 ---@param self Entity
 ---@param v Animation
 function Entity:set_animation(v) end
+
+---@param self Entity
+---@param v Position
+function Entity:set_position(v) end
 
 ---@param self Entity
 ---@param v Interactable
@@ -110,12 +118,24 @@ function Entity:set_current_room(v) end
 function Entity:set_layer(v) end
 
 ---@param self Entity
----@param v Position
-function Entity:set_position(v) end
+---@param v Global
+function Entity:set_global(v) end
+
+---@param self Entity
+---@param v Name
+function Entity:set_name(v) end
 
 ---@param self Entity
 ---@param v RoomCamera
 function Entity:set_room_camera(v) end
+
+---@param self Entity
+---@param v Children
+function Entity:set_children(v) end
+
+---@param self Entity
+---@param v Parent
+function Entity:set_parent(v) end
 
 ---@param component string
 ---@see ComponentId

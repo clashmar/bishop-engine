@@ -3,6 +3,7 @@
 /// Generated filenames
 pub const ENGINE_FILE: &str = "engine.lua";
 pub const ENTITY_FILE: &str = "entity.lua";
+pub const GLOBAL_FILE: &str = "global.lua";
 
 /// GLOBALS
 pub const LUA_GAME_CTX: &str = "lua_game_ctx";
