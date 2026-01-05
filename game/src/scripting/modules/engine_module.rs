@@ -1,7 +1,7 @@
-// game/src/scripting/modules/global_module.rs
+// game/src/scripting/modules/engine_module.rs
 use crate::scripting::lua_game_ctx::LuaGameCtx;
-use engine_core::scripting::lua_constants::GLOBAL_FILE;
 use engine_core::scripting::modules::lua_module::*;
+use engine_core::scripting::lua_constants::*;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::component::*;
 use mlua::prelude::LuaResult;
@@ -10,16 +10,17 @@ use engine_core::*;
 use mlua::Function;
 use mlua::Variadic;
 use mlua::Value;
+use mlua::Table;
 use mlua::Lua;
 
 /// Lua module that exposes the engine's global modules to scripts.
 #[derive(Default)]
-pub struct GlobalModule;
-register_lua_module!(GlobalModule);
+pub struct EngineModule;
+register_lua_module!(EngineModule);
 
-impl LuaModule for GlobalModule {
+impl LuaModule for EngineModule {
     fn register(&self, lua: &Lua) -> LuaResult<()> {
-        let global_table = lua.create_table()?;
+        let engine_tbl: Table = lua.globals().get(ENGINE)?;
 
         // global.call(name, method_name, ...)
         let call_fn = lua.create_function(|lua, args: Variadic<Value>| {
@@ -43,7 +44,6 @@ impl LuaModule for GlobalModule {
             // Remaining args go to the method
             let method_args: Vec<Value> = iter.collect();
 
-            // Execute synchronously since we need return values
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_state = ctx.game_state.borrow();
             let ecs = &game_state.game.ecs;
@@ -103,29 +103,60 @@ impl LuaModule for GlobalModule {
             // Execute the call synchronously and return the result
             func.call::<MultiValue>(MultiValue::from_vec(call_args))
         })?;
+        engine_tbl.set(ENGINE_CALL, call_fn)?;
 
-        global_table.set("call", call_fn)?;
+        // engine.on(event, handler)
+        let on_fn = lua.create_function(|lua, (event, handler): (String, Function)| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let sm = &game_state.game.script_manager;
+            let bus = sm.event_bus.clone();
+            bus.on(event, handler);
+            Ok(())
+        })?;
+        engine_tbl.set(ENGINE_ON, on_fn)?;
 
-        // Set as global module
-        lua.globals().set("global", global_table)?;
-
+        // engine.emit(event, …)
+        let emit_fn = lua.create_function(|lua, (event, args): (String, Variadic<Value>)| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let sm = &game_state.game.script_manager;
+            let bus = sm.event_bus.clone();
+            bus.emit(event, args);
+            Ok(())
+        })?;
+        engine_tbl.set(ENGINE_EMIT, emit_fn)?;
         Ok(())
     }
 }
 
-impl LuaApi for GlobalModule {
+impl LuaApi for EngineModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
-        out.line("--- Global entity script API");
-        out.line("global = {}");
-        out.line("");
+        // engine.call
         out.line("--- Call a method on a global entity script");
         out.line("--- @param name string The name of the global entity");
         out.line("--- @param method string The method name to call");
         out.line("--- @param ... any Additional arguments to pass to the method");
         out.line("--- @return any Returns whatever the method returns");
-        out.line("function global.call(name, method, ...) end");
+        out.line("function engine.call(name, method, ...) end");
+        out.line("");
+
+        // engine.on
+        out.line("--- Register an event handler");
+        out.line("--- @param event string The name of the event to listen for");
+        out.line("--- @param handler function The Lua function that will be called");
+        out.line("--- @return nil");
+        out.line("function engine.on(event, handler) end");
+        out.line("");
+
+        // engine.emit
+        out.line("--- Emit an event to all registered handlers");
+        out.line("--- @param event string The name of the event to emit");
+        out.line("--- @param ... any Arguments that will be passed to each handler");
+        out.line("--- @return nil");
+        out.line("function engine.emit(event, ...) end");
         out.line("");
     }
 }
 
-register_lua_api!(GlobalModule, GLOBAL_FILE);
+register_lua_api!(EngineModule, ENGINE_FILE);

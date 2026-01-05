@@ -48,7 +48,7 @@ impl GameState {
         let player_pos = ecs.get_player_position().position;
         *camera_manager = CameraManager::new(ecs, current_room.id, player_pos);
 
-        ScriptSystem::init(lua, &mut game.script_manager);
+        ScriptSystem::init(lua);
 
         Self {
             game,
@@ -70,7 +70,7 @@ impl GameState {
         let player_pos = ecs.get_player_position().position;
         *camera_manager = CameraManager::new(ecs, room.id, player_pos);
 
-        ScriptSystem::init(lua, &mut game.script_manager);
+        ScriptSystem::init(lua);
 
         Self {
             game,
