@@ -1,6 +1,6 @@
 // engine_core/src/script/script_manager.rs
 use crate::storage::path_utils::scripts_folder;
-use crate::scripting::engine_api::EngineApi;
+use crate::scripting::event_bus::EventBus;
 use crate::scripting::lua_constants::*;
 use crate::ecs::entity::Entity;
 use crate::game::game::Game;
@@ -24,8 +24,8 @@ use std::fs;
 #[derive(Serialize, Deserialize, Default)]
 pub struct ScriptManager {
     #[serde(skip)]
-    /// Shared Engine API that Lua scripts call into.
-    pub engine_api: Arc<EngineApi>,
+    /// Event bus used by the global module.
+    pub event_bus: EventBus,
     #[serde(skip)]
     /// Maps `ScriptId`'s to their `Table` definition.
     pub tables: HashMap<ScriptId, Table>,
@@ -35,6 +35,9 @@ pub struct ScriptManager {
     #[serde(skip)]
     /// Maps ScriptId to optional update(dt) function.
     pub update_fns: HashMap<ScriptId, Function>,
+    /// Init functions that need to be executed.
+    #[serde(skip)]
+    pub pending_inits: Vec<(Entity, ScriptId)>,
     /// Persistent map of all script ids to their paths.
     pub script_id_to_path: HashMap<ScriptId, PathBuf>,
     #[serde(skip)]
@@ -50,10 +53,11 @@ impl ScriptManager {
     /// Initializes a new script manager.
     pub async fn new(game_name: String) -> Self {
         let manager = Self {
-            engine_api: Arc::new(EngineApi::default()),
+            event_bus: EventBus::default(),
             tables: HashMap::new(),
             instances: HashMap::new(),
             update_fns: HashMap::new(),
+            pending_inits: Vec::new(),
             script_id_to_path: HashMap::new(),
             path_to_script_id: HashMap::new(),
             next_script_id: 1,
@@ -79,15 +83,17 @@ impl ScriptManager {
         Ok(self.tables.get(&id).unwrap())
     }
 
+    /// Returns the instance and whether the instance was freshly created.
+    /// Runs `init` on the script if present.
     pub fn get_or_create_instance(
         &mut self,
         lua: &Lua,
         entity: Entity,
         script_id: ScriptId,
-    ) -> LuaResult<&Table> {
+    ) -> LuaResult<(&Table, bool)> {
         // Check if instance already exists
         if self.instances.contains_key(&(entity, script_id)) {
-            return Ok(self.instances.get(&(entity, script_id)).unwrap());
+            return Ok((self.instances.get(&(entity, script_id)).unwrap(), false));
         }
 
         // Ensure table is loaded first
@@ -114,14 +120,30 @@ impl ScriptManager {
         // Setup instance metatable, this makes sure that scripts 
         // will check the script def for data not on the instance
         let mt = lua.create_table()?;
-        mt.set("__index", def)?;
+        mt.set("__index", def.clone())?;
         instance.set_metatable(Some(mt))?;
 
         self.instances.insert((entity, script_id), instance);
-        Ok(self.instances.get(&(entity, script_id)).unwrap())
+        Ok((self.instances.get(&(entity, script_id)).unwrap(), true))
     }
 
-    /// Get the table for a script.
+    /// Returns a reference to the Lua table that represents the script instance.
+    pub fn get_instance(
+        &self,
+        entity: Entity,
+        script_id: ScriptId,
+    ) -> LuaResult<&Table> {
+        self.instances
+            .get(&(entity, script_id))
+            .ok_or_else(|| {
+                mlua::Error::RuntimeError(format!(
+                    "Lua script instance not found for entity {:?}, script {:?}",
+                    entity, script_id
+                ))
+            })
+    }
+
+    /// Get the table definition for a script.
     pub fn get_table(&self, id: ScriptId) -> Option<&Table> {
         self.tables.get(&id)
     }

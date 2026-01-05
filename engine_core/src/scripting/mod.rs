@@ -1,4 +1,4 @@
-pub mod engine_api;
+pub mod event_bus;
 pub mod interactable;
 pub mod lua_constants;
 pub mod script;

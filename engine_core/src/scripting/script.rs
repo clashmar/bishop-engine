@@ -56,7 +56,7 @@ impl Script {
         }
 
         // Get or create the per-entity instance
-        let instance = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
+        let (instance, _created) = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
 
         // Determine the public fields table
         let public: Table = match instance.get::<Option<Table>>(PUBLIC)? {
@@ -117,7 +117,7 @@ impl Script {
         }
 
         // Get the instance for this entity
-        let instance = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
+        let (instance, _created) = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
 
         let public = instance.get::<Option<Table>>(PUBLIC)?
             .unwrap_or_else(|| instance.clone());

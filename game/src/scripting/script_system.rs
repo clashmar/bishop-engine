@@ -10,23 +10,20 @@ use engine_core::ecs::ecs::Ecs;
 use mlua::prelude::LuaResult;
 use engine_core::*;
 use mlua::Function;
-use mlua::Variadic;
-use mlua::Value;
 use mlua::Lua;
 
 pub struct ScriptSystem;
 
 impl ScriptSystem {
     /// Initialize the script system.
-    pub fn init(lua: &Lua, script_manager: &mut ScriptManager) {
-        // .engine module
-        if let Err(e) = Self::register_engine_module(lua, script_manager) {
+    pub fn init(lua: &Lua) {
+        // Registers the `engine` module that some other modules extend
+        if let Err(e) = Self::register_engine_module(lua) {
             onscreen_error!("Error registering engine module: {e}")
         };
 
         // Sub-modules
         for descriptor in inventory::iter::<LuaModuleRegistry> {
-            // Build the concrete module and register it
             let module = (descriptor.ctor)();
             if let Err(e) = module.register(lua) {
                 onscreen_error!("Lua module registration failed: {e}");
@@ -34,59 +31,9 @@ impl ScriptSystem {
         }
     }
 
-    /// Call this once after the `Lua` instance has been created.
-    fn register_engine_module(lua: &Lua, script_manager: &mut ScriptManager) -> LuaResult<()> {
-        // Build the module
+    /// Called during init.
+    fn register_engine_module(lua: &Lua) -> LuaResult<()> {
         let engine_mod = lua.create_table()?;
-
-        // engine.call(name, ...)
-        let engine_api = script_manager.engine_api.clone();
-        let call_fn = lua.create_function(move |lua, args: Variadic<Value>| {
-            engine_api.lua_call(lua, args)
-        })?;
-        engine_mod.set(ENGINE_CALL, call_fn)?;
-
-        // Convenience wrappers (engine.log, engine.wait, …)
-        let engine_api = script_manager.engine_api.clone();
-        for name in engine_api.callbacks.lock().unwrap().keys() {
-            let fn_name = name.clone();
-            let api = engine_api.clone();
-            let wrapper = lua.create_function(move |lua, args: Variadic<Value>| {
-                let mut full = vec![Value::String(lua.create_string(&fn_name)?)];
-                full.extend_from_slice(&args);
-                api.lua_call(lua, Variadic::from(full))
-            })?;
-            engine_mod.set(name.clone(), wrapper)?;
-        }
-
-        // engine.on(event, handler)
-        let engine_api = script_manager.engine_api.clone();
-        let on_fn = lua.create_function(move |_, (event, handler): (String, Function)| {
-            engine_api.listeners
-                .lock()
-                .unwrap()
-                .entry(event)
-                .or_default()
-                .push(handler);
-            Ok(())
-        })?;
-        engine_mod.set(ENGINE_ON, on_fn)?;
-
-        // engine.emit(event, …)
-        let engine_api = script_manager.engine_api.clone();
-        let emit_fn = lua.create_function(move |_lua, (event, args): (String, Variadic<Value>)| {
-            let map = engine_api.listeners.lock().unwrap();
-            if let Some(callbacks) = map.get(&event) {
-                for cb in callbacks {
-                    if let Err(e) = cb.call::<()>(args.clone()) {
-                        onscreen_error!("Lua listener error for event '{}': {}", event, e);
-                    }
-                }
-            }
-            Ok(())
-        })?;
-        engine_mod.set(ENGINE_EMIT, emit_fn)?;
-
         lua.globals().set(ENGINE, engine_mod.clone())?;
         lua.register_module(ENGINE, &engine_mod)?;
         Ok(())
@@ -97,6 +44,36 @@ impl ScriptSystem {
         dt: f32,
         engine: &mut Engine,
     ) -> LuaResult<()> {
+        // Run all pending init functionsm queued in load phase
+        let pending_init: Vec<_> = {
+            let game_state = engine.game_state.borrow();
+            game_state.game.script_manager.pending_inits.clone()
+        };
+
+        {
+            let mut game_state = engine.game_state.borrow_mut();
+            game_state.game.script_manager.pending_inits.clear();
+        }
+
+        for (entity, script_id) in pending_init {
+            let (instance, init_fn) = {
+                let game_state = engine.game_state.borrow();
+                let sm = &game_state.game.script_manager;
+
+                let instance = sm.get_instance(entity, script_id)?.clone();
+                let init = instance.get::<Function>(INIT).ok();
+
+                (instance, init)
+            };
+
+            if let Some(init_fn) = init_fn {
+                init_fn.call::<()>(&instance)?;
+                // Process commands immediately after init completes
+                Self::process_commands(engine);
+            }
+        }
+
+        // Run all update functions on scripts
         let entities_and_scripts: Vec<_> = {
             let game_state = engine.game_state.borrow();
             let ctx = game_state.game.ctx();
@@ -112,8 +89,7 @@ impl ScriptSystem {
         for (entity, script_id) in entities_and_scripts {
             let (update, instance) = {
                 let game_state = engine.game_state.borrow();
-                let ctx = game_state.game.ctx();
-                let script_manager = ctx.script_manager;
+                let script_manager = &game_state.game.script_manager;
                 
                 if let Some(update) = script_manager.update_fns.get(&script_id) {
                     // Instance should exist and be setup already
@@ -149,21 +125,41 @@ impl ScriptSystem {
         }
     }
 
-    // Load all scripts for the given ecs. TODO: handle scope correctly
+    /// Initializes all needed scripts in the game.
     pub fn load_scripts(
         lua: &Lua,
-        ecs: &mut Ecs, 
-        script_manager: &mut ScriptManager
+        ecs: &mut Ecs,
+        script_manager: &mut ScriptManager,
     ) -> LuaResult<()> {
         let script_store = ecs.get_store_mut::<Script>();
 
         for (entity, script) in script_store.data.iter_mut() {
-            match script_manager.get_or_create_instance(lua, *entity, script.script_id) {
-                Ok(instance) => {
-                    let handle = lua_entity_handle(&lua, *entity)?;
-                    instance.set(ENTITY, handle)?; // TODO: Can this be done automatically?
+            let created;
+
+            {
+                let (instance, was_created) =
+                    script_manager.get_or_create_instance(lua, *entity, script.script_id)?;
+
+                created = was_created;
+
+                // Always expose the entity handle
+                let handle = lua_entity_handle(lua, *entity)?;
+                instance.set(ENTITY, handle)?;
+            }
+
+            // Script manager is free again here
+            if created {
+                // Sync first
+                script.sync_to_lua(lua, script_manager, *entity)?;
+
+                let instance = script_manager.get_instance(*entity, script.script_id)?;
+
+                // Queue the init function for a script if present
+                if let Ok(_init_fn) = instance.get::<Function>(INIT) {
+                    script_manager
+                        .pending_inits
+                        .push((*entity, script.script_id));
                 }
-                Err(e) => return Err(e)
             }
         }
 

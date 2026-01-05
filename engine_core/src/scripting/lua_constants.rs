@@ -3,7 +3,6 @@
 /// Generated filenames
 pub const ENGINE_FILE: &str = "engine.lua";
 pub const ENTITY_FILE: &str = "entity.lua";
-pub const GLOBAL_FILE: &str = "global.lua";
 
 /// GLOBALS
 pub const LUA_GAME_CTX: &str = "lua_game_ctx";
@@ -17,12 +16,12 @@ pub const ENGINE: &str = "engine";
 pub const ENGINE_CALL: &str = "call";
 pub const ENGINE_ON: &str = "on";
 pub const ENGINE_EMIT: &str = "emit";
-pub const GLOBAL: &str = "global";
 pub const INPUT: &str = "input";
 pub const LOG: &str = "log";
 
 // Entity methods
 pub const UPDATE: &str = "update";
+pub const INIT: &str = "init";
 pub const GET: &str = "get";
 pub const SET: &str = "set";
 pub const HAS: &str = "has";

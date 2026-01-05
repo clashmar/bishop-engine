@@ -141,13 +141,13 @@ fn generate_lua_script() {
 
     fs::create_dir_all(&out_dir).expect("cannot create _engine folder");
 
-    // The exact snippet you asked for.
     let lua = String::from(
         "-- Auto-generated. Do not edit.\n\
         ---@meta\n\
         ---@class ScriptDef\n\
         ---@field public table\n\
         ---@field update fun(self: Script, dt: number)\n\
+        ---@field init fun(self: Script)\n\
         ---@class Script : ScriptDef\n\
         ---@field entity Entity\n\
         local Script = {}\n\
