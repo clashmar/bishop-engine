@@ -228,7 +228,7 @@ impl ScriptManager {
 
     /// Initialize all scripts for the game.
     pub async fn init_manager(game: &mut Game, lua: &Lua) {
-        Self::load_engine_to_package(lua, &game.name);
+        Self::load_to_package(lua, &game.name);
 
         // Calculate the next id from the existing map
         game.script_manager.restore_next_id();
@@ -245,8 +245,8 @@ impl ScriptManager {
         }
     }
 
-    // Load the _engine.lua files to the package.path
-    fn load_engine_to_package(lua: &Lua, game_name: &String) {
+    // Load all .lua files to the package.path
+    fn load_to_package(lua: &Lua, game_name: &String) {
         let scripts_dir = scripts_folder(game_name);
         let add_path = format!(
             r#"

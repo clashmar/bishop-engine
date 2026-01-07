@@ -1,6 +1,5 @@
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::room::room_editor::RoomEditor;
-use crate::gui::gui_constants::*;
 use crate::ecs::component::Name;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
@@ -13,12 +12,14 @@ use std::collections::HashSet;
 use macroquad::prelude::*;
 
 const ROW_HEIGHT: f32 = 22.0;
+const ROW_SPACING: f32 = 5.0;
 const HEADER_HEIGHT: f32 = 18.0;
 const ADD_BUTTON_HEIGHT: f32 = 26.0;
 const SCROLL_SPEED: f32 = 24.0;
 const SCROLLBAR_W: f32 = 6.0;
 const TOP_PADDING: f32 = 8.0;
 const BOTTOM_PADDING: f32 = 8.0;
+const HEADER_FONT_SIZE: f32 = 15.0;
 
 pub struct HierarchyPanel {
     expanded: HashSet<Entity>,
@@ -60,34 +61,48 @@ impl PanelDefinition for HierarchyPanel {
 
         let ecs = &mut editor.game.ecs;
         let room_editor = &mut editor.room_editor;
+        let cur_room_id = editor.cur_room_id;
 
         let global_entities = {
             let store = ecs.get_store::<Global>();
             let all: Vec<Entity> = store.data.keys().copied().collect();
             get_root_entities(ecs, &all)
         };
+
         let room_entities = {
-            let store = ecs.get_store::<CurrentRoom>();
-            let all: Vec<Entity> = store.data.keys().copied().collect();
-            get_root_entities(ecs, &all)
+            let cur_room_store = ecs.get_store::<CurrentRoom>();
+            let entities: Vec<Entity> = cur_room_store
+                .data
+                .iter()
+                .filter_map(|(&entity, cur_room_comp)| {
+                    if cur_room_comp.0 == cur_room_id.unwrap() {
+                        Some(entity)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            get_root_entities(ecs, &entities)
         };
 
         // Layout pass 
         let mut layout_y = 0.0;
 
         layout_y += TOP_PADDING;                                  
-        layout_y += ADD_BUTTON_HEIGHT + SPACING * 2.0;             
+        layout_y += ADD_BUTTON_HEIGHT + ROW_SPACING;             
         layout_y += HEADER_HEIGHT;      
 
-        for e in &global_entities {
-            layout_entity_tree(*e, &mut layout_y, &self.expanded, ecs);
+        for entity in &global_entities {
+            layout_entity_tree(*entity, &mut layout_y, &self.expanded, ecs);
         }
+
         layout_y += 10.0;                                       
         layout_y += HEADER_HEIGHT;  
 
-        for e in &room_entities {
-            layout_entity_tree(*e, &mut layout_y, &self.expanded, ecs);
+        for entity in &room_entities {
+            layout_entity_tree(*entity, &mut layout_y, &self.expanded, ecs);
         }
+
         layout_y += BOTTOM_PADDING;                             
 
         let content_height = layout_y;
@@ -114,14 +129,15 @@ impl PanelDefinition for HierarchyPanel {
                 }
             },
         );
-        y += ADD_BUTTON_HEIGHT + SPACING * 2.0;
+
+        y += ADD_BUTTON_HEIGHT + ROW_SPACING;
 
         // Global header
         draw_block(
             Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
             rect,
             || {
-                draw_text_ui("Global", rect.x + 6., y + 14., 14., GRAY);
+                draw_text_ui("Global", rect.x + 6., y + 14., HEADER_FONT_SIZE, GRAY);
             },
         );
         y += HEADER_HEIGHT;
@@ -142,14 +158,14 @@ impl PanelDefinition for HierarchyPanel {
             );
         }
 
-        y += 10.0;
+        y += ROW_SPACING;
 
         // Room header
         draw_block(
             Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
             rect,
             || {
-                draw_text_ui("Room", rect.x + 6., y + 14., 14., GRAY);
+                draw_text_ui("Room", rect.x + 6., y + 14., HEADER_FONT_SIZE, GRAY);
             },
         );
         y += HEADER_HEIGHT;

@@ -36,8 +36,8 @@ pub struct Editor {
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
     pub camera: Camera2D,
-    pub current_world_id: Option<WorldId>,
-    pub current_room_id: Option<RoomId>,
+    pub cur_world_id: Option<WorldId>,
+    pub cur_room_id: Option<RoomId>,
     pub render_system: RenderSystem,
     pub menu_bar: MenuBar,
     pub modal: Modal,
@@ -93,7 +93,7 @@ impl Editor {
                         self.game.get_world_mut(world_id)
                     );
                     self.game.current_world_id = world_id;
-                    self.current_world_id = Some(world_id);
+                    self.cur_world_id = Some(world_id);
                     self.mode = EditorMode::World(world_id);
                 }
             }
@@ -106,7 +106,7 @@ impl Editor {
                     ecs,
                     world,
                 ).await {
-                    self.current_room_id = Some(room_id);
+                    self.cur_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
 
                     // The world current room must be set
@@ -121,7 +121,7 @@ impl Editor {
                     );
 
                     // Clean up
-                    self.current_world_id = None;
+                    self.cur_world_id = None;
                     self.world_editor.reset();
                     self.mode = EditorMode::Game;
 
@@ -164,7 +164,7 @@ impl Editor {
                         }
 
                         // Clean up
-                        self.current_room_id = None;
+                        self.cur_room_id = None;
                         self.room_editor.reset();
                         self.mode = EditorMode::World(current_world.id);
 
@@ -219,8 +219,8 @@ impl Editor {
             },
             EditorMode::World(world_id) => {
                 // World id should already be set
-                if self.current_world_id.is_none() {
-                    self.current_world_id = Some(world_id);
+                if self.cur_world_id.is_none() {
+                    self.cur_world_id = Some(world_id);
                 }
 
                 self.world_editor.draw(
@@ -231,8 +231,8 @@ impl Editor {
             },
             EditorMode::Room(room_id) => {
                 // Room id should already be set
-                if self.current_room_id.is_none() {
-                    self.current_room_id = Some(room_id);
+                if self.cur_room_id.is_none() {
+                    self.cur_room_id = Some(room_id);
                 }
 
                 self.room_editor

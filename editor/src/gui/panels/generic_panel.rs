@@ -61,7 +61,7 @@ impl GenericPanel {
 
         // Collapse button
         let collapse_rect = Rect::new(panel_rect.left() + 5., panel_rect.y + 4., 20., 20.);
-        if gui_button_plain_default(collapse_rect, if self.collapsed { "→" } else { "↓" }, BLACK, false) {
+        if gui_button_plain_default(collapse_rect, if self.collapsed { "+" } else { "-" }, BLACK, false) {
             self.collapsed = !self.collapsed;
         }
 

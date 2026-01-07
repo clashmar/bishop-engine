@@ -1,12 +1,12 @@
 // editor/src/room/room_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
-use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::gui::inspector::inspector::Inspector;
 use crate::gui::panels::hierarchy_panel::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
 use crate::gui::panels::generic_panel::*;
+use crate::gui::panels::panel_manager::*;
 use crate::commands::entity_commands::*;
 use crate::gui::modal::is_modal_open;
 use crate::ecs::position::Position;
@@ -86,11 +86,11 @@ impl RoomEditor {
     pub fn new() -> Self {
         let mode = RoomEditorMode::Scene;
 
-        // Register room specific panels
+        // Register room specific panels (maybe this should go in panel manager?)
         with_panel_manager(|panel_manager| {
             panel_manager.register(
                 GenericPanel::new(HierarchyPanel::new()),
-                vec![crate::editor::EditorMode::Room(RoomId(0))], // match any room
+                vec![PanelMode::Room],
             );
         });
 
