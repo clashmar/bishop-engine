@@ -22,6 +22,140 @@ impl LuaModule for EngineModule {
     fn register(&self, lua: &Lua) -> LuaResult<()> {
         let engine_tbl: Table = lua.globals().get(ENGINE)?;
 
+        // TODO: assess if this is needed
+        // Create the metatable for global entity proxies
+        let proxy_mt = lua.create_table()?;
+        
+        // __index metamethod - intercepts method/field access
+        let index_fn = lua.create_function(|lua, (proxy_table, key): (Table, String)| {
+            // Get the entity name stored in the proxy
+            let entity_name: String = proxy_table.raw_get("__entity_name")?;
+            
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+            let script_manager = &game_state.game.script_manager;
+
+            // Find global entity by name
+            let global_entity = {
+                let global_store = ecs.get_store::<Global>();
+                let name_store = ecs.get_store::<Name>();
+                
+                global_store.data.keys()
+                    .find(|&&entity| {
+                        name_store.get(entity)
+                            .map(|n| n.0 == entity_name)
+                            .unwrap_or(false)
+                    })
+                    .copied()
+            };
+
+            let entity = global_entity.ok_or_else(|| {
+                mlua::Error::RuntimeError(format!("Global entity '{}' not found", entity_name))
+            })?;
+
+            // Get the script component
+            let script_id = ecs.get_store::<Script>()
+                .get(entity)
+                .map(|s| s.script_id)
+                .ok_or_else(|| {
+                    mlua::Error::RuntimeError(
+                        format!("Global entity '{}' has no script", entity_name)
+                    )
+                })?;
+
+            // Get the script instance
+            let instance = script_manager.instances
+                .get(&(entity, script_id))
+                .ok_or_else(|| {
+                    mlua::Error::RuntimeError(
+                        format!("Script instance not found for global '{}'", entity_name)
+                    )
+                })?;
+
+            // Try to get the value from the instance
+            match instance.get::<Value>(key.clone()) {
+                Ok(Value::Function(_func)) => {
+                    // Return a wrapper function that calls with self
+                    let entity_name_clone = entity_name.clone();
+                    let wrapper = lua.create_function(move |lua, args: Variadic<Value>| {
+                        let ctx = LuaGameCtx::borrow_ctx(lua)?;
+                        let game_state = ctx.game_state.borrow();
+                        let ecs = &game_state.game.ecs;
+                        let script_manager = &game_state.game.script_manager;
+
+                        // Re-lookup entity and instance
+                        let entity = {
+                            let global_store = ecs.get_store::<Global>();
+                            let name_store = ecs.get_store::<Name>();
+                            
+                            global_store.data.keys()
+                                .find(|&&e| {
+                                    name_store.get(e)
+                                        .map(|n| n.0 == entity_name_clone)
+                                        .unwrap_or(false)
+                                })
+                                .copied()
+                                .ok_or_else(|| mlua::Error::RuntimeError(
+                                    format!("Global entity '{}' not found", entity_name_clone)
+                                ))?
+                        };
+
+                        let script_id = ecs.get_store::<Script>()
+                            .get(entity)
+                            .map(|s| s.script_id)
+                            .ok_or_else(|| mlua::Error::RuntimeError(
+                                format!("Global entity '{}' has no script", entity_name_clone)
+                            ))?;
+
+                        let instance = script_manager.instances
+                            .get(&(entity, script_id))
+                            .ok_or_else(|| mlua::Error::RuntimeError(
+                                format!("Script instance not found for global '{}'", entity_name_clone)
+                            ))?;
+
+                        let func = instance.get::<Function>(key.clone())?;
+
+                        // Build call args with instance as first argument (self)
+                        let mut call_args = Vec::with_capacity(args.len() + 1);
+                        call_args.push(Value::Table(instance.clone()));
+                        call_args.extend(args.into_iter());
+
+                        func.call::<MultiValue>(MultiValue::from_vec(call_args))
+                    })?;
+                    
+                    Ok(Value::Function(wrapper))
+                }
+                Ok(value) => Ok(value),
+                Err(_) => {
+                    // Try public table
+                    if let Ok(public_tbl) = instance.get::<Table>(PUBLIC) {
+                        public_tbl.get::<Value>(key)
+                    } else {
+                        Ok(Value::Nil)
+                    }
+                }
+            }
+        })?;
+        proxy_mt.set("__index", index_fn)?;
+
+        // Store the metatable in registry for reuse
+        lua.set_named_registry_value("__global_proxy_mt", proxy_mt.clone())?;
+
+        // engine.global(name) - creates a proxy for a global entity
+        let global_fn = lua.create_function(|lua, name: String| {
+            let proxy = lua.create_table()?;
+            proxy.raw_set("__entity_name", name)?;
+            
+            // Get the metatable from registry
+            let mt: Table = lua.named_registry_value("__global_proxy_mt")?;
+            let _ = proxy.set_metatable(Some(mt));
+            
+            Ok(proxy)
+        })?;
+        engine_tbl.set(GLOBAL, global_fn)?;
+
+
         // global.call(name, method_name, ...)
         let call_fn = lua.create_function(|lua, args: Variadic<Value>| {
             // Extract global entity name and method name
@@ -158,5 +292,3 @@ impl LuaApi for EngineModule {
         out.line("");
     }
 }
-
-register_lua_api!(EngineModule, ENGINE_FILE);

@@ -5,12 +5,15 @@ use crate::engine::Engine;
 use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
 use engine_core::scripting::script_manager::ScriptManager;
 use engine_core::scripting::lua_constants::*;
+use engine_core::storage::path_utils::*;
 use engine_core::scripting::script::*;
 use engine_core::ecs::ecs::Ecs;
 use mlua::prelude::LuaResult;
 use engine_core::*;
 use mlua::Function;
+use std::sync::Arc;
 use mlua::Lua;
+use std::fs;
 
 pub struct ScriptSystem;
 
@@ -21,6 +24,11 @@ impl ScriptSystem {
         if let Err(e) = Self::register_engine_module(lua) {
             onscreen_error!("Error registering engine module: {e}")
         };
+        
+        // Run main.lua after registering `engine``
+        if let Err(e) = Self::load_main(lua) {
+            onscreen_error!("Main failed: {e}");
+        }
 
         // Sub-modules
         for descriptor in inventory::iter::<LuaModuleRegistry> {
@@ -29,6 +37,15 @@ impl ScriptSystem {
                 onscreen_error!("Lua module registration failed: {e}");
             }
         }
+    }
+
+    /// Loads and executes main.lua if present.
+    fn load_main(lua: &Lua) -> LuaResult<()> {
+        // TODO: get folder to point to correct game automatically
+        let main_path = scripts_folder("Demo").join("main.lua");
+        let src = fs::read_to_string(main_path)
+            .map_err(|e| mlua::Error::ExternalError(Arc::new(e)))?;
+        lua.load(&src).exec()
     }
 
     /// Called during init.

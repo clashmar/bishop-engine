@@ -5,10 +5,26 @@ use crate::editor::EditorMode;
 use crate::Editor;
 use std::collections::HashMap;
 use macroquad::prelude::*;
+pub enum PanelMode {
+    Room,
+    World,
+    Game,
+}
+
+impl PanelMode {
+    fn matches(&self, mode: &EditorMode) -> bool {
+        match (self, mode) {
+            (PanelMode::Game, EditorMode::Game) => true,
+            (PanelMode::World, EditorMode::World(_)) => true,
+            (PanelMode::Room, EditorMode::Room(_)) => true,
+            _ => false,
+        }
+    }
+}
 
 pub struct PanelManager {
     panels: HashMap<PanelId, GenericPanel>,
-    panel_modes: HashMap<PanelId, Vec<EditorMode>>,
+    panel_modes: HashMap<PanelId, Vec<PanelMode>>,
 }
 
 impl PanelManager {
@@ -22,7 +38,7 @@ impl PanelManager {
     pub fn register(
         &mut self,
         panel: GenericPanel,
-        modes: Vec<EditorMode>,
+        modes: Vec<PanelMode>,
     ) {
         self.panel_modes.insert(panel.title, modes);
         self.panels.insert(panel.title, panel);
@@ -30,7 +46,10 @@ impl PanelManager {
 
     pub fn draw(&mut self, editor_mode: EditorMode, editor: &mut Editor) {
         for (id, panel) in self.panels.iter_mut() {
-            if self.panel_modes[id].contains(&editor_mode) {
+            if self.panel_modes[id]
+                .iter()
+                .any(|m| m.matches(&editor_mode))
+            {
                 panel.update_and_draw(editor);
             }
         }

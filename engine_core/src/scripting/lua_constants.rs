@@ -13,6 +13,7 @@ pub const PUBLIC: &str = "public";
 
 // .engine APIS
 pub const ENGINE: &str = "engine";
+pub const GLOBAL: &str = "global";
 pub const ENGINE_CALL: &str = "call";
 pub const ENGINE_ON: &str = "on";
 pub const ENGINE_EMIT: &str = "emit";
