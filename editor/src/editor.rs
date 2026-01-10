@@ -4,12 +4,14 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::world::world_editor::WorldEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
+use crate::storage::editor_storage::*;
 use crate::playtest::room_playtest::*;
 use crate::storage::editor_storage;
 use crate::gui::menu_bar::MenuBar;
 use crate::with_panel_manager;
 use crate::gui::modal::Modal;
 use crate::Camera2D;
+use crate::*;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::ui::widgets::input_is_focused;
 use engine_core::controls::controls::Controls;
@@ -18,8 +20,6 @@ use engine_core::world::world::WorldId;
 use engine_core::ui::toast::Toast;
 use engine_core::world::room::*;
 use engine_core::game::game::*;
-use macroquad::prelude::*;
-use engine_core::*;
 use std::io;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -48,17 +48,25 @@ impl Editor {
     pub async fn new() -> io::Result<Self> {
         let mut editor = Editor::default();
 
-        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
-            editor_storage::load_game_by_name(&name).await?
+        let game = if let Some(name) = most_recent_game_name() {
+            load_game_by_name(&name).await?
         } else if let Some(name) = editor.prompt_new_game().await {
-            editor_storage::create_new_game(name).await
+            create_new_game(name).await
         } else {
             // User pressed Cancel
             onscreen_info!("User cancelled new game dialogue.");
             std::process::exit(0);
         };
 
-        let palette = match editor_storage::load_palette(&game.name.clone()) {
+        let mut game = with_lua_async(|lua| {
+            Box::pin(async move {
+                let mut game = game;
+                game.initialize(lua).await;
+                game
+            })
+        }).await;
+
+        let palette = match load_palette(&game.name.clone()) {
             Ok(p) => p,
             Err(e) => {
                 onscreen_error!("Failed to load palette: {e}");
@@ -98,13 +106,12 @@ impl Editor {
                 }
             }
             EditorMode::World(world_id) => {
-                let (ecs, world) = self.game.get_ecs_and_world_mut(world_id);
+                let mut ctx = self.game.ctx_mut();
 
                 // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
-                    ecs,
-                    world,
+                    &mut ctx,
                 ).await {
                     self.cur_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);

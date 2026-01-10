@@ -6,6 +6,7 @@ use crate::tiles::tilemap::TileMap;
 use crate::ecs::ecs::Ecs;
 use crate::world::coord;
 use engine_core::ecs::component::CurrentRoom;
+use engine_core::game::game::GameCtxMut;
 use engine_core::world::room::RoomVariant;
 use engine_core::world::world::World;
 use engine_core::world::room::*;
@@ -68,23 +69,22 @@ impl WorldEditor {
     /// Delete a room by its RoomId.
     pub fn delete_room(
         &mut self, 
-        ecs: &mut Ecs,
-        world: &mut World, 
+        ctx: &mut GameCtxMut,
         room_id: RoomId
     ) {
         // Find the index of the room we want to remove
-        let idx = match world.rooms.iter().position(|m| m.id == room_id) {
+        let idx = match ctx.cur_world.rooms.iter().position(|m| m.id == room_id) {
             Some(i) => i,
             None => return, // nothing to delete
         };
 
         // Remove the room from the world
-        world.rooms.remove(idx);
+        ctx.cur_world.rooms.remove(idx);
 
         // Re‑compute adjacency for the remaining rooms
-        let len = world.rooms.len();
+        let len = ctx.cur_world.rooms.len();
         for i in 0..len {
-            let (before, rest) = world.rooms.split_at_mut(i);
+            let (before, rest) = ctx.cur_world.rooms.split_at_mut(i);
             let (room_i, after) = rest.split_first_mut().unwrap();
             room_i.adjacent_rooms.clear();
 
@@ -103,7 +103,7 @@ impl WorldEditor {
         // Gather all entities from the current room.
         let mut entities_to_remove = Vec::new();
         {
-            let current_room_store = ecs.get_store::<CurrentRoom>();
+            let current_room_store = ctx.ecs.get_store::<CurrentRoom>();
             for (&entity, &CurrentRoom(room)) in current_room_store.data.iter() {
                 if room == room_id {
                     entities_to_remove.push(entity);
@@ -113,7 +113,7 @@ impl WorldEditor {
 
         // Delete the entities
         for entity in entities_to_remove {
-            ecs.remove_entity(entity);
+            Ecs::remove_entity(ctx, entity);
         }
     }
 

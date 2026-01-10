@@ -1,10 +1,11 @@
 // editor/src/gui/inspector/script_module.rs
-use engine_core::ecs::inpsector_module::*;
+use crate::with_lua;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use engine_core::ecs::reflect_field::parse_field_name;
 use engine_core::scripting::script::ScriptField;
 use engine_core::scripting::script::ScriptId;
 use engine_core::scripting::script::Script;
+use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
@@ -13,7 +14,6 @@ use std::collections::HashMap;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
 use engine_core::*;
-use crate::with_lua;
 
 #[derive(Default)]   
 pub struct ScriptModule {
@@ -36,8 +36,11 @@ impl InspectorModule for ScriptModule {
     fn removable(&self) -> bool { true }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
-        game_ctx.ecs.get_store_mut::<Script>().remove(entity);
-        game_ctx.script_manager.unload(entity);
+        let store = game_ctx.ecs.get_store_mut::<Script>();
+        if let Some(comp) = store.get(entity) {
+            game_ctx.script_manager.unload(entity, comp.script_id);
+        }
+        store.remove(entity);
     }
 
     fn draw(

@@ -16,6 +16,7 @@ use engine_core::game::game::Game;
 use engine_core::world::world::*;
 use engine_core::world::room::*;
 use engine_core::ui::widgets::*;
+use engine_core::game::game::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use once_cell::sync::Lazy;
@@ -88,21 +89,20 @@ impl WorldEditor {
     }
 
     /// Returns `Some(room_id)` if a room is clicked on.
-    pub async fn update(
+    pub async fn update<'a>(
         &mut self, 
         camera: &mut Camera2D, 
-        ecs: &mut Ecs,
-        world: &mut World
+        ctx: &'a mut GameCtxMut<'a>,
     ) -> Option<RoomId> {
-        world.link_all_exits();
+        ctx.cur_world.link_all_exits();
 
         self.handle_mouse_cursor();
         self.handle_shortcuts();
 
         match self.mode {
-            WorldEditorMode::SelectRoom => self.update_selecting_mode(camera, world),
-            WorldEditorMode::CreateRoom => self.update_placing_mode(camera, ecs, world),
-            WorldEditorMode::DeleteRoom => self.update_deleting_mode(camera, ecs, world),
+            WorldEditorMode::SelectRoom => self.update_selecting_mode(camera, ctx.cur_world),
+            WorldEditorMode::CreateRoom => self.update_placing_mode(camera, ctx.ecs, ctx.cur_world),
+            WorldEditorMode::DeleteRoom => self.update_deleting_mode(camera, ctx),
         }
     }
 
@@ -126,15 +126,14 @@ impl WorldEditor {
     fn update_deleting_mode(
         &mut self, 
         camera: &Camera2D, 
-        ecs: &mut Ecs,
-        world: &mut World
+        ctx: &mut GameCtxMut,
     ) -> Option<RoomId> {
         if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
             let world_mouse = coord::mouse_world_pos(camera);
-            for room in &world.rooms {
+            for room in &ctx.cur_world.rooms {
                 let rect = scaled_room_rect(room);
                 if rect.contains(world_mouse) {
-                    self.delete_room(ecs, world, room.id);
+                    self.delete_room(ctx, room.id);
                     return None;
                 }
             }

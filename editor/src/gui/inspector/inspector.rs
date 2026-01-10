@@ -279,9 +279,11 @@ impl Inspector {
             if menu_button(cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
                 let ecs = &mut game_ctx.ecs;
-                let cur_room = &game_ctx.cur_room;
+                let cur_room = game_ctx.cur_world.current_room().unwrap();
                 let _ = cur_room.create_room_camera(ecs, cur_room.id);
             }
+
+            let cur_room = game_ctx.cur_world.current_room_mut().unwrap();
 
             // Darkness slider
             let slider_width = 150.0;
@@ -297,15 +299,15 @@ impl Inspector {
                 slider_rect,
                 0.0,
                 1.0,
-                game_ctx.cur_room.darkness,                      
+                cur_room.darkness,                      
             );
 
             if changed {
                 // Clamp just in case and write back to the room
-                game_ctx.cur_room.darkness = new_val.clamp(0.0, 1.0);
+                cur_room.darkness = new_val.clamp(0.0, 1.0);
             }
 
-            let txt_val = format!("{:.2}", game_ctx.cur_room.darkness);
+            let txt_val = format!("{:.2}", cur_room.darkness);
             let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
             let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;

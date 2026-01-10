@@ -1,6 +1,7 @@
 // engine_core/src/script/script.rs
 use crate::scripting::script_manager::ScriptManager;
 use crate::scripting::lua_constants::PUBLIC;
+use crate::game::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use ecs_component::ecs_component;
 use std::collections::HashMap;
@@ -33,7 +34,7 @@ pub struct ScriptData {
 }
 
 /// The script component that lives on an entity.
-#[ecs_component]
+#[ecs_component(post_create = post_create, post_remove = post_remove)]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Script {
     /// Id stored by the script manager.
@@ -147,4 +148,11 @@ impl Script {
     }
 }
 
+fn post_create(script: &mut Script, _entity: &Entity, ctx: &mut GameCtxMut) {
+    ctx.script_manager.increment_ref(script.script_id)
+}
+
+fn post_remove(script: &mut Script, entity: &Entity, ctx: &mut GameCtxMut) {
+    ctx.script_manager.unload(*entity, script.script_id)
+}
 

@@ -2,12 +2,25 @@
 use crate::ecs::position::Position;
 use crate::game::game::Game;
 use crate::constants::*;
+use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EngineMode {
     Editor,
     Game
+}
+
+static GAME_NAME: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
+
+/// Set the current game name globally.
+pub fn set_game_name(name: impl Into<String>) {
+    *GAME_NAME.lock().unwrap() = name.into();
+}
+
+/// Get a clone of the current game name.
+pub fn game_name() -> String {
+    GAME_NAME.lock().unwrap().clone()
 }
 
 pub static ENGINE_MODE: Mutex<EngineMode> = Mutex::new(EngineMode::Editor);

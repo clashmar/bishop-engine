@@ -2,10 +2,11 @@
 use crate::storage::path_utils::scripts_folder;
 use crate::scripting::event_bus::EventBus;
 use crate::scripting::lua_constants::*;
+use crate::scripting::script::*;
 use crate::ecs::entity::Entity;
+use crate::engine_global::*;
 use crate::game::game::Game;
 use crate::*;
-use crate::scripting::script::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
 use mlua::prelude::LuaResult;
@@ -24,11 +25,11 @@ use std::fs;
 #[derive(Serialize, Deserialize, Default)]
 pub struct ScriptManager {
     #[serde(skip)]
-    /// Event bus used by the global module.
+    /// Event bus used by the global script module.
     pub event_bus: EventBus,
     #[serde(skip)]
     /// Maps `ScriptId`'s to their `Table` definition.
-    pub tables: HashMap<ScriptId, Table>,
+    pub table_defs: HashMap<ScriptId, Table>,
     /// Script instances (per entity).
     #[serde(skip)]
     pub instances: HashMap<(Entity, ScriptId), Table>,
@@ -44,43 +45,81 @@ pub struct ScriptManager {
     pub path_to_script_id: HashMap<PathBuf, ScriptId>,
     #[serde(skip)]
     /// Counter for script ids. Starts from 1.
-    next_script_id: usize,
-    /// Shared mutable reference to the game.
-    pub game_name: String,
+    pub next_script_id: usize,
+    /// How many entities are using a script.
+    ref_counts: HashMap<ScriptId, usize>,
 }
 
 impl ScriptManager {
     /// Initializes a new script manager.
-    pub async fn new(game_name: String) -> Self {
+    pub async fn new() -> Self {
         let manager = Self {
             event_bus: EventBus::default(),
-            tables: HashMap::new(),
+            table_defs: HashMap::new(),
             instances: HashMap::new(),
             update_fns: HashMap::new(),
             pending_inits: Vec::new(),
             script_id_to_path: HashMap::new(),
             path_to_script_id: HashMap::new(),
             next_script_id: 1,
-            game_name,
+            ref_counts: HashMap::new(),
         };
 
         manager
     }
 
-    /// Load the Lua table and store it in the manager.
-    pub fn load_script_table(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
-        if self.tables.contains_key(&id) {
-            return Ok(self.tables.get(&id).unwrap());
+    /// Increment reference count for a script.
+    pub fn increment_ref(&mut self, script_id: ScriptId) {
+        if script_id.0 == 0 {
+            return;
+        }
+        *self.ref_counts.entry(script_id).or_insert(0) += 1;
+    }
+
+    /// Decrement reference count for a script, and clean up if it reaches zero.
+    fn decrement_ref(&mut self, script_id: ScriptId) {
+        if script_id.0 == 0 {
+            return;
         }
 
-        let table = self.load_table_from_id(lua, id)?;
+        if let Some(count) = self.ref_counts.get_mut(&script_id) {
+            *count = count.saturating_sub(1);
+            
+            if *count == 0 {
+                self.ref_counts.remove(&script_id);
+                self.table_defs.remove(&script_id);
+                self.update_fns.remove(&script_id);
+
+                // In editor mode also remove the path mappings
+                if get_engine_mode() == EngineMode::Editor {
+                    // Find and remove the path entry for this script_id
+                    if let Some(path) = self.script_id_to_path.remove(&script_id) {
+                        self.path_to_script_id.remove(&path);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Get the reference count for a script.
+    pub fn get_ref_count(&self, script_id: ScriptId) -> usize {
+        self.ref_counts.get(&script_id).copied().unwrap_or(0)
+    }
+
+    /// Load the Lua table by id and return a reference to it.
+    pub fn load_script_table(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
+        if self.table_defs.contains_key(&id) {
+            return Ok(self.table_defs.get(&id).unwrap());
+        }
+
+        let table = self.get_table_from_id(lua, id)?;
 
         if let Ok(update) = table.get::<_>(UPDATE) {
             self.update_fns.insert(id, update);
         }
 
-        self.tables.insert(id, table);
-        Ok(self.tables.get(&id).unwrap())
+        self.table_defs.insert(id, table);
+        Ok(self.table_defs.get(&id).unwrap())
     }
 
     /// Returns the instance and whether the instance was freshly created.
@@ -100,7 +139,7 @@ impl ScriptManager {
         self.load_script_table(lua, script_id)?;
 
         // Script definition
-        let def = self.tables.get(&script_id).ok_or_else(|| {
+        let def = self.table_defs.get(&script_id).ok_or_else(|| {
             mlua::Error::RuntimeError("Script definition not loaded".into())
         })?.clone(); // Clone here to end borrow
 
@@ -143,17 +182,8 @@ impl ScriptManager {
             })
     }
 
-    /// Get the table definition for a script.
-    pub fn get_table(&self, id: ScriptId) -> Option<&Table> {
-        self.tables.get(&id)
-    }
-
-    /// Get the update function for a script.
-    pub fn get_update_fn(&self, id: ScriptId) -> Option<&Function> {
-        self.update_fns.get(&id)
-    }
-
-    pub fn load_table_from_id(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<Table> {
+    /// Loads and returns a Lua table from disk by id. 
+    pub fn get_table_from_id(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<Table> {
         let rel_path = self
             .script_id_to_path
             .get(&id)
@@ -161,7 +191,7 @@ impl ScriptManager {
                 mlua::Error::RuntimeError(format!("Unknown script id: {:?}.", id))
             })?;
         
-        let abs_path = scripts_folder(&self.game_name).join(rel_path);
+        let abs_path = scripts_folder().join(rel_path);
 
         let src = fs::read_to_string(abs_path)
             .map_err(|e| mlua::Error::ExternalError(Arc::new(e)))?;
@@ -209,18 +239,20 @@ impl ScriptManager {
 
         // Set and calculate the next script id
         let id = ScriptId(self.next_script_id);
-        self.restore_next_id();
-
+        
         // Store everything
         self.path_to_script_id.insert(path.clone(), id);
         self.script_id_to_path.insert(id, path);
+
+        // Restore after inserting 
+        self.restore_next_id();
 
         return Ok(id);
     }
 
     /// Returns a path normalized relative to the game's scripts folder.
     pub fn normalize_path(&self, path: PathBuf) -> PathBuf {
-        let scripts_dir = scripts_folder(&self.game_name);
+        let scripts_dir = scripts_folder();
         path.strip_prefix(&scripts_dir)
             .unwrap_or_else(|_| &path)
             .to_path_buf()
@@ -228,7 +260,7 @@ impl ScriptManager {
 
     /// Initialize all scripts for the game.
     pub async fn init_manager(game: &mut Game, lua: &Lua) {
-        Self::load_to_package(lua, &game.name);
+        Self::load_to_package(lua);
 
         // Calculate the next id from the existing map
         game.script_manager.restore_next_id();
@@ -245,9 +277,9 @@ impl ScriptManager {
         }
     }
 
-    // Load all .lua files to the package.path
-    fn load_to_package(lua: &Lua, game_name: &String) {
-        let scripts_dir = scripts_folder(game_name);
+    /// Load all .lua files to the package.path
+    fn load_to_package(lua: &Lua) {
+        let scripts_dir = scripts_folder();
         let add_path = format!(
             r#"
             local p = package.path
@@ -259,7 +291,7 @@ impl ScriptManager {
         lua.load(&add_path).exec().expect("Cannot set package.path");
     }
 
-    /// Calculates the next script id 
+    /// Calculates the next script id.
     fn restore_next_id(&mut self) {
         let used: HashSet<_> = self.script_id_to_path
             .keys()
@@ -277,14 +309,30 @@ impl ScriptManager {
     }
 
     pub fn reload(&mut self, lua: &Lua, entity: Entity, id: ScriptId) -> LuaResult<&Table> {
-        self.tables.remove(&id);
+        self.table_defs.remove(&id);
         self.instances.remove(&(entity, id));
         self.update_fns.remove(&id);
         self.load_script_table(lua, id)
     }
 
-    pub fn unload(&mut self, entity: Entity) {
+    pub fn unload(&mut self, entity: Entity, script_id: ScriptId) {
         self.instances.retain(|(ent, _script_id), _table| *ent != entity);
-        // TODO: track if this needs to be removed from defs or the system
+        self.decrement_ref(script_id)
+    }
+
+    /// Change the script for an entity.
+    pub fn change_script(&mut self, entity: Entity, old_id: &mut ScriptId, new_id: ScriptId) {
+        if *old_id == new_id {
+            return;
+        }
+
+        // Update old script counter
+        if old_id.0 != 0 {
+            self.instances.remove(&(entity, *old_id));
+            self.decrement_ref(*old_id);
+        }
+
+        *old_id = new_id;
+        self.increment_ref(new_id)
     }
 }

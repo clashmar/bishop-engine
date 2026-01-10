@@ -4,6 +4,7 @@ use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::ecs::position::Position;
 use crate::with_lua_async;
+use engine_core::engine_global::set_game_name;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
 use engine_core::assets::asset_manager::*;
@@ -36,6 +37,9 @@ use std::os::unix::fs::PermissionsExt;
 pub async fn create_new_game(name: String) -> Game {
     onscreen_debug!("Creating new game.");
 
+    // Set game name globally
+    set_game_name(&name);
+
     // Ensure the folder structure exists.
     create_game_folders(&name);
     
@@ -44,8 +48,8 @@ pub async fn create_new_game(name: String) -> Game {
     let world = create_new_world(&mut ecs);
     let current_id = world.id;
 
-    let asset_manager = AssetManager::new(name.clone()).await;
-    let script_manager = ScriptManager::new(name.clone()).await;
+    let asset_manager = AssetManager::new().await;
+    let script_manager = ScriptManager::new().await;
 
     let game = Game {
         save_version: 1,
@@ -70,11 +74,11 @@ pub async fn create_new_game(name: String) -> Game {
 
 fn create_game_folders(name: &String) {
     let folders: [(PathBuf, &str); 5] = [
-        (resources_folder(&name), RESOURCES_FOLDER),
-        (assets_folder(&name), ASSETS_FOLDER),
-        (scripts_folder(&name), SCRIPTS_FOLDER),
-        (windows_folder(&name), WINDOWS_FOLDER),
-        (mac_os_folder(&name), MAC_OS_FOLDER),
+        (resources_folder_current(), RESOURCES_FOLDER),
+        (assets_folder(), ASSETS_FOLDER),
+        (scripts_folder(), SCRIPTS_FOLDER),
+        (windows_folder(), WINDOWS_FOLDER),
+        (mac_os_folder(), MAC_OS_FOLDER),
     ];
 
     for (path, folder) in folders {
@@ -93,11 +97,11 @@ pub fn save_game(game: &Game) -> io::Result<()> {
     let ron_string = ron::ser::to_string_pretty(game, pretty)
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
-    let resources_folder = resources_folder(&game.name);
+    let resources_folder = resources_folder_current();
     let file_path = resources_folder.join(GAME_RON);
     
     fs::create_dir_all(&resources_folder)?;
-    onscreen_info!("{}", file_path.display());
+    onscreen_info!("Game saved to: {}", file_path.display());
     fs::write(file_path, ron_string)
 }
 
@@ -122,14 +126,6 @@ pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
         Ok(game) => game,
         Err(_) => return Ok(create_new_game(name.to_string()).await),
     };
-
-    let game = with_lua_async(|lua| {
-        Box::pin(async move {
-            let mut game = game;
-            game.initialize(lua).await;
-            game
-        })
-    }).await;
 
     Ok(game)
 }
@@ -215,10 +211,8 @@ pub fn rename_game(
     let old_game_dir = game_folder(&game.name);
     let new_game_dir = game_folder(new_name);
     fs::rename(&old_game_dir, &new_game_dir)?;
-
-    // Asset manager uses the game name to find the assets folder
-    game.asset_manager.game_name = new_name.to_owned();
     game.name = new_name.to_owned();
+    set_game_name(new_name);
     Ok(())
 }
 
@@ -231,24 +225,21 @@ pub fn save_as(
     // Determine paths
     let old_game_dir = game_folder(&game.name);
     let new_game_dir = game_folder(new_name);
-    let old_assets_dir = assets_folder(&game.name);
-    let new_assets_dir = assets_folder(new_name);
 
     // Guard against overwriting an existing game
-    if new_game_dir.exists() || new_assets_dir.exists() {
+    if new_game_dir.exists() {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,
             format!("A game called \"{new_name}\" already exists"),
         ));
     }
 
-    // Copy the game and assets folder
+    // Copy the game folder
     copy_dir_recursive(&old_game_dir, &new_game_dir)?;
-    copy_dir_recursive(&old_assets_dir, &new_assets_dir)?;
 
-    // Update the game and assets manager
+    // Update the game and global
     game.name = new_name.to_owned();
-    game.asset_manager.game_name = new_name.to_owned();
+    set_game_name(new_name);
 
     Ok(())
 }
