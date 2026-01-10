@@ -62,7 +62,7 @@ impl Engine {
 
         let game_ctx = game_state.game.ctx_mut();
         let ecs = game_ctx.ecs;
-        let current_room = game_ctx.cur_room;
+        let current_room = game_ctx.cur_world.current_room().unwrap();
         let asset_manager = game_ctx.asset_manager;
 
         update_physics(
@@ -82,7 +82,7 @@ impl Engine {
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
-            let current_room = game_ctx.cur_room;
+            let current_room = game_ctx.cur_world.current_room().unwrap();
             
             let player_pos = ecs.get_player_position().position;
             
@@ -128,7 +128,7 @@ impl Engine {
         let game_ctx = game_state.game.ctx_mut();
         let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
-        let current_room = game_ctx.cur_room;
+        let current_room = game_ctx.cur_world.current_room().unwrap();
 
         let interpolated_target = lerp(
             self.camera_manager.previous_position.unwrap_or_default(),

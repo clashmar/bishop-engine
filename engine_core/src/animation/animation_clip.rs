@@ -2,6 +2,8 @@
 use crate::assets::asset_manager::AssetManager;
 use crate::engine_global::tile_size;
 use crate::assets::sprite::SpriteId;
+use crate::ecs::entity::Entity;
+use crate::game::game::*;
 use std::{collections::HashMap, path::{Path, PathBuf}};
 use serde_with::{FromInto, serde_as};
 use serde::{Deserialize, Serialize};
@@ -208,7 +210,9 @@ pub async fn resolve_sprite_id(
 
 /// Initializes the component when an entity is instantiated into the world.
 pub fn post_create(
-    anim: &mut Animation
+    anim: &mut Animation,
+    _entity: &Entity,
+    _ctx: &mut GameCtxMut,
 ) {
     anim.init_runtime();
 }

@@ -4,6 +4,7 @@ use crate::ecs::position::Position;
 use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
 use crate::ecs::entity::*;
+use crate::game::game::GameCtxMut;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -65,24 +66,32 @@ impl Ecs {
     }
 
     /// Remove an entity and all of its descendants.
-    pub fn remove_entity(&mut self, entity: Entity) {
+    pub fn remove_entity(ctx: &mut GameCtxMut, entity: Entity) {
         // Detach from parent (if any)
-        if let Some(parent) = self.get::<Parent>(entity).map(|p| p.0) {
-            if let Some(children) = self.get_mut::<Children>(parent) {
+        if let Some(parent) = ctx.ecs.get::<Parent>(entity).map(|p| p.0) {
+            if let Some(children) = ctx.ecs.get_mut::<Children>(parent) {
                 children.remove(entity);
                 if children.entities.is_empty() {
-                    self.get_store_mut::<Children>().remove(parent);
+                    ctx.ecs.get_store_mut::<Children>().remove(parent);
                 }
             }
         }
 
-        let children = get_children(self, entity);
+        // Remove children recursively
+        let children = get_children(ctx.ecs, entity);
         for child in children {
-            self.remove_entity(child);
+            Ecs::remove_entity(ctx, child);
         }
 
+        // Remove all its components
         for reg in inventory::iter::<ComponentRegistry> {
-            (reg.remove)(self, entity);
+            // Run post_remove for all components before removing them
+            if (reg.has)(ctx.ecs, entity) {
+                let mut boxed = (reg.clone)(ctx.ecs, entity);
+                (reg.post_remove)(&mut *boxed, &entity, ctx);
+            }
+
+            (reg.remove)(ctx.ecs, entity);
         }
     }
 

@@ -1,19 +1,18 @@
 // engine_core/src/storage/path_utils.rs
-use std::ffi::OsStr;
-use std::io::ErrorKind;
-use std::io::Error;
-use std::io;
+use crate::storage::editor_config::*;
+use crate::engine_global::*;
+use crate::constants::*;
+use crate::*; 
 use futures::executor::block_on;
 use macroquad::prelude::*;
-use rfd::FileDialog;
-use crate::constants::*;
-use crate::engine_global::EngineMode;
-use crate::engine_global::get_engine_mode;
-use crate::storage::editor_config::*;
-use std::fs;
-use std::path::Path;
+use std::io::ErrorKind;
 use std::path::PathBuf;
-use crate::*; 
+use std::path::Path;
+use rfd::FileDialog;
+use std::ffi::OsStr;
+use std::io::Error;
+use std::fs;
+use std::io;
 
 /// Path to the folder that belongs to a particular game (Editor).
 pub fn game_folder(name: &str) -> PathBuf {
@@ -21,14 +20,14 @@ pub fn game_folder(name: &str) -> PathBuf {
 }
 
 /// Path to the resources folder for a game (Editor/Game).
-pub fn resources_folder(name: &str) -> PathBuf {
+pub fn resources_folder(game_name: &str) -> PathBuf {
     match get_engine_mode() {
         EngineMode::Editor => {
-            game_folder(name).join(RESOURCES_FOLDER)
+            game_folder(game_name).join(RESOURCES_FOLDER)
         }
         EngineMode::Game => {
             if cfg!(debug_assertions) {
-                game_folder(name).join(RESOURCES_FOLDER)
+                game_folder(game_name).join(RESOURCES_FOLDER)
             } else {
                 // Panic is acceptable here as there is no possible fallback 
                 resources_dir_from_exe().unwrap()
@@ -38,24 +37,29 @@ pub fn resources_folder(name: &str) -> PathBuf {
     }
 }
 
-/// Path to the assets folder inside a resources folder (Editor/Game).
-pub fn assets_folder(name: &str) -> PathBuf {
-    resources_folder(name).join(ASSETS_FOLDER)
+/// Path to the resources folder for the current game (Editor/Game).
+pub fn resources_folder_current() -> PathBuf {
+    resources_folder(&game_name())
 }
 
-/// Path to the scripts folder inside a resources folder (Editor/Game).
-pub fn scripts_folder(name: &str) -> PathBuf {
-    resources_folder(name).join(SCRIPTS_FOLDER)
+/// Path to the assets folder inside the resources folder (Editor/Game).
+pub fn assets_folder() -> PathBuf {
+    resources_folder_current().join(ASSETS_FOLDER)
 }
 
-/// Path to the windows folder inside a resources folder (Editor).
-pub fn windows_folder(name: &str) -> PathBuf {
-    game_folder(name).join(WINDOWS_FOLDER)
+/// Path to the scripts folder inside the resources folder (Editor/Game).
+pub fn scripts_folder() -> PathBuf {
+    resources_folder_current().join(SCRIPTS_FOLDER)
 }
 
-/// Path to the mac_os folder inside a resources folder (Editor).
-pub fn mac_os_folder(name: &str) -> PathBuf {
-    game_folder(name).join(MAC_OS_FOLDER)
+/// Path to the windows folder inside the game folder (Editor).
+pub fn windows_folder() -> PathBuf {
+    game_folder(&game_name()).join(WINDOWS_FOLDER)
+}
+
+/// Path to the mac_os folder inside the game folder (Editor).
+pub fn mac_os_folder() -> PathBuf {
+    game_folder(&game_name()).join(MAC_OS_FOLDER)
 }
 
 /// Returns the absolute path to the folder that stores all games for the editor,

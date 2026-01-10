@@ -230,7 +230,7 @@ impl RoomEditor {
 
         let mut game_ctx = game.ctx_mut();
         let ecs = &mut game_ctx.ecs;
-        let room = &mut game_ctx.cur_room;
+        let room = &mut game_ctx.cur_world.current_room_mut().unwrap();
         let asset_manager = &mut game_ctx.asset_manager;
 
         let tilemap = &mut room.variants[0].tilemap;

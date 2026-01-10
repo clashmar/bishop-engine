@@ -1,6 +1,7 @@
 // engine_core/src/scripting/lua_constants.rs
 
 /// Generated filenames
+pub const MAIN_FILE: &str = "main.lua";
 pub const ENGINE_FILE: &str = "engine.lua";
 pub const ENTITY_FILE: &str = "entity.lua";
 

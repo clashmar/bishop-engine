@@ -2,11 +2,11 @@
 extern crate proc_macro;
 use syn::punctuated::Punctuated;
 use proc_macro::TokenStream;
-use quote::quote;
 use syn::parse_macro_input;
 use syn::parse::ParseStream;
 use syn::parse::Parse;
 use syn::DeriveInput;
+use quote::quote;
 use syn::Fields;
 use syn::Token;
 use syn::Data;
@@ -16,12 +16,14 @@ use syn::Type;
 struct EcsComponentArgs {
     deps: Vec<Type>,
     post_create: Option<Path>,
+    post_remove: Option<Path>,
 }
 
 impl Parse for EcsComponentArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut deps = Vec::new();
         let mut post_create = None;
+        let mut post_remove = None;
 
         while !input.is_empty() {
             let ident: syn::Ident = input.parse()?;
@@ -35,10 +37,12 @@ impl Parse for EcsComponentArgs {
                 deps = types.into_iter().collect();
             } else if ident == "post_create" {
                 post_create = Some(input.parse()?);
+            } else if ident == "post_remove" {
+                post_remove = Some(input.parse()?);
             } else {
                 return Err(syn::Error::new_spanned(
                     ident,
-                    "Expected 'deps' or 'post_create'",
+                    "Expected 'deps', 'post_create' or 'post_remove'",
                 ));
             }
 
@@ -47,7 +51,7 @@ impl Parse for EcsComponentArgs {
             }
         }
 
-        Ok(EcsComponentArgs { deps, post_create })
+        Ok(EcsComponentArgs { deps, post_create, post_remove })
     }
 }
 
@@ -58,6 +62,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
         EcsComponentArgs {
             deps: Vec::new(),
             post_create: None,
+            post_remove: None,
         }
     } else {
         parse_macro_input!(args as EcsComponentArgs)
@@ -82,7 +87,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
     let fields = &struct_data.fields;
     let deps = &args.deps;
 
-    // Build the struct definition - preserve all attributes including derives
+    // Build the struct definition
     let struct_def = match fields {
         Fields::Named(_) => {
             quote! { #(#attrs)* #vis struct #name #generics #fields }
@@ -109,19 +114,39 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
     // Generate post_create function
     let post_create_fn = if let Some(func) = &args.post_create {
         quote! {
-            |any: &mut dyn std::any::Any| {
+            |any: &mut dyn std::any::Any, entity: &Entity, ctx: &mut GameCtxMut| {
                 let comp = any
                     .downcast_mut::<#name>()
                     .expect(concat!(
                         "post_create: Type mismatch for ",
                         stringify!(#name)
                     ));
-                #func(comp);
+                #func(comp, entity, ctx);
             }
         }
     } else {
         quote! {
             crate::ecs::component_registry::post_create
+        }
+    };
+
+    // Generate post_remove function
+    let post_remove_fn = if let Some(func) = &args.post_remove {
+        // The user‑provided function now expects (comp, entity, ctx)
+        quote! {
+            |any: &mut dyn std::any::Any, entity: &Entity, ctx: &mut GameCtxMut| {
+                let comp = any
+                    .downcast_mut::<#name>()
+                    .expect(concat!(
+                        "post_remove: Type mismatch for ",
+                        stringify!(#name)
+                    ));
+                #func(comp, entity, ctx);
+            }
+        }
+    } else {
+        quote! {
+            crate::ecs::component_registry::post_remove
         }
     };
 
@@ -247,6 +272,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
                 from_lua: <#name>::__from_lua,
                 lua_schema: <#name as crate::ecs::component_registry::LuaSchema>::lua_schema,
                 post_create: #post_create_fn,
+                post_remove: #post_remove_fn,
             }
         }
     };

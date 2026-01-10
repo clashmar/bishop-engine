@@ -16,8 +16,6 @@ use std::path::Path;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct AssetManager {
-    /// Name of the game for the file system to use.
-    pub game_name: String,
     #[serde(skip)]
     textures: HashMap<SpriteId, Texture2D>,
     /// Persistent map of all sprite is to their paths.
@@ -38,9 +36,8 @@ static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty())
 
 impl AssetManager {
     /// Initializes a new asset manager.
-    pub async fn new(game_name: String) -> Self {
+    pub async fn new() -> Self {
         Self {
-            game_name,
             textures: HashMap::new(),
             path_to_sprite_id: HashMap::new(),
             sprite_id_to_path: HashMap::new(),
@@ -183,7 +180,7 @@ impl AssetManager {
 
     /// Returns a path normalized relative to the game's assets folder.
     pub fn normalize_path(&self, path: PathBuf) -> PathBuf {
-        let assets_dir = assets_folder(&self.game_name);
+        let assets_dir = assets_folder();
         path.strip_prefix(&assets_dir)
             .unwrap_or_else(|_| &path)
             .to_path_buf()
@@ -206,7 +203,7 @@ impl AssetManager {
         &self,
         rel_path: P,
     ) -> Result<Texture2D, String> {
-        let full_path = assets_folder(&self.game_name).join(rel_path);
+        let full_path = assets_folder().join(rel_path);
 
         load_texture(full_path.to_string_lossy().as_ref())
             .await

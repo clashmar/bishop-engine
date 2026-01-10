@@ -1164,7 +1164,7 @@ pub fn gui_script_picker(
                 let normalized = script_manager.normalize_path(path);
                 match script_manager.get_or_load(&normalized) {
                     Some(new_id) => {
-                        *script_id = new_id;
+                        script_manager.change_script(entity, script_id, new_id);
                         changed = true;
                     }
                     None => {
@@ -1176,8 +1176,8 @@ pub fn gui_script_picker(
     }
 
     if gui_button(remove_rect, "x", blocked) && script_id.0 != 0 {
+        script_manager.unload(entity, *script_id);
         *script_id = ScriptId(0);
-        script_manager.unload(entity);
         changed = true;
     }
 

@@ -23,9 +23,9 @@ impl EditorCommand for DeleteEntityCmd {
     fn execute(&mut self) {
         // Capture components before deleting
         with_editor(|editor| {
-            let ecs = &mut editor.game.ecs;
-            self.saved = Some(capture_subtree(ecs, self.entity));
-            ecs.remove_entity(self.entity);
+            let ctx = &mut editor.game.ctx_mut();
+            self.saved = Some(capture_subtree(ctx.ecs, self.entity));
+            Ecs::remove_entity(ctx, self.entity);
             editor.room_editor.set_selected_entity(None);
         });
     }
@@ -33,9 +33,9 @@ impl EditorCommand for DeleteEntityCmd {
     fn undo(&mut self) {
         if let Some(saved) = self.saved.take() {
             with_editor(|editor| {
-                let ecs = &mut editor.game.ecs;
+                let ctx = &mut editor.game.ctx_mut();
                 // Restore every entity and its components
-                restore_subtree(ecs, &saved);
+                restore_subtree(ctx, &saved);
                 editor.room_editor.set_selected_entity(Some(self.entity));
             });
         }
@@ -93,7 +93,7 @@ impl EditorCommand for PasteEntityCmd {
         self.id_map = Some(map.clone());
 
         with_editor(|editor| {
-            let ecs = &mut editor.game.ecs;
+            let ctx = &mut editor.game.ctx_mut();
 
             for (old_id, bag) in snapshot.iter() {
                 let new_id = map[old_id];
@@ -132,9 +132,9 @@ impl EditorCommand for PasteEntityCmd {
                     }
 
                     // Run any post‑create logic the component may have
-                    (component_reg.post_create)(&mut *boxed);
+                    (component_reg.post_create)(&mut *boxed, &new_id, ctx);
                     // Insert it into the world under the new id
-                    (component_reg.inserter)(ecs, new_id, boxed);
+                    (component_reg.inserter)(ctx.ecs, new_id, boxed);
                 }
             }
 
@@ -149,8 +149,8 @@ impl EditorCommand for PasteEntityCmd {
             if let Some((root_old, _)) = self.snapshot.as_ref().and_then(|s| s.first()) {
                 if let Some(&root_new) = map.get(root_old) {
                     with_editor(|editor| {
-                        let ecs = &mut editor.game.ecs;
-                        ecs.remove_entity(root_new);
+                        let ctx = &mut editor.game.ctx_mut();
+                        Ecs::remove_entity(ctx, root_new);
                         editor.room_editor.set_selected_entity(None);
                     });
                 }

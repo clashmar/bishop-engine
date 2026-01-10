@@ -35,7 +35,7 @@ impl RoomEditor {
         // Reset to static camera
         set_default_camera();
 
-        self.draw_coordinates(camera, game_ctx.cur_room);
+        self.draw_coordinates(camera, game_ctx.cur_world.current_room().unwrap());
 
         match self.mode {
             RoomEditorMode::Tilemap => {

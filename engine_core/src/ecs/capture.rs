@@ -1,5 +1,5 @@
 // engine_core/src/ecs/capture.rs
-use crate::ecs::entity::Children;
+use crate::{ecs::entity::Children, game::game::GameCtxMut};
 
 /// Capture the whole entity hierarchy that starts at `root`.
 /// Returns a vector of (old_entity, component_bag) for the root and every descendant.
@@ -23,7 +23,7 @@ pub fn capture_subtree(ecs: &mut Ecs, root: Entity) -> Vec<(Entity, Vec<(String,
 }
 
 /// Restore a previously captured subtree.  
-pub fn restore_subtree(ecs: &mut Ecs, saved: &[(Entity, Vec<(String, String)>)]) {
+pub fn restore_subtree(ctx: &mut GameCtxMut, saved: &[(Entity, Vec<(String, String)>)]) {
     // Create every entity id that appears in the snapshot
     for (old_id, _) in saved {
         let _ = *old_id;
@@ -31,13 +31,13 @@ pub fn restore_subtree(ecs: &mut Ecs, saved: &[(Entity, Vec<(String, String)>)])
 
     // Insert the component bags
     for (old_id, bag) in saved {
-        restore_entity(ecs, *old_id, bag.clone());
+        restore_entity(ctx, *old_id, bag.clone());
     }
 }
 
 /// Restores an entity into the Ecs from its component bag.
 pub fn restore_entity(
-    ecs: &mut Ecs,
+    ctx: &mut GameCtxMut,
     entity: Entity,
     bag: Vec<(String, String)>,
 ) {
@@ -51,10 +51,10 @@ pub fn restore_entity(
         let mut boxed = (component_reg.from_ron_component)(ron);
 
         // Run any post create logic the component may have
-        (component_reg.post_create)(&mut *boxed);
+        (component_reg.post_create)(&mut *boxed, &entity, ctx);
 
         // Insert it into the (already‑existing) entity
-        (component_reg.inserter)(ecs, entity, boxed);
+        (component_reg.inserter)(ctx.ecs, entity, boxed);
     }
 }
 

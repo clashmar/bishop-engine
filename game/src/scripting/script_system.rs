@@ -41,8 +41,7 @@ impl ScriptSystem {
 
     /// Loads and executes main.lua if present.
     fn load_main(lua: &Lua) -> LuaResult<()> {
-        // TODO: get folder to point to correct game automatically
-        let main_path = scripts_folder("Demo").join("main.lua");
+        let main_path = scripts_folder().join(MAIN_FILE);
         let src = fs::read_to_string(main_path)
             .map_err(|e| mlua::Error::ExternalError(Arc::new(e)))?;
         lua.load(&src).exec()
@@ -75,9 +74,9 @@ impl ScriptSystem {
         for (entity, script_id) in pending_init {
             let (instance, init_fn) = {
                 let game_state = engine.game_state.borrow();
-                let sm = &game_state.game.script_manager;
+                let script_manager = &game_state.game.script_manager;
 
-                let instance = sm.get_instance(entity, script_id)?.clone();
+                let instance = script_manager.get_instance(entity, script_id)?.clone();
                 let init = instance.get::<Function>(INIT).ok();
 
                 (instance, init)
@@ -97,9 +96,19 @@ impl ScriptSystem {
             let ecs = ctx.ecs;
             let script_store = ecs.get_store::<Script>();
             
-            // Collect all entities that have scripts
-            script_store.data.iter()
-                .map(|(entity, script)| (*entity, script.script_id.clone()))
+            // Collect all entities with ScriptId != 0
+            script_store
+                .data
+                .iter()
+                .filter_map(|(entity, script)| {
+                    // Keep only non‑zero script ids
+                    if script.script_id == ScriptId(0) {
+                        None
+                    } else {
+                        // Return the entity and a cloned script id
+                        Some((*entity, script.script_id.clone()))
+                    }
+                })
                 .collect()
         };
 
@@ -151,11 +160,16 @@ impl ScriptSystem {
         let script_store = ecs.get_store_mut::<Script>();
 
         for (entity, script) in script_store.data.iter_mut() {
+            // 0 means the component has no script yet
+            if script.script_id == ScriptId(0) {
+                continue;
+            }
+
             let created;
 
             {
-                let (instance, was_created) =
-                    script_manager.get_or_create_instance(lua, *entity, script.script_id)?;
+                let (instance, was_created) = script_manager
+                    .get_or_create_instance(lua, *entity, script.script_id)?;
 
                 created = was_created;
 
