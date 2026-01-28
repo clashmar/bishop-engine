@@ -24,14 +24,15 @@ impl PanelMode {
 }
 
 pub struct PanelManager {
-    panels: HashMap<PanelId, GenericPanel>,
+    /// Panels ordered by z-index (last = on top).
+    panels: Vec<(PanelId, GenericPanel)>,
     panel_modes: HashMap<PanelId, Vec<PanelMode>>,
 }
 
 impl PanelManager {
     pub fn new() -> Self {
         Self {
-            panels: HashMap::new(),
+            panels: Vec::new(),
             panel_modes: HashMap::new(),
         }
     }
@@ -42,23 +43,65 @@ impl PanelManager {
         modes: Vec<PanelMode>,
     ) {
         self.panel_modes.insert(panel.title, modes);
-        self.panels.insert(panel.title, panel);
+        self.panels.push((panel.title, panel));
+    }
+
+    /// Brings the panel with the given id to the front (top of z-order).
+    pub fn bring_to_front(&mut self, id: PanelId) {
+        if let Some(idx) = self.panels.iter().position(|(pid, _)| *pid == id) {
+            let panel = self.panels.remove(idx);
+            self.panels.push(panel);
+        }
     }
 
     pub fn draw(&mut self, editor_mode: EditorMode, editor: &mut Editor) {
-        for (id, panel) in self.panels.iter_mut() {
-            if self.panel_modes[id]
-                .iter()
-                .any(|m| m.matches(&editor_mode))
-            {
-                panel.update_and_draw(editor);
+        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
+
+        // Find which panel was clicked (iterate back-to-front for z-order).
+        let mut clicked_panel_id: Option<PanelId> = None;
+        if mouse_pressed {
+            for (id, panel) in self.panels.iter().rev() {
+                if panel.visible
+                    && self.panel_modes[id].iter().any(|m| m.matches(&editor_mode))
+                    && panel.rect.contains(mouse_screen)
+                {
+                    clicked_panel_id = Some(*id);
+                    break;
+                }
             }
+        }
+
+        // Bring clicked panel to front.
+        if let Some(id) = clicked_panel_id {
+            self.bring_to_front(id);
+        }
+
+        // Find the topmost panel containing the mouse (for blocking lower panels)
+        let topmost_panel_at_mouse: Option<PanelId> = self.panels.iter().rev()
+            .find(|(id, panel)| {
+                panel.visible
+                    && self.panel_modes[id].iter().any(|m| m.matches(&editor_mode))
+                    && panel.rect.contains(mouse_screen)
+            })
+            .map(|(id, _)| *id);
+
+        // Draw panels in order. Block panels if the mouse is over a higher-z panel.
+        for (id, panel) in self.panels.iter_mut() {
+            if !self.panel_modes[id].iter().any(|m| m.matches(&editor_mode)) {
+                continue;
+            }
+
+            // Block this panel if the mouse is over a different (higher-z) panel
+            let blocked = topmost_panel_at_mouse.is_some() && topmost_panel_at_mouse != Some(*id);
+
+            panel.update_and_draw_with_block(editor, blocked);
         }
     }
 
     pub fn toggle(&mut self, id: PanelId) {
-        if let Some(p) = self.panels.get_mut(id) {
-            p.visible = !p.visible;
+        if let Some((_, panel)) = self.panels.iter_mut().find(|(pid, _)| *pid == id) {
+            panel.visible = !panel.visible;
         }
     }
 }
@@ -66,7 +109,7 @@ impl PanelManager {
 pub fn is_mouse_over_panel() -> bool {
     with_panel_manager(|pm| {
         let mouse_screen: Vec2 = mouse_position().into();
-        pm.panels.values()
-            .any(|p| p.visible && p.rect.contains(mouse_screen))
+        pm.panels.iter()
+            .any(|(_, p)| p.visible && p.rect.contains(mouse_screen))
     })
 }

@@ -31,8 +31,9 @@ pub enum MenuAction {
     // Edit actions
     Undo,
     Redo,
-    // View actions,
-    ViewHierarchyPanel
+    // View actions
+    ViewHierarchyPanel,
+    ViewConsolePanel,
 }
 
 impl MenuAction {
@@ -47,6 +48,7 @@ impl MenuAction {
             MenuAction::Redo => "Redo".to_string(),
             MenuAction::ChangeSaveRoot => "Change Save Root".to_string(),
             MenuAction::ViewHierarchyPanel => "Hierarchy".to_string(),
+            MenuAction::ViewConsolePanel => "Console".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -60,8 +62,9 @@ impl MenuAction {
                 MenuAction::Save => Some("^ S"),
                 MenuAction::SaveAs => Some("⇧ ^ S"),
                 MenuAction::Undo => Some("^ Z"),
-                MenuAction::Redo => Some("⇧ ^ Z"),       
-                MenuAction::ViewHierarchyPanel => Some("H"),       
+                MenuAction::Redo => Some("⇧ ^ Z"),
+                MenuAction::ViewHierarchyPanel => Some("H"),
+                MenuAction::ViewConsolePanel => Some("C"),
                 _ => None,
             }
         }
@@ -75,6 +78,7 @@ impl MenuAction {
                 MenuAction::Undo => Some("^ Z"),
                 MenuAction::Redo => Some("⇧ ^ Z"),
                 MenuAction::ViewHierarchyPanel => Some("H"),
+                MenuAction::ViewConsolePanel => Some("C"),
                 _ => None,
             }
         }
@@ -207,13 +211,16 @@ impl MenuBar {
         let view_label = "View";
 
         let view_rect = Rect::new(
-            x, 
-            y, 
-            rect_width_for_text(view_label, HEADER_FONT_SIZE_20), 
+            x,
+            y,
+            rect_width_for_text(view_label, HEADER_FONT_SIZE_20),
             HEIGHT
         );
 
         let mut view_actions: Vec<MenuAction> = Vec::new();
+
+        // Console panel available in all modes
+        view_actions.push(MenuAction::ViewConsolePanel);
 
         match editor_mode {
             EditorMode::Game => {},

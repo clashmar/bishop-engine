@@ -1,9 +1,11 @@
 // editor/src/editor_actions.rs
 use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
+use crate::gui::panels::console_panel::CONSOLE_PANEL;
 use crate::commands::game_editor_commands::RenameGameCmd;
 use crate::world::world_editor::WorldEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
+use crate::ui::widgets::input_is_focused;
 use crate::storage::export::export_game;
 use crate::storage::editor_storage::*;
 use crate::editor_global::*;
@@ -13,7 +15,6 @@ use crate::gui::modal::*;
 use crate::editor::*;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::controls::controls::Controls;
-use engine_core::logging::logging::LAST_LOG;
 use engine_core::storage::path_utils::*;
 use engine_core::ui::toast::Toast;
 use engine_core::game::game::Game;
@@ -182,6 +183,11 @@ impl Editor {
                         panel_manager.toggle(HIERARCHY_PANEL);
                     });
                 }
+                MenuAction::ViewConsolePanel => {
+                    with_panel_manager(|panel_manager| {
+                        panel_manager.toggle(CONSOLE_PANEL);
+                    });
+                }
             }
         }
     }
@@ -201,6 +207,10 @@ impl Editor {
 
         if Controls::redo() {
             crate::editor_global::request_redo();
+        }
+
+        if Controls::c() && !input_is_focused() {
+            with_panel_manager(|pm| pm.toggle(CONSOLE_PANEL));
         }
     }
 
@@ -383,24 +393,6 @@ impl Editor {
             toast.update();
             if !toast.active {
                 self.toast = None;
-            }
-        }
-    }
-
-    pub fn draw_logs(&self) {
-        // Draw overlay logs to screen in debug mode
-        if cfg!(debug_assertions) {
-            {
-                let msg = LAST_LOG.lock().unwrap().clone();
-                if !msg.is_empty() {
-                    draw_text(
-                        &msg,
-                        10.0,
-                        screen_height() - 10.0,
-                        20.0,
-                        WHITE,
-                    );
-                }
             }
         }
     }

@@ -285,7 +285,7 @@ impl ScriptManager {
             local p = package.path
             package.path = p .. ';{dir}/?.lua;{dir}/?/init.lua'
             "#,
-            dir = scripts_dir.to_string_lossy()
+            dir = scripts_dir.to_string_lossy().replace('\\', "/")
         );
         
         lua.load(&add_path).exec().expect("Cannot set package.path");
