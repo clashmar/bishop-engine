@@ -54,7 +54,10 @@ async fn main() -> std::io::Result<()> {
     onscreen_info!("Starting editor.");
 
     // Initialize logging
-    init_file_logger();    
+    init_file_logger();
+
+    // Pre-cache font to avoid macroquad text bug
+    engine_core::assets::core_assets::precache_font();
 
     if !ensure_save_root().await {
         // User cancelled
