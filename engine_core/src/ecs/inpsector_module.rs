@@ -2,8 +2,8 @@
 use crate::game::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use crate::ui::widgets::*;
+use crate::ui::text::draw_text_ui;
 use crate::ecs::ecs::Ecs;
-use crate::ui::text::*;
 use macroquad::prelude::*;
 
 /// Every inspector sub‑module implements this trait.

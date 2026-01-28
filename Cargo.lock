@@ -934,6 +934,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "uuid",
+ "widgets",
 ]
 
 [[package]]
@@ -3584,6 +3585,13 @@ dependencies = [
  "env_home",
  "rustix",
  "winsafe",
+]
+
+[[package]]
+name = "widgets"
+version = "0.1.0"
+dependencies = [
+ "macroquad",
 ]
 
 [[package]]

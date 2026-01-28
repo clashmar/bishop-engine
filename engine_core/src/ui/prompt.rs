@@ -3,7 +3,7 @@ use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::controls::controls::Controls;
 use crate::ui::widgets::*;
-use crate::ui::text::*;
+use crate::ui::text::{draw_text_ui, measure_text_ui, center_text};
 use crate::world::world::WorldId;
 use macroquad::prelude::*;
 use crate::ui::widgets::WidgetId;

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+widgets = { path = "../widgets" }
 reflect_derive = { path = "../reflect_derive" }
 ecs_component = { path = "../ecs_component" }
 macroquad = "0.4.14"
