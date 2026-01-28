@@ -51,6 +51,9 @@ fn load_icon(png_bytes: &[u8]) -> Icon {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // Pre-cache font to avoid black rectangle rendering bug
+    engine_core::assets::core_assets::precache_font();
+
     // let lua = Lua::new();
     // let game_state = std::rc::Rc::new(std::cell::RefCell::new(GameState::new(&lua).await));
     // let script_mgr = &mut game_state.borrow_mut().game.script_manager;

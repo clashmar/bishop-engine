@@ -2,8 +2,8 @@
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::Editor;
 use engine_core::logging::logging::LOG_HISTORY;
-use engine_core::ui::text::draw_text_ui;
 use engine_core::ui::widgets::*;
+use engine_core::ui::text::*;
 use macroquad::prelude::*;
 
 const ROW_HEIGHT: f32 = 18.0;
@@ -38,6 +38,107 @@ impl ConsolePanel {
             log::Level::Trace => DARKGRAY,
         }
     }
+
+    fn level_prefix(level: log::Level) -> &'static str {
+        match level {
+            log::Level::Error => "[ERROR] ",
+            log::Level::Warn => "[WARN]  ",
+            log::Level::Info => "[INFO]  ",
+            log::Level::Debug => "[DEBUG] ",
+            log::Level::Trace => "[TRACE] ",
+        }
+    }
+
+    /// Wraps text to fit within the given pixel width.
+    fn wrap_text(text: &str, max_width: f32, font_size: f32) -> Vec<String> {
+        if text.is_empty() {
+            return vec![String::new()];
+        }
+
+        let mut lines = Vec::new();
+        let mut current_line = String::new();
+        let mut current_width: f32 = 0.0;
+
+        // Split into tokens that preserve delimiters as separate tokens
+        let tokens = Self::tokenize_for_wrap(text);
+
+        for token in tokens {
+            let token_width = measure_text_ui(&token, font_size, 1.0).width;
+
+            // If this token alone exceeds max_width, break it character by character
+            if token_width > max_width {
+                // First, push current line if non-empty
+                if !current_line.is_empty() {
+                    lines.push(current_line);
+                    current_line = String::new();
+                    current_width = 0.0;
+                }
+
+                // Break the long token character by character
+                for c in token.chars() {
+                    let char_str = c.to_string();
+                    let char_width = measure_text_ui(&char_str, font_size, 1.0).width;
+
+                    if current_width + char_width > max_width && !current_line.is_empty() {
+                        lines.push(current_line);
+                        current_line = String::new();
+                        current_width = 0.0;
+                    }
+
+                    current_line.push(c);
+                    current_width += char_width;
+                }
+            } else if current_width + token_width > max_width {
+                // Token doesn't fit on current line, start a new line
+                if !current_line.is_empty() {
+                    lines.push(current_line);
+                }
+                // Skip leading whitespace on new lines
+                let trimmed = token.trim_start();
+                current_line = trimmed.to_string();
+                current_width = measure_text_ui(&current_line, font_size, 1.0).width;
+            } else {
+                // Token fits, append it
+                current_line.push_str(&token);
+                current_width += token_width;
+            }
+        }
+
+        if !current_line.is_empty() {
+            lines.push(current_line);
+        }
+
+        if lines.is_empty() {
+            lines.push(String::new());
+        }
+
+        lines
+    }
+
+    /// Splits text into tokens for wrapping, keeping delimiters as break points.
+    fn tokenize_for_wrap(text: &str) -> Vec<String> {
+        let mut tokens = Vec::new();
+        let mut current = String::new();
+
+        for c in text.chars() {
+            // These characters are good break points
+            if c == ' ' || c == '/' || c == '\\' || c == '-' || c == '_' || c == '.' {
+                if !current.is_empty() {
+                    tokens.push(current);
+                    current = String::new();
+                }
+                tokens.push(c.to_string());
+            } else {
+                current.push(c);
+            }
+        }
+
+        if !current.is_empty() {
+            tokens.push(current);
+        }
+
+        tokens
+    }
 }
 
 pub const CONSOLE_PANEL: &str = "Console";
@@ -58,7 +159,7 @@ impl PanelDefinition for ConsolePanel {
         let btn_width = 50.0;
         let btn_y = rect.y + TOP_PADDING + (HEADER_ROW_HEIGHT - CLEAR_BUTTON_HEIGHT) / 2.0;
         let clear_btn_rect = Rect::new(
-            rect.x + 6.,
+            rect.x + rect.w - btn_width - 6.,
             btn_y,
             btn_width,
             CLEAR_BUTTON_HEIGHT,
@@ -99,17 +200,33 @@ impl PanelDefinition for ConsolePanel {
 
         let entry_count = entries.len();
 
+        // Calculate usable width for text
+        let usable_w = content_rect.w - SCROLLBAR_W - 12.0;
+        let font_size = 14.0;
+
+        // Pre-calculate wrapped lines for all entries 
+        let wrapped_entries: Vec<(log::Level, Vec<String>)> = entries
+            .iter()
+            .map(|(level, message)| {
+                let prefix = Self::level_prefix(*level);
+                let full_message = format!("{}{}", prefix, message);
+                let lines = Self::wrap_text(&full_message, usable_w, font_size);
+                (*level, lines)
+            })
+            .collect();
+
+        // Calculate total line count for content height
+        let total_lines: usize = wrapped_entries.iter().map(|(_, lines)| lines.len()).sum();
+        let content_height = total_lines as f32 * ROW_HEIGHT;
+        let scroll_range = (content_height - content_h).max(0.0);
+
         // Auto-scroll when new entries arrive
         if entry_count > self.last_entry_count && self.auto_scroll {
-            let content_height = entry_count as f32 * ROW_HEIGHT;
-            let scroll_range = (content_height - content_h).max(0.0);
             self.scroll_y = -scroll_range;
         }
         self.last_entry_count = entry_count;
 
         // Re-enable auto-scroll if scrolled to bottom
-        let content_height = entry_count as f32 * ROW_HEIGHT;
-        let scroll_range = (content_height - content_h).max(0.0);
         if scroll_range > 0.0 && self.scroll_y <= -scroll_range + 1.0 {
             self.auto_scroll = true;
         }
@@ -117,38 +234,41 @@ impl PanelDefinition for ConsolePanel {
         // Clamp scroll
         self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
 
-        // Draw entries
-        let usable_w = if scroll_range > 0.0 {
-            content_rect.w - SCROLLBAR_W - 8.0
-        } else {
-            content_rect.w - 8.0
-        };
+        // Draw entries with cumulative Y tracking
+        let mut cumulative_y = 0.0;
 
-        for (i, (level, message)) in entries.iter().enumerate() {
-            let entry_y = content_rect.y + self.scroll_y + i as f32 * ROW_HEIGHT;
+        for (level, lines) in &wrapped_entries {
+            let entry_height = lines.len() as f32 * ROW_HEIGHT;
+            let entry_top = content_rect.y + self.scroll_y + cumulative_y;
+            let entry_bottom = entry_top + entry_height;
 
-            // Skip entries outside visible area
-            if entry_y + ROW_HEIGHT < content_rect.y || entry_y + ROW_HEIGHT > content_rect.y + content_rect.h {
+            // Skip entries entirely outside visible area
+            if entry_bottom < content_rect.y || entry_top > content_rect.y + content_rect.h {
+                cumulative_y += entry_height;
                 continue;
             }
 
             let color = Self::level_color(*level);
 
-            // Truncate message if too long
-            let max_chars = (usable_w / 7.0) as usize;
-            let display_msg = if message.len() > max_chars {
-                format!("{}...", &message[..max_chars.saturating_sub(3)])
-            } else {
-                message.clone()
-            };
+            // Draw each line of the wrapped entry
+            for (line_idx, line) in lines.iter().enumerate() {
+                let line_y = entry_top + line_idx as f32 * ROW_HEIGHT;
 
-            draw_text_ui(
-                &display_msg,
-                content_rect.x + 6.,
-                entry_y + ROW_HEIGHT * 0.75,
-                14.0,
-                color,
-            );
+                // Skip individual lines outside visible area
+                if line_y < content_rect.y || line_y + ROW_HEIGHT > content_rect.y + content_rect.h {
+                    continue;
+                }
+
+                draw_text_ui(
+                    line,
+                    content_rect.x + 6.,
+                    line_y + ROW_HEIGHT * 0.75,
+                    font_size,
+                    color,
+                );
+            }
+
+            cumulative_y += entry_height;
         }
 
         // Scrollbar
