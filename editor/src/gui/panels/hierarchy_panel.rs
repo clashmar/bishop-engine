@@ -7,7 +7,7 @@ use crate::Editor;
 use engine_core::ui::text::draw_text_ui;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::Button;
 use std::collections::HashSet;
 use macroquad::prelude::*;
 
@@ -118,11 +118,10 @@ impl PanelDefinition for HierarchyPanel {
             Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
             rect,
             || {
-                let clicked = gui_button(
+                let clicked = Button::new(
                     Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
                     "+ Global",
-                    blocked,
-                );
+                ).blocked(blocked).show();
                 if !blocked && clicked {
                     ecs.create_entity()
                         .with(Global::default())
@@ -295,7 +294,7 @@ fn draw_entity_tree(
         if has_children {
             let btn = Rect::new(row_rect.x, row_rect.y, 14.0, ROW_HEIGHT);
             let symbol = if is_expanded { "-" } else { "+" };
-            let clicked = gui_button_plain_hover(btn, symbol, WHITE, GRAY, blocked);
+            let clicked = Button::new(btn, symbol).plain().text_color(WHITE).hover_color(GRAY).blocked(blocked).show();
             if !blocked && clicked {
                 if is_expanded {
                     expanded.remove(&entity);

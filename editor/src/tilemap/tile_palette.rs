@@ -5,7 +5,7 @@ use crate::assets::sprite::SpriteId;
 use crate::engine_global::tile_size;
 use crate::ui::text::draw_text_ui;
 use crate::tiles::tile::TileDef;
-use crate::ui::widgets::*;
+use crate::ui::widgets::{Button, gui_checkbox};
 use engine_core::tiles::tile::TileDefId;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -182,7 +182,7 @@ impl TilePalette {
 
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);
-        if gui_button(sprite_rect, "Pick sprite", false) {
+        if Button::new(sprite_rect, "Pick sprite").show() {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("PNG images", &["png"])
                 .pick_file()
@@ -233,7 +233,7 @@ impl TilePalette {
 
         // Create/Update
         let btn_ok = Rect::new(panel.x + 30., panel.y + 220., 100., 30.);
-        if gui_button(btn_ok, btn_label, false) {
+        if Button::new(btn_ok, btn_label).show() {
             // Add the request to the queue, it will be excecuted next frame
             let cmd = match self.ui.mode {
                 TilePaletteUiMode::Create => PaletteCmd::Create,
@@ -245,14 +245,14 @@ impl TilePalette {
 
         // Cancel
         let btn_cancel = Rect::new(panel.x + 170., panel.y + 220., 100., 30.);
-        if gui_button(btn_cancel, "Cancel", false) {
+        if Button::new(btn_cancel, "Cancel").show() {
             self.ui.open = false;
         }
 
         // Draw delete button if in edit mode
         if self.ui.mode == TilePaletteUiMode::Edit {
             let btn_del = Rect::new(panel.x + 30., panel.y + 260., 240., 30.);
-            if gui_button(btn_del, "Delete", false) {
+            if Button::new(btn_del, "Delete").show() {
                 //Add the request to the queue
                 let cmd = PaletteCmd::Delete(self.ui.edit_index);
                 self.command_queue.push_back(cmd);

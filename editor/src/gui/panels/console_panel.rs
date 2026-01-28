@@ -2,7 +2,7 @@
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::Editor;
 use engine_core::logging::logging::LOG_HISTORY;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::Button;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
 
@@ -165,7 +165,7 @@ impl PanelDefinition for ConsolePanel {
             CLEAR_BUTTON_HEIGHT,
         );
 
-        let clicked = gui_button(clear_btn_rect, "Clear", blocked);
+        let clicked = Button::new(clear_btn_rect, "Clear").blocked(blocked).show();
         if !blocked && clicked {
             if let Ok(mut history) = LOG_HISTORY.lock() {
                 history.clear();

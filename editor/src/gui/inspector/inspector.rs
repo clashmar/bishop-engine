@@ -14,7 +14,10 @@ use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
 use engine_core::onscreen_error;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::{
+    Button, gui_slider, input_is_focused, WidgetId, WIDGET_PADDING, WIDGET_SPACING,
+    HEADER_FONT_SIZE_20, DEFAULT_FONT_SIZE_16,
+};
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
@@ -413,7 +416,7 @@ impl Inspector {
                 menu_rect.w - 10.0,
                 25.0,
             );
-            if gui_button(entry_rect, reg.type_name, false) {
+            if Button::new(entry_rect, reg.type_name).show() {
                 self.pending_add = Some(reg.type_name.to_string());
                 self.add_mode = false;
             }

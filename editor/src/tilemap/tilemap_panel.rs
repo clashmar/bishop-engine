@@ -6,7 +6,7 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::tilemap::tile_palette::*;
 use crate::tiles::tilemap::TileMap;
 use crate::gui::gui_constants::*;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::Button;
 use macroquad::prelude::*;
 
 const INSET: f32 = 10.0;
@@ -113,7 +113,7 @@ impl TilemapPanel {
         self.background.draw(background_rect, tilemap, blocked);
 
         // Draw create button
-        if gui_button(create_rect, create_label, blocked) {
+        if Button::new(create_rect, create_label).blocked(blocked).show() {
             if self.palette.ui.open && self.palette.ui.mode == TilePaletteUiMode::Create {
                 self.palette.ui.open = false; // Hide dialog
             } else {
@@ -130,7 +130,7 @@ impl TilemapPanel {
             let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
             let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
 
-            if gui_button(edit_rect, edit_label, blocked) {
+            if Button::new(edit_rect, edit_label).blocked(blocked).show() {
                 self.palette.ui.mode = TilePaletteUiMode::Edit;
                 self.palette.ui.edit_index = self.palette.selected_index;
                 self.palette.ui.edit_initialized = true;

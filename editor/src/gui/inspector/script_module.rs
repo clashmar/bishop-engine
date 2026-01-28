@@ -7,7 +7,11 @@ use engine_core::scripting::script::ScriptId;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::entity::Entity;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::{
+    Button, gui_script_picker, gui_input_text_default, gui_input_number_i32, gui_input_number_f32,
+    gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, DEFAULT_FIELD_HEIGHT, DEFAULT_CHECKBOX_DIMS,
+    FIELD_TEXT_COLOR, WIDGET_SPACING, WIDGET_PADDING,
+};
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use std::collections::HashMap;
@@ -100,7 +104,7 @@ impl InspectorModule for ScriptModule {
         }
 
         // Refresh button
-        if gui_button(refresh_rect, "R", blocked) {
+        if Button::new(refresh_rect, "R").blocked(blocked).show() {
             if script_comp.script_id == ScriptId(0) {
                 return;
             }

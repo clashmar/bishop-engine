@@ -8,7 +8,11 @@ use engine_core::animation::animation_clip::*;
 use engine_core::ecs::inpsector_module::InspectorModule;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::toast::Toast;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::{
+    Button, gui_dropdown, gui_input_text_clamped_focused, gui_input_text_reset,
+    gui_input_number_f32, gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
+    WIDGET_PADDING, WIDGET_SPACING,
+};
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
@@ -84,7 +88,7 @@ impl InspectorModule for AnimationModule {
         let btn_rect = Rect::new(btn_x, y, btn_w, btn_h);
 
         // Button press
-        if gui_button(btn_rect, ADD_LABEL, blocked) {
+        if Button::new(btn_rect, ADD_LABEL).blocked(blocked).show() {
             let new_id = if animation.clips.is_empty() {
                 ClipId::Idle
             } else {
@@ -121,8 +125,7 @@ impl InspectorModule for AnimationModule {
             let has_variant = !animation.variant.0.as_os_str().is_empty();
             let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, full_w / 2., MARGIN);
 
-            if gui_button(sprite_btn,
-                if has_variant { "Edit Variant" } else { "Choose Variant" }, blocked) {
+            if Button::new(sprite_btn, if has_variant { "Edit Variant" } else { "Choose Variant" }).blocked(blocked).show() {
                 if let Some(path) = rfd::FileDialog::new()
                     .pick_folder()
                 {
