@@ -1,9 +1,9 @@
-// engine_core/src/assets/core_assets.rs
 use image::imageops::FilterType;
 use macroquad::prelude::*;
 use std::sync::LazyLock;
 use image::ImageReader;
 use std::io::Cursor;
+use crate::ui::text::GNF_TEXT_RENDERER;
 
 pub static GNF_FONT: LazyLock<Font> = LazyLock::new(|| {
     let mut font = load_ttf_font_from_bytes(include_bytes!("fonts/gnf.regular.ttf")).expect("Failed to load font.");
@@ -14,20 +14,16 @@ pub static GNF_FONT: LazyLock<Font> = LazyLock::new(|| {
     font
 });
 
-/// Pre-caches the font atlas with common characters and sizes.
-/// Call this early at startup to avoid font rendering corruption.
-/// See: https://github.com/not-fl3/macroquad/issues/1006
 pub fn precache_font() {
-    // Force lazy initialization
     let font = &*GNF_FONT;
 
-    // All printable ASCII characters (32-126)
     let chars: Vec<char> = (32u8..=126).map(|c| c as char).collect();
 
-    // Common font sizes used in the editor/game UI
     for size in [12, 14, 15, 16, 18, 20, 24, 28, 32, 36, 48] {
         font.populate_font_cache(&chars, size);
     }
+
+    widgets::set_text_renderer(&GNF_TEXT_RENDERER);
 }
 
 /// Helper that decodes a PNG, resizes it and returns the raw RGBA bytes.

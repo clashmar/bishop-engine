@@ -4,6 +4,8 @@ members = [
     "engine_core",
     "game",
     "editor",
-    "reflect_derive", 
-    "lua_api_gen", "ecs_component",
+    "reflect_derive",
+    "lua_api_gen",
+    "ecs_component",
+    "widgets",
     ]
