@@ -1,5 +1,6 @@
 // editor/src/game/game_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::commands::game_editor_commands::*;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
@@ -417,6 +418,7 @@ impl GameEditor {
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || is_dropdown_open()
         || is_modal_open()
+        || is_mouse_over_panel()
     }
 
     fn handle_mouse_cursor(&self) {

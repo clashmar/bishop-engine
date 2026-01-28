@@ -274,8 +274,5 @@ impl Editor {
         }
 
         self.draw_toast();
-
-        // Draws onscreen logs in debug mode
-        self.draw_logs();
     }
 }

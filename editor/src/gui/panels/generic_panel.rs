@@ -14,8 +14,8 @@ pub trait PanelDefinition {
     fn title(&self) -> &'static str;
     /// Default rect when first created.
     fn default_rect(&self) -> Rect;
-    /// Draws panel contents.
-    fn draw(&mut self, rect: Rect, editor: &mut Editor);
+    /// Draws panel contents. When `blocked` is true, the panel should not respond to mouse input.
+    fn draw(&mut self, rect: Rect, editor: &mut Editor, blocked: bool);
 }
 
 /// Movable and collabsible panel to be composed with the supplied `PanelDefinition`.
@@ -45,7 +45,7 @@ impl GenericPanel {
         }
     }
 
-    pub fn update_and_draw(&mut self, editor: &mut Editor) {
+    pub fn update_and_draw_with_block(&mut self, editor: &mut Editor, blocked: bool) {
         if !self.visible {
             return;
         }
@@ -61,7 +61,8 @@ impl GenericPanel {
 
         // Collapse button
         let collapse_rect = Rect::new(panel_rect.left() + 5., panel_rect.y + 4., 20., 20.);
-        if gui_button_plain_default(collapse_rect, if self.collapsed { "+" } else { "-" }, BLACK, false) {
+        let collapse_clicked = gui_button_plain_default(collapse_rect, if self.collapsed { "+" } else { "-" }, BLACK, blocked);
+        if !blocked && collapse_clicked {
             self.collapsed = !self.collapsed;
         }
 
@@ -70,13 +71,14 @@ impl GenericPanel {
 
         // Close button
         let close_rect = Rect::new(panel_rect.right() - 26., panel_rect.y + 4., 20., 20.);
-        if gui_button_plain_default(close_rect, "x", BLACK, false) {
+        let close_clicked = gui_button_plain_default(close_rect, "x", BLACK, blocked);
+        if !blocked && close_clicked {
             self.visible = false;
         }
 
-        // Drag logic before collapse check
+        // Drag logic before collapse check (only when not blocked)
         let mouse: Vec2 = mouse_position().into();
-        if is_mouse_button_pressed(MouseButton::Left) && title_bar.contains(mouse) {
+        if !blocked && is_mouse_button_pressed(MouseButton::Left) && title_bar.contains(mouse) {
             self.dragging = true;
             self.drag_offset = mouse - vec2(self.rect.x, self.rect.y);
         }
@@ -128,7 +130,7 @@ impl GenericPanel {
         draw_rectangle_lines(content_rect.x, content_rect.y, content_rect.w, content_rect.h, 2., WHITE);
 
         if !self.collapsed {
-            self.definition.draw(content_rect, editor);
+            self.definition.draw(content_rect, editor, blocked);
         }
     }
 }

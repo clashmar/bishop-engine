@@ -50,11 +50,11 @@ impl PanelDefinition for HierarchyPanel {
         Rect::new(20., 60., 260., 400.)
     }
 
-    fn draw(&mut self, rect: Rect, editor: &mut Editor) {
+    fn draw(&mut self, rect: Rect, editor: &mut Editor, blocked: bool) {
         let mouse: Vec2 = mouse_position().into();
 
         // Scroll input
-        if rect.contains(mouse) {
+        if !blocked && rect.contains(mouse) {
             let (_, wheel_y) = mouse_wheel();
             self.scroll_y += wheel_y * SCROLL_SPEED;
         }
@@ -118,11 +118,12 @@ impl PanelDefinition for HierarchyPanel {
             Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
             rect,
             || {
-                if gui_button(
+                let clicked = gui_button(
                     Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
                     "+ Global",
-                    false,
-                ) {
+                    blocked,
+                );
+                if !blocked && clicked {
                     ecs.create_entity()
                         .with(Global::default())
                         .with(Name("Global Entity".into()));
@@ -155,6 +156,7 @@ impl PanelDefinition for HierarchyPanel {
                 room_editor,
                 ecs,
                 scroll_range,
+                blocked,
             );
         }
 
@@ -183,6 +185,7 @@ impl PanelDefinition for HierarchyPanel {
                 room_editor,
                 ecs,
                 scroll_range,
+                blocked,
             );
         }
 
@@ -259,6 +262,7 @@ fn draw_entity_tree(
     room_editor: &mut RoomEditor,
     ecs: &mut Ecs,
     scroll_range: f32,
+    blocked: bool,
 ) {
     // Width that respects the scrollbar
     let usable_w = inner_width(panel_rect, scroll_range);
@@ -291,7 +295,8 @@ fn draw_entity_tree(
         if has_children {
             let btn = Rect::new(row_rect.x, row_rect.y, 14.0, ROW_HEIGHT);
             let symbol = if is_expanded { "-" } else { "+" };
-            if gui_button_plain_hover(btn, symbol, WHITE, GRAY, false) {
+            let clicked = gui_button_plain_hover(btn, symbol, WHITE, GRAY, blocked);
+            if !blocked && clicked {
                 if is_expanded {
                     expanded.remove(&entity);
                 } else {
@@ -301,30 +306,32 @@ fn draw_entity_tree(
         }
 
         // Selection
-        if mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
+        if !blocked && mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
             room_editor.set_selected_entity(Some(entity));
         }
 
         // Start drag
-        if mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
+        if !blocked && mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
             *dragging = Some(entity);
             *drag_offset = mouse - row_rect.point();
         }
 
         // Drop target to parent
-        if let Some(dragged) = *dragging {
-            if dragged != entity && mouse_over && !is_ancestor(ecs, dragged, entity) {
-                draw_rectangle(
-                    row_rect.x,
-                    row_rect.y,
-                    row_rect.w,
-                    row_rect.h,
-                    Color::new(0.3, 0.7, 0.3, 0.3),
-                );
-                if is_mouse_button_released(MouseButton::Left) {
-                    set_parent(ecs, dragged, entity);
-                    expanded.insert(entity);
-                    *dragging = None;
+        if !blocked {
+            if let Some(dragged) = *dragging {
+                if dragged != entity && mouse_over && !is_ancestor(ecs, dragged, entity) {
+                    draw_rectangle(
+                        row_rect.x,
+                        row_rect.y,
+                        row_rect.w,
+                        row_rect.h,
+                        Color::new(0.3, 0.7, 0.3, 0.3),
+                    );
+                    if is_mouse_button_released(MouseButton::Left) {
+                        set_parent(ecs, dragged, entity);
+                        expanded.insert(entity);
+                        *dragging = None;
+                    }
                 }
             }
         }
@@ -355,17 +362,20 @@ fn draw_entity_tree(
                 room_editor,
                 ecs,
                 scroll_range,
+                blocked,
             );
         }
     }
 
     // Unparent by dragging outside panel
-    if let Some(dragged) = *dragging {
-        if dragged == entity {
-            let mouse: Vec2 = mouse_position().into();
-            if !panel_rect.contains(mouse) && is_mouse_button_released(MouseButton::Left) {
-                remove_parent(ecs, dragged);
-                *dragging = None;
+    if !blocked {
+        if let Some(dragged) = *dragging {
+            if dragged == entity {
+                let mouse: Vec2 = mouse_position().into();
+                if !panel_rect.contains(mouse) && is_mouse_button_released(MouseButton::Left) {
+                    remove_parent(ecs, dragged);
+                    *dragging = None;
+                }
             }
         }
     }

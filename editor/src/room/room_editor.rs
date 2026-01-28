@@ -3,6 +3,7 @@ use crate::editor_camera_controller::EditorCameraController;
 use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::gui::inspector::inspector::Inspector;
 use crate::gui::panels::hierarchy_panel::*;
+use crate::gui::panels::console_panel::*;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
 use crate::gui::panels::generic_panel::*;
@@ -86,8 +87,15 @@ impl RoomEditor {
     pub fn new() -> Self {
         let mode = RoomEditorMode::Scene;
 
-        // Register room specific panels (maybe this should go in panel manager?)
+        // Register panels
         with_panel_manager(|panel_manager| {
+            // Console panel available in all modes
+            panel_manager.register(
+                GenericPanel::new(ConsolePanel::new()),
+                vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
+            );
+
+            // Hierarchy panel only in room mode
             panel_manager.register(
                 GenericPanel::new(HierarchyPanel::new()),
                 vec![PanelMode::Room],
