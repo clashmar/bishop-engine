@@ -2,11 +2,13 @@
 use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::controls::controls::Controls;
-use crate::ui::widgets::*;
+use crate::ui::widgets::{
+    Button, gui_input_text_focused, gui_input_text_clamped, gui_sprite_picker,
+    WidgetId, DEFAULT_FONT_SIZE_16, WIDGET_SPACING,
+};
 use crate::ui::text::{draw_text_ui, measure_text_ui, center_text};
 use crate::world::world::WorldId;
 use macroquad::prelude::*;
-use crate::ui::widgets::WidgetId;
 
 pub const BUTTON_W: f32 = 80.0;
 pub const BUTTON_H: f32 = 30.0;
@@ -57,7 +59,6 @@ impl StringPromptWidget {
 
     /// Draws the widget and, return the result if confirmed/cancelled or None.
     pub fn draw(&mut self) -> Option<StringPromptResult> {
-        // Message
         let message_pos = vec2(self.rect.x, self.rect.y + 10.0);
 
         draw_text_ui(
@@ -82,8 +83,8 @@ impl StringPromptWidget {
         // Buttons
         let btn_y = self.rect.y + 70.0;
         let (confirm_rect, cancel_rect) = confirm_cancel_rects(self.rect, btn_y);
-        let confirm_clicked = gui_button(confirm_rect, "Confirm", false);
-        let cancel_clicked = gui_button(cancel_rect, "Cancel", false);
+        let confirm_clicked = Button::new(confirm_rect, "Confirm").show();
+        let cancel_clicked = Button::new(cancel_rect, "Cancel").show();
 
         // Handle result
         if (confirm_clicked || Controls::enter())
@@ -150,8 +151,8 @@ impl ConfirmPromptWidget {
         // Buttons
         let btn_y = self.rect.y + message_height + WIDGET_SPACING;
         let (confirm_rect, cancel_rect) = confirm_cancel_rects(self.rect, btn_y);
-        let confirm_clicked = gui_button(confirm_rect, "Confirm", false);
-        let cancel_clicked = gui_button(cancel_rect, "Cancel", false);
+        let confirm_clicked = Button::new(confirm_rect, "Confirm").show();
+        let cancel_clicked = Button::new(cancel_rect, "Cancel").show();
 
         // Handle result
         if confirm_clicked || Controls::enter() {
@@ -262,8 +263,8 @@ impl WorldEditPrompt {
 
         // Buttons
         let (confirm_rect, cancel_rect) = confirm_cancel_rects(self.rect, y);
-        let confirm_clicked = gui_button(confirm_rect, "Confirm", false);
-        let cancel_clicked = gui_button(cancel_rect, "Cancel", false);
+        let confirm_clicked = Button::new(confirm_rect, "Confirm").show();
+        let cancel_clicked = Button::new(cancel_rect, "Cancel").show();
 
         // Result
         if (confirm_clicked || Controls::enter())

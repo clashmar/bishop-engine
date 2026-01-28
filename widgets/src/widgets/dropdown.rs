@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use std::fmt::Display;
 use crate::{
     WidgetId, draw_text_ui, measure_text_ui,
-    gui_button, gui_button_plain_default,
+    Button,
     DROPDOWN_OPEN, FIELD_BACKGROUND_COLOR, OUTLINE_COLOR,
     DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
 };
@@ -80,10 +80,10 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
 
     let button_clicked = match style {
         DropDownStyle::Default => {
-            gui_button(rect, label, blocked) && !blocked
+            Button::new(rect, label).blocked(blocked).show() && !blocked
         }
         DropDownStyle::Plain => {
-            gui_button_plain_default(rect, label, text_color, blocked) && !blocked
+            Button::new(rect, label).plain().text_color(text_color).blocked(blocked).show() && !blocked
         }
     };
 

@@ -5,71 +5,97 @@ use crate::{
     HOVER_COLOR, HOVER_COLOR_PLAIN,
 };
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum ButtonStyle {
     Default,
     Plain,
 }
 
-pub fn gui_button(rect: Rect, label: &str, blocked: bool) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, Vec2::ZERO, HOVER_COLOR, blocked)
-}
-
-pub fn gui_button_plain_default(rect: Rect, label: &str, text_color: Color, blocked: bool) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, HOVER_COLOR_PLAIN, blocked)
-}
-
-pub fn gui_button_plain_hover(rect: Rect, label: &str, text_color: Color, hover_color: Color, blocked: bool) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Plain, text_color, Vec2::ZERO, hover_color, blocked)
-}
-
-pub fn gui_button_y_offset(rect: Rect, label: &str, text_offset: Vec2, blocked: bool) -> bool {
-    gui_button_impl(rect, label, ButtonStyle::Default, FIELD_TEXT_COLOR, text_offset, HOVER_COLOR, blocked)
-}
-
-fn gui_button_impl(
+pub struct Button<'a> {
     rect: Rect,
-    label: &str,
+    label: &'a str,
     style: ButtonStyle,
     text_color: Color,
-    text_offset: Vec2,
     hover_color: Color,
+    text_offset: Vec2,
     blocked: bool,
-) -> bool {
-    let mouse = mouse_position();
-    let hovered = rect.contains(vec2(mouse.0, mouse.1));
+}
 
-    let txt_dims = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0);
-    let txt_y = rect.y + rect.h * 0.7;
-    let txt_x = rect.x + (rect.w - txt_dims.width) / 2.;
-
-    match style {
-        ButtonStyle::Default => {
-            let hovered = rect.contains(vec2(mouse.0, mouse.1));
-            let background = if hovered && !is_dropdown_open() && !blocked && !is_mouse_button_down(MouseButton::Left) {
-                hover_color
-            } else {
-                FIELD_BACKGROUND_COLOR
-            };
-            draw_rectangle(rect.x, rect.y, rect.w, rect.h, background);
-            draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
-        }
-        ButtonStyle::Plain => {
-            if hovered && !is_dropdown_open() && !blocked && !is_mouse_button_down(MouseButton::Left) {
-                draw_rectangle(
-                    rect.x,
-                    rect.y,
-                    rect.w,
-                    rect.h,
-                    hover_color,
-                );
-            }
+impl<'a> Button<'a> {
+    pub fn new(rect: Rect, label: &'a str) -> Self {
+        Self {
+            rect,
+            label,
+            style: ButtonStyle::Default,
+            text_color: FIELD_TEXT_COLOR,
+            hover_color: HOVER_COLOR,
+            text_offset: Vec2::ZERO,
+            blocked: false,
         }
     }
 
-    draw_text_ui(label, txt_x + text_offset.x, txt_y + text_offset.y, FIELD_TEXT_SIZE_16, text_color);
+    pub fn plain(mut self) -> Self {
+        self.style = ButtonStyle::Plain;
+        self.hover_color = HOVER_COLOR_PLAIN;
+        self
+    }
 
-    is_mouse_button_pressed(MouseButton::Left)
-    && hovered
-    && !blocked
-    && !is_dropdown_open()
+    pub fn text_color(mut self, color: Color) -> Self {
+        self.text_color = color;
+        self
+    }
+
+    pub fn hover_color(mut self, color: Color) -> Self {
+        self.hover_color = color;
+        self
+    }
+
+    pub fn text_offset(mut self, offset: Vec2) -> Self {
+        self.text_offset = offset;
+        self
+    }
+
+    pub fn blocked(mut self, blocked: bool) -> Self {
+        self.blocked = blocked;
+        self
+    }
+
+    pub fn show(self) -> bool {
+        let mouse = mouse_position();
+        let hovered = self.rect.contains(vec2(mouse.0, mouse.1));
+
+        let txt_dims = measure_text_ui(self.label, FIELD_TEXT_SIZE_16, 1.0);
+        let txt_y = self.rect.y + self.rect.h * 0.7;
+        let txt_x = self.rect.x + (self.rect.w - txt_dims.width) / 2.;
+
+        match self.style {
+            ButtonStyle::Default => {
+                let background = if hovered && !is_dropdown_open() && !self.blocked && !is_mouse_button_down(MouseButton::Left) {
+                    self.hover_color
+                } else {
+                    FIELD_BACKGROUND_COLOR
+                };
+                draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, background);
+                draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
+            }
+            ButtonStyle::Plain => {
+                if hovered && !is_dropdown_open() && !self.blocked && !is_mouse_button_down(MouseButton::Left) {
+                    draw_rectangle(
+                        self.rect.x,
+                        self.rect.y,
+                        self.rect.w,
+                        self.rect.h,
+                        self.hover_color,
+                    );
+                }
+            }
+        }
+
+        draw_text_ui(self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, FIELD_TEXT_SIZE_16, self.text_color);
+
+        is_mouse_button_pressed(MouseButton::Left)
+        && hovered
+        && !self.blocked
+        && !is_dropdown_open()
+    }
 }

@@ -1,7 +1,7 @@
 // engine_core/src/ecs/module.rs
 use crate::game::game::GameCtxMut;
 use crate::ecs::entity::Entity;
-use crate::ui::widgets::*;
+use crate::ui::widgets::{Button, DEFAULT_FONT_SIZE_16};
 use crate::ui::text::draw_text_ui;
 use crate::ecs::ecs::Ecs;
 use macroquad::prelude::*;
@@ -107,7 +107,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
         // Toggle button (‑ when open, ＋ when closed)
         let btn = Rect::new(rect.x + 4.0, rect.y + 4.0, 16.0, 16.0);
         let symbol = if self.expanded { "-" } else { "+" };
-        if gui_button_y_offset(btn, symbol, vec2(-0.3, 1.5), blocked) {
+        if Button::new(btn, symbol).text_offset(vec2(-0.3, 1.5)).blocked(blocked).show() {
             self.expanded = !self.expanded;
         }
 
@@ -122,7 +122,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_W,
                 BTN_H,
             );
-            if gui_button(btn_rect, "x", blocked) {
+            if Button::new(btn_rect, "x").blocked(blocked).show() {
                 self.inner.remove(game_ctx, entity);
                 return; // Don't draw the rest of the module
             }
