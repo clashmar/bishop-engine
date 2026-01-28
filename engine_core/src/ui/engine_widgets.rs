@@ -4,7 +4,7 @@ use crate::scripting::script::ScriptId;
 use crate::assets::sprite::SpriteId;
 use crate::ecs::entity::Entity;
 use crate::*;
-use widgets::{gui_button, WIDGET_SPACING};
+use widgets::{Button, WIDGET_SPACING};
 use macroquad::prelude::*;
 use std::borrow::Cow;
 
@@ -40,7 +40,7 @@ pub fn gui_sprite_picker(
 
     let mut changed = false;
 
-    if gui_button(picker_rect, &btn_label, blocked) {
+    if Button::new(picker_rect, &btn_label).blocked(blocked).show() {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -61,7 +61,7 @@ pub fn gui_sprite_picker(
         }
     }
 
-    if gui_button(remove_rect, "x", blocked) && id.0 != 0 {
+    if Button::new(remove_rect, "x").blocked(blocked).show() && id.0 != 0 {
         *id = SpriteId(0);
         changed = true;
     }
@@ -102,7 +102,7 @@ pub fn gui_script_picker(
 
     let mut changed = false;
 
-    if gui_button(picker_rect, &btn_label, blocked) {
+    if Button::new(picker_rect, &btn_label).blocked(blocked).show() {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -123,7 +123,7 @@ pub fn gui_script_picker(
         }
     }
 
-    if gui_button(remove_rect, "x", blocked) && script_id.0 != 0 {
+    if Button::new(remove_rect, "x").blocked(blocked).show() && script_id.0 != 0 {
         script_manager.unload(entity, *script_id);
         *script_id = ScriptId(0);
         changed = true;

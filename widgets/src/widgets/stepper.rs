@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use crate::{
-    draw_text_ui, measure_text_ui, gui_button,
+    draw_text_ui, measure_text_ui, Button,
     FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR, OUTLINE_COLOR, WIDGET_SPACING,
 };
 
@@ -64,7 +64,7 @@ pub fn gui_stepper(
         btn_w,
     );
 
-    if gui_button(decrease_rect, "-", blocked) && idx > 0 {
+    if Button::new(decrease_rect, "-").blocked(blocked).show() && idx > 0 {
         idx -= 1;
     }
 
@@ -74,7 +74,7 @@ pub fn gui_stepper(
         btn_w,
         btn_w,
     );
-    if gui_button(increase_rect, "+", blocked) && idx + 1 < steps.len() {
+    if Button::new(increase_rect, "+").blocked(blocked).show() && idx + 1 < steps.len() {
         idx += 1;
     }
 
