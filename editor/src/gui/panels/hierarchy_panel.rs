@@ -306,7 +306,7 @@ fn draw_entity_tree(
         }
 
         // Start drag
-        if mouse_over && is_mouse_button_down(MouseButton::Left) && dragging.is_none() {
+        if mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
             *dragging = Some(entity);
             *drag_offset = mouse - row_rect.point();
         }

@@ -96,7 +96,7 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     }
 
     // Everything else goes in /Resources to mirror macOS structure
-    let src_resources = resources_folder_current(&game.name);
+    let src_resources = resources_folder_current();
     let target_resources = target_package.join(RESOURCES_FOLDER);
     copy_dir_recursive(&src_resources, &target_resources)?;
 
@@ -176,7 +176,7 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 fn update_exe(exe_path: &PathBuf, game: &Game) -> Result<(), winres_edit::Error> {
     let resources = Resources::new(&exe_path);
 
-    let icon_path = windows_folder(&game.name).join("Icon.ico");
+    let icon_path = windows_folder().join("Icon.ico");
 
     // TODO: Maybe 1 PNG which the program can handle 
     // all together using Image or .ico crate and icns
