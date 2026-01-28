@@ -1,7 +1,7 @@
 // editor/src/gui/generic_panel.rs
 use crate::gui::gui_constants::*;
 use crate::Editor;
-use engine_core::ui::widgets::*;
+use engine_core::ui::widgets::{Button, FIELD_BACKGROUND_COLOR};
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
 
@@ -61,7 +61,7 @@ impl GenericPanel {
 
         // Collapse button
         let collapse_rect = Rect::new(panel_rect.left() + 5., panel_rect.y + 4., 20., 20.);
-        let collapse_clicked = gui_button_plain_default(collapse_rect, if self.collapsed { "+" } else { "-" }, BLACK, blocked);
+        let collapse_clicked = Button::new(collapse_rect, if self.collapsed { "+" } else { "-" }).plain().text_color(BLACK).blocked(blocked).show();
         if !blocked && collapse_clicked {
             self.collapsed = !self.collapsed;
         }
@@ -71,7 +71,7 @@ impl GenericPanel {
 
         // Close button
         let close_rect = Rect::new(panel_rect.right() - 26., panel_rect.y + 4., 20., 20.);
-        let close_clicked = gui_button_plain_default(close_rect, "x", BLACK, blocked);
+        let close_clicked = Button::new(close_rect, "x").plain().text_color(BLACK).blocked(blocked).show();
         if !blocked && close_clicked {
             self.visible = false;
         }
