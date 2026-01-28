@@ -5,6 +5,7 @@ use crate::editor::EditorMode;
 use crate::Editor;
 use std::collections::HashMap;
 use macroquad::prelude::*;
+
 pub enum PanelMode {
     Room,
     World,
