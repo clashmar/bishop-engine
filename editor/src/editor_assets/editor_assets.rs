@@ -114,14 +114,27 @@ pub fn write_engine_scripts(scripts_folder: &Path) -> io::Result<()> {
         fs::write(engine_folder.join(filename), content)?;
     }
 
-    // Hide the _engine folder on Windows
+    hide_folder(&engine_folder);
+    Ok(())
+}
+
+/// Hide a folder using platform-specific methods.
+fn hide_folder(path: &Path) {
     #[cfg(windows)]
     {
         use std::process::Command;
         let _ = Command::new("attrib")
-            .args(["+h", &engine_folder.to_string_lossy()])
+            .args(["+h", &path.to_string_lossy()])
             .output();
     }
 
-    Ok(())
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let _ = Command::new("chflags")
+            .args(["hidden", &path.to_string_lossy()])
+            .output();
+    }
+
+    // Linux has no hidden attribute - the underscore prefix is the convention
 }
