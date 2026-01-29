@@ -3,6 +3,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use crate::{WidgetId, is_dropdown_open, FIELD_BACKGROUND_COLOR, OUTLINE_COLOR};
 
+/// Draws a horizontal slider widget.
+///
+/// Returns the new value and whether it changed this frame.
 pub fn gui_slider(id: WidgetId, rect: Rect, min: f32, max: f32, value: f32) -> (f32, bool) {
     thread_local! {
         static STATE: RefCell<HashMap<WidgetId, (bool, f32)>> =

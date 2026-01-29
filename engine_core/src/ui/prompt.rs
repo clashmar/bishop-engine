@@ -3,7 +3,7 @@ use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::controls::controls::Controls;
 use crate::ui::widgets::{
-    Button, gui_input_text_focused, gui_input_text_clamped, gui_sprite_picker,
+    Button, TextInput, gui_sprite_picker,
     WidgetId, DEFAULT_FONT_SIZE_16, WIDGET_SPACING,
 };
 use crate::ui::text::{draw_text_ui, measure_text_ui, center_text};
@@ -77,7 +77,7 @@ impl StringPromptWidget {
             30.0,
         );
 
-        let (new_text, _) = gui_input_text_focused(self.input_id, field_rect, &self.current, false);
+        let (new_text, _) = TextInput::new(self.input_id, field_rect, &self.current).focused(true).show();
         self.current = new_text;
 
         // Buttons
@@ -238,7 +238,7 @@ impl WorldEditPrompt {
 
         // Name field
         let name_rect = Rect::new(self.rect.x, y, self.rect.w, FIELD_H);
-        let (new_name, _) = gui_input_text_clamped(self.name_id, name_rect, &self.current_name, 33, false);
+        let (new_name, _) = TextInput::new(self.name_id, name_rect, &self.current_name).max_len(33).show();
         self.current_name = new_name;
 
         y += name_rect.h + FIELD_GAP;

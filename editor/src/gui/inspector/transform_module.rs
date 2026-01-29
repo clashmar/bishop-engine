@@ -43,7 +43,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_x = gui_input_number_f32(self.x_id, x_field, pos.position.x, blocked);
+        let new_x = NumberInput::new(self.x_id, x_field, pos.position.x).blocked(blocked).show();
 
         // Y
         let y_label = Rect::new(
@@ -59,7 +59,7 @@ impl TransformModule {
             field_w,
             field_h,
         );
-        let new_y = gui_input_number_f32(self.y_id, y_field, pos.position.y, blocked);
+        let new_y = NumberInput::new(self.y_id, y_field, pos.position.y).blocked(blocked).show();
 
         // Write back only if something changed
         if !blocked && (new_x - pos.position.x).abs() > f32::EPSILON

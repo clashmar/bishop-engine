@@ -1,6 +1,9 @@
 use macroquad::prelude::*;
 use crate::{is_dropdown_open, FIELD_BACKGROUND_COLOR, OUTLINE_COLOR};
 
+/// Draws a checkbox widget and toggles the value on click.
+///
+/// Returns true if the value was changed this frame.
 pub fn gui_checkbox(rect: Rect, value: &mut bool) -> bool {
     draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
     draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);

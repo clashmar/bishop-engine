@@ -1,5 +1,5 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::cell::RefCell;
 use crate::WidgetId;
 
 thread_local! {
