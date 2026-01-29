@@ -86,6 +86,11 @@ fn create_game_folders(name: &String) {
             onscreen_error!("Could not create {folder} folder '{}': {e}", path.display());
         }
     }
+
+    // Extract embedded _engine scripts
+    if let Err(e) = crate::editor_assets::write_engine_scripts(&scripts_folder()) {
+        onscreen_error!("Could not write _engine scripts: {e}");
+    }
 }
 
 /// Save a `Game` and all its contents.

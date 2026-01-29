@@ -5,9 +5,9 @@ use std::hash::BuildHasherDefault;
 use std::hash::DefaultHasher;
 use engine_core::assets::core_assets::load_rgba_resized;
 use futures::executor::block_on;
-use std::{env, fs};
+use std::{env, fs, io};
 use std::hash::BuildHasher;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use macroquad::prelude::*;
 
@@ -102,3 +102,26 @@ fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
     texture
 }
 
+// Include the auto-generated ENGINE_SCRIPTS array from build.rs
+include!("engine_scripts.rs");
+
+/// Write embedded _engine scripts to the specified scripts folder.
+pub fn write_engine_scripts(scripts_folder: &Path) -> io::Result<()> {
+    let engine_folder = scripts_folder.join("_engine");
+    fs::create_dir_all(&engine_folder)?;
+
+    for (filename, content) in ENGINE_SCRIPTS {
+        fs::write(engine_folder.join(filename), content)?;
+    }
+
+    // Hide the _engine folder on Windows
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        let _ = Command::new("attrib")
+            .args(["+h", &engine_folder.to_string_lossy()])
+            .output();
+    }
+
+    Ok(())
+}
