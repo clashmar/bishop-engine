@@ -24,7 +24,7 @@ pub struct GenericPanel {
     pub rect: Rect,
     pub visible: bool,
     pub collapsed: bool,
-    dragging: bool,
+    pub dragging: bool,
     drag_offset: Vec2,
     definition: Box<dyn PanelDefinition>,
 }
@@ -50,10 +50,44 @@ impl GenericPanel {
             return;
         }
 
-        // Take a snapshot of the rect before it mutates
-        let panel_rect = self.rect;
-
         const TITLE_BAR_H: f32 = 28.0;
+
+        // Process drag logic first (before snapshot) so drawing uses current position
+        let mouse: Vec2 = mouse_position().into();
+        let title_bar_for_drag = Rect::new(self.rect.x, self.rect.y, self.rect.w, TITLE_BAR_H);
+        if !blocked && is_mouse_button_pressed(MouseButton::Left) && title_bar_for_drag.contains(mouse) {
+            self.dragging = true;
+            self.drag_offset = mouse - vec2(self.rect.x, self.rect.y);
+        }
+
+        if self.dragging {
+            if is_mouse_button_down(MouseButton::Left) {
+                let new_pos = mouse - self.drag_offset;
+                self.rect.x = new_pos.x;
+                self.rect.y = new_pos.y;
+            } else {
+                self.dragging = false;
+            }
+        }
+
+        // Clamp the panel within bounds
+        let max_x = screen_width() - self.rect.w;
+        if self.rect.x < 0.0 {
+            self.rect.x = 0.0;
+        } else if self.rect.x > max_x {
+            self.rect.x = max_x;
+        }
+
+        let min_y = MENU_PANEL_HEIGHT;
+        let max_y = screen_height() - TITLE_BAR_H;
+        if self.rect.y < min_y {
+            self.rect.y = min_y;
+        } else if self.rect.y > max_y {
+            self.rect.y = max_y;
+        }
+
+        // Take snapshot after position updates so all drawing uses current frame's position
+        let panel_rect = self.rect;
         let title_bar = Rect::new(panel_rect.x, panel_rect.y, panel_rect.w, TITLE_BAR_H);
 
         // Title bar
@@ -74,43 +108,6 @@ impl GenericPanel {
         let close_clicked = Button::new(close_rect, "x").plain().text_color(BLACK).blocked(blocked).show();
         if !blocked && close_clicked {
             self.visible = false;
-        }
-
-        // Drag logic before collapse check (only when not blocked)
-        let mouse: Vec2 = mouse_position().into();
-        if !blocked && is_mouse_button_pressed(MouseButton::Left) && title_bar.contains(mouse) {
-            self.dragging = true;
-            self.drag_offset = mouse - vec2(self.rect.x, self.rect.y);
-        }
-
-        if self.dragging {
-            if is_mouse_button_down(MouseButton::Left) {
-                let new_pos = mouse - self.drag_offset;
-                self.rect.x = new_pos.x;
-                self.rect.y = new_pos.y;
-            } else {
-                self.dragging = false;
-            }
-        }
-
-        // Clamp the panel within bounds
-        // Horizontal
-        let max_x = screen_width() - self.rect.w;
-        if self.rect.x < 0.0 {
-            self.rect.x = 0.0;
-        } else if self.rect.x > max_x {
-            self.rect.x = max_x;
-        }
-
-        // Top (menu bar)
-        let min_y = MENU_PANEL_HEIGHT;
-        // Bottom (title bar must stay above bottom)
-        let max_y = screen_height() - TITLE_BAR_H;
-
-        if self.rect.y < min_y {
-            self.rect.y = min_y;
-        } else if self.rect.y > max_y {
-            self.rect.y = max_y;
         }
 
         if self.collapsed {

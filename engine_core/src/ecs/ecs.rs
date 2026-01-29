@@ -22,7 +22,7 @@ pub struct Ecs {
 
 impl Ecs {
     /// Allocate a fresh id and return a builder.
-    pub fn create_entity(&mut self) -> EntityBuilder {
+    pub fn create_entity(&mut self) -> EntityBuilder<'_> {
         // This ensures id will always start from 1 
         self.next_entity_id += 1;
         EntityBuilder {

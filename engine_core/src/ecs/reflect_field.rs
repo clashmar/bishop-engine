@@ -111,7 +111,7 @@ impl ReflectField for SpriteId {
     }
 }
 
-pub fn parse_field_name(name: &str) -> Cow<str> {
+pub fn parse_field_name(name: &str) -> Cow<'_, str> {
     // Fast path
     if !name.contains('_')
         && name
