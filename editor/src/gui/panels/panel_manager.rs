@@ -110,6 +110,6 @@ pub fn is_mouse_over_panel() -> bool {
     with_panel_manager(|pm| {
         let mouse_screen: Vec2 = mouse_position().into();
         pm.panels.iter()
-            .any(|(_, p)| p.visible && p.rect.contains(mouse_screen))
+            .any(|(_, p)| p.visible && (p.rect.contains(mouse_screen) || p.dragging))
     })
 }
