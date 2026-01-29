@@ -111,19 +111,19 @@ where
                     gui_sprite_picker(widget_rect, id, game_ctx.asset_manager, blocked);
                 }
                 (FieldValue::Text(txt), _) => {
-                    let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str(), blocked);
+                    let (new, _) = TextInput::new(base_id, widget_rect, txt.as_str()).blocked(blocked).show();
                     if new != *txt {
                         *txt = new;
                     }
                 }
                 (FieldValue::Float(f), _) => {
-                    let new = gui_input_number_f32(base_id, widget_rect, *f, blocked);
+                    let new = NumberInput::new(base_id, widget_rect, *f).blocked(blocked).show();
                     if (new - *f).abs() > f32::EPSILON {
                         *f = new;
                     }
                 }
                 (FieldValue::Int(i), _) => {
-                    let new = gui_input_number_i32(base_id, widget_rect, *i, blocked);
+                    let new = NumberInput::new(base_id, widget_rect, *i).blocked(blocked).show();
                     if new != *i {
                         *i = new;
                     }
@@ -155,7 +155,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v.x, blocked);
+                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show();
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -166,7 +166,7 @@ where
                         half - 2.0,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number_f32(id_y, rect_y, v.y, blocked);
+                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show();
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -189,7 +189,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v.x, blocked);
+                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show();
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -200,7 +200,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number_f32(id_y, rect_y, v.y, blocked);
+                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show();
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -211,7 +211,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_z = gui_input_number_f32(id_z, rect_z, v.z, blocked);
+                    let new_z = NumberInput::new(id_z, rect_z, v.z).blocked(blocked).show();
                     if (new_z - v.z).abs() > f32::EPSILON {
                         v.z = new_z;
                     }

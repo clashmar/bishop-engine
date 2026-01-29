@@ -192,12 +192,9 @@ impl RoomCameraModule {
         );
 
         // Numeric field
-        let typed = gui_input_number_f32(
-            self.zoom_id,
-            num_rect,
-            round_to_dp(scalar, 2),
-            blocked
-        );
+        let typed = NumberInput::new(self.zoom_id, num_rect, round_to_dp(scalar, 2))
+            .blocked(blocked)
+            .show();
 
         // Slider
         let (slider_val, slider_changed) = gui_slider(

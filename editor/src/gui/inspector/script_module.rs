@@ -8,7 +8,7 @@ use engine_core::scripting::script::Script;
 use engine_core::ecs::inpsector_module::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::widgets::{
-    Button, gui_script_picker, gui_input_text_default, gui_input_number_i32, gui_input_number_f32,
+    Button, gui_script_picker, TextInput, NumberInput,
     gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, DEFAULT_FIELD_HEIGHT, DEFAULT_CHECKBOX_DIMS,
     FIELD_TEXT_COLOR, WIDGET_SPACING, WIDGET_PADDING,
 };
@@ -187,21 +187,21 @@ impl InspectorModule for ScriptModule {
                     }
                 }
                 ScriptField::Int(ref mut v) => {
-                    let new = gui_input_number_i32(base_id, widget_rect, *v as i32, blocked) as i64;
+                    let new = NumberInput::new(base_id, widget_rect, *v as i32).blocked(blocked).show() as i64;
                     if new != *v {
                         *v = new;
                         changed = true;
                     }
                 }
                 ScriptField::Float(ref mut v) => {
-                    let new = gui_input_number_f32(base_id, widget_rect, *v as f32, blocked) as f64;
+                    let new = NumberInput::new(base_id, widget_rect, *v as f32).blocked(blocked).show() as f64;
                     if new != *v {
                         *v = new;
                         changed = true;
                     }
                 }
                 ScriptField::Text(ref mut s) => {
-                    let (txt, _) = gui_input_text_default(base_id, widget_rect, s, blocked);
+                    let (txt, _) = TextInput::new(base_id, widget_rect, s).blocked(blocked).show();
                     if txt != *s {
                         *s = txt;
                         changed = true;
@@ -222,7 +222,7 @@ impl InspectorModule for ScriptModule {
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v[0], blocked);
+                    let new_x = NumberInput::new(id_x, rect_x, v[0]).blocked(blocked).show();
                     if (new_x - v[0]).abs() > f32::EPSILON {
                         v[0] = new_x;
                         changed = true;
@@ -236,7 +236,7 @@ impl InspectorModule for ScriptModule {
                         widget_rect.h,
                     );
 
-                    let new_y = gui_input_number_f32(id_y, rect_y, v[0], blocked);
+                    let new_y = NumberInput::new(id_y, rect_y, v[0]).blocked(blocked).show();
                     if (new_y - v[0]).abs() > f32::EPSILON {
                         v[0] = new_y;
                         changed = true;
@@ -262,7 +262,7 @@ impl InspectorModule for ScriptModule {
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v[0], blocked);
+                    let new_x = NumberInput::new(id_x, rect_x, v[0]).blocked(blocked).show();
                     if (new_x - v[0]).abs() > f32::EPSILON {
                         v[0] = new_x;
                         changed = true;
@@ -276,7 +276,7 @@ impl InspectorModule for ScriptModule {
                         widget_rect.h,
                     );
 
-                    let new_y = gui_input_number_f32(id_y, rect_y, v[0], blocked);
+                    let new_y = NumberInput::new(id_y, rect_y, v[0]).blocked(blocked).show();
                     if (new_y - v[0]).abs() > f32::EPSILON {
                         v[0] = new_y;
                         changed = true;
@@ -290,7 +290,7 @@ impl InspectorModule for ScriptModule {
                         widget_rect.h,
                     );
 
-                    let new_z = gui_input_number_f32(id_z, rect_z, v[0], blocked);
+                    let new_z = NumberInput::new(id_z, rect_z, v[0]).blocked(blocked).show();
                     if (new_z - v[0]).abs() > f32::EPSILON {
                         v[0] = new_z;
                         changed = true;

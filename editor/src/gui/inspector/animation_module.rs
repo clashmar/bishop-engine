@@ -9,8 +9,8 @@ use engine_core::ecs::inpsector_module::InspectorModule;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::{
-    Button, gui_dropdown, gui_input_text_clamped_focused, gui_input_text_reset,
-    gui_input_number_f32, gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
+    Button, gui_dropdown, TextInput, text_input_reset,
+    NumberInput, gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
     WIDGET_PADDING, WIDGET_SPACING,
 };
 use engine_core::ecs::ecs::Ecs;
@@ -285,23 +285,21 @@ pub fn draw_current_clip_dropdowns(
         const CLAMP: usize = 12;
 
         // The field starts empty each time we open it
-        let (entered, focused) = gui_input_text_clamped_focused(
-            module.rename_field_id,
-            input_rect, 
-            &module.rename_initial_value, 
-            CLAMP,
-            blocked,
-        );
+        let (entered, focused) = TextInput::new(module.rename_field_id, input_rect, &module.rename_initial_value)
+            .max_len(CLAMP)
+            .focused(true)
+            .blocked(blocked)
+            .show();
 
         // Check if enter is pressed first
         if is_key_pressed(KeyCode::Enter) {
             let new_id = ClipId::Custom(entered.trim().to_string());
             reset_current_clip_id(animation, new_id);
             module.pending_rename = false;
-            gui_input_text_reset(module.rename_field_id);
+            text_input_reset(module.rename_field_id);
         }
         else if !focused {
-            gui_input_text_reset(module.rename_field_id);
+            text_input_reset(module.rename_field_id);
             module.pending_rename = false;
         }
     }
@@ -322,8 +320,8 @@ pub fn draw_frame_size_fields(
     draw_text_ui(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     // Numeric inputs
-    clip.frame_size.x = gui_input_number_f32(module.frame_x_id, inp_x, clip.frame_size.x, blocked);
-    clip.frame_size.y = gui_input_number_f32(module.frame_y_id, inp_y, clip.frame_size.y, blocked);
+    clip.frame_size.x = NumberInput::new(module.frame_x_id, inp_x, clip.frame_size.x).blocked(blocked).show();
+    clip.frame_size.y = NumberInput::new(module.frame_y_id, inp_y, clip.frame_size.y).blocked(blocked).show();
 }
 
 pub fn draw_spritesheet_dimension_fields(
@@ -339,8 +337,8 @@ pub fn draw_spritesheet_dimension_fields(
     draw_text_ui(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
     draw_text_ui(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
-    clip.cols = gui_input_number_f32(module.cols_id, inp_c, clip.cols as f32, blocked) as usize;
-    clip.rows = gui_input_number_f32(module.rows_id, inp_r, clip.rows as f32, blocked) as usize;
+    clip.cols = NumberInput::new(module.cols_id, inp_c, clip.cols as f32).blocked(blocked).show() as usize;
+    clip.rows = NumberInput::new(module.rows_id, inp_r, clip.rows as f32).blocked(blocked).show() as usize;
 }
 
 pub fn draw_fps_and_loop(
@@ -359,7 +357,7 @@ pub fn draw_fps_and_loop(
     draw_text_ui(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
     draw_text_ui(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
-    clip.fps = gui_input_number_f32(module.fps_id, inp_fps, clip.fps, blocked);
+    clip.fps = NumberInput::new(module.fps_id, inp_fps, clip.fps).blocked(blocked).show();
     gui_checkbox(inp_loop, &mut clip.looping);
 }
 
@@ -376,8 +374,8 @@ pub fn draw_offset_fields(
     draw_text_ui(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
     draw_text_ui(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
-    clip.offset.x = gui_input_number_f32(module.offset_x_id, inp_x, clip.offset.x, blocked);
-    clip.offset.y = gui_input_number_f32(module.offset_y_id, inp_y, clip.offset.y, blocked);
+    clip.offset.x = NumberInput::new(module.offset_x_id, inp_x, clip.offset.x).blocked(blocked).show();
+    clip.offset.y = NumberInput::new(module.offset_y_id, inp_y, clip.offset.y).blocked(blocked).show();
 }
 
 /// Returns every ClipId that has a concrete Clip stored in the map.

@@ -47,13 +47,13 @@ impl BackgroundModule {
         let mut x = rect.x + 10.0;
         let y = rect.y + 30.0;
 
-        r = gui_input_number_f32(self.r_id, Rect::new(x, y, field_w, field_h), r, blocked);
+        r = NumberInput::new(self.r_id, Rect::new(x, y, field_w, field_h), r).blocked(blocked).show();
         x += field_w + spacing;
-        g = gui_input_number_f32(self.g_id,Rect::new(x, y, field_w, field_h), g, blocked);
+        g = NumberInput::new(self.g_id, Rect::new(x, y, field_w, field_h), g).blocked(blocked).show();
         x += field_w + spacing;
-        b = gui_input_number_f32(self.b_id,Rect::new(x, y, field_w, field_h), b, blocked);
+        b = NumberInput::new(self.b_id, Rect::new(x, y, field_w, field_h), b).blocked(blocked).show();
         x += field_w + spacing;
-        a = gui_input_number_f32(self.a_id,Rect::new(x, y, field_w, field_h), a, blocked);
+        a = NumberInput::new(self.a_id, Rect::new(x, y, field_w, field_h), a).blocked(blocked).show();
         x += field_w + spacing;
 
         // Clamp to a valid range (0‑255) and push the colour back

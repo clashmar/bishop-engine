@@ -7,11 +7,17 @@ use crate::{
     DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
 };
 
+/// The visual style of a dropdown.
 pub enum DropDownStyle {
+    /// Standard dropdown with background and border.
     Default,
+    /// Minimal dropdown with no background.
     Plain,
 }
 
+/// Draws a dropdown widget with the default style.
+///
+/// Returns the selected option if one was clicked this frame.
 pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     id: WidgetId,
     rect: Rect,
@@ -33,6 +39,9 @@ pub fn gui_dropdown<T: Clone + PartialEq + Display>(
     )
 }
 
+/// Draws a dropdown widget with the plain style.
+///
+/// Returns the selected option if one was clicked this frame.
 pub fn gui_dropdown_plain<T: Clone + PartialEq + Display>(
     id: WidgetId,
     rect: Rect,
@@ -241,6 +250,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
     None
 }
 
+/// Internal module for managing dropdown state.
 pub mod dropdown_state {
     use macroquad::prelude::*;
     use std::cell::RefCell;
@@ -252,6 +262,7 @@ pub mod dropdown_state {
             RefCell::new(HashMap::new());
     }
 
+    /// The state of a dropdown widget.
     #[derive(Clone, Copy)]
     pub struct DropState {
         pub open: bool,
@@ -269,6 +280,7 @@ pub mod dropdown_state {
         }
     }
 
+    /// Gets the state for a dropdown by id.
     pub fn get(key: WidgetId) -> DropState {
         STATE.with(|s| {
             *s.borrow()
@@ -277,6 +289,7 @@ pub mod dropdown_state {
         })
     }
 
+    /// Sets the state for a dropdown by id.
     pub fn set(key: WidgetId, value: DropState) {
         STATE.with(|s| {
             s.borrow_mut().insert(key, value);
@@ -284,6 +297,7 @@ pub mod dropdown_state {
     }
 }
 
+/// Updates the global flag indicating whether any dropdown is open.
 pub fn update_global_dropdown_flag() {
     dropdown_state::STATE.with(|s| {
         let any = s.borrow().values().any(|st| st.open);

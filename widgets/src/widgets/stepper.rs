@@ -4,6 +4,9 @@ use crate::{
     FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR, OUTLINE_COLOR, WIDGET_SPACING,
 };
 
+/// Draws a stepper widget that allows selecting from a list of predefined values.
+///
+/// Returns the selected value from the steps array.
 pub fn gui_stepper(
     rect: Rect,
     label: &str,
