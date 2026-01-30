@@ -20,6 +20,7 @@ pub struct TextInputState {
     pub last_key_time: f64,
     pub repeat_key: Option<RepeatableKey>,
     pub repeat_started: bool,
+    pub dragging: bool,
 }
 
 impl TextInputState {
@@ -33,6 +34,7 @@ impl TextInputState {
             last_key_time: 0.0,
             repeat_key: None,
             repeat_started: false,
+            dragging: false,
         }
     }
 }
@@ -46,6 +48,7 @@ pub struct NumberInputState {
     pub last_key_time: f64,
     pub repeat_key: Option<RepeatableKey>,
     pub repeat_started: bool,
+    pub dragging: bool,
 }
 
 impl NumberInputState {
@@ -59,6 +62,7 @@ impl NumberInputState {
             last_key_time: 0.0,
             repeat_key: None,
             repeat_started: false,
+            dragging: false,
         }
     }
 }
