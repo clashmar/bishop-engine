@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::cell::RefCell;
-use crate::WidgetId;
+use crate::*;
 
 /// Keys that support hold-to-repeat behavior.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -21,6 +21,7 @@ pub struct TextInputState {
     pub repeat_key: Option<RepeatableKey>,
     pub repeat_started: bool,
     pub dragging: bool,
+    pub scroll_offset_x: f32,
 }
 
 impl TextInputState {
@@ -35,6 +36,7 @@ impl TextInputState {
             repeat_key: None,
             repeat_started: false,
             dragging: false,
+            scroll_offset_x: 0.0,
         }
     }
 }
@@ -49,6 +51,7 @@ pub struct NumberInputState {
     pub repeat_key: Option<RepeatableKey>,
     pub repeat_started: bool,
     pub dragging: bool,
+    pub scroll_offset_x: f32,
 }
 
 impl NumberInputState {
@@ -63,6 +66,7 @@ impl NumberInputState {
             repeat_key: None,
             repeat_started: false,
             dragging: false,
+            scroll_offset_x: 0.0,
         }
     }
 }
@@ -78,17 +82,6 @@ thread_local! {
 }
 
 thread_local! {
-    pub static INPUT_FOCUSED: RefCell<bool> = RefCell::new(false);
-}
-
-pub fn input_is_focused() -> bool {
-    INPUT_FOCUSED.with(|f| {
-        let flag = f.borrow_mut();
-        *flag
-    })
-}
-
-thread_local! {
     pub static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
 }
 
@@ -96,18 +89,10 @@ pub fn is_dropdown_open() -> bool {
     DROPDOWN_OPEN.with(|f| *f.borrow())
 }
 
-pub fn clear_all_input_focus() {
-    INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
-    INPUT_TEXT_STATE.with(|s| {
-        let mut map = s.borrow_mut();
-        for (_, entry) in map.iter_mut() {
-            entry.focused = false;
-        }
-    });
-    INPUT_NUMBER_STATE.with(|s| {
-        let mut map = s.borrow_mut();
-        for (_, entry) in map.iter_mut() {
-            entry.focused = false;
-        }
-    });
+pub fn widgets_frame_start() {
+    tab_registry_clear();
+}
+
+pub fn widgets_frame_end() {
+    resolve_pending_tab();
 }

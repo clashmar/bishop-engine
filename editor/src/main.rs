@@ -7,6 +7,7 @@ use crate::editor_assets::editor_assets::*;
 use crate::editor_global::*;
 use crate::editor::Editor;
 use engine_core::logging::logging::init_file_logger;
+use engine_core::ui::widgets::*;
 use engine_core::*;
 use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
@@ -85,9 +86,13 @@ async fn main() -> std::io::Result<()> {
             current_window_size = cur_screen;
         }
 
+        widgets_frame_start();
+
         with_editor_async(|editor| Box::pin(editor.update())).await;
     
         with_editor_async(|editor| Box::pin(editor.draw())).await;
+
+        widgets_frame_end();
         
         apply_pending_commands();
         

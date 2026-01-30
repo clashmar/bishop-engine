@@ -1,6 +1,6 @@
-use macroquad::prelude::*;
-use crate::*;
 use crate::clipboard::{clipboard_get_text, clipboard_set_text};
+use crate::*;
+use macroquad::prelude::*;
 
 /// A text input widget using the builder pattern.
 pub struct TextInput<'a> {
@@ -45,50 +45,64 @@ impl<'a> TextInput<'a> {
 
     /// Draws the widget and returns the current text and focus state.
     pub fn show(self) -> (String, bool) {
+        tab_registry_add(self.id, self.rect, true);
+
         let mut just_gained_focus = false;
 
-        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging) =
+        let pending_focus = consume_pending_focus(self.id);
+
+        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging, mut scroll_offset_x) =
             INPUT_TEXT_STATE.with(|s| {
                 let mut map = s.borrow_mut();
 
                 if let Some(state) = map.get(&self.id) {
-                    let f = if self.start_focused { true } else { state.focused };
-                    just_gained_focus = self.start_focused && !state.focused;
-                    let cc = if self.start_focused && just_gained_focus { state.text.chars().count() } else { state.cursor_char };
-                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging)
+                    let should_focus = self.start_focused || pending_focus;
+                    let f = if should_focus { true } else { state.focused };
+                    just_gained_focus = should_focus && !state.focused;
+                    let cc = if should_focus && just_gained_focus { state.text.chars().count() } else { state.cursor_char };
+                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging, state.scroll_offset_x)
                 } else {
                     let t = self.current.to_string();
                     let cc = t.chars().count();
-                    just_gained_focus = self.start_focused;
+                    just_gained_focus = self.start_focused || pending_focus;
                     map.insert(self.id, TextInputState::new(t.clone()));
-                    (t, cc, self.start_focused, None, 0.0, None, false, false)
+                    (t, cc, self.start_focused || pending_focus, None, 0.0, None, false, false, 0.0)
                 }
             });
 
         if !focused && text != self.current {
             text = self.current.to_string();
             cursor_char = text.chars().count();
+            scroll_offset_x = 0.0;
         }
 
         draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
         draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., WHITE);
 
+        let text_area_x = self.rect.x + WIDGET_PADDING / 2.;
+
         if let Some((start, end)) = selection_range(cursor_char, selection_anchor) {
             let start_byte = byte_offset(&text, start);
             let end_byte = byte_offset(&text, end);
-            let start_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(&text[..start_byte], DEFAULT_FONT_SIZE_16, 1.0).width;
-            let end_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(&text[..end_byte], DEFAULT_FONT_SIZE_16, 1.0).width;
-            draw_rectangle(
-                start_x,
-                self.rect.y + self.rect.h * 0.2,
-                end_x - start_x,
-                self.rect.h * 0.6,
-                Color::new(0.3, 0.5, 0.8, 0.5),
-            );
+            let sel_start_x = text_area_x + measure_text_ui(&text[..start_byte], DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
+            let sel_end_x = text_area_x + measure_text_ui(&text[..end_byte], DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
+
+            let clipped_start = sel_start_x.max(text_area_x);
+            let clipped_end = sel_end_x.min(self.rect.x + self.rect.w - WIDGET_PADDING / 2.);
+
+            if clipped_end > clipped_start {
+                draw_rectangle(
+                    clipped_start,
+                    self.rect.y + self.rect.h * 0.2,
+                    clipped_end - clipped_start,
+                    self.rect.h * 0.6,
+                    Color::new(0.3, 0.5, 0.8, 0.5),
+                );
+            }
         }
 
         let display = if text.is_empty() { PLACEHOLDER_TEXT } else { &text };
-        draw_input_field_text(display, self.rect);
+        draw_text_clipped(display, self.rect.x, self.rect.y, self.rect.w, self.rect.h, scroll_offset_x, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR);
 
         let mouse = mouse_position();
         let mouse_over = self.rect.contains(vec2(mouse.0, mouse.1));
@@ -104,7 +118,7 @@ impl<'a> TextInput<'a> {
             }
 
             if focused && mouse_over {
-                let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+                let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
                 cursor_char = click_pos;
                 selection_anchor = Some(click_pos);
                 dragging = true;
@@ -112,7 +126,7 @@ impl<'a> TextInput<'a> {
         }
 
         if dragging && is_mouse_button_down(MouseButton::Left) {
-            let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+            let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
             cursor_char = drag_pos;
         }
 
@@ -247,7 +261,11 @@ impl<'a> TextInput<'a> {
                 } else {
                     selection_anchor = None;
                 }
-                cursor_char -= 1;
+                if ctrl_held {
+                    cursor_char = prev_word_boundary(&text, cursor_char);
+                } else {
+                    cursor_char -= 1;
+                }
             }
 
             if handle_key_action(
@@ -265,7 +283,37 @@ impl<'a> TextInput<'a> {
                 } else {
                     selection_anchor = None;
                 }
-                cursor_char += 1;
+                if ctrl_held {
+                    cursor_char = next_word_boundary(&text, cursor_char);
+                } else {
+                    cursor_char += 1;
+                }
+            }
+
+            if is_key_pressed(KeyCode::Home) {
+                if shift_held {
+                    if selection_anchor.is_none() {
+                        selection_anchor = Some(cursor_char);
+                    }
+                } else {
+                    selection_anchor = None;
+                }
+                cursor_char = 0;
+            }
+
+            if is_key_pressed(KeyCode::End) {
+                if shift_held {
+                    if selection_anchor.is_none() {
+                        selection_anchor = Some(cursor_char);
+                    }
+                } else {
+                    selection_anchor = None;
+                }
+                cursor_char = text.chars().count();
+            }
+
+            if is_key_pressed(KeyCode::Tab) {
+                tab_request_pending(self.id, shift_held);
             }
 
             while let Some(chr) = get_char_pressed() {
@@ -291,19 +339,30 @@ impl<'a> TextInput<'a> {
             }
         }
 
+        scroll_offset_x = calculate_scroll_offset(
+            &text,
+            cursor_char,
+            scroll_offset_x,
+            self.rect.w,
+            WIDGET_PADDING,
+            DEFAULT_FONT_SIZE_16,
+        );
+
         let now = get_time();
         if focused && ((now * 2.0) as i32 % 2 == 0) {
             let byte_pos = byte_offset(&text, cursor_char);
             let prefix = &text[..byte_pos];
-            let cursor_x = self.rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width;
-            draw_line(
-                cursor_x,
-                self.rect.y + self.rect.h * 0.3,
-                cursor_x,
-                self.rect.y + self.rect.h * 0.8,
-                2.,
-                OUTLINE_COLOR,
-            );
+            let cursor_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
+            if cursor_x >= self.rect.x && cursor_x <= self.rect.x + self.rect.w {
+                draw_line(
+                    cursor_x,
+                    self.rect.y + self.rect.h * 0.3,
+                    cursor_x,
+                    self.rect.y + self.rect.h * 0.8,
+                    2.,
+                    OUTLINE_COLOR,
+                );
+            }
         }
 
         INPUT_TEXT_STATE.with(|s| {
@@ -317,6 +376,7 @@ impl<'a> TextInput<'a> {
                 repeat_key,
                 repeat_started,
                 dragging,
+                scroll_offset_x,
             });
         });
 

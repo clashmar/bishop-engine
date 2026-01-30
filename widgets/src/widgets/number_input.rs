@@ -1,8 +1,8 @@
 use macroquad::prelude::*;
+use crate::clipboard::*;
 use std::fmt::Display;
 use std::str::FromStr;
 use crate::*;
-use crate::clipboard::{clipboard_get_text, clipboard_set_text};
 
 /// A numeric input widget using the builder pattern.
 ///
@@ -37,45 +37,62 @@ where
 
     /// Draws the widget and returns the current numeric value.
     pub fn show(self) -> T {
+        tab_registry_add(self.id, self.rect, false);
+
         let is_float = T::from_str("0.0").is_ok();
         let allow_negative = T::from_str("-0").is_ok();
 
-        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging) =
+        let pending_focus = consume_pending_focus(self.id);
+
+        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging, mut scroll_offset_x) =
             INPUT_NUMBER_STATE.with(|s| {
                 let mut map = s.borrow_mut();
                 if let Some(state) = map.get(&self.id) {
-                    (state.text.clone(), state.cursor_char, state.focused, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging)
+                    let f = if pending_focus { true } else { state.focused };
+                    let cc = if pending_focus && !state.focused { state.text.chars().count() } else { state.cursor_char };
+                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging, state.scroll_offset_x)
                 } else {
                     let t = self.current.to_string();
                     let cc = t.chars().count();
                     map.insert(self.id, NumberInputState::new(t.clone()));
-                    (t, cc, false, None, 0.0, None, false, false)
+                    (t, cc, pending_focus, None, 0.0, None, false, false, 0.0)
                 }
             });
 
         if !focused && text.parse::<T>().unwrap_or_default() != self.current {
             text = self.current.to_string();
             cursor_char = text.chars().count();
+            scroll_offset_x = 0.0;
         }
 
         draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
         draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., WHITE);
 
+        let text_area_x = self.rect.x + WIDGET_PADDING / 2.;
+
         if let Some((start, end)) = selection_range(cursor_char, selection_anchor) {
-            let start_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(&text[..start], DEFAULT_FONT_SIZE_16, 1.0).width;
-            let end_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(&text[..end], DEFAULT_FONT_SIZE_16, 1.0).width;
-            draw_rectangle(
-                start_x,
-                self.rect.y + self.rect.h * 0.2,
-                end_x - start_x,
-                self.rect.h * 0.6,
-                Color::new(0.3, 0.5, 0.8, 0.5),
-            );
+            let start_byte = byte_offset(&text, start);
+            let end_byte = byte_offset(&text, end);
+            let sel_start_x = text_area_x + measure_text_ui(&text[..start_byte], DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
+            let sel_end_x = text_area_x + measure_text_ui(&text[..end_byte], DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
+
+            let clipped_start = sel_start_x.max(text_area_x);
+            let clipped_end = sel_end_x.min(self.rect.x + self.rect.w - WIDGET_PADDING / 2.);
+
+            if clipped_end > clipped_start {
+                draw_rectangle(
+                    clipped_start,
+                    self.rect.y + self.rect.h * 0.2,
+                    clipped_end - clipped_start,
+                    self.rect.h * 0.6,
+                    Color::new(0.3, 0.5, 0.8, 0.5),
+                );
+            }
         }
 
         let placeholder = "<#>";
         let display = if text.is_empty() { placeholder } else { &text };
-        draw_input_field_text(display, self.rect);
+        draw_text_clipped(display, self.rect.x, self.rect.y, self.rect.w, self.rect.h, scroll_offset_x, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR);
 
         if is_dropdown_open() {
             return self.current;
@@ -88,7 +105,7 @@ where
             focused = mouse_over && !self.blocked;
 
             if focused && mouse_over {
-                let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+                let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
                 cursor_char = click_pos;
                 selection_anchor = Some(click_pos);
                 dragging = true;
@@ -96,7 +113,7 @@ where
         }
 
         if dragging && is_mouse_button_down(MouseButton::Left) {
-            let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+            let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
             cursor_char = drag_pos;
         }
 
@@ -221,7 +238,11 @@ where
                 } else {
                     selection_anchor = None;
                 }
-                cursor_char -= 1;
+                if ctrl_held {
+                    cursor_char = 0;
+                } else {
+                    cursor_char -= 1;
+                }
             }
 
             if handle_key_action(
@@ -239,7 +260,37 @@ where
                 } else {
                     selection_anchor = None;
                 }
-                cursor_char += 1;
+                if ctrl_held {
+                    cursor_char = text.len();
+                } else {
+                    cursor_char += 1;
+                }
+            }
+
+            if is_key_pressed(KeyCode::Home) {
+                if shift_held {
+                    if selection_anchor.is_none() {
+                        selection_anchor = Some(cursor_char);
+                    }
+                } else {
+                    selection_anchor = None;
+                }
+                cursor_char = 0;
+            }
+
+            if is_key_pressed(KeyCode::End) {
+                if shift_held {
+                    if selection_anchor.is_none() {
+                        selection_anchor = Some(cursor_char);
+                    }
+                } else {
+                    selection_anchor = None;
+                }
+                cursor_char = text.len();
+            }
+
+            if is_key_pressed(KeyCode::Tab) {
+                tab_request_pending(self.id, shift_held);
             }
 
             while let Some(chr) = get_char_pressed() {
@@ -279,18 +330,30 @@ where
             }
         }
 
+        scroll_offset_x = calculate_scroll_offset(
+            &text,
+            cursor_char,
+            scroll_offset_x,
+            self.rect.w,
+            WIDGET_PADDING,
+            DEFAULT_FONT_SIZE_16,
+        );
+
         let now = get_time();
         if focused && ((now * 2.0) as i32 % 2 == 0) {
-            let prefix = &text[..cursor_char];
-            let caret_x = self.rect.x + 5. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width;
-            draw_line(
-                caret_x,
-                self.rect.y + self.rect.h * 0.3,
-                caret_x,
-                self.rect.y + self.rect.h * 0.8,
-                2.,
-                OUTLINE_COLOR,
-            );
+            let byte_pos = byte_offset(&text, cursor_char);
+            let prefix = &text[..byte_pos];
+            let caret_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
+            if caret_x >= self.rect.x && caret_x <= self.rect.x + self.rect.w {
+                draw_line(
+                    caret_x,
+                    self.rect.y + self.rect.h * 0.3,
+                    caret_x,
+                    self.rect.y + self.rect.h * 0.8,
+                    2.,
+                    OUTLINE_COLOR,
+                );
+            }
         }
 
         INPUT_NUMBER_STATE.with(|s| {
@@ -304,6 +367,7 @@ where
                 repeat_key,
                 repeat_started,
                 dragging,
+                scroll_offset_x,
             });
         });
 
