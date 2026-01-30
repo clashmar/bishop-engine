@@ -50,6 +50,9 @@
 ---@class Sprite
 ---@field sprite number
 
+---@class Transform
+---@field position vec2
+
 ---@class Grounded
 ---@field value boolean
 
@@ -91,9 +94,6 @@
 ---@class CurrentRoom
 ---@field value number
 
----@class Position
----@field position vec2
-
 ---@class Children
 ---@field entities table
 
@@ -109,6 +109,7 @@
 ---@field Glow string
 ---@field RoomCamera string
 ---@field Sprite string
+---@field Transform string
 ---@field Grounded string
 ---@field Player string
 ---@field Damage string
@@ -122,7 +123,6 @@
 ---@field Global string
 ---@field Walkable string
 ---@field CurrentRoom string
----@field Position string
 ---@field Children string
 ---@field Parent string
 
@@ -136,6 +136,7 @@ C.Light = "Light"
 C.Glow = "Glow"
 C.RoomCamera = "RoomCamera"
 C.Sprite = "Sprite"
+C.Transform = "Transform"
 C.Grounded = "Grounded"
 C.Player = "Player"
 C.Damage = "Damage"
@@ -149,7 +150,6 @@ C.Name = "Name"
 C.Global = "Global"
 C.Walkable = "Walkable"
 C.CurrentRoom = "CurrentRoom"
-C.Position = "Position"
 C.Children = "Children"
 C.Parent = "Parent"
 

@@ -8,7 +8,7 @@ local Entity = {}
 -- Component getters
 ---@overload fun(self: Entity, component: "Sprite"): Sprite
 ---@overload fun(self: Entity, component: "Animation"): Animation
----@overload fun(self: Entity, component: "Position"): Position
+---@overload fun(self: Entity, component: "Transform"): Transform
 ---@overload fun(self: Entity, component: "Interactable"): Interactable
 ---@overload fun(self: Entity, component: "Script"): Script
 ---@overload fun(self: Entity, component: "Light"): Light
@@ -50,7 +50,7 @@ function Entity:set_sprite(v) end
 function Entity:set_animation(v) end
 
 ---@param self Entity
----@param v Position
+---@param v Transform
 function Entity:set_position(v) end
 
 ---@param self Entity

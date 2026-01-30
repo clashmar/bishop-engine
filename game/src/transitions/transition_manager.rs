@@ -1,7 +1,7 @@
 // engine_core/src/world/transition_manager.rs
 use crate::game_state::GameState;
 use engine_core::engine_global::tile_size;
-use engine_core::ecs::position::Position;
+use engine_core::ecs::transform::Transform;
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use macroquad::prelude::*;
@@ -66,7 +66,7 @@ impl TransitionManager {
         let rooms = game_state.game.current_world().rooms.clone();
         
         let entities: Vec<_> = game_state.game.ecs
-            .get_store::<Position>()
+            .get_store::<Transform>()
             .data
             .keys()
             .cloned()
@@ -74,7 +74,7 @@ impl TransitionManager {
 
         for entity in entities {
             let (pos, _coll) = {
-                let p = match game_state.game.ecs.get::<Position>(entity) {
+                let p = match game_state.game.ecs.get::<Transform>(entity) {
                     Some(v) => v.position,
                     None => continue,           
                 };

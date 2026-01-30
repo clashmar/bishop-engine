@@ -2,7 +2,7 @@
 use engine_core::assets::asset_manager::AssetManager;
 use engine_core::tiles::tile::TileComponent;
 use engine_core::engine_global::tile_size;
-use engine_core::ecs::position::Position;
+use engine_core::ecs::transform::Transform;
 use engine_core::tiles::tilemap::TileMap;
 use engine_core::ecs::component::*;
 use engine_core::world::room::Exit;
@@ -129,7 +129,7 @@ pub fn sweep_move(
     for (other_entity, other_coll) in ecs.get_store::<Collider>().data.iter() {
         // Do not test against ourselves
         if let Some(other_pos) =
-            ecs.get::<Position>(*other_entity)
+            ecs.get::<Transform>(*other_entity)
         {
             if (other_pos.position - entity_position).length() < 0.001 {
                 // Same entity
@@ -141,7 +141,7 @@ pub fn sweep_move(
         if let Some(solid) = ecs.get::<Solid>(*other_entity) {
             if solid.0 {
                 if let Some(other_pos) =
-                    ecs.get::<Position>(*other_entity)
+                    ecs.get::<Transform>(*other_entity)
                 {
                     let aabb = aabb(other_pos.position, *other_coll);
                     obstacles.push(aabb);

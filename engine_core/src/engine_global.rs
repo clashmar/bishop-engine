@@ -1,5 +1,5 @@
 // engine_core/src/engine_global.rs
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::game::game::Game;
 use crate::constants::*;
 use once_cell::sync::Lazy;
@@ -79,7 +79,7 @@ pub fn update_tile_size(game: &mut Game, old_size: f32, new_size: f32) {
         }
     }
 
-    let pos_store = game.ecs.get_store_mut::<Position>();
+    let pos_store = game.ecs.get_store_mut::<Transform>();
     for (_entity, pos) in &mut pos_store.data {
         pos.position *= sf;
     }

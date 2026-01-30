@@ -4,7 +4,7 @@ use crate::rendering::render_system::RenderSystem;
 use crate::assets::asset_manager::AssetManager;
 use crate::camera::game_camera::RoomCamera;
 use crate::engine_global::tile_size;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::assets::sprite::Sprite;
 use crate::lighting::light::Light;
 use crate::lighting::glow::Glow;
@@ -166,7 +166,7 @@ pub fn highlight_selected_entity(
     asset_manager: &mut AssetManager,
     color: Color
 ) {
-    let pos = match ecs.get_store::<Position>().get(entity) {
+    let pos = match ecs.get_store::<Transform>().get(entity) {
         Some(p) => p,
         None => return,
     };
@@ -226,7 +226,7 @@ fn collect_interpolated_layer_map<'a>(
 ) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
     let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
-    let pos_store = ecs.get_store::<Position>();
+    let pos_store = ecs.get_store::<Transform>();
     let cam_store = ecs.get_store::<RoomCamera>();
     let room_store = ecs.get_store::<CurrentRoom>();
     let layer_store = ecs.get_store::<Layer>();
@@ -286,7 +286,7 @@ fn collect_lights(
     let mut lights: Vec<(Vec2, Light)> = Vec::new();
 
     let light_store = ecs.get_store::<Light>();
-    let pos_store = ecs.get_store::<Position>();
+    let pos_store = ecs.get_store::<Transform>();
     let room_store = ecs.get_store::<CurrentRoom>();
 
     for (entity, light) in &light_store.data {

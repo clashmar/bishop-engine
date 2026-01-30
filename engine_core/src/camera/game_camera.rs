@@ -1,6 +1,6 @@
 // engine_core/src/camera/game_camera.rs
 use crate::ecs::component::CurrentRoom;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::engine_global::*;
@@ -170,7 +170,7 @@ pub fn room_to_game_camera(
     room_camera: &RoomCamera,
     player_pos: Vec2, 
 ) -> GameCamera {
-    let pos_store  = ecs.get_store::<Position>();
+    let pos_store  = ecs.get_store::<Transform>();
 
     // If the camera is a Follow cam user the player as the target
     let target = match room_camera.camera_mode {
@@ -179,7 +179,7 @@ pub fn room_to_game_camera(
             pos_store
                 .data
                 .get(entity)
-                .expect("Camera should always have a Position component")
+                .expect("Camera should always have a Transform component")
                 .position
         }
     };
@@ -197,7 +197,7 @@ pub fn room_to_game_camera(
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
 pub fn get_room_camera(ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
-    let pos_store = ecs.get_store::<Position>();
+    let pos_store = ecs.get_store::<Transform>();
     let cam_store = ecs.get_store::<RoomCamera>();
     let room_store = ecs.get_store::<CurrentRoom>();
 

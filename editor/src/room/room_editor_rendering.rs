@@ -1,6 +1,6 @@
 // editor/src/room/room_editor_actions.rs
 use crate::editor_camera_controller::*;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::gui::gui_constants::*;
 use crate::room::room_editor::*;
 use crate::gui::menu_bar::*;
@@ -98,7 +98,7 @@ impl RoomEditor {
         ecs: &Ecs,
         selected: Entity,
     ) {
-        let pos = match ecs.get_store::<Position>().get(selected) {
+        let pos = match ecs.get_store::<Transform>().get(selected) {
             Some(p) => p.position,
             None => return,
         };
@@ -147,7 +147,7 @@ pub fn draw_collider(
         .get(entity)
         .filter(|c| c.width > 0.0 && c.height > 0.0)
         .map(|c| (c.width, c.height)) {
-            let pos = match ecs.get_store::<Position>().get(entity) {
+            let pos = match ecs.get_store::<Transform>().get(entity) {
                 Some(p) => p.position,
                 None => return,
             };
@@ -191,7 +191,7 @@ pub fn entity_hitbox(
 /// Draw an icon for a `RoomCamera`.
 pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId) {
     let cam_store = ecs.get_store::<RoomCamera>();
-    let pos_store = ecs.get_store::<Position>();
+    let pos_store = ecs.get_store::<Transform>();
     let room_store = ecs.get_store::<CurrentRoom>();
 
     let positions: Vec<Vec2> = cam_store
@@ -261,7 +261,7 @@ pub fn draw_light_placeholders(
             continue;
         }
 
-        if let Some(position) = ecs.get_store::<Position>().get(*entity) {
+        if let Some(position) = ecs.get_store::<Transform>().get(*entity) {
             let pos = position.position;
 
             let half_tile = tile_size() * 0.5;
@@ -314,7 +314,7 @@ pub fn draw_glow_placeholders(
             continue;
         }
 
-        if let Some(position) = ecs.get_store::<Position>().get(*entity) {
+        if let Some(position) = ecs.get_store::<Transform>().get(*entity) {
             let mut pos = position.position;
 
             if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {

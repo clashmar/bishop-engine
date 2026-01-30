@@ -2,6 +2,7 @@ mod widget_id;
 mod constants;
 mod state;
 mod helpers;
+mod clipboard;
 mod widgets;
 
 pub use widget_id::*;

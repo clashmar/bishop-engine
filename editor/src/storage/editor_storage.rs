@@ -2,7 +2,7 @@
 #![allow(unused)]
 use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::with_lua_async;
 use engine_core::engine_global::set_game_name;
 use engine_core::storage::editor_config::app_dir;
@@ -198,7 +198,7 @@ pub fn create_new_world(ecs: &mut Ecs) -> World {
     let _player = ecs
         .create_entity()
         .with(Player)
-        .with(Position { position: starting_position })
+        .with(Transform { position: starting_position })
         .with(PhysicsBody)
         .with(CurrentRoom(room_id))
         .with(Name(format!("Player")))
