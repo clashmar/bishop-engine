@@ -47,7 +47,7 @@ impl<'a> TextInput<'a> {
     pub fn show(self) -> (String, bool) {
         let mut just_gained_focus = false;
 
-        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started) =
+        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging) =
             INPUT_TEXT_STATE.with(|s| {
                 let mut map = s.borrow_mut();
 
@@ -55,13 +55,13 @@ impl<'a> TextInput<'a> {
                     let f = if self.start_focused { true } else { state.focused };
                     just_gained_focus = self.start_focused && !state.focused;
                     let cc = if self.start_focused && just_gained_focus { state.text.chars().count() } else { state.cursor_char };
-                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started)
+                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging)
                 } else {
                     let t = self.current.to_string();
                     let cc = t.chars().count();
                     just_gained_focus = self.start_focused;
                     map.insert(self.id, TextInputState::new(t.clone()));
-                    (t, cc, self.start_focused, None, 0.0, None, false)
+                    (t, cc, self.start_focused, None, 0.0, None, false, false)
                 }
             });
 
@@ -92,6 +92,7 @@ impl<'a> TextInput<'a> {
 
         let mouse = mouse_position();
         let mouse_over = self.rect.contains(vec2(mouse.0, mouse.1));
+
         if is_mouse_button_pressed(MouseButton::Left) {
             if !focused && mouse_over {
                 just_gained_focus = true;
@@ -102,8 +103,25 @@ impl<'a> TextInput<'a> {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
             }
 
-            if focused {
-                selection_anchor = None;
+            if focused && mouse_over {
+                let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+                cursor_char = click_pos;
+                selection_anchor = Some(click_pos);
+                dragging = true;
+            }
+        }
+
+        if dragging && is_mouse_button_down(MouseButton::Left) {
+            let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+            cursor_char = drag_pos;
+        }
+
+        if is_mouse_button_released(MouseButton::Left) {
+            if dragging {
+                if selection_anchor == Some(cursor_char) {
+                    selection_anchor = None;
+                }
+                dragging = false;
             }
         }
 
@@ -298,6 +316,7 @@ impl<'a> TextInput<'a> {
                 last_key_time,
                 repeat_key,
                 repeat_started,
+                dragging,
             });
         });
 

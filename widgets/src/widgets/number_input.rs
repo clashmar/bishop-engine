@@ -40,16 +40,16 @@ where
         let is_float = T::from_str("0.0").is_ok();
         let allow_negative = T::from_str("-0").is_ok();
 
-        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started) =
+        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging) =
             INPUT_NUMBER_STATE.with(|s| {
                 let mut map = s.borrow_mut();
                 if let Some(state) = map.get(&self.id) {
-                    (state.text.clone(), state.cursor_char, state.focused, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started)
+                    (state.text.clone(), state.cursor_char, state.focused, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging)
                 } else {
                     let t = self.current.to_string();
                     let cc = t.chars().count();
                     map.insert(self.id, NumberInputState::new(t.clone()));
-                    (t, cc, false, None, 0.0, None, false)
+                    (t, cc, false, None, 0.0, None, false, false)
                 }
             });
 
@@ -86,8 +86,26 @@ where
 
         if is_mouse_button_pressed(MouseButton::Left) {
             focused = mouse_over && !self.blocked;
-            if focused {
-                selection_anchor = None;
+
+            if focused && mouse_over {
+                let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+                cursor_char = click_pos;
+                selection_anchor = Some(click_pos);
+                dragging = true;
+            }
+        }
+
+        if dragging && is_mouse_button_down(MouseButton::Left) {
+            let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16);
+            cursor_char = drag_pos;
+        }
+
+        if is_mouse_button_released(MouseButton::Left) {
+            if dragging {
+                if selection_anchor == Some(cursor_char) {
+                    selection_anchor = None;
+                }
+                dragging = false;
             }
         }
 
@@ -285,6 +303,7 @@ where
                 last_key_time,
                 repeat_key,
                 repeat_started,
+                dragging,
             });
         });
 

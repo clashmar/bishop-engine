@@ -82,3 +82,32 @@ pub fn filter_numeric_paste(input: &str, is_float: bool, allow_negative: bool, h
 
     result
 }
+
+/// Calculates the character index from a mouse x-coordinate within the text field.
+pub fn char_index_from_x(text: &str, mouse_x: f32, field_x: f32, font_size: f32) -> usize {
+    let text_start_x = field_x + WIDGET_PADDING / 2.;
+    let relative_x = mouse_x - text_start_x;
+
+    if relative_x <= 0.0 {
+        return 0;
+    }
+
+    let mut prev_width = 0.0;
+    for (i, _) in text.char_indices() {
+        let char_idx = text[..i].chars().count();
+        let prefix = &text[..i];
+        let width = measure_text_ui(prefix, font_size, 1.0).width;
+
+        if relative_x < width {
+            let mid = (prev_width + width) / 2.0;
+            if relative_x < mid {
+                return char_idx.saturating_sub(1);
+            } else {
+                return char_idx;
+            }
+        }
+        prev_width = width;
+    }
+
+    text.chars().count()
+}
