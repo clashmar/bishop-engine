@@ -1,10 +1,6 @@
 use macroquad::prelude::*;
-use crate::{
-    WidgetId, measure_text_ui, draw_input_field_text, byte_offset,
-    INPUT_TEXT_STATE, INPUT_FOCUSED, is_dropdown_open,
-    FIELD_BACKGROUND_COLOR, OUTLINE_COLOR, DEFAULT_FONT_SIZE_16,
-    HOLD_INITIAL_DELAY, HOLD_REPEAT_RATE, PLACEHOLDER_TEXT,
-};
+use crate::*;
+use crate::clipboard::{clipboard_get_text, clipboard_set_text};
 
 /// A text input widget using the builder pattern.
 pub struct TextInput<'a> {
@@ -51,41 +47,47 @@ impl<'a> TextInput<'a> {
     pub fn show(self) -> (String, bool) {
         let mut just_gained_focus = false;
 
-        let mut text = self.current.to_string();
-        let mut cursor_char = 0usize;
-        let mut focused = false;
-        let mut last_backspace = 0.0_f64;
-        let mut repeat_started = false;
+        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started) =
+            INPUT_TEXT_STATE.with(|s| {
+                let mut map = s.borrow_mut();
 
-        INPUT_TEXT_STATE.with(|s| {
-            let mut map = s.borrow_mut();
+                if let Some(state) = map.get(&self.id) {
+                    let f = if self.start_focused { true } else { state.focused };
+                    just_gained_focus = self.start_focused && !state.focused;
+                    let cc = if self.start_focused && just_gained_focus { state.text.chars().count() } else { state.cursor_char };
+                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started)
+                } else {
+                    let t = self.current.to_string();
+                    let cc = t.chars().count();
+                    just_gained_focus = self.start_focused;
+                    map.insert(self.id, TextInputState::new(t.clone()));
+                    (t, cc, self.start_focused, None, 0.0, None, false)
+                }
+            });
 
-            if let Some((saved_text, saved_cur, saved_foc, saved_time, saved_repeat)) = map.get(&self.id) {
-                text = saved_text.clone();
-                focused = if self.start_focused { true } else { *saved_foc };
-                just_gained_focus = self.start_focused && !*saved_foc;
-                cursor_char = if self.start_focused && just_gained_focus { text.chars().count() } else { *saved_cur };
-                last_backspace = *saved_time;
-                repeat_started = *saved_repeat;
-            } else {
-                focused = self.start_focused;
-                just_gained_focus = self.start_focused;
-                cursor_char = text.chars().count();
-                map.insert(self.id, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
-            }
-        });
-
-        if !focused {
-            if text != self.current {
-                text = self.current.to_string();
-                cursor_char = text.len();
-            }
+        if !focused && text != self.current {
+            text = self.current.to_string();
+            cursor_char = text.chars().count();
         }
 
         draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
         draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., WHITE);
-        let display = if text.is_empty() { PLACEHOLDER_TEXT } else { &text };
 
+        if let Some((start, end)) = selection_range(cursor_char, selection_anchor) {
+            let start_byte = byte_offset(&text, start);
+            let end_byte = byte_offset(&text, end);
+            let start_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(&text[..start_byte], DEFAULT_FONT_SIZE_16, 1.0).width;
+            let end_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(&text[..end_byte], DEFAULT_FONT_SIZE_16, 1.0).width;
+            draw_rectangle(
+                start_x,
+                self.rect.y + self.rect.h * 0.2,
+                end_x - start_x,
+                self.rect.h * 0.6,
+                Color::new(0.3, 0.5, 0.8, 0.5),
+            );
+        }
+
+        let display = if text.is_empty() { PLACEHOLDER_TEXT } else { &text };
         draw_input_field_text(display, self.rect);
 
         let mouse = mouse_position();
@@ -98,6 +100,10 @@ impl<'a> TextInput<'a> {
 
             if !focused {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+            }
+
+            if focused {
+                selection_anchor = None;
             }
         }
 
@@ -112,44 +118,145 @@ impl<'a> TextInput<'a> {
         if focused {
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
             let now = get_time();
+            let shift_held = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
+            let ctrl_held = is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl);
 
-            if is_key_pressed(KeyCode::Backspace) && cursor_char > 0 {
-                let start = byte_offset(&text, cursor_char - 1);
-                let end = byte_offset(&text, cursor_char);
-                text.drain(start..end);
-                cursor_char -= 1;
-                last_backspace = now;
-                repeat_started = false;
-            } else if is_key_down(KeyCode::Backspace) && cursor_char > 0 {
-                let elapsed = now - last_backspace;
-                if (!repeat_started && elapsed >= HOLD_INITIAL_DELAY)
-                    || (repeat_started && elapsed >= HOLD_REPEAT_RATE)
-                {
+            if ctrl_held && is_key_pressed(KeyCode::A) {
+                selection_anchor = Some(0);
+                cursor_char = text.chars().count();
+            }
+
+            if ctrl_held && is_key_pressed(KeyCode::C) {
+                if let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
+                    clipboard_set_text(&selected);
+                }
+            }
+
+            if ctrl_held && is_key_pressed(KeyCode::V) {
+                if let Some(clipboard_text) = clipboard_get_text() {
+                    if selection_anchor.is_some() {
+                        cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
+                        selection_anchor = None;
+                    }
+
+                    let filtered: String = clipboard_text
+                        .chars()
+                        .filter(|c| c.is_ascii_graphic() || *c == ' ')
+                        .collect();
+
+                    let cur_len = text.chars().count();
+                    let available = self.max_len.map_or(usize::MAX, |limit| limit.saturating_sub(cur_len));
+                    let to_insert: String = filtered.chars().take(available).collect();
+
+                    let pos = byte_offset(&text, cursor_char);
+                    text.insert_str(pos, &to_insert);
+                    cursor_char += to_insert.chars().count();
+                }
+            }
+
+            let handle_key_action = |key: RepeatableKey, pressed: bool, down: bool, rk: &mut Option<RepeatableKey>, rs: &mut bool, lkt: &mut f64| -> bool {
+                if pressed {
+                    *rk = Some(key);
+                    *lkt = now;
+                    *rs = false;
+                    true
+                } else if down && *rk == Some(key) {
+                    let elapsed = now - *lkt;
+                    if (!*rs && elapsed >= HOLD_INITIAL_DELAY) || (*rs && elapsed >= HOLD_REPEAT_RATE) {
+                        *lkt = now;
+                        *rs = true;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    if *rk == Some(key) && !down {
+                        *rk = None;
+                    }
+                    false
+                }
+            };
+
+            if handle_key_action(
+                RepeatableKey::Backspace,
+                is_key_pressed(KeyCode::Backspace),
+                is_key_down(KeyCode::Backspace),
+                &mut repeat_key,
+                &mut repeat_started,
+                &mut last_key_time,
+            ) {
+                if selection_anchor.is_some() {
+                    cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
+                    selection_anchor = None;
+                } else if cursor_char > 0 {
                     let start = byte_offset(&text, cursor_char - 1);
                     let end = byte_offset(&text, cursor_char);
                     text.drain(start..end);
                     cursor_char -= 1;
-                    last_backspace = now;
-                    repeat_started = true;
                 }
             }
 
-            if is_key_pressed(KeyCode::Delete) && cursor_char < text.chars().count() {
-                let start = byte_offset(&text, cursor_char);
-                let end = byte_offset(&text, cursor_char + 1);
-                text.drain(start..end);
+            if handle_key_action(
+                RepeatableKey::Delete,
+                is_key_pressed(KeyCode::Delete),
+                is_key_down(KeyCode::Delete),
+                &mut repeat_key,
+                &mut repeat_started,
+                &mut last_key_time,
+            ) {
+                if selection_anchor.is_some() {
+                    cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
+                    selection_anchor = None;
+                } else if cursor_char < text.chars().count() {
+                    let start = byte_offset(&text, cursor_char);
+                    let end = byte_offset(&text, cursor_char + 1);
+                    text.drain(start..end);
+                }
             }
 
-            if is_key_pressed(KeyCode::Left) && cursor_char > 0 {
+            if handle_key_action(
+                RepeatableKey::Left,
+                is_key_pressed(KeyCode::Left),
+                is_key_down(KeyCode::Left),
+                &mut repeat_key,
+                &mut repeat_started,
+                &mut last_key_time,
+            ) && cursor_char > 0 {
+                if shift_held {
+                    if selection_anchor.is_none() {
+                        selection_anchor = Some(cursor_char);
+                    }
+                } else {
+                    selection_anchor = None;
+                }
                 cursor_char -= 1;
             }
 
-            if is_key_pressed(KeyCode::Right) && cursor_char < text.chars().count() {
+            if handle_key_action(
+                RepeatableKey::Right,
+                is_key_pressed(KeyCode::Right),
+                is_key_down(KeyCode::Right),
+                &mut repeat_key,
+                &mut repeat_started,
+                &mut last_key_time,
+            ) && cursor_char < text.chars().count() {
+                if shift_held {
+                    if selection_anchor.is_none() {
+                        selection_anchor = Some(cursor_char);
+                    }
+                } else {
+                    selection_anchor = None;
+                }
                 cursor_char += 1;
             }
 
             while let Some(chr) = get_char_pressed() {
                 if chr.is_ascii_graphic() || chr == ' ' {
+                    if selection_anchor.is_some() {
+                        cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
+                        selection_anchor = None;
+                    }
+
                     let cur_len = text.chars().count();
                     if self.max_len.map_or(true, |limit| cur_len < limit) {
                         let pos = byte_offset(&text, cursor_char);
@@ -162,6 +269,7 @@ impl<'a> TextInput<'a> {
             if is_key_pressed(KeyCode::Escape) || is_key_down(KeyCode::Enter) {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
                 focused = false;
+                selection_anchor = None;
             }
         }
 
@@ -182,7 +290,15 @@ impl<'a> TextInput<'a> {
 
         INPUT_TEXT_STATE.with(|s| {
             let mut map = s.borrow_mut();
-            map.insert(self.id, (text.clone(), cursor_char, focused, last_backspace, repeat_started));
+            map.insert(self.id, TextInputState {
+                text: text.clone(),
+                cursor_char,
+                focused,
+                selection_anchor,
+                last_key_time,
+                repeat_key,
+                repeat_started,
+            });
         });
 
         (text, focused)

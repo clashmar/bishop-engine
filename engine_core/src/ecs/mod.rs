@@ -7,5 +7,5 @@ pub mod generic_module;
 pub mod has_any;
 pub mod inpsector_module;
 pub mod module_factory;
-pub mod position;
+pub mod transform;
 pub mod reflect_field;

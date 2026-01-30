@@ -1,5 +1,5 @@
 // engine_core/src/scripting/interactable.rs
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::ecs::entity::Entity;
 use crate::ecs::component::*;
 use crate::inspector_module;
@@ -32,7 +32,7 @@ pub fn find_best_interactable(ecs: &Ecs) -> Option<Entity> {
         .map(|r| r.0)?;
 
     let interactables = ecs.get_store::<Interactable>();
-    let positions = ecs.get_store::<Position>();
+    let positions = ecs.get_store::<Transform>();
     let rooms = ecs.get_store::<CurrentRoom>();
 
     let mut best: Option<(Entity, f32)> = None;

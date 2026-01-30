@@ -2,7 +2,7 @@
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY;
 use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::position::{Position, update_entity_position};
+use engine_core::ecs::transform::{Transform, update_entity_position};
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use engine_core::ecs::ecs::Ecs;
@@ -25,7 +25,7 @@ pub fn update_physics(
 
     for entity in entities {
         let (pos_cur, mut vel_cur, collider) = {
-            let p = ecs.get::<Position>(entity).unwrap();
+            let p = ecs.get::<Transform>(entity).unwrap();
             let v = ecs.get::<Velocity>(entity).unwrap();
             let c = ecs
                 .get::<Collider>(entity)

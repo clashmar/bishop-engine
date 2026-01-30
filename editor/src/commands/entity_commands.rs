@@ -2,7 +2,7 @@
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
 use crate::editor::EditorMode;
-use crate::ecs::position::*;
+use engine_core::ecs::transform::update_entity_position;
 use crate::EDITOR_SERVICES;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;

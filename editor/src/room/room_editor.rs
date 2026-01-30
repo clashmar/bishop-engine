@@ -10,12 +10,12 @@ use crate::gui::panels::generic_panel::*;
 use crate::gui::panels::panel_manager::*;
 use crate::commands::entity_commands::*;
 use crate::gui::modal::is_modal_open;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::gui::mode_selector::*;
 use crate::editor_global::*;
 use crate::world::coord;
 use crate::canvas::grid;
-use engine_core::ecs::position::update_entity_position;
+use engine_core::ecs::transform::update_entity_position;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::assets::asset_manager::AssetManager;
 use macroquad::miniquad::window::set_mouse_cursor;
@@ -200,7 +200,7 @@ impl RoomEditor {
                     // Build the entity
                     let entity = ecs
                         .create_entity()
-                        .with(Position { position: room.position })
+                        .with(Transform { position: room.position })
                         .with(CurrentRoom(room.id))
                         .with(Name(format!("Entity")))
                         .finish();
@@ -345,7 +345,7 @@ impl RoomEditor {
             && !self.dragging
         {
             self.selected_entity = None;
-            for (entity, pos) in ecs.get_store::<Position>().data.iter() {
+            for (entity, pos) in ecs.get_store::<Transform>().data.iter() {
                 // Skip tiles, UI etc
                 if !can_select_entity_in_room(ecs, *entity, room_id) {
                     continue;
@@ -392,7 +392,7 @@ impl RoomEditor {
                 {
                     // Final position after the drag
                     if let Some(final_pos) = ecs
-                        .get_store::<Position>()
+                        .get_store::<Transform>()
                         .get(entity)
                         .map(|p| p.position)
                     {
@@ -438,7 +438,7 @@ impl RoomEditor {
             return;
         }
 
-        if let Some(position) = ecs.get_store_mut::<Position>().get_mut(entity) {
+        if let Some(position) = ecs.get_store_mut::<Transform>().get_mut(entity) {
             let old = position.position;
             position.position += step;
 

@@ -1,6 +1,5 @@
 // editor/src/gui/inspector/inspector.rs
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
-use crate::gui::inspector::transform_module::TransformModule;
 use crate::gui::inspector::player_module::PlayerModule;
 use crate::commands::entity_commands::*;
 use crate::editor_global::push_command;
@@ -11,13 +10,11 @@ use engine_core::ecs::module_factory::MODULES;
 use engine_core::controls::controls::Controls;
 use engine_core::ecs::component_registry::*;
 use engine_core::ecs::inpsector_module::*;
+use engine_core::ecs::transform::Transform;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
 use engine_core::onscreen_error;
-use engine_core::ui::widgets::{
-    Button, gui_slider, input_is_focused, WidgetId, WIDGET_PADDING, WIDGET_SPACING,
-    HEADER_FONT_SIZE_20, DEFAULT_FONT_SIZE_16,
-};
+use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
@@ -60,21 +57,19 @@ impl Inspector {
             PlayerModule::default(),
         ));
 
-        // Transform will be at the top (under Name)
-        modules.push(Box::new(
-            CollapsibleModule::new(TransformModule::default()).with_title("Transform"),
-        ));
-
-        // Collect generic modules here, with Name first
+        // Collect generic modules here, with Name and Transform handled specially
         let mut name_module: Option<Box<dyn InspectorModule>> = None;
+        let mut transform_module: Option<Box<dyn InspectorModule>> = None;
         let mut other_modules: Vec<Box<dyn InspectorModule>> = Vec::new();
 
         for entry in MODULES.iter() {
             let module = (entry.factory)();
-            
+
             // Check if this is the Name module
             if entry.title == comp_type_name::<Name>() {
                 name_module = Some(module);
+            } else if entry.title == comp_type_name::<Transform>() {
+                transform_module = Some(module);
             } else {
                 other_modules.push(module);
             }
@@ -83,6 +78,11 @@ impl Inspector {
         // Add Name module (after player module) if it exists
         if let Some(name_mod) = name_module {
             modules.insert(1, name_mod);
+        }
+
+        // Add Transform module (after Name) if it exists
+        if let Some(transform_mod) = transform_module {
+            modules.insert(2, transform_mod);
         }
 
         // Add all other generic modules

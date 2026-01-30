@@ -1,6 +1,6 @@
 // engine_core/src/ecs/ecs.rs
 use crate::ecs::component_registry::*;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
 use crate::ecs::entity::*;
@@ -166,14 +166,14 @@ impl Ecs {
         *player
     }
 
-    /// Returns the player Position.
-    pub fn get_player_position(&self) -> Position {
+    /// Returns the player Transform.
+    pub fn get_player_position(&self) -> Transform {
         let player_entity = self.get_player_entity();
 
-        self.get_store::<Position>()
+        self.get_store::<Transform>()
             .get(player_entity)
             .cloned()
-            .expect("Player should always have a Position component.")
+            .expect("Player should always have a Transform component.")
     }
 }
 

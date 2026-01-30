@@ -2,7 +2,7 @@
 use crate::camera::game_camera::RoomCamera;
 use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
-use crate::ecs::position::Position;
+use crate::ecs::transform::Transform;
 use crate::ecs::entity::Entity;
 use crate::ecs::component::*;
 use crate::ecs::ecs::Ecs;
@@ -151,7 +151,7 @@ impl Room {
         }
 
         ecs.create_entity()
-            .with(Position { position: self.position })
+            .with(Transform { position: self.position })
             .with(RoomCamera::new(room_id))
             .with(CurrentRoom(self.id))
             .with(Name(format!("{}{}", CAMERA_PREFIX, next_idx)));

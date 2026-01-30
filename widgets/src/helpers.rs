@@ -31,3 +31,54 @@ pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
 pub fn rect_width_for_text(text: &str, font_size: f32) -> f32 {
     measure_text_ui(text, font_size, 1.0).width + WIDGET_PADDING * 2.0
 }
+
+/// Returns the selection range as (start, end) where start <= end.
+pub fn selection_range(cursor: usize, anchor: Option<usize>) -> Option<(usize, usize)> {
+    anchor.map(|a| {
+        if cursor < a {
+            (cursor, a)
+        } else {
+            (a, cursor)
+        }
+    })
+}
+
+/// Gets the selected text from a string given cursor position and optional anchor.
+pub fn get_selected_text(text: &str, cursor: usize, anchor: Option<usize>) -> Option<String> {
+    selection_range(cursor, anchor).map(|(start, end)| {
+        let start_byte = byte_offset(text, start);
+        let end_byte = byte_offset(text, end);
+        text[start_byte..end_byte].to_string()
+    })
+}
+
+/// Deletes the selected text and returns the new cursor position.
+pub fn delete_selection(text: &mut String, cursor: usize, anchor: Option<usize>) -> usize {
+    if let Some((start, end)) = selection_range(cursor, anchor) {
+        let start_byte = byte_offset(text, start);
+        let end_byte = byte_offset(text, end);
+        text.drain(start_byte..end_byte);
+        start
+    } else {
+        cursor
+    }
+}
+
+/// Filters pasted text for numeric input, keeping only valid numeric characters.
+pub fn filter_numeric_paste(input: &str, is_float: bool, allow_negative: bool, has_decimal: bool) -> String {
+    let mut result = String::new();
+    let mut seen_decimal = has_decimal;
+
+    for (i, ch) in input.chars().enumerate() {
+        if ch == '-' && i == 0 && allow_negative && result.is_empty() {
+            result.push(ch);
+        } else if ch == '.' && is_float && !seen_decimal {
+            result.push(ch);
+            seen_decimal = true;
+        } else if ch.is_ascii_digit() {
+            result.push(ch);
+        }
+    }
+
+    result
+}
