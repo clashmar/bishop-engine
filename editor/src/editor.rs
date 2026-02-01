@@ -262,7 +262,7 @@ impl Editor {
 
         // Draw all panels
         with_panel_manager(|panel_manager| {
-            panel_manager.draw(self.mode, self);
+            panel_manager.update_and_draw(self.mode, self);
         });
 
         // Global menu options

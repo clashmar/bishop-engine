@@ -1,8 +1,8 @@
 // editor/src/editor_global.rs
-use crate::commands::editor_command_manager::EditorCommandManager;
-use crate::commands::editor_command_manager::EditorCommand;
 use crate::gui::panels::panel_manager::PanelManager;
+use crate::commands::editor_command_manager::*;
 use crate::ecs::entity::Entity;
+use crate::editor::EditorMode;
 use crate::Editor;
 use std::cell::RefCell;
 use std::future::Future;
@@ -76,6 +76,11 @@ where
 
     let fut = f(editor);
     fut.await
+}
+
+/// Return a copy of the current `EditorMode`.
+pub fn current_editor_mode() -> EditorMode {
+    with_editor(|editor| editor.mode)
 }
 
 /// Gets immutable access to the Lua VM.

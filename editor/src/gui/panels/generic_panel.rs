@@ -23,6 +23,7 @@ pub struct GenericPanel {
     pub title: &'static str,
     pub rect: Rect,
     pub visible: bool,
+    pub active: bool,
     pub collapsed: bool,
     pub dragging: bool,
     drag_offset: Vec2,
@@ -37,7 +38,8 @@ impl GenericPanel {
         Self {
             title,
             rect,
-            visible: true,
+            visible: false,
+            active: false,
             collapsed: false,
             dragging: false,
             drag_offset: Vec2::ZERO,
@@ -45,7 +47,7 @@ impl GenericPanel {
         }
     }
 
-    pub fn update_and_draw_with_block(&mut self, editor: &mut Editor, blocked: bool) {
+    pub fn update_and_draw(&mut self, editor: &mut Editor, blocked: bool) {
         if !self.visible {
             return;
         }

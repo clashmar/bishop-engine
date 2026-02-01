@@ -100,7 +100,7 @@ fn gui_dropdown_impl<T: Clone + PartialEq + Display>(
     }
 
     let list_is_open = state.open;
-    state.open = list_is_open;
+    // state.open = list_is_open;
 
     let mut any_open = false;
     DROPDOWN_OPEN.with(|r| {

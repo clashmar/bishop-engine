@@ -54,7 +54,7 @@ impl PanelManager {
         }
     }
 
-    pub fn draw(&mut self, editor_mode: EditorMode, editor: &mut Editor) {
+    pub fn update_and_draw(&mut self, editor_mode: EditorMode, editor: &mut Editor) {
         let mouse_screen: Vec2 = mouse_position().into();
         let mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
 
@@ -89,13 +89,17 @@ impl PanelManager {
         // Draw panels in order. Block panels if the mouse is over a higher-z panel.
         for (id, panel) in self.panels.iter_mut() {
             if !self.panel_modes[id].iter().any(|m| m.matches(&editor_mode)) {
+                // Update if the panel is active
+                panel.active = false;
                 continue;
             }
+
+            panel.active = true;
 
             // Block this panel if the mouse is over a different (higher-z) panel
             let blocked = topmost_panel_at_mouse.is_some() && topmost_panel_at_mouse != Some(*id);
 
-            panel.update_and_draw_with_block(editor, blocked);
+            panel.update_and_draw(editor, blocked);
         }
     }
 
@@ -110,6 +114,10 @@ pub fn is_mouse_over_panel() -> bool {
     with_panel_manager(|pm| {
         let mouse_screen: Vec2 = mouse_position().into();
         pm.panels.iter()
-            .any(|(_, p)| p.visible && (p.rect.contains(mouse_screen) || p.dragging))
+            .any(|(_, p)| 
+            p.visible
+            && p.active
+            && (p.rect.contains(mouse_screen) || p.dragging)
+        )
     })
 }

@@ -2,25 +2,19 @@ use arboard::Clipboard;
 use std::cell::RefCell;
 
 thread_local! {
-    static INTERNAL_CLIPBOARD: RefCell<String> = RefCell::new(String::new());
+    static INTERNAL_CLIPBOARD: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
 /// Gets text from the system clipboard, falling back to internal buffer.
 pub fn clipboard_get_text() -> Option<String> {
-    if let Ok(mut clipboard) = Clipboard::new() {
-        if let Ok(text) = clipboard.get_text() {
-            if !text.is_empty() {
-                return Some(text);
-            }
-        }
-    }
-
-    let internal = INTERNAL_CLIPBOARD.with(|cb| cb.borrow().clone());
-    if !internal.is_empty() {
-        Some(internal)
-    } else {
-        None
-    }
+    Clipboard::new()
+        .ok()                                  
+        .and_then(|mut clipboard| clipboard.get_text().ok())
+        .filter(|text| !text.is_empty())       
+        .or_else(|| {
+            let internal = INTERNAL_CLIPBOARD.with(|cb| cb.borrow().clone());
+            (!internal.is_empty()).then_some(internal)
+        })
 }
 
 /// Sets text to the system clipboard and internal buffer.

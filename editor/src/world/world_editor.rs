@@ -1,6 +1,5 @@
 // editor/src/world/world_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
-use crate::editor_assets::editor_assets::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
@@ -10,18 +9,17 @@ use crate::engine_global;
 use crate::ecs::ecs::Ecs;
 use crate::world::coord;
 use crate::canvas::grid;
+use crate::*;
 use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::controls::controls::Controls;
 use engine_core::engine_global::*;
 use engine_core::game::game::Game;
 use engine_core::world::world::*;
 use engine_core::world::room::*;
-use engine_core::ui::widgets::*;
 use engine_core::game::game::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use once_cell::sync::Lazy;
-use macroquad::prelude::*;
 
 pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.01;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
