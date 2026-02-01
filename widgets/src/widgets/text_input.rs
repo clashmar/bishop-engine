@@ -130,14 +130,13 @@ impl<'a> TextInput<'a> {
             cursor_char = drag_pos;
         }
 
-        if is_mouse_button_released(MouseButton::Left) {
-            if dragging {
-                if selection_anchor == Some(cursor_char) {
-                    selection_anchor = None;
-                }
-                dragging = false;
+        if is_mouse_button_released(MouseButton::Left) && dragging {
+            if selection_anchor == Some(cursor_char) {
+                selection_anchor = None;
             }
+            dragging = false;
         }
+        
 
         if just_gained_focus {
             while get_char_pressed().is_some() {}
@@ -158,32 +157,30 @@ impl<'a> TextInput<'a> {
                 cursor_char = text.chars().count();
             }
 
-            if ctrl_held && is_key_pressed(KeyCode::C) {
-                if let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
-                    clipboard_set_text(&selected);
-                }
+            if ctrl_held && is_key_pressed(KeyCode::C) 
+                && let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
+                clipboard_set_text(&selected);
             }
+            
 
-            if ctrl_held && is_key_pressed(KeyCode::V) {
-                if let Some(clipboard_text) = clipboard_get_text() {
-                    if selection_anchor.is_some() {
-                        cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
-                        selection_anchor = None;
-                    }
-
-                    let filtered: String = clipboard_text
-                        .chars()
-                        .filter(|c| c.is_ascii_graphic() || *c == ' ')
-                        .collect();
-
-                    let cur_len = text.chars().count();
-                    let available = self.max_len.map_or(usize::MAX, |limit| limit.saturating_sub(cur_len));
-                    let to_insert: String = filtered.chars().take(available).collect();
-
-                    let pos = byte_offset(&text, cursor_char);
-                    text.insert_str(pos, &to_insert);
-                    cursor_char += to_insert.chars().count();
+            if ctrl_held && is_key_pressed(KeyCode::V) && let Some(clipboard_text) = clipboard_get_text() {
+                if selection_anchor.is_some() {
+                    cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
+                    selection_anchor = None;
                 }
+
+                let filtered: String = clipboard_text
+                    .chars()
+                    .filter(|c| c.is_ascii_graphic() || *c == ' ')
+                    .collect();
+
+                let cur_len = text.chars().count();
+                let available = self.max_len.map_or(usize::MAX, |limit| limit.saturating_sub(cur_len));
+                let to_insert: String = filtered.chars().take(available).collect();
+
+                let pos = byte_offset(&text, cursor_char);
+                text.insert_str(pos, &to_insert);
+                cursor_char += to_insert.chars().count();
             }
 
             let handle_key_action = |key: RepeatableKey, pressed: bool, down: bool, rk: &mut Option<RepeatableKey>, rs: &mut bool, lkt: &mut f64| -> bool {
@@ -324,7 +321,7 @@ impl<'a> TextInput<'a> {
                     }
 
                     let cur_len = text.chars().count();
-                    if self.max_len.map_or(true, |limit| cur_len < limit) {
+                    if self.max_len.is_none_or(|limit| cur_len < limit) {
                         let pos = byte_offset(&text, cursor_char);
                         text.insert(pos, chr);
                         cursor_char += 1;

@@ -11,11 +11,8 @@ pub struct TabTarget {
 }
 
 thread_local! {
-    /// The registry is a map so we never get duplicate entries.
     static TAB_REGISTRY: RefCell<HashMap<WidgetId, TabTarget>> = RefCell::new(HashMap::new());
-
-    /// At most one widget can press Tab per frame, so a simple `Option` is enough.
-    static PENDING_TAB: RefCell<Option<PendingTab>> = RefCell::new(None);
+    static PENDING_TAB: RefCell<Option<PendingTab>> = const { RefCell::new(None) };
 }
 
 

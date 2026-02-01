@@ -82,7 +82,7 @@ thread_local! {
 }
 
 thread_local! {
-    pub static DROPDOWN_OPEN: RefCell<bool> = RefCell::new(false);
+    pub static DROPDOWN_OPEN: RefCell<bool> = const { RefCell::new(false) };
 }
 
 pub fn is_dropdown_open() -> bool {

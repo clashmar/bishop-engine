@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use crate::*;
 
 thread_local! {
-    pub static INPUT_FOCUSED: RefCell<bool> = RefCell::new(false);
+    pub static INPUT_FOCUSED: RefCell<bool> = const { RefCell::new(false) };
 }
 
 pub fn input_is_focused() -> bool {
@@ -13,7 +13,7 @@ pub fn input_is_focused() -> bool {
 }
 
 thread_local! {
-    static PENDING_FOCUS: RefCell<Option<WidgetId>> = RefCell::new(None);
+    static PENDING_FOCUS: RefCell<Option<WidgetId>> = const { RefCell::new(None) };
 }
 
 pub fn request_focus(id: WidgetId, is_text_input: bool) {
@@ -42,11 +42,9 @@ pub fn consume_pending_focus(id: WidgetId) -> bool {
     let mut consumed = false;
     PENDING_FOCUS.with(|p| {
         let mut opt = p.borrow_mut();
-        if let Some(pending_id) = *opt {
-            if pending_id == id {
-                consumed = true;
-                *opt = None;
-            }
+        if let Some(pending_id) = *opt && pending_id == id {
+            consumed = true;
+            *opt = None;
         }
     });
     consumed

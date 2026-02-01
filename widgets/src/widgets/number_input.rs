@@ -117,14 +117,14 @@ where
             cursor_char = drag_pos;
         }
 
-        if is_mouse_button_released(MouseButton::Left) {
-            if dragging {
-                if selection_anchor == Some(cursor_char) {
-                    selection_anchor = None;
-                }
-                dragging = false;
+        if is_mouse_button_released(MouseButton::Left) 
+            && dragging {
+            if selection_anchor == Some(cursor_char) {
+                selection_anchor = None;
             }
+            dragging = false;
         }
+        
 
         if focused {
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
@@ -137,35 +137,35 @@ where
                 cursor_char = text.chars().count();
             }
 
-            if ctrl_held && is_key_pressed(KeyCode::C) {
-                if let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
-                    clipboard_set_text(&selected);
-                }
+            if ctrl_held && is_key_pressed(KeyCode::C) 
+                && let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
+                clipboard_set_text(&selected);
             }
+            
 
-            if ctrl_held && is_key_pressed(KeyCode::V) {
-                if let Some(clipboard_text) = clipboard_get_text() {
-                    let insert_pos = if selection_anchor.is_some() {
-                        cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
-                        selection_anchor = None;
-                        cursor_char
-                    } else {
-                        cursor_char
-                    };
+            if ctrl_held && is_key_pressed(KeyCode::V) 
+                && let Some(clipboard_text) = clipboard_get_text() {
+                let insert_pos = if selection_anchor.is_some() {
+                    cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
+                    selection_anchor = None;
+                    cursor_char
+                } else {
+                    cursor_char
+                };
 
-                    let at_start = insert_pos == 0;
-                    let has_decimal = text.contains('.');
-                    let filtered = filter_numeric_paste(
-                        &clipboard_text,
-                        is_float,
-                        allow_negative && at_start && !text.starts_with('-'),
-                        has_decimal,
-                    );
+                let at_start = insert_pos == 0;
+                let has_decimal = text.contains('.');
+                let filtered = filter_numeric_paste(
+                    &clipboard_text,
+                    is_float,
+                    allow_negative && at_start && !text.starts_with('-'),
+                    has_decimal,
+                );
 
-                    text.insert_str(insert_pos, &filtered);
-                    cursor_char += filtered.chars().count();
-                }
+                text.insert_str(insert_pos, &filtered);
+                cursor_char += filtered.chars().count();
             }
+            
 
             let handle_key_action = |key: RepeatableKey, pressed: bool, down: bool, rk: &mut Option<RepeatableKey>, rs: &mut bool, lkt: &mut f64| -> bool {
                 if pressed {
