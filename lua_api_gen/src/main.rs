@@ -10,7 +10,11 @@ use game_lib as _;
 
 fn main() {
     let out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("../editor/scripts/_engine");
+        .parent()
+        .expect("CARGO_MANIFEST_DIR should have a parent")
+        .join("editor")
+        .join("scripts")
+        .join(".engine");
 
     fs::create_dir_all(&out_dir).unwrap();
 
