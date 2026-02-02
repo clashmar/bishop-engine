@@ -87,9 +87,15 @@ fn create_game_folders(name: &String) {
         }
     }
 
-    // Extract embedded _engine scripts
+    // Extract embedded .engine scripts
     if let Err(e) = crate::editor_assets::write_engine_scripts(&scripts_folder()) {
-        onscreen_error!("Could not write _engine scripts: {e}");
+        onscreen_error!("Could not write .engine scripts: {e}");
+    }
+
+    // Create an empty main.lua for the user
+    let main_lua = scripts_folder().join("main.lua");
+    if let Err(e) = fs::write(&main_lua, "") {
+        onscreen_error!("Could not create main.lua: {e}");
     }
 }
 
