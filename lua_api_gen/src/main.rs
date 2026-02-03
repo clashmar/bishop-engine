@@ -14,7 +14,7 @@ fn main() {
         .expect("CARGO_MANIFEST_DIR should have a parent")
         .join("editor")
         .join("scripts")
-        .join(".engine");
+        .join("_engine");
 
     fs::create_dir_all(&out_dir).unwrap();
 

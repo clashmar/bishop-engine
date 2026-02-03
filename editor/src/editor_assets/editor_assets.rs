@@ -105,9 +105,9 @@ fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
 // Include the auto-generated ENGINE_SCRIPTS array from build.rs
 include!("engine_scripts.rs");
 
-/// Write embedded .engine scripts to the specified scripts folder.
+/// Write embedded _engine scripts to the specified scripts folder.
 pub fn write_engine_scripts(scripts_folder: &Path) -> io::Result<()> {
-    let engine_folder = scripts_folder.join(".engine");
+    let engine_folder = scripts_folder.join("_engine");
     fs::create_dir_all(&engine_folder)?;
 
     for (filename, content) in ENGINE_SCRIPTS {
