@@ -1,3 +1,10 @@
+# Lua api generation for both platforms
+[tasks.generate-lua-api]
+script = [
+    "cd ..",
+    "cargo run -p lua_api_gen",
+]
+
 # Mac
 [tasks.build-game-mac]
 script = [
@@ -17,7 +24,7 @@ dependencies = ["build-game-mac"]
 [tasks.build-editor-mac]
 command = "cargo"
 args = ["build", "--release", "--target", "aarch64-apple-darwin"]
-dependencies = ["copy-game-bins-mac"]
+dependencies = ["generate-lua-api", "copy-game-bins-mac"]
 
 [tasks.release-editor-mac]
 command = "cargo"
@@ -55,6 +62,7 @@ dependencies = ["build-game-windows"]
 command = "cargo"
 args = ["build", "--release", "--target", "x86_64-pc-windows-msvc"]
 dependencies = [
+    "generate-lua-api",
     "copy-game-exes-windows",
-    "copy-game-exes-unix", 
+    "copy-game-exes-unix",
 ]

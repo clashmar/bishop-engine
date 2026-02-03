@@ -1,13 +1,14 @@
 // game/src/physics/collision.rs
+use engine_core::assets::asset_manager::AssetManager;
+use engine_core::tiles::tile::TileComponent;
+use engine_core::engine_global::tile_size;
+use engine_core::ecs::transform::Transform;
+use engine_core::tiles::tilemap::TileMap;
+use engine_core::ecs::component::*;
+use engine_core::world::room::Exit;
+use engine_core::ecs::ecs::Ecs;
+use std::collections::HashSet;
 use macroquad::prelude::*;
-use engine_core::{
-    ecs::{
-        component::{Collider, Position, Solid},
-        world_ecs::WorldEcs,
-    }, 
-    global::tile_size, 
-    tiles::{tile::TileComponent, tilemap::TileMap}
-};
 
 const OVERLAP_EPS: f32 = 0.0001; 
 
@@ -96,12 +97,14 @@ fn resolve_axis(
 
 /// Sweep the requested movement and return the maximal safe delta.
 pub fn sweep_move(
-    world_ecs: &mut WorldEcs,
+    asset_manager: &AssetManager,
+    ecs: &mut Ecs,
     tilemap: &TileMap,
     room_origin: Vec2,               
     entity_position: Vec2,                 
     desired_delta: Vec2,
     collider: Collider,
+    exits: &[Exit],
 ) -> SweepResult {
     // Gather every solid AABB to test against
     let mut obstacles: Vec<(Vec2, Vec2)> = Vec::new();
@@ -109,7 +112,7 @@ pub fn sweep_move(
     // Tiles
     // Only tiles that carry a Solid component are obstacles
     for ((x, y), tile_def_id) in tilemap.tiles.iter() {
-        let Some(tile_def) = world_ecs.tile_defs.get(tile_def_id) else {continue};
+        let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) else {continue};
 
         if tile_def.components.contains(&TileComponent::Solid(true)) {
             let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
@@ -118,12 +121,15 @@ pub fn sweep_move(
         }
     }
 
+    // Create an invisible border around the edge of the room except where exits are placed
+    add_border_obstacles(&mut obstacles, room_origin, tilemap, exits);
+
     // Other solid entities
     // Iterate over every Collider component in the world, skip the moving one
-    for (other_entity, other_coll) in world_ecs.get_store::<Collider>().data.iter() {
+    for (other_entity, other_coll) in ecs.get_store::<Collider>().data.iter() {
         // Do not test against ourselves
         if let Some(other_pos) =
-            world_ecs.get::<Position>(*other_entity)
+            ecs.get::<Transform>(*other_entity)
         {
             if (other_pos.position - entity_position).length() < 0.001 {
                 // Same entity
@@ -132,10 +138,10 @@ pub fn sweep_move(
         }
 
         // Only solid entities block movement
-        if let Some(solid) = world_ecs.get::<Solid>(*other_entity) {
+        if let Some(solid) = ecs.get::<Solid>(*other_entity) {
             if solid.0 {
                 if let Some(other_pos) =
-                    world_ecs.get::<Position>(*other_entity)
+                    ecs.get::<Transform>(*other_entity)
                 {
                     let aabb = aabb(other_pos.position, *other_coll);
                     obstacles.push(aabb);
@@ -143,10 +149,6 @@ pub fn sweep_move(
             }
         }
     }
-
-    obstacles.extend(
-        room_bounds_aabbs(room_origin, tilemap.width, tilemap.height)
-    );
 
     // Sweep X axis, then Y axis
     let (allowed_x, blocked_x) = resolve_axis(
@@ -174,23 +176,47 @@ pub fn sweep_move(
     }
 }
 
-/// Returns four AABBs that represent the four borders of a rectangular room.
-fn room_bounds_aabbs(origin: Vec2, map_width: usize, map_height: usize) -> Vec<(Vec2, Vec2)> {
-    let width = map_width as f32 * tile_size();
-    let height = map_height as f32 * tile_size();
+/// Creates solid tiles around the edge of the tilemap to constrain movement.
+fn add_border_obstacles(
+    obstacles: &mut Vec<(Vec2, Vec2)>,
+    room_origin: Vec2,
+    tilemap: &TileMap,
+    exits: &[Exit],
+) {
+    let ts = tile_size();
+    let w = tilemap.width as i32;
+    let h = tilemap.height as i32;
 
-    let thickness = 0.1_f32;
+    let mut outer_exits: HashSet<(i32, i32)> = HashSet::with_capacity(exits.len());
+    for e in exits {
+        outer_exits.insert((e.position.x as i32, e.position.y as i32));
+    }
 
-    // Left wall
-    let left = (origin - vec2(thickness, 0.0), origin + vec2(0.0, height));
+    for gx in 0..w {
+        if !outer_exits.contains(&(gx, -1)) {
+            let min = room_origin + vec2(gx as f32 * ts, -ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 
-    // Right wall
-    let right = (origin + vec2(width, 0.0), origin + vec2(width + thickness, height));
+    for gx in 0..w {
+        if !outer_exits.contains(&(gx, h)) {
+            let min = room_origin + vec2(gx as f32 * ts, h as f32 * ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 
-    // Ignore top wall (we don't need to jump of it... yet)
+    for gy in 0..h {
+        if !outer_exits.contains(&(-1, gy)) {
+            let min = room_origin + vec2(-ts, gy as f32 * ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 
-    // Bottom wall
-    let bottom = (origin + vec2(0.0, height), origin + vec2(width, height + thickness));
-
-    vec![left, right, bottom]
+    for gy in 0..h {
+        if !outer_exits.contains(&(w, gy)) {
+            let min = room_origin + vec2(w as f32 * ts, gy as f32 * ts);
+            obstacles.push((min, min + vec2(ts, ts)));
+        }
+    }
 }

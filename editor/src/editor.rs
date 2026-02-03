@@ -1,26 +1,26 @@
 // editor/src/editor.rs
-use crate::gui::inspector::modal::Modal;
-use engine_core::*;
-use engine_core::ui::toast::Toast;
-use engine_core::ui::widgets::input_is_focused;
-use engine_core::world::world::WorldId;
-use engine_core::world::room::RoomId;
-use engine_core::physics::collider_system;
-use engine_core::rendering::render_system::RenderSystem;
-use std::io;
-use macroquad::prelude::*;
-use engine_core::game::game::Game;
-use crate::gui::menu_bar::MenuBar;
-use engine_core::controls::controls::Controls;
-use crate::playtest::room_playtest::*;
-use crate::tilemap::tile_palette::TilePalette;
 use crate::editor_camera_controller::EditorCameraController;
-use crate::storage::editor_storage;
-use crate::Camera2D;
-use crate::room::room_editor::RoomEditor;
+use crate::tilemap::tile_palette::TilePalette;
 use crate::world::world_editor::WorldEditor;
+use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
-
+use crate::storage::editor_storage::*;
+use crate::playtest::room_playtest::*;
+use crate::storage::editor_storage;
+use crate::gui::menu_bar::MenuBar;
+use crate::with_panel_manager;
+use crate::gui::modal::Modal;
+use crate::Camera2D;
+use crate::*;
+use engine_core::rendering::render_system::RenderSystem;
+use engine_core::ui::widgets::input_is_focused;
+use engine_core::controls::controls::Controls;
+use engine_core::physics::collider_system;
+use engine_core::world::world::WorldId;
+use engine_core::ui::toast::Toast;
+use engine_core::world::room::*;
+use engine_core::game::game::*;
+use std::io;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum EditorMode {
@@ -36,8 +36,8 @@ pub struct Editor {
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
     pub camera: Camera2D,
-    pub current_world_id: Option<WorldId>,
-    pub current_room_id: Option<RoomId>,
+    pub cur_world_id: Option<WorldId>,
+    pub cur_room_id: Option<RoomId>,
     pub render_system: RenderSystem,
     pub menu_bar: MenuBar,
     pub modal: Modal,
@@ -48,17 +48,30 @@ impl Editor {
     pub async fn new() -> io::Result<Self> {
         let mut editor = Editor::default();
 
-        let mut game = if let Some(name) = editor_storage::most_recent_game_name() {
-            editor_storage::load_game_by_name(&name).await?
+        let game = if let Some(name) = most_recent_game_name() {
+            load_game_by_name(&name).await?
         } else if let Some(name) = editor.prompt_new_game().await {
-            editor_storage::create_new_game(name).await
+            create_new_game(name).await
         } else {
             // User pressed Cancel
             onscreen_info!("User cancelled new game dialogue.");
             std::process::exit(0);
         };
 
-        let palette = match editor_storage::load_palette(&game.name.clone()) {
+        let mut game = with_lua_async(|lua| {
+            Box::pin(async move {
+                let mut game = game;
+                game.initialize(lua).await;
+                game
+            })
+        }).await;
+
+        // Register all panels
+        with_panel_manager(|panel_manager| {
+            panel_manager.register_all_panels();
+        });
+
+        let palette = match load_palette(&game.name.clone()) {
             Ok(p) => p,
             Err(e) => {
                 onscreen_error!("Failed to load palette: {e}");
@@ -93,18 +106,23 @@ impl Editor {
                         self.game.get_world_mut(world_id)
                     );
                     self.game.current_world_id = world_id;
-                    self.current_world_id = Some(world_id);
+                    self.cur_world_id = Some(world_id);
                     self.mode = EditorMode::World(world_id);
                 }
             }
             EditorMode::World(world_id) => {
+                let mut ctx = self.game.ctx_mut();
+
                 // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
                     &mut self.camera, 
-                    &mut self.game.get_world_mut(world_id)
+                    &mut ctx,
                 ).await {
-                    self.current_room_id = Some(room_id);
+                    self.cur_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);
+
+                    // The world current room must be set
+                    self.game.get_world_mut(world_id).current_room_id = Some(room_id);
                 }
 
                 // Handle escape
@@ -115,7 +133,7 @@ impl Editor {
                     );
 
                     // Clean up
-                    self.current_world_id = None;
+                    self.cur_world_id = None;
                     self.world_editor.reset();
                     self.mode = EditorMode::Game;
 
@@ -134,12 +152,13 @@ impl Editor {
                     self.room_editor.update(
                         &mut self.camera, 
                         room_id,
+                        &mut self.game.ecs,
                         current_world,
                         &mut self.game.asset_manager,
                     ).await;
 
                     collider_system::update_colliders_from_sprites(
-                        &mut current_world.world_ecs,
+                        &mut self.game.ecs,
                         &mut self.game.asset_manager,
                     );
 
@@ -157,7 +176,7 @@ impl Editor {
                         }
 
                         // Clean up
-                        self.current_room_id = None;
+                        self.cur_room_id = None;
                         self.room_editor.reset();
                         self.mode = EditorMode::World(current_world.id);
 
@@ -212,8 +231,8 @@ impl Editor {
             },
             EditorMode::World(world_id) => {
                 // World id should already be set
-                if self.current_world_id.is_none() {
-                    self.current_world_id = Some(world_id);
+                if self.cur_world_id.is_none() {
+                    self.cur_world_id = Some(world_id);
                 }
 
                 self.world_editor.draw(
@@ -224,27 +243,18 @@ impl Editor {
             },
             EditorMode::Room(room_id) => {
                 // Room id should already be set
-                if self.current_room_id.is_none() {
-                    self.current_room_id = Some(room_id);
+                if self.cur_room_id.is_none() {
+                    self.cur_room_id = Some(room_id);
                 }
-                
-                let world = &mut self.game.worlds
-                    .iter_mut()
-                    .find(|w| w.id == self.game.current_world_id)
-                    .expect("Current world id not present in game.");
 
-                let room = world.rooms
-                    .iter_mut()
-                    .find(|r| r.id == room_id)
-                    .expect("Could not find room in world.");
-
-                self.room_editor.draw(
-                    &self.camera,
-                    room,
-                    &mut world.world_ecs,
-                    &mut self.game.asset_manager,
-                    &mut self.render_system,
-                ).await;
+                self.room_editor
+                    .draw(
+                        &self.camera,
+                        room_id,
+                        &mut self.game,
+                        &mut self.render_system,
+                    )
+                    .await;
             }
         }
 
@@ -255,6 +265,11 @@ impl Editor {
     async fn draw_ui(&mut self) {
         set_default_camera();
 
+        // Draw all panels
+        with_panel_manager(|panel_manager| {
+            panel_manager.update_and_draw(self.mode, self);
+        });
+
         // Global menu options
         self.draw_menu_bar().await;
 
@@ -264,8 +279,5 @@ impl Editor {
         }
 
         self.draw_toast();
-
-        // Draws onscreen logs in debug mode
-        self.draw_logs();
     }
 }

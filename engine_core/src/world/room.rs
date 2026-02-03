@@ -1,19 +1,34 @@
 // engine_core/src/world/room.rs
-use crate::{
-    camera::game_camera::RoomCamera, ecs::{
-        component::{CurrentRoom, Position}, 
-        world_ecs::WorldEcs
-    }, global::tile_size, tiles::tilemap::TileMap
-};
-use serde_with::FromInto;
-use macroquad::prelude::*;
+use crate::camera::game_camera::RoomCamera;
+use crate::engine_global::tile_size;
+use crate::tiles::tilemap::TileMap;
+use crate::ecs::transform::Transform;
+use crate::ecs::entity::Entity;
+use crate::ecs::component::*;
+use crate::ecs::ecs::Ecs;
+use crate::constants::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use macroquad::prelude::*;
+use serde_with::FromInto;
 use serde_with::serde_as;
-use crate::{constants::*};
 
-/// Identifier for a room.
+/// Identifier for a room. TODO: Make sure this is unique across worlds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct RoomId(pub usize);
+
+impl std::ops::Deref for RoomId {
+    type Target = usize;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for RoomId {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -32,7 +47,7 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn default(world_ecs: &mut WorldEcs) -> Self {
+    pub fn default(ecs: &mut Ecs) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
@@ -51,20 +66,10 @@ impl Room {
         darkness: 0.,
         };
 
-        let _camera = room.create_room_camera(world_ecs, id);
+        let _camera = room.create_room_camera(ecs, id);
 
         room
     }
-
-    // pub fn load_room(&self, world_name: &str) -> io::Result<Room> {
-    //     let path = PathBuf::from(GAME_SAVE_ROOT)
-    //         .join(world_name)
-    //         .join("rooms")
-    //         .join(format!("{}.ron", self.id));
-
-    //     let data = std::fs::read_to_string(path)?;
-    //     ron::de::from_str(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-    // }
 
     pub fn link_exits(&mut self, other_rooms: &[&Room]) {
         let epsilon = 0.01; // tolerance for floating-point comparisons
@@ -118,11 +123,38 @@ impl Room {
         }).collect()
     }
 
-    pub fn create_room_camera(&self, world_ecs: &mut WorldEcs, room_id: RoomId) {
-        let _camera = world_ecs.create_entity()
-            .with(Position { position: self.position })
+    pub fn create_room_camera(&self, ecs: &mut Ecs, room_id: RoomId) {
+        const CAMERA_PREFIX: &str = "Camera ";
+        let name_store = ecs.get_store::<Name>();
+        let cur_room_store = ecs.get_store::<CurrentRoom>();
+
+        let mut used: HashSet<usize> = HashSet::new();
+
+        for (entity, name) in name_store.data.iter() {
+            if let Some(cur_room) = cur_room_store.get(*entity) {
+                if cur_room.0 != self.id {
+                    continue;
+                }
+                if let Some(num_str) = name.strip_prefix(CAMERA_PREFIX) {
+                    if let Ok(num) = num_str.parse::<usize>() {
+                        if num > 0 {
+                            used.insert(num);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut next_idx = 1;
+        while used.contains(&next_idx) {
+            next_idx += 1;
+        }
+
+        ecs.create_entity()
+            .with(Transform { position: self.position })
             .with(RoomCamera::new(room_id))
-            .with(CurrentRoom(self.id));
+            .with(CurrentRoom(self.id))
+            .with(Name(format!("{}{}", CAMERA_PREFIX, next_idx)));
     }
 
     /// Returns the axis‑aligned rectangle that a room occupies in world space.
@@ -137,6 +169,22 @@ impl Room {
     pub fn current_variant(&self) -> &RoomVariant {
         &self.variants[0]
     }
+}
+
+/// Returns a HashSet of all entities in the current room.
+pub fn entities_in_room(ecs: &mut Ecs, room_id: RoomId) -> HashSet<Entity> {
+    let room_store = ecs.get_store::<CurrentRoom>();
+    room_store
+        .data
+        .iter()
+        .filter_map(|(entity, cur_room)| {
+            if cur_room.0 == room_id {
+                Some(*entity)
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

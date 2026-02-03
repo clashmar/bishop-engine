@@ -1,5 +1,5 @@
 // editor/src/world/coord.rs
-use engine_core::global::tile_size;
+use engine_core::engine_global::tile_size;
 use macroquad::prelude::*;
 
 /// Convert the current mouse position (screen pixels) to world

@@ -1,27 +1,29 @@
 // editor/src/editor_actions.rs
+use crate::commands::game_editor_commands::RenameGameCmd;
+use crate::editor::Editor;
+use crate::editor::*;
+use crate::editor_global::*;
+use crate::game::game_editor::GameEditor;
+use crate::gui::menu_bar::*;
+use crate::gui::modal::*;
+use crate::gui::panels::console_panel::CONSOLE_PANEL;
+use crate::gui::panels::diagnostics_panel::DIAGNOSTICS_PANEL;
+use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
+use crate::room::room_editor::RoomEditor;
+use crate::storage::editor_storage::*;
 use crate::storage::export::export_game;
-use engine_core::*;
+use crate::ui::widgets::input_is_focused;
+use crate::world::world_editor::WorldEditor;
 use engine_core::controls::controls::Controls;
-use engine_core::logging::logging::LAST_LOG;
-use engine_core::ui::prompt::StringPromptResult;
-use std::cell::RefCell;
-use engine_core::ui::prompt::StringPromptWidget;
-use engine_core::world::room::*;
-use macroquad::prelude::*;
 use engine_core::game::game::Game;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::storage::path_utils::*;
+use engine_core::ui::prompt::*;
 use engine_core::ui::toast::Toast;
-use crate::commands::game_editor_commands::RenameGameCmd;
-use crate::game::game_editor::GameEditor;
-use crate::global::push_command;
-use crate::gui::inspector::modal::*;
-use crate::room::room_editor::RoomEditor;
-use crate::world::world_editor::WorldEditor;
-use crate::editor::*;
-use crate::storage::editor_storage::*;
-use crate::gui::menu_bar::*;
-use crate::editor::Editor;
+use engine_core::world::room::*;
+use engine_core::*;
+use macroquad::prelude::*;
+use std::cell::RefCell;
 
 impl Default for Editor {
     fn default() -> Self {
@@ -32,8 +34,8 @@ impl Default for Editor {
             game_editor: GameEditor::new(),
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
-            current_world_id: None,
-            current_room_id: None,
+            cur_world_id: None,
+            cur_room_id: None,
             render_system: RenderSystem::new(),
             menu_bar: MenuBar::new(),
             modal: Modal::default(),
@@ -72,22 +74,17 @@ impl Editor {
 
     pub async fn draw_menu_bar(&mut self) {
         let menu_title = match self.mode {
-            EditorMode::Game => {
-                self.game.name.clone()
-            }
-            EditorMode::World(_) => {
-                self.game.current_world().name.clone()
-            }
-            EditorMode::Room(id) => {
-                self.game
-                    .current_world()
-                    .get_room(id)
-                    .map(|room| room.name.clone())
-                    .unwrap_or_else(|| "Room".to_string())
-            }
+            EditorMode::Game => self.game.name.clone(),
+            EditorMode::World(_) => self.game.current_world().name.clone(),
+            EditorMode::Room(id) => self
+                .game
+                .current_world()
+                .get_room(id)
+                .map(|room| room.name.clone())
+                .unwrap_or_else(|| "Room".to_string()),
         };
 
-        if let Some(action) = self.menu_bar.draw(&menu_title) {
+        if let Some(action) = self.menu_bar.draw(&menu_title, self.mode) {
             match action {
                 MenuAction::Rename => {
                     self.open_rename_modal();
@@ -127,10 +124,8 @@ impl Editor {
                                             }
                                         }
                                     } else {
-                                        self.toast = Some(Toast::new(
-                                            "Folder name could not be read.",
-                                            2.5,
-                                        ));
+                                        self.toast =
+                                            Some(Toast::new("Folder name could not be read.", 2.5));
                                     }
                                 }
                                 Err(err_msg) => {
@@ -141,41 +136,47 @@ impl Editor {
                     }
                     #[cfg(target_arch = "wasm32")]
                     {
-                        self.toast = Some(Toast::new(
-                            "Folder picker unavailable in WASM",
-                            2.5,
-                        ));
+                        self.toast = Some(Toast::new("Folder picker unavailable in WASM", 2.5));
                     }
                 }
                 MenuAction::Save => self.save(),
                 MenuAction::SaveAs => self.open_save_as_modal(),
-                MenuAction::Undo => crate::global::request_undo(),
-                MenuAction::Redo => crate::global::request_redo(),
-                MenuAction::Export => {
-                    match export_game(&self.game).await {
-                        Ok(path) => {
-                            self.toast = Some(Toast::new(format!("Exported to: {}", path.display()), 2.5));
-                        }
-                        Err(e) => {
-                            onscreen_error!("Export failed: {e}");
-                        }
+                MenuAction::Undo => crate::editor_global::request_undo(),
+                MenuAction::Redo => crate::editor_global::request_redo(),
+                MenuAction::Export => match export_game(&self.game).await {
+                    Ok(path) => {
+                        self.toast =
+                            Some(Toast::new(format!("Exported to: {}", path.display()), 2.5));
                     }
+                    Err(e) => {
+                        onscreen_error!("Export failed: {e}");
+                    }
+                },
+                MenuAction::ChangeSaveRoot => match change_save_root_async().await {
+                    Some(new_root) => {
+                        self.toast = Some(Toast::new(
+                            format!("Save root moved to: {}", new_root.display()),
+                            2.5,
+                        ));
+                    }
+                    None => {
+                        self.toast = Some(Toast::new("Failed to update save root.", 2.0));
+                    }
+                },
+                MenuAction::ViewHierarchyPanel => {
+                    with_panel_manager(|panel_manager| {
+                        panel_manager.toggle(HIERARCHY_PANEL);
+                    });
                 }
-                MenuAction::ChangeSaveRoot => {
-                    match change_save_root_async().await {
-                        Some(new_root) => {
-                            self.toast = Some(Toast::new(
-                                format!("Save root moved to: {}", new_root.display()),
-                                2.5,
-                            ));
-                        }
-                        None => {
-                            self.toast = Some(Toast::new(
-                                "Failed to update save root.",
-                                2.0,
-                            ));
-                        }
-                    }
+                MenuAction::ViewConsolePanel => {
+                    with_panel_manager(|panel_manager| {
+                        panel_manager.toggle(CONSOLE_PANEL);
+                    });
+                }
+                MenuAction::ViewDiagnosticsPanel => {
+                    with_panel_manager(|panel_manager| {
+                        panel_manager.toggle(DIAGNOSTICS_PANEL);
+                    });
                 }
             }
         }
@@ -191,11 +192,19 @@ impl Editor {
         }
 
         if Controls::undo() {
-            crate::global::request_undo();
+            crate::editor_global::request_undo();
         }
 
         if Controls::redo() {
-            crate::global::request_redo();
+            crate::editor_global::request_redo();
+        }
+
+        if Controls::c() && !input_is_focused() {
+            with_panel_manager(|pm| pm.toggle(CONSOLE_PANEL));
+        }
+
+        if Controls::f3() && !input_is_focused() {
+            with_panel_manager(|pm| pm.toggle(DIAGNOSTICS_PANEL));
         }
     }
 
@@ -209,7 +218,8 @@ impl Editor {
 
     pub fn get_room_from_id(&self, room_id: &RoomId) -> &Room {
         self.game
-            .current_world().rooms
+            .current_world()
+            .rooms
             .iter()
             .find(|m| m.id == *room_id)
             .expect("Could not find room from id.")
@@ -219,14 +229,12 @@ impl Editor {
         let prompt_message = "Enter game name:";
         let mut prompt = self.set_prompt_modal(prompt_message);
 
-        let widgets: Vec<BoxedWidget> = vec![ 
-            Box::new(move |_| {
-                if let Some(result) = prompt.draw() {
-                    // Write the result to the static thread local
-                    NEW_GAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
-                }
-            })
-        ];
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
+            if let Some(result) = prompt.draw() {
+                // Write the result to the static thread local
+                NEW_GAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
+            }
+        })];
 
         self.modal.open(widgets);
     }
@@ -240,14 +248,12 @@ impl Editor {
 
         let mut prompt = self.set_prompt_modal(prompt_message);
 
-        let widgets: Vec<BoxedWidget> = vec![ 
-            Box::new(move |_| {
-                if let Some(result) = prompt.draw() {
-                    // Write the result to the static thread local
-                    RENAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
-                }
-            })
-        ];
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
+            if let Some(result) = prompt.draw() {
+                // Write the result to the static thread local
+                RENAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
+            }
+        })];
 
         self.modal.open(widgets);
     }
@@ -256,14 +262,12 @@ impl Editor {
         let prompt_message = "Save as:";
         let mut prompt = self.set_prompt_modal(prompt_message);
 
-        let widgets: Vec<BoxedWidget> = vec![ 
-            Box::new(move |_| {
-                if let Some(result) = prompt.draw() {
-                    // Write the result to the static thread local
-                    SAVE_AS_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
-                }
-            })
-        ];
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
+            if let Some(result) = prompt.draw() {
+                // Write the result to the static thread local
+                SAVE_AS_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
+            }
+        })];
 
         self.modal.open(widgets);
     }
@@ -295,7 +299,7 @@ impl Editor {
                         } else {
                             if self.duplicate_game_exists(&name) {
                                 return None;
-                            } 
+                            }
                             // Create the new game
                             let new_game = create_new_game(name.clone()).await;
                             self.reset(new_game);
@@ -303,9 +307,9 @@ impl Editor {
                             return Some(ModalResult::String(name));
                         }
                     }
-                    StringPromptResult::Cancelled => { 
+                    StringPromptResult::Cancelled => {
                         self.modal.close();
-                        return None
+                        return None;
                     }
                 }
             }
@@ -320,12 +324,13 @@ impl Editor {
                             EditorMode::Game => {
                                 if self.duplicate_game_exists(&name) {
                                     return None;
-                                } 
-                                push_command(Box::new(RenameGameCmd::new(name, self.game.name.clone())))
-                            } 
-                            EditorMode::World(_) => {
-                                self.game.current_world_mut().name = name
-                            },
+                                }
+                                push_command(Box::new(RenameGameCmd::new(
+                                    name,
+                                    self.game.name.clone(),
+                                )))
+                            }
+                            EditorMode::World(_) => self.game.current_world_mut().name = name,
                             EditorMode::Room(id) => {
                                 if let Some(room) = self.game.current_world_mut().get_room_mut(id) {
                                     room.name = name;
@@ -334,9 +339,9 @@ impl Editor {
                         }
                         self.modal.close();
                     }
-                    StringPromptResult::Cancelled => { 
+                    StringPromptResult::Cancelled => {
                         self.modal.close();
-                        return None
+                        return None;
                     }
                 }
             }
@@ -349,23 +354,19 @@ impl Editor {
                     StringPromptResult::Confirmed(name) => {
                         if self.duplicate_game_exists(&name) {
                             return None;
-                        } 
+                        }
                         match save_as(&mut self.game, &name) {
-                            Ok(()) => { 
-                                self.save() 
-                            }
+                            Ok(()) => self.save(),
                             Err(err) => {
-                                self.toast = Some(Toast::new(
-                                    &format!("Failed to save game: {err}"),
-                                    3.0,
-                                ));
+                                self.toast =
+                                    Some(Toast::new(&format!("Failed to save game: {err}"), 3.0));
                             }
                         }
                         self.modal.close();
                     }
-                    StringPromptResult::Cancelled => { 
+                    StringPromptResult::Cancelled => {
                         self.modal.close();
-                        return None
+                        return None;
                     }
                 }
             }
@@ -382,24 +383,6 @@ impl Editor {
         }
     }
 
-    pub fn draw_logs(&self) {
-        // Draw overlay logs to screen in debug mode
-        if cfg!(debug_assertions) {
-            {
-                let msg = LAST_LOG.lock().unwrap().clone();
-                if !msg.is_empty() {
-                    draw_text(
-                        &msg,
-                        10.0,
-                        screen_height() - 10.0,
-                        20.0,
-                        WHITE,
-                    );
-                }
-            }
-        }
-    }
-
     pub fn reset(&mut self, game: Game) {
         *self = Self {
             game: game,
@@ -410,15 +393,10 @@ impl Editor {
 
     /// Returns `true` and creates a toast notification if a duplicate game name exists.
     fn duplicate_game_exists(&mut self, name: &String) -> bool {
-        let duplicate_exists = list_game_names()
-            .iter()
-            .any(|existing| existing == name);
+        let duplicate_exists = list_game_names().iter().any(|existing| existing == name);
 
         if duplicate_exists {
-            self.toast = Some(Toast::new(
-                &format!("\"{name}\" already exists."),
-                2.5,
-            ));
+            self.toast = Some(Toast::new(&format!("\"{name}\" already exists."), 2.5));
         };
 
         duplicate_exists

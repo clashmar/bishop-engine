@@ -1,26 +1,23 @@
-use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
-use strum::IntoEnumIterator;
-use engine_core::{
-    animation::{
-            animation_clip::{
-            Animation, ClipDef, 
-            ClipId, 
-            ClipState, 
-            VariantFolder
-        }, 
-        animation_system::CurrentFrame
-    }, 
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        module::{CollapsibleModule, InspectorModule}, 
-        module_factory::ModuleFactoryEntry, 
-        world_ecs::WorldEcs
-    }, 
-    ui::{text::*, toast::Toast, widgets::*}
-};
-use macroquad::prelude::*;
+// editor/src/gui/inspector/animation_module.rs
 use crate::gui::gui_constants::*;
+use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
+use engine_core::ecs::module_factory::ModuleFactoryEntry;
+use engine_core::ecs::inpsector_module::CollapsibleModule;
+use engine_core::animation::animation_system::*;
+use engine_core::animation::animation_clip::*;
+use engine_core::ecs::inpsector_module::InspectorModule;
+use engine_core::ecs::entity::Entity;
+use engine_core::ui::toast::Toast;
+use engine_core::ui::widgets::{
+    Button, gui_dropdown, TextInput, text_input_reset,
+    NumberInput, gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
+    WIDGET_PADDING, WIDGET_SPACING,
+};
+use engine_core::ecs::ecs::Ecs;
+use engine_core::game::game::*;
+use engine_core::ui::text::*;
+use strum::IntoEnumIterator;
+use macroquad::prelude::*;
 
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;
@@ -47,29 +44,33 @@ pub struct AnimationModule {
 }
 
 impl InspectorModule for AnimationModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
-        world_ecs.get::<Animation>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<Animation>(entity).is_some()
     }
 
     fn removable(&self) -> bool { true }
 
-    fn remove(&mut self, world_ecs: &mut WorldEcs, entity: Entity) {
-        world_ecs.get_store_mut::<Animation>().remove(entity);
-        world_ecs.get_store_mut::<CurrentFrame>().remove(entity);
+    fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
+        game_ctx.ecs.get_store_mut::<Animation>().remove(entity);
+        game_ctx.ecs.get_store_mut::<CurrentFrame>().remove(entity);
     }
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
+        let ecs = &mut game_ctx.ecs;
+
+        let asset_manager = &mut game_ctx.asset_manager;
+
         let mut variant_changed = false;
         let mut all_ids: Vec<ClipId> = vec![];
-        fill_all_clip_ids(&world_ecs, &mut all_ids);
+        fill_all_clip_ids(ecs, &mut all_ids);
         
-        let animation = world_ecs
+        let animation = ecs
             .get_mut::<Animation>(entity)
             .expect("Animation must exist");
 
@@ -87,7 +88,7 @@ impl InspectorModule for AnimationModule {
         let btn_rect = Rect::new(btn_x, y, btn_w, btn_h);
 
         // Button press
-        if gui_button(btn_rect, ADD_LABEL) {
+        if Button::new(btn_rect, ADD_LABEL).blocked(blocked).show() {
             let new_id = if animation.clips.is_empty() {
                 ClipId::Idle
             } else {
@@ -122,11 +123,9 @@ impl InspectorModule for AnimationModule {
         if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
             // Variant picker
             let has_variant = !animation.variant.0.as_os_str().is_empty();
-
             let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, full_w / 2., MARGIN);
 
-            if gui_button(sprite_btn,
-                if has_variant { "Edit Variant" } else { "Choose Variant" }) {
+            if Button::new(sprite_btn, if has_variant { "Edit Variant" } else { "Choose Variant" }).blocked(blocked).show() {
                 if let Some(path) = rfd::FileDialog::new()
                     .pick_folder()
                 {
@@ -158,19 +157,19 @@ impl InspectorModule for AnimationModule {
             y += MARGIN + WIDGET_PADDING;
 
             // Frame size
-            draw_frame_size_fields(self, y, rect, clip);
+            draw_frame_size_fields(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
             // Columns / rows
-            draw_spritesheet_dimension_fields(self, y, rect, clip);
+            draw_spritesheet_dimension_fields(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
             // FPS / Loop toggle
-            draw_fps_and_loop(self, y, rect, clip);
+            draw_fps_and_loop(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
             // Optional offset
-            draw_offset_fields(self, y, rect, clip);
+            draw_offset_fields(self, y, rect, clip, blocked);
         }
 
         draw_current_clip_dropdowns(
@@ -178,6 +177,7 @@ impl InspectorModule for AnimationModule {
             clip_dropdown_rect, 
             animation, 
             all_ids,
+            blocked
         );
 
         if let Some(toast) = &mut self.warning {
@@ -192,7 +192,7 @@ impl InspectorModule for AnimationModule {
     }
 
     fn height(&self) -> f32 {
-        400.0
+        300.0
     }
 }
 
@@ -201,10 +201,12 @@ pub fn draw_current_clip_dropdowns(
     rect: Rect, 
     animation: &mut Animation, 
     all_ids: Vec<ClipId>,
+    blocked: bool,
 ) {
     let current_id = animation.current.as_ref().unwrap();
     let clip_label = format!("{current_id}");
     let width = rect.w / 2.0 - WIDGET_SPACING;
+
     // Select clip
     let select_rect = Rect::new(rect.x, rect.y, width, rect.h);
 
@@ -214,6 +216,7 @@ pub fn draw_current_clip_dropdowns(
         &clip_label,
         &existing_clip_ids(&animation.clips),
         |id| id.ui_label(),
+        blocked
     ) {
         animation.set_clip(&selected);
         return;
@@ -236,6 +239,7 @@ pub fn draw_current_clip_dropdowns(
         &type_label,
         &all_ids,
         |id| id.ui_label(),
+        blocked,
     );
 
     if let Some(chosen) = chosen {
@@ -281,22 +285,21 @@ pub fn draw_current_clip_dropdowns(
         const CLAMP: usize = 12;
 
         // The field starts empty each time we open it
-        let (entered, focused) = gui_input_text_clamped_focused(
-            module.rename_field_id,
-            input_rect, 
-            &module.rename_initial_value, 
-            CLAMP
-        );
+        let (entered, focused) = TextInput::new(module.rename_field_id, input_rect, &module.rename_initial_value)
+            .max_len(CLAMP)
+            .focused(true)
+            .blocked(blocked)
+            .show();
 
         // Check if enter is pressed first
         if is_key_pressed(KeyCode::Enter) {
             let new_id = ClipId::Custom(entered.trim().to_string());
             reset_current_clip_id(animation, new_id);
             module.pending_rename = false;
-            gui_input_text_reset(module.rename_field_id);
+            text_input_reset(module.rename_field_id);
         }
         else if !focused {
-            gui_input_text_reset(module.rename_field_id);
+            text_input_reset(module.rename_field_id);
             module.pending_rename = false;
         }
     }
@@ -306,7 +309,8 @@ pub fn draw_frame_size_fields(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut ClipDef
+    clip: &mut ClipDef,
+    blocked: bool,
 ) {
     const LABELS: [&str; 2] = ["Frame X:", "Frame Y:"];
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
@@ -316,15 +320,16 @@ pub fn draw_frame_size_fields(
     draw_text_ui(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
     // Numeric inputs
-    clip.frame_size.x = gui_input_number_f32(module.frame_x_id, inp_x, clip.frame_size.x);
-    clip.frame_size.y = gui_input_number_f32(module.frame_y_id, inp_y, clip.frame_size.y);
+    clip.frame_size.x = NumberInput::new(module.frame_x_id, inp_x, clip.frame_size.x).blocked(blocked).show();
+    clip.frame_size.y = NumberInput::new(module.frame_y_id, inp_y, clip.frame_size.y).blocked(blocked).show();
 }
 
 pub fn draw_spritesheet_dimension_fields(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut ClipDef
+    clip: &mut ClipDef,
+    blocked: bool,
 ) {
     const LABELS: [&str; 2] = ["Cols:", "Rows:"];
     let (lbl_c, inp_c, lbl_r, inp_r) = layout_pair(y, rect, LABELS);
@@ -332,15 +337,16 @@ pub fn draw_spritesheet_dimension_fields(
     draw_text_ui(LABELS[0], lbl_c.x, lbl_c.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
     draw_text_ui(LABELS[1], lbl_r.x, lbl_r.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
-    clip.cols = gui_input_number_f32(module.cols_id, inp_c, clip.cols as f32) as usize;
-    clip.rows = gui_input_number_f32(module.rows_id, inp_r, clip.rows as f32) as usize;
+    clip.cols = NumberInput::new(module.cols_id, inp_c, clip.cols as f32).blocked(blocked).show() as usize;
+    clip.rows = NumberInput::new(module.rows_id, inp_r, clip.rows as f32).blocked(blocked).show() as usize;
 }
 
 pub fn draw_fps_and_loop(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut ClipDef
+    clip: &mut ClipDef,
+    blocked: bool,
 ) {
     const LABELS: [&str; 2] = ["FPS:", "Loop:"];
     let (lbl_fps, inp_fps, lbl_loop, mut inp_loop) = layout_pair(y, rect, LABELS);
@@ -351,7 +357,7 @@ pub fn draw_fps_and_loop(
     draw_text_ui(LABELS[0], lbl_fps.x, lbl_fps.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
     draw_text_ui(LABELS[1], lbl_loop.x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
-    clip.fps = gui_input_number_f32(module.fps_id, inp_fps, clip.fps);
+    clip.fps = NumberInput::new(module.fps_id, inp_fps, clip.fps).blocked(blocked).show();
     gui_checkbox(inp_loop, &mut clip.looping);
 }
 
@@ -359,7 +365,8 @@ pub fn draw_offset_fields(
     module: &mut AnimationModule,
     y: f32, 
     rect: Rect, 
-    clip: &mut ClipDef
+    clip: &mut ClipDef,
+    blocked: bool
 ) {
     const LABELS: [&str; 2] = ["Offset X:", "Offset Y:"];
     let (lbl_x, inp_x, lbl_y, inp_y) = layout_pair(y, rect, LABELS);
@@ -367,8 +374,8 @@ pub fn draw_offset_fields(
     draw_text_ui(LABELS[0], lbl_x.x, lbl_x.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
     draw_text_ui(LABELS[1], lbl_y.x, lbl_y.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
-    clip.offset.x = gui_input_number_f32(module.offset_x_id, inp_x, clip.offset.x);
-    clip.offset.y = gui_input_number_f32(module.offset_y_id, inp_y, clip.offset.y);
+    clip.offset.x = NumberInput::new(module.offset_x_id, inp_x, clip.offset.x).blocked(blocked).show();
+    clip.offset.y = NumberInput::new(module.offset_y_id, inp_y, clip.offset.y).blocked(blocked).show();
 }
 
 /// Returns every ClipId that has a concrete Clip stored in the map.
@@ -377,7 +384,7 @@ fn existing_clip_ids(clips: &HashMap<ClipId, ClipDef>) -> Vec<ClipId> {
 }
 
 /// Adds every possible `ClipId` to the supplied Vec.
-pub fn fill_all_clip_ids(world_ecs: &WorldEcs, out: &mut Vec<ClipId>) {
+pub fn fill_all_clip_ids(ecs: &Ecs, out: &mut Vec<ClipId>) {
     // Built‑in IDs
     let mut ids: Vec<ClipId> = ClipId::iter()
         .filter(|id| !matches!(id, ClipId::New | ClipId::Custom(_)))
@@ -385,7 +392,7 @@ pub fn fill_all_clip_ids(world_ecs: &WorldEcs, out: &mut Vec<ClipId>) {
 
     // Gather every custom type
     let mut custom_names = HashSet::new();
-    for animation in world_ecs.get_store::<Animation>().data.values() {
+    for animation in ecs.get_store::<Animation>().data.values() {
         for clip_id in animation.clips.keys() {
             if let ClipId::Custom(name) = clip_id {
                 custom_names.insert(name.clone());

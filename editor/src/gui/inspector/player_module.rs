@@ -1,31 +1,28 @@
 // editor/src/gui/inspector/player_module.rs
-use engine_core::{ecs::component::Player, ui::{text::*, widgets::*}};
+use engine_core::{ecs::component::Player, game::game::GameCtxMut, ui::{text::*, widgets::*}};
+use engine_core::ecs::inpsector_module::InspectorModule;
+use engine_core::ecs::entity::Entity;
+use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::*;
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        module::InspectorModule, 
-        world_ecs::WorldEcs
-    }
-};
 
 #[derive(Default)]
 pub struct PlayerModule {}
 
 impl InspectorModule for PlayerModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
-        world_ecs.get::<Player>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<Player>(entity).is_some()
     }
 
     fn draw(
         &mut self,
+        _blocked: bool,
         rect: Rect,
-        _asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        if let Some(_player) = world_ecs.get::<Player>(entity) {
+        let ecs = &mut game_ctx.ecs;
+
+        if let Some(_player) = ecs.get::<Player>(entity) {
             draw_text_ui("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
     }

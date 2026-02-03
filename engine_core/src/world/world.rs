@@ -1,15 +1,13 @@
 // engine_core/src/world/world.rs
 use crate::assets::sprite::SpriteId;
-use crate::world::room::RoomId;
-use crate::global::tile_size;
+use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
-use crate::ecs::{world_ecs::WorldEcs};
-use serde_with::FromInto;
-use uuid::Uuid;
-use crate::{world::room::{Room}};
-use macroquad::prelude::*;
+use crate::world::room::*;
 use serde::{Deserialize, Serialize};
+use macroquad::prelude::*;
+use serde_with::FromInto;
 use serde_with::serde_as;
+use uuid::Uuid;
 
 /// Identifier for a world.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -20,8 +18,8 @@ pub struct WorldId(pub Uuid);
 pub struct World {
     pub id: WorldId,
     pub name: String,
-    pub world_ecs: WorldEcs,
     pub rooms: Vec<Room>,
+    pub current_room_id: Option<RoomId>,
     pub starting_room_id: Option<RoomId>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
@@ -37,7 +35,6 @@ pub struct WorldMeta {
     pub position: Vec2,
     /// Sprite of the world or None. 
     pub sprite_id: Option<SpriteId>,
-
 }
 
 impl World {
@@ -68,6 +65,18 @@ impl World {
         self.rooms
             .iter_mut()
             .find(|r| r.id == id)
+    }
+
+    /// Returns an  immutable reference to the current room of the world.
+    pub fn current_room(&self) -> Option<&Room> {
+        let id = self.current_room_id?;
+        self.get_room(id)
+    }
+
+    /// Returns a mutable reference to the current room of the world.
+    pub fn current_room_mut(&mut self) -> Option<&mut Room> {
+        let id = self.current_room_id?;
+        self.get_room_mut(id)
     }
 }
 

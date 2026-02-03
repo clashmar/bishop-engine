@@ -1,19 +1,16 @@
 // engine_core/src/animation/animation_system.rs
-use macroquad::prelude::*;
+use crate::assets::asset_manager::AssetManager;
+use crate::world::room::entities_in_room;
+use crate::animation::animation_clip::*;
+use crate::assets::sprite::SpriteId;
+use crate::ecs::entity::Entity;
+use crate::world::room::RoomId;
+use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
-use crate::{
-    animation::animation_clip::{
-        Animation, 
-        ClipId, resolve_sprite_id
-    }, assets::{asset_manager::AssetManager, sprite::SpriteId}, 
-    ecs::{
-        entity::{Entity, entities_in_room}, 
-        world_ecs::WorldEcs
-    }, 
-    ecs_component, 
-    world::room::RoomId
-};
+use ecs_component::ecs_component;
+use macroquad::prelude::*;
 
+#[ecs_component]
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct CurrentFrame {
     #[serde(skip)]
@@ -30,18 +27,16 @@ pub struct CurrentFrame {
     pub frame_size: Vec2,
 }
 
-ecs_component!(CurrentFrame);
-
 pub async fn update_animation_sytem(
-    world_ecs: &mut WorldEcs,
+    ecs: &mut Ecs,
     asset_manager: &mut AssetManager,
     dt: f32,
     room_id: RoomId,
 ) {
     // Gather the ids of all entities that are in the current room
-    let entities = entities_in_room(world_ecs, room_id);
+    let entities = entities_in_room(ecs, room_id);
 
-    let anim_store = world_ecs.get_store_mut::<Animation>();
+    let anim_store = ecs.get_store_mut::<Animation>();
 
     let mut frames: Vec<(Entity, CurrentFrame)> = vec![];
 
@@ -100,7 +95,7 @@ pub async fn update_animation_sytem(
     
 
     for (entity, frame) in frames {
-        world_ecs.add_component_to_entity(entity, frame)
+        ecs.add_component_to_entity(entity, frame)
     }
 }
 

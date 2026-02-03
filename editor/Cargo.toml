@@ -12,6 +12,7 @@ path = "src/main.rs"
 engine_core = { path = "../engine_core" }
 game = { path = "../game" }
 reflect_derive = { path = "../reflect_derive" }
+mlua = { version = "0.11.5", features = ["lua54", "vendored", "serde" ] }
 log = "0.4"
 flexi_logger = "0.27"
 macroquad = "0.4.14"
@@ -32,6 +33,7 @@ winres-edit = "0.2.0"
 # For windows
 [build-dependencies]
 winres = "0.1.12"
+engine_core = { path = "../engine_core" }
 
 # Bundle for macOS
 [package.metadata.bundle]

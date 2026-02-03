@@ -5,9 +5,9 @@ use std::hash::BuildHasherDefault;
 use std::hash::DefaultHasher;
 use engine_core::assets::core_assets::load_rgba_resized;
 use futures::executor::block_on;
-use std::{env, fs};
+use std::{env, fs, io};
 use std::hash::BuildHasher;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use macroquad::prelude::*;
 
@@ -102,3 +102,37 @@ fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
     texture
 }
 
+// Include the auto-generated ENGINE_SCRIPTS array from build.rs
+include!("engine_scripts.rs");
+
+/// Write embedded .engine scripts to the specified scripts folder.
+pub fn write_engine_scripts(scripts_folder: &Path) -> io::Result<()> {
+    let engine_folder = scripts_folder.join(".engine");
+    fs::create_dir_all(&engine_folder)?;
+
+    for (filename, content) in ENGINE_SCRIPTS {
+        fs::write(engine_folder.join(filename), content)?;
+    }
+
+    hide_folder(&engine_folder);
+    Ok(())
+}
+
+/// Hide a folder using platform-specific methods.
+fn hide_folder(path: &Path) {
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        let _ = Command::new("attrib")
+            .args(["+h", &path.to_string_lossy()])
+            .output();
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        let _ = Command::new("chflags")
+            .args(["hidden", &path.to_string_lossy()])
+            .output();
+    }
+}
