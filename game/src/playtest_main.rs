@@ -1,6 +1,7 @@
 // game/src/playtest_main.rs
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::camera::camera_manager::CameraManager;
+use game_lib::diagnostics::DiagnosticsOverlay;
 use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::game_state::GameState;
 use engine_core::world::room::Room;
@@ -63,11 +64,12 @@ async fn main() {
     let ctx = LuaGameCtx { game_state: game_state.clone() };
     let _ = ctx.set_lua_game_ctx(&lua);
 
-    let mut engine = Engine { 
-        game_state: game_state.clone(), 
-        lua, 
+    let mut engine = Engine {
+        game_state: game_state.clone(),
+        lua,
         camera_manager,
         render_system: RenderSystem::new(),
+        diagnostics: DiagnosticsOverlay::new(),
     };
 
     engine.run().await;

@@ -316,6 +316,9 @@ impl ScriptManager {
     }
 
     pub fn unload(&mut self, entity: Entity, script_id: ScriptId) {
+        // Remove any event listeners registered by this entity's script
+        self.event_bus.remove_entity_listeners(entity);
+
         self.instances.retain(|(ent, _script_id), _table| *ent != entity);
         self.decrement_ref(script_id)
     }

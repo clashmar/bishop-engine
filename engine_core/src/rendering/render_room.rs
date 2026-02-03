@@ -23,8 +23,10 @@ pub fn render_room(
     render_system: &mut RenderSystem,
     render_cam: &Camera2D,
     alpha: f32,
-    prev_positions: Option<&HashMap<Entity, Vec2>>, 
+    prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) {
+    let render_start = std::time::Instant::now();
+
     // Cache the needed stores
     let sprite_store = ecs.get_store::<Sprite>();
     let frame_store = ecs.get_store::<CurrentFrame>();
@@ -97,6 +99,8 @@ pub fn render_room(
     
     // Composite the final render
     render_system.run_final_pass();
+
+    render_system.render_time_ms = render_start.elapsed().as_secs_f32() * 1000.0;
 }
 
 fn draw_entity(

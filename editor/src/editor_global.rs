@@ -2,7 +2,6 @@
 use crate::gui::panels::panel_manager::PanelManager;
 use crate::commands::editor_command_manager::*;
 use crate::ecs::entity::Entity;
-use crate::editor::EditorMode;
 use crate::Editor;
 use std::cell::RefCell;
 use std::future::Future;
@@ -78,11 +77,6 @@ where
     fut.await
 }
 
-/// Return a copy of the current `EditorMode`.
-pub fn current_editor_mode() -> EditorMode {
-    with_editor(|editor| editor.mode)
-}
-
 /// Gets immutable access to the Lua VM.
 pub fn with_lua<F, R>(f: F) -> R
 where
@@ -148,5 +142,16 @@ where
     EDITOR_SERVICES.with(|services| {
         let mut pm = services.panel_manager.borrow_mut();
         f(&mut pm)
+    })
+}
+
+/// Gets immutable access to the `EditorCommandManager`.
+pub fn with_command_manager<F, R>(f: F) -> R
+where
+    F: FnOnce(&EditorCommandManager) -> R,
+{
+    EDITOR_SERVICES.with(|services| {
+        let cm = services.command_manager.borrow();
+        f(&cm)
     })
 }

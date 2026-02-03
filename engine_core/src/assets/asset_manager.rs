@@ -198,6 +198,16 @@ impl AssetManager {
         self.textures.get(&id).map(|tex| (tex.width(), tex.height()))
     }
 
+    /// Returns the number of loaded textures.
+    pub fn texture_count(&self) -> usize {
+        self.textures.len()
+    }
+
+    /// Returns the number of tile definitions.
+    pub fn tile_def_count(&self) -> usize {
+        self.tile_defs.len()
+    }
+
     /// Loads a texture from the assets folder.
     async fn load_texture_from_game<P: AsRef<Path> + Copy>(
         &self,

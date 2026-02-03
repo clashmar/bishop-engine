@@ -44,13 +44,15 @@ pub struct RenderSystem {
     /// Materials
     pub ambient_mat: Material,
     pub glow_mat: Material,
-    pub undarkened_mat: Material, 
+    pub undarkened_mat: Material,
     pub spot_mat: Material,
     pub scene_comp_mat: Material,
     pub final_comp_mat: Material,
     /// Cached light data
     light_bufffers: [LightBuffer; MAX_LIGHTS],
     glow_bufffers: [GlowBuffer; MAX_LIGHTS],
+    /// Time spent rendering last frame (ms)
+    pub render_time_ms: f32,
 }
 
 impl RenderSystem {
@@ -195,6 +197,7 @@ impl RenderSystem {
             final_comp_mat,
             light_bufffers: [LightBuffer::default(); MAX_LIGHTS],
             glow_bufffers: [GlowBuffer::default(); MAX_LIGHTS],
+            render_time_ms: 0.0,
         }
     }
 

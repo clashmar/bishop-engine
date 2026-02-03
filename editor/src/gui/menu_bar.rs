@@ -34,6 +34,7 @@ pub enum MenuAction {
     // View actions
     ViewHierarchyPanel,
     ViewConsolePanel,
+    ViewDiagnosticsPanel,
 }
 
 impl MenuAction {
@@ -49,6 +50,7 @@ impl MenuAction {
             MenuAction::ChangeSaveRoot => "Change Save Root".to_string(),
             MenuAction::ViewHierarchyPanel => "Hierarchy".to_string(),
             MenuAction::ViewConsolePanel => "Console".to_string(),
+            MenuAction::ViewDiagnosticsPanel => "Diagnostics".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -65,6 +67,7 @@ impl MenuAction {
                 MenuAction::Redo => Some("⇧ ^ Z"),
                 MenuAction::ViewHierarchyPanel => Some("H"),
                 MenuAction::ViewConsolePanel => Some("C"),
+                MenuAction::ViewDiagnosticsPanel => Some("D"),
                 _ => None,
             }
         }
@@ -79,6 +82,7 @@ impl MenuAction {
                 MenuAction::Redo => Some("⇧ ^ Z"),
                 MenuAction::ViewHierarchyPanel => Some("H"),
                 MenuAction::ViewConsolePanel => Some("C"),
+                MenuAction::ViewDiagnosticsPanel => Some("F3"),
                 _ => None,
             }
         }
@@ -219,8 +223,9 @@ impl MenuBar {
 
         let mut view_actions: Vec<MenuAction> = Vec::new();
 
-        // Console panel available in all modes
+        // Console and Diagnostics panels available in all modes
         view_actions.push(MenuAction::ViewConsolePanel);
+        view_actions.push(MenuAction::ViewDiagnosticsPanel);
 
         match editor_mode {
             EditorMode::Game => {},

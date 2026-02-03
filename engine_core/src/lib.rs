@@ -3,6 +3,7 @@ pub mod assets;
 pub mod camera;
 pub mod constants;
 pub mod controls;
+pub mod diagnostics;
 pub mod ecs;
 pub mod engine_global;
 pub mod game;
