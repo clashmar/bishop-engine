@@ -29,6 +29,7 @@ local Entity = {}
 ---@overload fun(self: Entity, component: "Sprite"): Sprite
 ---@overload fun(self: Entity, component: "Light"): Light
 ---@overload fun(self: Entity, component: "Glow"): Glow
+---@overload fun(self: Entity, component: "FacingDirection"): FacingDirection
 ---@overload fun(self: Entity, component: "Interactable"): Interactable
 ---@param component string
 ---@return table|nil
@@ -134,6 +135,10 @@ function Entity:set_light(v) end
 function Entity:set_glow(v) end
 
 ---@param self Entity
+---@param v FacingDirection
+function Entity:set_facing_direction(v) end
+
+---@param self Entity
 ---@param v Interactable
 function Entity:set_interactable(v) end
 
@@ -158,5 +163,40 @@ function Entity:interact(...) end
 
 ---@return Entity|nil
 function Entity:find_best_interactable() end
+
+--- Sets the active animation clip.
+---@param clip_name string The name of the clip (e.g. "Walk", "Idle")
+function Entity:set_clip(clip_name) end
+
+--- Gets the current animation clip name.
+---@return string|nil
+function Entity:get_clip() end
+
+--- Resets the current clip to frame 0.
+function Entity:reset_clip() end
+
+--- Sets horizontal flip for the sprite.
+---@param flip_x boolean Whether to flip horizontally
+function Entity:set_flip_x(flip_x) end
+
+--- Gets the horizontal flip state.
+---@return boolean
+function Entity:get_flip_x() end
+
+--- Sets the facing direction (for auto-flip with mirrored clips).
+---@param direction string "left" or "right"
+function Entity:set_facing(direction) end
+
+--- Sets the animation playback speed multiplier.
+---@param speed number Speed multiplier (1.0 = normal)
+function Entity:set_anim_speed(speed) end
+
+--- Gets the current animation frame indices.
+---@return {col: integer, row: integer}|nil
+function Entity:get_current_frame() end
+
+--- Checks if the current non-looping clip has finished.
+---@return boolean
+function Entity:is_clip_finished() end
 
 return Entity

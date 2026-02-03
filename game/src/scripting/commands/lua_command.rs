@@ -1,6 +1,8 @@
 // game/src/scripting/commands/lua_command.rs
 use crate::engine::Engine;
 use engine_core::ecs::component_registry::COMPONENTS;
+use engine_core::animation::animation_clip::*;
+use engine_core::ecs::facing_direction::*;
 use engine_core::scripting::script::Script;
 use engine_core::ecs::entity::Entity;
 use mlua::MultiValue;
@@ -80,5 +82,122 @@ impl LuaCommand for CallEntityFnCmd {
         if let Err(e) = func.call::<()>(MultiValue::from_vec(call_args)) {
             onscreen_error!("Lua call failed: {}", e);
         }
+    }
+}
+
+/// Sets the active animation clip on an entity.
+pub struct SetClipCmd {
+    pub entity: Entity,
+    pub clip_name: String,
+}
+
+impl LuaCommand for SetClipCmd {
+    fn execute(&mut self, engine: &mut Engine) {
+        let mut game_state = engine.game_state.borrow_mut();
+        let ecs = &mut game_state.game.ecs;
+
+        if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
+            let clip_id = string_to_clip_id(&self.clip_name);
+            animation.set_clip(&clip_id);
+        }
+    }
+}
+
+/// Resets the current animation clip to frame 0.
+pub struct ResetClipCmd {
+    pub entity: Entity,
+}
+
+impl LuaCommand for ResetClipCmd {
+    fn execute(&mut self, engine: &mut Engine) {
+        let mut game_state = engine.game_state.borrow_mut();
+        let ecs = &mut game_state.game.ecs;
+
+        if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
+            if let Some(current_id) = &animation.current.clone() {
+                if let Some(state) = animation.states.get_mut(current_id) {
+                    state.timer = 0.0;
+                    state.col = 0;
+                    state.row = 0;
+                    state.finished = false;
+                }
+            }
+        }
+    }
+}
+
+/// Sets the horizontal flip state on an entity's animation.
+pub struct SetFlipXCmd {
+    pub entity: Entity,
+    pub flip_x: bool,
+}
+
+impl LuaCommand for SetFlipXCmd {
+    fn execute(&mut self, engine: &mut Engine) {
+        let mut game_state = engine.game_state.borrow_mut();
+        let ecs = &mut game_state.game.ecs;
+
+        if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
+            animation.flip_x = self.flip_x;
+        }
+    }
+}
+
+/// Sets the facing direction on an entity.
+pub struct SetFacingCmd {
+    pub entity: Entity,
+    pub direction: String,
+}
+
+impl LuaCommand for SetFacingCmd {
+    fn execute(&mut self, engine: &mut Engine) {
+        let mut game_state = engine.game_state.borrow_mut();
+        let ecs = &mut game_state.game.ecs;
+
+        let direction = match self.direction.to_lowercase().as_str() {
+            "left" => Direction::Left,
+            _ => Direction::Right,
+        };
+
+        ecs.add_component_to_entity(self.entity, FacingDirection(direction));
+
+        // Auto-flip if current clip has mirrored enabled
+        if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
+            if let Some(current_id) = &animation.current {
+                if let Some(clip) = animation.clips.get(current_id) {
+                    if clip.mirrored {
+                        animation.flip_x = direction.is_left();
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Sets the animation playback speed multiplier.
+pub struct SetAnimSpeedCmd {
+    pub entity: Entity,
+    pub speed: f32,
+}
+
+impl LuaCommand for SetAnimSpeedCmd {
+    fn execute(&mut self, engine: &mut Engine) {
+        let mut game_state = engine.game_state.borrow_mut();
+        let ecs = &mut game_state.game.ecs;
+
+        if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
+            animation.speed_multiplier = self.speed.max(0.0);
+        }
+    }
+}
+
+/// Converts a string clip name to a ClipId.
+fn string_to_clip_id(name: &str) -> ClipId {
+    match name.to_lowercase().as_str() {
+        "idle" => ClipId::Idle,
+        "walk" => ClipId::Walk,
+        "run" => ClipId::Run,
+        "attack" => ClipId::Attack,
+        _ => ClipId::Custom(name.to_string()),
     }
 }

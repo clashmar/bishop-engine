@@ -3,6 +3,8 @@ use crate::scripting::commands::lua_command::*;
 use crate::scripting::lua_game_ctx::LuaGameCtx;
 use crate::game_global::push_command;
 use crate::scripting::lua_helpers::*;
+use engine_core::animation::animation_clip::Animation;
+use engine_core::animation::animation_system::CurrentFrame;
 use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::scripting::interactable::find_best_interactable;
 use engine_core::scripting::modules::lua_module::*;
@@ -46,14 +48,7 @@ impl LuaApi for EntityModule {
         out.line("");
 
         // Emit each registered method
-        let methods_vec = [
-            EntityHandleMethod::Get(GetMethod),
-            EntityHandleMethod::Set(SetMethod),
-            EntityHandleMethod::Has(HasMethod),
-            EntityHandleMethod::Interact(InteractMethod),
-            EntityHandleMethod::FindBestInteractable(FindBestInteractableMethod),
-        ];
-        for m in methods_vec.iter() {
+        for m in entity_handle_methods().iter() {
             m.emit_api(out);
         }
 
@@ -75,15 +70,7 @@ pub fn lua_entity_handle<'lua>(lua: &'lua Lua, entity: Entity) -> LuaResult<Valu
 
 impl UserData for EntityHandle {
     fn add_methods<'lua, M: UserDataMethods<Self>>(methods: &mut M) {
-        let methods_vec = [
-            EntityHandleMethod::Get(GetMethod),
-            EntityHandleMethod::Set(SetMethod),
-            EntityHandleMethod::Has(HasMethod),
-            EntityHandleMethod::Interact(InteractMethod),
-            EntityHandleMethod::FindBestInteractable(FindBestInteractableMethod),
-        ];
-
-        for m in &methods_vec {
+        for m in &entity_handle_methods() {
             m.register(methods);
         }
     }
@@ -104,6 +91,35 @@ pub enum EntityHandleMethod {
     Has(HasMethod),
     Interact(InteractMethod),
     FindBestInteractable(FindBestInteractableMethod),
+    SetClip(SetClipMethod),
+    GetClip(GetClipMethod),
+    ResetClip(ResetClipMethod),
+    SetFlipX(SetFlipXMethod),
+    GetFlipX(GetFlipXMethod),
+    SetFacing(SetFacingMethod),
+    SetAnimSpeed(SetAnimSpeedMethod),
+    GetCurrentFrame(GetCurrentFrameMethod),
+    IsClipFinished(IsClipFinishedMethod),
+}
+
+/// Returns all entity handle methods.
+fn entity_handle_methods() -> Vec<EntityHandleMethod> {
+    vec![
+        EntityHandleMethod::Get(GetMethod),
+        EntityHandleMethod::Set(SetMethod),
+        EntityHandleMethod::Has(HasMethod),
+        EntityHandleMethod::Interact(InteractMethod),
+        EntityHandleMethod::FindBestInteractable(FindBestInteractableMethod),
+        EntityHandleMethod::SetClip(SetClipMethod),
+        EntityHandleMethod::GetClip(GetClipMethod),
+        EntityHandleMethod::ResetClip(ResetClipMethod),
+        EntityHandleMethod::SetFlipX(SetFlipXMethod),
+        EntityHandleMethod::GetFlipX(GetFlipXMethod),
+        EntityHandleMethod::SetFacing(SetFacingMethod),
+        EntityHandleMethod::SetAnimSpeed(SetAnimSpeedMethod),
+        EntityHandleMethod::GetCurrentFrame(GetCurrentFrameMethod),
+        EntityHandleMethod::IsClipFinished(IsClipFinishedMethod),
+    ]
 }
 
 impl LuaMethod<EntityHandle> for EntityHandleMethod {
@@ -114,6 +130,15 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::Has(m) => m.register(methods),
             EntityHandleMethod::Interact(m) => m.register(methods),
             EntityHandleMethod::FindBestInteractable(m) => m.register(methods),
+            EntityHandleMethod::SetClip(m) => m.register(methods),
+            EntityHandleMethod::GetClip(m) => m.register(methods),
+            EntityHandleMethod::ResetClip(m) => m.register(methods),
+            EntityHandleMethod::SetFlipX(m) => m.register(methods),
+            EntityHandleMethod::GetFlipX(m) => m.register(methods),
+            EntityHandleMethod::SetFacing(m) => m.register(methods),
+            EntityHandleMethod::SetAnimSpeed(m) => m.register(methods),
+            EntityHandleMethod::GetCurrentFrame(m) => m.register(methods),
+            EntityHandleMethod::IsClipFinished(m) => m.register(methods),
         }
     }
 
@@ -124,6 +149,15 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::Has(m) => m.emit_api(out),
             EntityHandleMethod::Interact(m) => m.emit_api(out),
             EntityHandleMethod::FindBestInteractable(m) => m.emit_api(out),
+            EntityHandleMethod::SetClip(m) => m.emit_api(out),
+            EntityHandleMethod::GetClip(m) => m.emit_api(out),
+            EntityHandleMethod::ResetClip(m) => m.emit_api(out),
+            EntityHandleMethod::SetFlipX(m) => m.emit_api(out),
+            EntityHandleMethod::GetFlipX(m) => m.emit_api(out),
+            EntityHandleMethod::SetFacing(m) => m.emit_api(out),
+            EntityHandleMethod::SetAnimSpeed(m) => m.emit_api(out),
+            EntityHandleMethod::GetCurrentFrame(m) => m.emit_api(out),
+            EntityHandleMethod::IsClipFinished(m) => m.emit_api(out),
         }
     }
 }
@@ -325,6 +359,219 @@ impl LuaMethod<EntityHandle> for FindBestInteractableMethod {
     fn emit_api(&self, out: &mut LuaApiWriter) {
         out.line("---@return Entity|nil");
         out.line(&format!("function Entity:{}() end", FIND_BEST_INTERACTABLE));
+        out.line("");
+    }
+}
+
+/// Method: `entity:set_clip("Walk")`
+pub struct SetClipMethod;
+impl LuaMethod<EntityHandle> for SetClipMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(SET_CLIP, |_lua, this, clip_name: String| {
+            push_command(Box::new(SetClipCmd {
+                entity: this.entity,
+                clip_name,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Sets the active animation clip.");
+        out.line("---@param clip_name string The name of the clip (e.g. \"Walk\", \"Idle\")");
+        out.line(&format!("function Entity:{}(clip_name) end", SET_CLIP));
+        out.line("");
+    }
+}
+
+/// Method: `entity:get_clip() -> string?`
+pub struct GetClipMethod;
+impl LuaMethod<EntityHandle> for GetClipMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(GET_CLIP, |lua, this, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+
+            if let Some(animation) = ecs.get::<Animation>(this.entity) {
+                if let Some(clip_id) = &animation.current {
+                    Ok(Value::String(lua.create_string(&clip_id.ui_label())?))
+                } else {
+                    Ok(Value::Nil)
+                }
+            } else {
+                Ok(Value::Nil)
+            }
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Gets the current animation clip name.");
+        out.line("---@return string|nil");
+        out.line(&format!("function Entity:{}() end", GET_CLIP));
+        out.line("");
+    }
+}
+
+/// Method: `entity:reset_clip()`
+pub struct ResetClipMethod;
+impl LuaMethod<EntityHandle> for ResetClipMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(RESET_CLIP, |_lua, this, ()| {
+            push_command(Box::new(ResetClipCmd {
+                entity: this.entity,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Resets the current clip to frame 0.");
+        out.line(&format!("function Entity:{}() end", RESET_CLIP));
+        out.line("");
+    }
+}
+
+/// Method: `entity:set_flip_x(true)`
+pub struct SetFlipXMethod;
+impl LuaMethod<EntityHandle> for SetFlipXMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(SET_FLIP_X, |_lua, this, flip_x: bool| {
+            push_command(Box::new(SetFlipXCmd {
+                entity: this.entity,
+                flip_x,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Sets horizontal flip for the sprite.");
+        out.line("---@param flip_x boolean Whether to flip horizontally");
+        out.line(&format!("function Entity:{}(flip_x) end", SET_FLIP_X));
+        out.line("");
+    }
+}
+
+/// Method: `entity:get_flip_x() -> bool`
+pub struct GetFlipXMethod;
+impl LuaMethod<EntityHandle> for GetFlipXMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(GET_FLIP_X, |lua, this, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+
+            if let Some(animation) = ecs.get::<Animation>(this.entity) {
+                Ok(animation.flip_x)
+            } else {
+                Ok(false)
+            }
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Gets the horizontal flip state.");
+        out.line("---@return boolean");
+        out.line(&format!("function Entity:{}() end", GET_FLIP_X));
+        out.line("");
+    }
+}
+
+/// Method: `entity:set_facing("left")`
+pub struct SetFacingMethod;
+impl LuaMethod<EntityHandle> for SetFacingMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(SET_FACING, |_lua, this, direction: String| {
+            push_command(Box::new(SetFacingCmd {
+                entity: this.entity,
+                direction,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Sets the facing direction (for auto-flip with mirrored clips).");
+        out.line("---@param direction string \"left\" or \"right\"");
+        out.line(&format!("function Entity:{}(direction) end", SET_FACING));
+        out.line("");
+    }
+}
+
+/// Method: `entity:set_anim_speed(1.5)`
+pub struct SetAnimSpeedMethod;
+impl LuaMethod<EntityHandle> for SetAnimSpeedMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(SET_ANIM_SPEED, |_lua, this, speed: f32| {
+            push_command(Box::new(SetAnimSpeedCmd {
+                entity: this.entity,
+                speed,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Sets the animation playback speed multiplier.");
+        out.line("---@param speed number Speed multiplier (1.0 = normal)");
+        out.line(&format!("function Entity:{}(speed) end", SET_ANIM_SPEED));
+        out.line("");
+    }
+}
+
+/// Method: `entity:get_current_frame() -> {col, row}`
+pub struct GetCurrentFrameMethod;
+impl LuaMethod<EntityHandle> for GetCurrentFrameMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(GET_CURRENT_FRAME, |lua, this, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+
+            if let Some(frame) = ecs.get::<CurrentFrame>(this.entity) {
+                let table = lua.create_table()?;
+                table.set("col", frame.col)?;
+                table.set("row", frame.row)?;
+                Ok(Value::Table(table))
+            } else {
+                Ok(Value::Nil)
+            }
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Gets the current animation frame indices.");
+        out.line("---@return {col: integer, row: integer}|nil");
+        out.line(&format!("function Entity:{}() end", GET_CURRENT_FRAME));
+        out.line("");
+    }
+}
+
+/// Method: `entity:is_clip_finished() -> bool`
+pub struct IsClipFinishedMethod;
+impl LuaMethod<EntityHandle> for IsClipFinishedMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(IS_CLIP_FINISHED, |lua, this, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+
+            if let Some(animation) = ecs.get::<Animation>(this.entity) {
+                if let Some(current_id) = &animation.current {
+                    if let Some(state) = animation.states.get(current_id) {
+                        return Ok(state.finished);
+                    }
+                }
+            }
+            Ok(false)
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Checks if the current non-looping clip has finished.");
+        out.line("---@return boolean");
+        out.line(&format!("function Entity:{}() end", IS_CLIP_FINISHED));
         out.line("");
     }
 }
