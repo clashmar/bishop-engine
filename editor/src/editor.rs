@@ -66,6 +66,11 @@ impl Editor {
             })
         }).await;
 
+        // Register all panels
+        with_panel_manager(|panel_manager| {
+            panel_manager.register_all_panels();
+        });
+
         let palette = match load_palette(&game.name.clone()) {
             Ok(p) => p,
             Err(e) => {

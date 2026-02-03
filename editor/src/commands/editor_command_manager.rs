@@ -85,11 +85,32 @@ impl EditorCommandManager {
 
     /// Execute all commands that have been queued this frame.
     pub fn apply_all(&mut self) {
+        const MAX_UNDO_STACK_SIZE: usize = 300;
+
         while let Some(mut command) = self.pending.pop() {
             command.execute();
             self.undo_stack.push(command);
-           
         }
+
+        // Auto-trim undo stack if it exceeds the limit
+        while self.undo_stack.len() > MAX_UNDO_STACK_SIZE {
+            self.undo_stack.remove(0);
+        }
+    }
+
+    /// Get the current size of the undo stack.
+    pub fn undo_stack_len(&self) -> usize {
+        self.undo_stack.len()
+    }
+
+    /// Get the current size of the redo stack.
+    pub fn redo_stack_len(&self) -> usize {
+        self.redo_stack.len()
+    }
+
+    /// Get the number of pending commands.
+    pub fn pending_len(&self) -> usize {
+        self.pending.len()
     }
 }
 

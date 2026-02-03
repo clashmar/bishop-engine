@@ -1,4 +1,7 @@
 // editor/src/gui/panels/panel_manager.rs
+use crate::gui::panels::diagnostics_panel::DiagnosticsPanel;
+use crate::gui::panels::hierarchy_panel::HierarchyPanel;
+use crate::gui::panels::console_panel::ConsolePanel;
 use crate::gui::panels::generic_panel::*;
 use crate::with_panel_manager;
 use crate::editor::EditorMode;
@@ -108,8 +111,27 @@ impl PanelManager {
             panel.visible = !panel.visible;
         }
     }
+
+    /// Register all standard panels.
+    pub fn register_all_panels(&mut self) {
+        self.register(
+            GenericPanel::new(ConsolePanel::new()),
+            vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
+        );
+
+        self.register(
+            GenericPanel::new(HierarchyPanel::new()),
+            vec![PanelMode::Room],
+        );
+
+        self.register(
+            GenericPanel::new(DiagnosticsPanel::new()),
+            vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
+        );
+    }
 }
 
+/// Returns whether a panel should block interaction.
 pub fn is_mouse_over_panel() -> bool {
     with_panel_manager(|pm| {
         let mouse_screen: Vec2 = mouse_position().into();
