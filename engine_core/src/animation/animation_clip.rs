@@ -17,19 +17,25 @@ use std::fmt;
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Animation {
-    /// Defineds the animations that belong to the entity.
+    /// Defines the animations that belong to the entity.
     pub clips: HashMap<ClipId, ClipDef>,
     /// Which animation variant to show.
     pub variant: VariantFolder,
     /// Which clip is currently active.
     #[serde(skip)]
     pub current: Option<ClipId>,
-    /// Per‑clip runtime data.
+    /// Per-clip runtime data.
     #[serde(skip)]
     pub states: HashMap<ClipId, ClipState>,
     /// Cached SpriteId for each clip in the current variant.
     #[serde(skip)]
     pub sprite_cache: HashMap<ClipId, SpriteId>,
+    /// Whether to flip the sprite horizontally (runtime state).
+    #[serde(skip)]
+    pub flip_x: bool,
+    /// Playback speed multiplier (runtime state, defaults to 1.0).
+    #[serde(skip)]
+    pub speed_multiplier: f32,
 }
 
 impl Animation {
@@ -43,6 +49,11 @@ impl Animation {
         // If there is at least one clip but `current` is None, pick the first
         if self.current.is_none() && !self.clips.is_empty() {
             self.current = Some(self.clips.keys().next().unwrap().clone());
+        }
+
+        // Initialize speed multiplier to 1.0 if not set
+        if self.speed_multiplier == 0.0 {
+            self.speed_multiplier = 1.0;
         }
     }
 
@@ -138,6 +149,8 @@ pub struct ClipDef {
     /// Optional offset for drawing.
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub offset: Vec2,
+    /// Whether to auto-flip based on FacingDirection component.
+    pub mirrored: bool,
 }
 
 impl Default for ClipDef {
@@ -149,6 +162,7 @@ impl Default for ClipDef {
             fps: 4.0,
             looping: true,
             offset: Vec2::ZERO,
+            mirrored: false,
         }
     }
 }

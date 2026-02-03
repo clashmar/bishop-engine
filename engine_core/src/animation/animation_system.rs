@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use macroquad::prelude::*;
 
+/// Current frame data for rendering animated entities.
 #[ecs_component]
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct CurrentFrame {
@@ -25,6 +26,9 @@ pub struct CurrentFrame {
     pub sprite_id: SpriteId,
     #[serde(skip)]
     pub frame_size: Vec2,
+    /// Whether to flip the sprite horizontally when rendering.
+    #[serde(skip)]
+    pub flip_x: bool,
 }
 
 pub async fn update_animation_sytem(
@@ -58,8 +62,9 @@ pub async fn update_animation_sytem(
         let Some(clip) = animation.clips.get(current_id) else { continue };
         let clip_state = animation.states.get_mut(current_id).unwrap();
 
-        // Advance the timer
-        clip_state.timer += dt;
+        // Advance the timer with speed multiplier applied (0.0 means default speed of 1.0)
+        let speed = if animation.speed_multiplier == 0.0 { 1.0 } else { animation.speed_multiplier };
+        clip_state.timer += dt * speed;
         let frame_time = 1.0 / clip.fps.max(0.001);
         while clip_state.timer >= frame_time {
             clip_state.timer -= frame_time;
@@ -79,14 +84,14 @@ pub async fn update_animation_sytem(
             }
         }
 
-
         let frame = CurrentFrame {
             clip_id: animation.current.clone().unwrap(),
             col: clip_state.col,
             row: clip_state.row,
             offset: clip.offset,
-            sprite_id: sprite_id,
+            sprite_id,
             frame_size: clip.frame_size,
+            flip_x: animation.flip_x,
         };
 
         frames.push((*entity, frame));

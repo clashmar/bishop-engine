@@ -35,6 +35,18 @@ pub const HAS_ALL: &str = "has_all";
 pub const INTERACT: &str = "interact";
 pub const FIND_BEST_INTERACTABLE: &str = "find_best_interactable";
 
+// Animation methods
+pub const SET_CLIP: &str = "set_clip";
+pub const GET_CLIP: &str = "get_clip";
+pub const RESET_CLIP: &str = "reset_clip";
+pub const SET_FLIP_X: &str = "set_flip_x";
+pub const GET_FLIP_X: &str = "get_flip_x";
+pub const SET_FACING: &str = "set_facing";
+pub const SET_ANIM_SPEED: &str = "set_anim_speed";
+pub const GET_CURRENT_FRAME: &str = "get_current_frame";
+pub const IS_CLIP_FINISHED: &str = "is_clip_finished";
+pub const ON_CLIP_FINISHED: &str = "on_clip_finished";
+
 // Entity fields
 pub const ID: &str = "id";
 

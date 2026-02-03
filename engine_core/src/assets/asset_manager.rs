@@ -5,6 +5,7 @@ use crate::lighting::glow::Glow;
 use crate::assets::sprite::*;
 use crate::game::game::Game;
 use crate::tiles::tile::*;
+use crate::*;
 use serde::{Deserialize, Serialize};
 use futures::executor::block_on;
 use std::collections::HashSet;
@@ -53,28 +54,38 @@ impl AssetManager {
         let path = rel_path.as_ref().to_path_buf();
 
         if path.to_string_lossy().trim().is_empty() {
-            // Guard against path being empty
+            onscreen_info!("init_texture: empty path, returning error");
             return Err("Empty texture path".into());
         }
 
         // Already loaded, reuse the same id
         if let Some(&id) = self.path_to_sprite_id.get(&path) {
+            onscreen_info!("init_texture: {:?} already loaded as {:?}", path, id);
             return Ok(id);
         }
 
         // Load the texture from the assets folder.
-        let texture = self.load_texture_from_game(&path).await?;
+        let texture = match self.load_texture_from_game(&path).await {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(e);
+            }
+        };
 
-        // Set and calculate the next texture id
+        // Assign the next texture id
         let id = SpriteId(self.next_sprite_id);
-        self.restore_next_sprite_id();
 
         // Store everything
         self.textures.insert(id, texture);
         self.path_to_sprite_id.insert(path.clone(), id);
-        self.sprite_id_to_path.insert(id, path);
+        self.sprite_id_to_path.insert(id, path.clone());
 
-        return Ok(id);
+        // Calculate next available id AFTER inserting
+        self.restore_next_sprite_id();
+
+        info!("init_texture: loaded {:?} as {:?}, next_sprite_id now {}", path, id, self.next_sprite_id);
+
+        Ok(id)
     }
 
     /// Reloads a texture from its `SpriteId` and updates `path_to_sprite_id`.
@@ -157,25 +168,25 @@ impl AssetManager {
             game.asset_manager.next_tile_def_id = 1;
         }
 
-        let _purged = Self::purge_unused_assets(game);
-
         let sprites: Vec<(SpriteId, PathBuf)> = game.asset_manager
             .sprite_id_to_path
             .iter()
             .map(|(id, path)| (*id, path.clone()))
             .collect();
 
-        // Reload all textures
+        // Reload all textures first (before animation cache refresh)
         for (id, path) in sprites {
             let _ = game.asset_manager.reload_texture(&id, &path).await;
         }
 
-        // Load and initialize all animations
+        // Load and initialize all animations BEFORE purge so sprite_cache is populated
         for animation in game.ecs.get_store_mut::<Animation>().data.values_mut() {
             animation.refresh_sprite_cache(&mut game.asset_manager).await;
             animation.init_runtime();
         }
-        
+
+        // Purge AFTER sprite_cache is populated so animation sprites are kept
+        let _purged = Self::purge_unused_assets(game);
     }
 
     /// Returns a path normalized relative to the game's assets folder.

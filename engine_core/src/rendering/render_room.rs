@@ -123,14 +123,24 @@ fn draw_entity(
         );
         let tex = asset_manager.get_texture_from_id(cf.sprite_id);
 
-        // Draws individual entites
+        // Calculate draw position accounting for flip
+        let draw_x = if cf.flip_x {
+            pos.x + cf.offset.x + width
+        } else {
+            pos.x + cf.offset.x
+        };
+
+        // Draws individual entities
         draw_texture_ex(
             tex,
-            pos.x + cf.offset.x,
+            draw_x,
             pos.y + cf.offset.y,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(width, height)),
+                dest_size: Some(vec2(
+                    if cf.flip_x { -width } else { width },
+                    height
+                )),
                 source: Some(src),
                 ..Default::default()
             },

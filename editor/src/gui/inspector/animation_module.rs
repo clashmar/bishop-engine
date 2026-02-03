@@ -8,11 +8,7 @@ use engine_core::animation::animation_clip::*;
 use engine_core::ecs::inpsector_module::InspectorModule;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::toast::Toast;
-use engine_core::ui::widgets::{
-    Button, gui_dropdown, TextInput, text_input_reset,
-    NumberInput, gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
-    WIDGET_PADDING, WIDGET_SPACING,
-};
+use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
@@ -88,6 +84,7 @@ impl InspectorModule for AnimationModule {
         let btn_rect = Rect::new(btn_x, y, btn_w, btn_h);
 
         // Button press
+        let mut clip_added = false;
         if Button::new(btn_rect, ADD_LABEL).blocked(blocked).show() {
             let new_id = if animation.clips.is_empty() {
                 ClipId::Idle
@@ -105,6 +102,7 @@ impl InspectorModule for AnimationModule {
             animation.clips.insert(new_id.clone(), ClipDef::default());
             animation.states.insert(new_id.clone(), ClipState::default());
             animation.current = Some(new_id);
+            clip_added = true;
         }
 
         y += MARGIN + WIDGET_PADDING;
@@ -164,8 +162,8 @@ impl InspectorModule for AnimationModule {
             draw_spritesheet_dimension_fields(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
-            // FPS / Loop toggle
-            draw_fps_and_loop(self, y, rect, clip, blocked);
+            // FPS / Loop / Mirrored toggles
+            draw_fps_loop_and_mirrored(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
             // Optional offset
@@ -186,7 +184,10 @@ impl InspectorModule for AnimationModule {
                 self.warning = None;
             }
         }
-        if variant_changed {
+
+        // Refresh sprite cache when variant changes or a new clip is added (only if variant is set)
+        let has_variant = !animation.variant.0.as_os_str().is_empty();
+        if (variant_changed || clip_added) && has_variant {
             futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
         }
     }
@@ -341,10 +342,10 @@ pub fn draw_spritesheet_dimension_fields(
     clip.rows = NumberInput::new(module.rows_id, inp_r, clip.rows as f32).blocked(blocked).show() as usize;
 }
 
-pub fn draw_fps_and_loop(
+pub fn draw_fps_loop_and_mirrored(
     module: &mut AnimationModule,
-    y: f32, 
-    rect: Rect, 
+    y: f32,
+    rect: Rect,
     clip: &mut ClipDef,
     blocked: bool,
 ) {
@@ -359,6 +360,20 @@ pub fn draw_fps_and_loop(
 
     clip.fps = NumberInput::new(module.fps_id, inp_fps, clip.fps).blocked(blocked).show();
     gui_checkbox(inp_loop, &mut clip.looping);
+
+    // Mirrored checkbox
+    let mirrored_label = "Mirror:";
+    let mirrored_label_w = measure_text_ui(mirrored_label, LABEL_FONT_SIZE, 1.0).width + COLON_GAP;
+    let mirrored_lbl_x = inp_loop.x + inp_loop.w + FIELD_GAP;
+    draw_text_ui(mirrored_label, mirrored_lbl_x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+
+    let inp_mirrored = Rect::new(
+        mirrored_lbl_x + mirrored_label_w,
+        inp_loop.y,
+        CHECKBOX_SIZE,
+        CHECKBOX_SIZE,
+    );
+    gui_checkbox(inp_mirrored, &mut clip.mirrored);
 }
 
 pub fn draw_offset_fields(
