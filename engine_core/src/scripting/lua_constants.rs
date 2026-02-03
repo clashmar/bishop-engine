@@ -9,10 +9,13 @@ pub const ENTITY_FILE: &str = "entity.lua";
 pub const LUA_GAME_CTX: &str = "lua_game_ctx";
 pub const ENTITY: &str = "entity";
 
+/// _engine directory
+pub const ENGINE_DIR: &str = "_engine";
+
 /// Field name for script public fields.
 pub const PUBLIC: &str = "public";
 
-// .engine APIS
+// _engine APIS
 pub const ENGINE: &str = "engine";
 pub const GLOBAL: &str = "global";
 pub const ENGINE_CALL: &str = "call";
