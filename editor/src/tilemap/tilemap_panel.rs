@@ -1,14 +1,13 @@
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 // editor/src/tilemap/tilemap_panel.rs
-use crate::{gui::gui_constants::*, tilemap::{
-    background_module::BackgroundModule, 
-    tile_palette::{TilePalette, TilePaletteUi, TilePaletteUiMode}
-}};
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::world_ecs::WorldEcs, tiles::tilemap::TileMap
-};
+use crate::tilemap::background_module::BackgroundModule;
+use crate::assets::asset_manager::AssetManager;
+use crate::tilemap::tile_palette::TilePalette;
+use crate::tilemap::tile_palette::*;
+use crate::tiles::tilemap::TileMap;
+use crate::gui::gui_constants::*;
+use engine_core::ui::widgets::Button;
 use macroquad::prelude::*;
-use engine_core::ui::widgets::*;
 
 const INSET: f32 = 10.0;
 const BTN_HEIGHT: f32 = 30.0;
@@ -43,9 +42,9 @@ impl TilemapPanel {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut WorldEcs
+        asset_manager: &mut AssetManager,
     ) {
-        self.palette.update(world_ecs).await;
+        self.palette.update(asset_manager).await;
     }
 
     /// Called by the editor each frame to place the panel
@@ -57,8 +56,7 @@ impl TilemapPanel {
     pub async fn draw(
         &mut self,
         asset_manager: &mut AssetManager,
-        world_ecs: &WorldEcs,
-        map: &mut TileMap,
+        tilemap: &mut TileMap,
     ) {
         self.active_rects.clear();
 
@@ -100,20 +98,22 @@ impl TilemapPanel {
         // Layout the modules vertically
         let mut y = inner.y + 10.0;
 
+        let blocked = is_mouse_over_panel();
+
         // Palette
         self.palette.set_columns_for_width(inner.w - 20.0);
         let height = self.palette.height();
         let palette_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.palette.draw(palette_rect, asset_manager, world_ecs).await;
+        self.palette.draw(palette_rect, asset_manager).await;
 
         y += height + 20.0; // Create gap for next module
 
         // Background module
         let background_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.background.draw(background_rect, map);
+        self.background.draw(background_rect, tilemap, blocked);
 
         // Draw create button
-        if gui_button(create_rect, create_label) {
+        if Button::new(create_rect, create_label).blocked(blocked).show() {
             if self.palette.ui.open && self.palette.ui.mode == TilePaletteUiMode::Create {
                 self.palette.ui.open = false; // Hide dialog
             } else {
@@ -130,7 +130,7 @@ impl TilemapPanel {
             let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
             let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
 
-            if gui_button(edit_rect, edit_label) {
+            if Button::new(edit_rect, edit_label).blocked(blocked).show() {
                 self.palette.ui.mode = TilePaletteUiMode::Edit;
                 self.palette.ui.edit_index = self.palette.selected_index;
                 self.palette.ui.edit_initialized = true;

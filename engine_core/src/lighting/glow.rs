@@ -1,16 +1,14 @@
 // engine_core/src/lighting/glow.rs
-use macroquad::prelude::*;
-use reflect_derive::Reflect;
-use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
-use crate::{
-    assets::sprite::SpriteId, ecs_component, inspector_module
-};
-
-ecs_component!(Glow);
-inspector_module!(Glow);
+use crate::assets::sprite::SpriteId;
+use serde::{Deserialize, Serialize};
+use ecs_component::ecs_component;
+use crate::inspector_module;
+use reflect_derive::Reflect;
+use macroquad::prelude::*;
 
 /// A single glow source.  
+#[ecs_component]
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, Reflect)]
 #[serde(default)]
@@ -23,6 +21,8 @@ pub struct Glow {
     #[widget("png")]          
     pub sprite_id: SpriteId,
 }
+
+inspector_module!(Glow);
 
 impl Default for Glow {
     fn default() -> Self {

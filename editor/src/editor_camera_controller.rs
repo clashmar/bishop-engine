@@ -2,7 +2,7 @@
 use macroquad::prelude::*;
 use engine_core::{
     constants::*, 
-    global::*, 
+    engine_global::*, 
     world::room::Room
 };
 

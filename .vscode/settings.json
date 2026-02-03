@@ -1,0 +1,9 @@
+{
+    "Lua.diagnostics.globals": [
+        "local",
+        "engine",
+        "private",
+        "game_manager",
+        "GameManager"
+    ]
+}

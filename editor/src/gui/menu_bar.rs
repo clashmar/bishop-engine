@@ -1,17 +1,18 @@
 // editor/src/gui/menu_bar.rs
+use crate::{editor::EditorMode, gui::modal::is_modal_open};
 use crate::gui::gui_constants::*;
-use crate::gui::inspector::modal::is_modal_open;
-use std::cell::RefCell;
+use engine_core::ui::widgets::*;
 use std::fmt::{self, Display};
 use engine_core::ui::text::*;
-use engine_core::ui::widgets::*;
-use macroquad::prelude::*;
 use strum_macros::EnumIter;
+use macroquad::prelude::*;
+use std::cell::RefCell;
 
 /// Holds the state of the top‑level menu bar.
 pub struct MenuBar {
     file_id: WidgetId,
     edit_id: WidgetId,
+    view_id: WidgetId,
     title_id: WidgetId,
     pub pending: Option<MenuAction>,
 }
@@ -30,6 +31,10 @@ pub enum MenuAction {
     // Edit actions
     Undo,
     Redo,
+    // View actions
+    ViewHierarchyPanel,
+    ViewConsolePanel,
+    ViewDiagnosticsPanel,
 }
 
 impl MenuAction {
@@ -43,6 +48,9 @@ impl MenuAction {
             MenuAction::Undo => "Undo".to_string(),
             MenuAction::Redo => "Redo".to_string(),
             MenuAction::ChangeSaveRoot => "Change Save Root".to_string(),
+            MenuAction::ViewHierarchyPanel => "Hierarchy".to_string(),
+            MenuAction::ViewConsolePanel => "Console".to_string(),
+            MenuAction::ViewDiagnosticsPanel => "Diagnostics".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -56,7 +64,10 @@ impl MenuAction {
                 MenuAction::Save => Some("^ S"),
                 MenuAction::SaveAs => Some("⇧ ^ S"),
                 MenuAction::Undo => Some("^ Z"),
-                MenuAction::Redo => Some("⇧ ^ Z"),       
+                MenuAction::Redo => Some("⇧ ^ Z"),
+                MenuAction::ViewHierarchyPanel => Some("H"),
+                MenuAction::ViewConsolePanel => Some("C"),
+                MenuAction::ViewDiagnosticsPanel => Some("D"),
                 _ => None,
             }
         }
@@ -69,6 +80,9 @@ impl MenuAction {
                 MenuAction::SaveAs => Some("⇧ ^ S"),
                 MenuAction::Undo => Some("^ Z"),
                 MenuAction::Redo => Some("⇧ ^ Z"),
+                MenuAction::ViewHierarchyPanel => Some("H"),
+                MenuAction::ViewConsolePanel => Some("C"),
+                MenuAction::ViewDiagnosticsPanel => Some("F3"),
                 _ => None,
             }
         }
@@ -93,12 +107,17 @@ impl MenuBar {
             title_id: WidgetId::default(),
             file_id: WidgetId::default(),
             edit_id: WidgetId::default(),
+            view_id: WidgetId::default(),
             pending: None,
         }
     }
 
     /// Draw the menu options and return any requested action.
-    pub fn draw(&mut self, title: &str) -> Option<MenuAction> {
+    pub fn draw(
+        &mut self, 
+        title: &str,
+        editor_mode: EditorMode,
+    ) -> Option<MenuAction> {
         // Height of each dropdown item
         const HEIGHT: f32 = 30.0;
 
@@ -180,10 +199,47 @@ impl MenuBar {
         ];
 
         if let Some(selected) = menu_dropdown(
-            self.edit_id,
+            self.view_id,
             edit_rect,
             edit_label,
             &edit_actions,
+            |a| a.ui_label(),
+            |a| a.shortcut(),
+        ) {
+            self.pending = Some(selected);
+        }
+
+        x += edit_rect.w + SPACING;
+
+        // View dropdown
+        let view_label = "View";
+
+        let view_rect = Rect::new(
+            x,
+            y,
+            rect_width_for_text(view_label, HEADER_FONT_SIZE_20),
+            HEIGHT
+        );
+
+        let mut view_actions: Vec<MenuAction> = Vec::new();
+
+        // Console and Diagnostics panels available in all modes
+        view_actions.push(MenuAction::ViewConsolePanel);
+        view_actions.push(MenuAction::ViewDiagnosticsPanel);
+
+        match editor_mode {
+            EditorMode::Game => {},
+            EditorMode::World(_) => {},
+            EditorMode::Room(_) => {
+                view_actions.push(MenuAction::ViewHierarchyPanel);
+            }
+        }
+
+        if let Some(selected) = menu_dropdown(
+            self.edit_id,
+            view_rect,
+            view_label,
+            &view_actions,
             |a| a.ui_label(),
             |a| a.shortcut(),
         ) {
@@ -410,7 +466,7 @@ pub fn menu_button(
     let mouse = mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    if (hovered || is_dropdown_open) && !is_modal_open() {
+    if (hovered || is_dropdown_open) && !is_modal_open() && !is_mouse_button_down(MouseButton::Left) {
         draw_rectangle(
             rect.x,
             rect.y,

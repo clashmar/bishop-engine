@@ -1,23 +1,17 @@
 // engine_core/src/ecs/generic_module.rs
-use crate::ecs::module::InspectorModule;
-use crate::ui::text::*;
+use crate::ecs::inpsector_module::InspectorModule;
+use crate::ecs::component::Component;
+use crate::ecs::reflect_field::*;
+use crate::ecs::entity::Entity;
 use crate::ui::widgets::*;
-use crate::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        component::Component,
-        entity::Entity, 
-        reflect::{FieldValue, Reflect}, 
-        world_ecs::WorldEcs
-    }
-};
-use macroquad::prelude::*;
+use crate::ui::text::{draw_text_ui, measure_text_ui};
+use crate::game::game::*;
+use crate::ecs::ecs::Ecs;
 use std::collections::HashMap;
-use std::{borrow::Cow, marker::PhantomData};
-
+use std::marker::PhantomData;
+use macroquad::prelude::*;
 
 const TOP_PADDING: f32 = 10.0;
-const FIELD_HEIGHT: f32 = 30.0;
 const SPACING: f32 = 5.0;
 const LABEL_PADDING: f32 = 10.0;
 const MIN_WIDGET_WIDTH: f32 = 80.0;
@@ -28,6 +22,7 @@ const FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 pub struct GenericModule<T> {
     _phantom: PhantomData<T>,
     field_ids: HashMap<String, WidgetId>,
+    removable: bool,
 }
 
 impl<T> Default for GenericModule<T> {
@@ -35,6 +30,17 @@ impl<T> Default for GenericModule<T> {
         Self { 
             _phantom: PhantomData,
             field_ids: HashMap::new(),
+            removable: true,
+        }
+    }
+}
+
+impl<T> GenericModule<T> {
+    pub fn new(removable: bool) -> Self {
+        Self {
+            _phantom: PhantomData,
+            field_ids: HashMap::new(),
+            removable,
         }
     }
 }
@@ -43,23 +49,30 @@ impl<T> InspectorModule for GenericModule<T>
 where
     T: Reflect + Component + Default + 'static,
 {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         // Use the new `get_store` helper
-        world_ecs.get_store::<T>().contains(entity)
+        ecs.get_store::<T>().contains(entity)
     }
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
-        asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
+        let ecs = &mut game_ctx.ecs;
+
         // Grab a mutable reference to the component instance
-        let component = world_ecs
-            .get_store_mut::<T>()
-            .get_mut(entity)
-            .expect("Component must exist for selected entity");
+        let component = {
+            match ecs
+                .get_store_mut::<T>()
+                .get_mut(entity)
+            {
+                Some(c) => c,
+                None => return,
+            }
+        };
 
         // Layout constants
         let mut y = rect.y + TOP_PADDING;
@@ -74,7 +87,8 @@ where
                 .or_insert_with(WidgetId::default);
 
             // Prepare the field label
-            let label = parse_field_name(field.name);
+            let display_name = parse_field_name(field.name);
+            let label = format!("{} :", display_name);
             let label_w = measure_text_ui(&label, FONT_SIZE, 1.0).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
@@ -89,34 +103,40 @@ where
             };
 
             let widget_w = (rect.x + rect.w) - widget_x - 10.0;
-            let widget_rect = Rect::new(widget_x, y, widget_w.max(MIN_WIDGET_WIDTH), FIELD_HEIGHT);
+            let widget_rect = Rect::new(widget_x, y, widget_w.max(MIN_WIDGET_WIDTH), DEFAULT_FIELD_HEIGHT);
 
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
                 (FieldValue::SpriteId(id), _) => {
-                    gui_sprite_picker(widget_rect, id, asset_manager);
+                    gui_sprite_picker(widget_rect, id, game_ctx.asset_manager, blocked);
                 }
                 (FieldValue::Text(txt), _) => {
-                    let (new, _) = gui_input_text_default(base_id, widget_rect, txt.as_str());
+                    let (new, _) = TextInput::new(base_id, widget_rect, txt.as_str()).blocked(blocked).show();
                     if new != *txt {
                         *txt = new;
                     }
                 }
                 (FieldValue::Float(f), _) => {
-                    let new = gui_input_number_f32(base_id, widget_rect, *f);
+                    let new = NumberInput::new(base_id, widget_rect, *f).blocked(blocked).show();
                     if (new - *f).abs() > f32::EPSILON {
                         *f = new;
                     }
                 }
                 (FieldValue::Int(i), _) => {
-                    let new = gui_input_number_i32(base_id, widget_rect, *i);
+                    let new = NumberInput::new(base_id, widget_rect, *i).blocked(blocked).show();
                     if new != *i {
                         *i = new;
                     }
                 }
                 (FieldValue::Bool(b), _) => {
+                    let cb_rect = Rect::new(
+                        widget_rect.x,
+                        widget_rect.y + 7.5,
+                        DEFAULT_CHECKBOX_DIMS,
+                        DEFAULT_CHECKBOX_DIMS,
+                    );
                     let mut v = *b;
-                    if gui_checkbox(widget_rect, &mut v) {
+                    if gui_checkbox(cb_rect, &mut v) && !blocked {
                         *b = v;
                     }
                 }
@@ -135,7 +155,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v.x);
+                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show();
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -146,7 +166,7 @@ where
                         half - 2.0,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number_f32(id_y, rect_y, v.y);
+                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show();
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -169,7 +189,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third, widget_rect.h);
-                    let new_x = gui_input_number_f32(id_x, rect_x, v.x);
+                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show();
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -180,7 +200,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_y = gui_input_number_f32(id_y, rect_y, v.y);
+                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show();
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -191,14 +211,14 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_z = gui_input_number_f32(id_z, rect_z, v.z);
+                    let new_z = NumberInput::new(id_z, rect_z, v.z).blocked(blocked).show();
                     if (new_z - v.z).abs() > f32::EPSILON {
                         v.z = new_z;
                     }
                 }
             }
 
-            y += FIELD_HEIGHT + SPACING;
+            y += widget_rect.h + SPACING;
         }
     }
 
@@ -209,59 +229,14 @@ where
         let field_count = temp.fields().len() as f32;
 
         // Total height = top padding + (field height + spacing) * count
-        TOP_PADDING + field_count * (FIELD_HEIGHT + SPACING)
+        TOP_PADDING + field_count * (DEFAULT_FIELD_HEIGHT + SPACING)
     }
 
-    fn removable(&self) -> bool { true }
-
-    fn remove(&mut self, world_ecs: &mut WorldEcs, entity: Entity) {
-        world_ecs.get_store_mut::<T>().remove(entity);
-    }
-}
-
-pub fn parse_field_name(name: &str) -> Cow<str> {
-    // Fast path
-    if !name.contains('_')
-        && name
-            .chars()
-            .next()
-            .map(|c| c.is_ascii_uppercase())
-            .unwrap_or(false)
-    {
-        return Cow::Borrowed(name);
+    fn removable(&self) -> bool { 
+        self.removable 
     }
 
-    // Split on '_' and capitalise each segment
-    let mut parts = name.split('_').filter(|s| !s.is_empty());
-
-    // Build the first part (to avoid an extra allocation when possible)
-    let first = match parts.next() {
-        Some(p) => {
-            let mut chars = p.chars();
-            let first_char = chars.next().map(|c| c.to_ascii_uppercase());
-            let rest: String = chars.collect();
-            match first_char {
-                Some(f) => format!("{}{}", f, rest),
-                None => String::new(),
-            }
-        }
-        None => return Cow::Borrowed(name), // empty input
-    };
-
-    // Append the remaining parts, each preceded by a space
-    let result = parts.fold(first, |mut acc, part| {
-        let mut chars = part.chars();
-        let first_char = chars.next().map(|c| c.to_ascii_uppercase());
-        let rest: String = chars.collect();
-        match first_char {
-            Some(f) => {
-                acc.push(' ');
-                acc.push_str(&format!("{}{}", f, rest));
-            }
-            None => {}
-        }
-        acc
-    });
-
-    Cow::Owned(result)
+    fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
+        game_ctx.ecs.get_store_mut::<T>().remove(entity);
+    }
 }

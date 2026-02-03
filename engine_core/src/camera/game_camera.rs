@@ -1,10 +1,16 @@
 // engine_core/src/camera/game_camera.rs
-use crate::{ecs::{component::{CurrentRoom, Position}, entity::Entity, world_ecs::WorldEcs}, ecs_component, global::*, world::room::RoomId};
-use std::fmt;
-use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
+use crate::ecs::component::CurrentRoom;
+use crate::ecs::transform::Transform;
+use crate::ecs::entity::Entity;
+use crate::world::room::RoomId;
+use crate::engine_global::*;
+use crate::ecs::ecs::Ecs;
 use serde_with::{serde_as, FromInto};
+use serde::{Deserialize, Serialize};
+use ecs_component::ecs_component;
 use strum_macros::EnumIter;
+use macroquad::prelude::*;
+use std::fmt;
 
 #[derive(Debug, Default)]
 pub struct GameCamera {
@@ -32,6 +38,7 @@ pub fn world_virtual_width() -> f32 { cam_tile_dims().0 * tile_size() }
 pub fn world_virtual_height() -> f32 { cam_tile_dims().1 * tile_size() }
 
 /// Component for a room camera used by the game.
+#[ecs_component]
 #[serde_as] 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
 #[serde(default)]
@@ -42,7 +49,6 @@ pub struct RoomCamera {
     pub zoom_mode: ZoomMode,
     pub camera_mode: CameraMode,
 }
-ecs_component!(RoomCamera);
 
 impl RoomCamera {
     pub fn new(room_id: RoomId) -> Self {
@@ -140,9 +146,9 @@ pub fn game_render_target() -> RenderTarget {
 }
 
 /// Returns every `GameCamera` for a room from its id.
-pub fn get_room_cameras(world_ecs: &WorldEcs, room_id: RoomId) -> Vec<(Entity, RoomCamera)> {
-    let cam_store = world_ecs.get_store::<RoomCamera>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+pub fn get_room_cameras(ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)> {
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let room_store = ecs.get_store::<CurrentRoom>();
 
     cam_store
         .data
@@ -159,12 +165,12 @@ pub fn get_room_cameras(world_ecs: &WorldEcs, room_id: RoomId) -> Vec<(Entity, R
 
 /// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
 pub fn room_to_game_camera(
-    world_ecs: &WorldEcs, 
+    ecs: &Ecs, 
     entity: &Entity, 
     room_camera: &RoomCamera,
     player_pos: Vec2, 
 ) -> GameCamera {
-    let pos_store  = world_ecs.get_store::<Position>();
+    let pos_store  = ecs.get_store::<Transform>();
 
     // If the camera is a Follow cam user the player as the target
     let target = match room_camera.camera_mode {
@@ -173,7 +179,7 @@ pub fn room_to_game_camera(
             pos_store
                 .data
                 .get(entity)
-                .expect("Camera should always have a Position component")
+                .expect("Camera should always have a Transform component")
                 .position
         }
     };
@@ -190,10 +196,10 @@ pub fn room_to_game_camera(
 }
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
-pub fn get_room_camera(world_ecs: &WorldEcs, room_id: RoomId) -> Option<GameCamera> {
-    let pos_store = world_ecs.get_store::<Position>();
-    let cam_store = world_ecs.get_store::<RoomCamera>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
+pub fn get_room_camera(ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
+    let pos_store = ecs.get_store::<Transform>();
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let room_store = ecs.get_store::<CurrentRoom>();
 
     for (entity, room_cam) in cam_store.data.iter() {
         if let Some(current_room) = room_store.get(*entity) {

@@ -1,18 +1,14 @@
 // editor/src/gui/inspector/camera_module.rs
-use strum::IntoEnumIterator;
-use engine_core::{camera::game_camera::*, ui::text::*};
-use engine_core::ecs::module::CollapsibleModule;
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use macroquad::prelude::*;
+use engine_core::{camera::game_camera::*, ui::text::*};
+use engine_core::ecs::inpsector_module::CollapsibleModule;
+use engine_core::ecs::inpsector_module::InspectorModule;
+use engine_core::game::game::GameCtxMut;
+use engine_core::ecs::entity::Entity;
 use engine_core::ui::widgets::*;
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        module::InspectorModule, 
-        world_ecs::WorldEcs
-    }
-};
+use engine_core::ecs::ecs::Ecs;
+use strum::IntoEnumIterator;
+use macroquad::prelude::*;
 
 pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 
@@ -25,18 +21,20 @@ pub struct RoomCameraModule {
 }
 
 impl InspectorModule for RoomCameraModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
-        world_ecs.get::<RoomCamera>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<RoomCamera>(entity).is_some()
     }
 
     fn draw(
         &mut self,
+        blocked: bool,
         rect: Rect,
-        _asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let cam = world_ecs
+        let ecs = &mut game_ctx.ecs;
+
+        let cam = ecs
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
 
@@ -69,9 +67,9 @@ impl InspectorModule for RoomCameraModule {
                 const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 3.0];
                 
                 let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width());
-                let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar);
+                let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar, blocked);
 
-                if (new_scalar - current_scalar).abs() > f32::EPSILON {
+                if !blocked && (new_scalar - current_scalar).abs() > f32::EPSILON {
                     let width = world_virtual_width() * new_scalar;
                     let height = world_virtual_height() * new_scalar;
                     cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
@@ -89,6 +87,7 @@ impl InspectorModule for RoomCameraModule {
                 self.draw_freeform_mode(
                     zoom_rect,
                     cam,
+                    blocked,
                 );
             }
         }
@@ -134,6 +133,7 @@ impl InspectorModule for RoomCameraModule {
             &current_cam_label,
             &cam_mode_options,
             |mode| mode.ui_label(),
+            blocked,
         ) {
             if new_cam_mode != current_cam_mode {
                 cam.camera_mode = new_cam_mode;
@@ -146,6 +146,7 @@ impl InspectorModule for RoomCameraModule {
             &current_label, 
             &zoom_options,
             |mode| mode.ui_label(),
+            blocked
         ) {
             if new_mode != current_mode {
                 cam.zoom_mode = new_mode;
@@ -160,6 +161,7 @@ impl RoomCameraModule {
         &self,
         rect: Rect,
         cam: &mut RoomCamera,
+        blocked: bool,
     ) {
         let scalar = 2.0 / (cam.zoom.x * world_virtual_width());
 
@@ -190,11 +192,9 @@ impl RoomCameraModule {
         );
 
         // Numeric field
-        let typed = gui_input_number_f32(
-            self.zoom_id,
-            num_rect,
-            round_to_dp(scalar, 2),
-        );
+        let typed = NumberInput::new(self.zoom_id, num_rect, round_to_dp(scalar, 2))
+            .blocked(blocked)
+            .show();
 
         // Slider
         let (slider_val, slider_changed) = gui_slider(

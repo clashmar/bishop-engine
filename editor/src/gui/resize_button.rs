@@ -1,21 +1,12 @@
 // editor/src/gui/resize_button.rs
+use crate::gui::ui_element::DynamicTilemapUiElement;
+use crate::gui::text_button::TextButton;
+use crate::engine_global::tile_size;
+use crate::tiles::tilemap::*;
+use crate::ecs::ecs::Ecs;
+use crate::world::coord;
+use engine_core::world::room::Room;
 use macroquad::prelude::*;
-use engine_core::{
-    ecs::world_ecs::WorldEcs, 
-    global::tile_size, 
-    tiles::tilemap::{
-        TileMap, 
-        shift_tiles
-    }, 
-    world::room::Room
-};
-use crate::{
-    gui::{
-        text_button::TextButton, 
-        ui_element::DynamicTilemapUiElement
-    }, 
-    world::coord
-};
 
 pub struct ResizeButton {
     pub action: ResizeAction,
@@ -51,7 +42,7 @@ impl DynamicTilemapUiElement for ResizeButton {
         mouse_pos: Vec2, 
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
-        world_ecs: &mut WorldEcs,
+        _ecs: &mut Ecs,
     ) {
         let mouse_world_pos = camera.screen_to_world(mouse_pos);
         if !self.button.is_clicked(mouse_world_pos) {
@@ -105,7 +96,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             ResizeAction::RemoveTop => {
                 if map.height > 1 {
                     for x in 0..map.width {
-                        map.remove_tile((x, 0), world_ecs);
+                        map.remove_tile((x, 0));
                     }
                     map.height -= 1;
                     shift_tiles(map, 0, -1);
@@ -136,7 +127,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 if map.height > 1 {
                     let bottom = map.height - 1;
                     for x in 0..map.width {
-                        map.remove_tile((x, bottom), world_ecs);
+                        map.remove_tile((x, bottom));
                     }
                     map.height -= 1;
                     for exit in &mut room.exits {
@@ -157,7 +148,7 @@ impl DynamicTilemapUiElement for ResizeButton {
             ResizeAction::RemoveLeft => {
                 if map.width > 1 {
                     for y in 0..map.height {
-                        map.remove_tile((0, y), world_ecs);
+                        map.remove_tile((0, y));
                     }
                     map.width -= 1;
                     shift_tiles(map, -1, 0);
@@ -180,7 +171,7 @@ impl DynamicTilemapUiElement for ResizeButton {
                 if map.width > 1 {
                     let right = map.width - 1;
                     for y in 0..map.height {
-                        map.remove_tile((right, y), world_ecs);
+                        map.remove_tile((right, y));
                     }
                     map.width -= 1;
 

@@ -1,28 +1,22 @@
 // game/src/physics/physics_system.rs
-use engine_core::world::room::RoomId;
+use crate::physics::collision::sweep_move;
+use crate::constants::GRAVITY;
+use engine_core::assets::asset_manager::AssetManager;
+use engine_core::ecs::transform::{Transform, update_entity_position};
+use engine_core::ecs::component::*;
+use engine_core::world::room::*;
+use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::Vec2;
-use engine_core::{
-    ecs::{
-        component::{Collider, PhysicsBody, Position, Velocity}, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, world::room::Room
-};
-use crate::{
-    constants::*, 
-    physics::collision::sweep_move, 
-    world::world_helpers::*
-};
 
 /// Applies physics to all entities with a `PhysicsBody` component.
-/// Returns `Some((entity, exit_id, position))` when an entity crosses an exit, otherwise `None`.
 pub fn update_physics(
-    world_ecs: &mut WorldEcs,
+    asset_manager: &AssetManager,
+    ecs: &mut Ecs,
     room: &Room,
     dt: f32,
-) -> Option<(Entity, RoomId, Vec2)> {
+) {
     let tilemap = &room.variants[0].tilemap;
-    let entities: Vec<_> = world_ecs
+    let entities: Vec<_> = ecs
         .get_store::<PhysicsBody>()
         .data
         .keys()
@@ -31,9 +25,9 @@ pub fn update_physics(
 
     for entity in entities {
         let (pos_cur, mut vel_cur, collider) = {
-            let p = world_ecs.get::<Position>(entity).unwrap();
-            let v = world_ecs.get::<Velocity>(entity).unwrap();
-            let c = world_ecs
+            let p = ecs.get::<Transform>(entity).unwrap();
+            let v = ecs.get::<Velocity>(entity).unwrap();
+            let c = ecs
                 .get::<Collider>(entity)
                 .cloned()
                 .unwrap_or_default();
@@ -45,12 +39,14 @@ pub fn update_physics(
         let delta = Vec2::new(vel_cur.x * dt, vel_cur.y * dt);
 
         let sweep = sweep_move(
-            world_ecs,
+            asset_manager,
+            ecs,
             tilemap,
             room.position,
             pos_cur,
             delta,
             collider,
+            &room.exits
         );
 
         let new_pos = pos_cur + sweep.allowed_delta;
@@ -63,30 +59,11 @@ pub fn update_physics(
             new_vel.y = 0.0;
         }
 
-        // Exit check
-        if let Some(target_id) = crossed_exit(new_pos, delta, &collider, room) {
-            {
-                let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
-                pos_mut.position = new_pos;
-            }
-            {
-                let vel_mut = world_ecs.get_mut::<Velocity>(entity).unwrap();
-                *vel_mut = new_vel;
-            }
-            return Some((entity, target_id, new_pos));
-        }
-
-        // Clamp to room
-        let clamped = clamp_to_room(new_pos, &collider, room);
-
+        update_entity_position(ecs, entity, new_pos);
+        
         {
-            let pos_mut = world_ecs.get_mut::<Position>(entity).unwrap();
-            pos_mut.position = clamped;
-        }
-        {
-            let vel_mut = world_ecs.get_mut::<Velocity>(entity).unwrap();
+            let vel_mut = ecs.get_mut::<Velocity>(entity).unwrap();
             *vel_mut = new_vel;
         }
     }
-    None
 }

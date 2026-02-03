@@ -1,6 +1,6 @@
 // engine_core/src/constants.rs
 use macroquad::prelude::*;
-use crate::global::tile_size;
+use crate::engine_global::tile_size;
 
 /// 60Hz pysics.
 pub const FIXED_DT: f32 = 1.0 / 60.0;
@@ -31,6 +31,9 @@ pub const RESOURCES_FOLDER: &str = "Resources";
 
 /// Name of the assets folder.
 pub const ASSETS_FOLDER: &str = "assets";
+
+/// Name of the assets folder.
+pub const SCRIPTS_FOLDER: &str = "scripts";
 
 /// Name of the folder for windows-specific game assets.
 pub const WINDOWS_FOLDER: &str = "windows";

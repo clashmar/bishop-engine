@@ -1,16 +1,16 @@
 // editor/src/tilemap/tile_palette.rs
+use crate::assets::asset_manager::AssetManager;
+use crate::tiles::tile::TileComponent;
+use crate::assets::sprite::SpriteId;
+use crate::engine_global::tile_size;
+use crate::ui::text::draw_text_ui;
+use crate::tiles::tile::TileDef;
+use crate::ui::widgets::{Button, gui_checkbox};
+use engine_core::tiles::tile::TileDefId;
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
-use engine_core::{global::tile_size, ui::{text::draw_text_ui, widgets::*}};
 use serde_with::serde_as;
-use engine_core::{
-    assets::{asset_manager::AssetManager, sprite::SpriteId},
-    ecs::world_ecs::WorldEcs,
-    tiles::{
-        tile::{TileComponent, TileDef, TileDefId}
-    },
-};
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
@@ -62,13 +62,13 @@ impl TilePalette {
 
     pub async fn update(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
     ) {
         while let Some(cmd) = self.command_queue.pop_front() {
             match cmd {
-                PaletteCmd::Create => self.create_tile(world_ecs).await,
-                PaletteCmd::Edit => self.edit_tile(world_ecs).await,
-                PaletteCmd::Delete(i) => self.delete_tile(i, world_ecs).await,
+                PaletteCmd::Create => self.create_tile(asset_manager).await,
+                PaletteCmd::Edit => self.edit_tile(asset_manager).await,
+                PaletteCmd::Delete(i) => self.delete_tile(i, asset_manager).await,
             }
         }
     }
@@ -84,7 +84,6 @@ impl TilePalette {
         &mut self,
         rect: Rect,
         asset_manager: &mut AssetManager,
-        world_ecs: &WorldEcs,
     ) {
         // Draw grid
         for i in 0..self.entries.len() {
@@ -101,7 +100,7 @@ impl TilePalette {
 
             let x = rect.x + col as f32 * self.tile_size;
 
-            let sprite_id = world_ecs.tile_defs.get(&self.entries[i])
+            let sprite_id = asset_manager.tile_defs.get(&self.entries[i])
                 .expect("Could not find tile definition.")
                 .sprite_id;
 
@@ -122,7 +121,7 @@ impl TilePalette {
             }
         }
 
-        self.draw_tile_dialog(asset_manager, world_ecs).await;
+        self.draw_tile_dialog(asset_manager).await;
     }
 
     /// Called from `TileMapEditor::handle_ui_click` when the mouse
@@ -151,7 +150,7 @@ impl TilePalette {
         false
     }
 
-    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager, world_ecs: &WorldEcs) {
+    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager) {
         if !self.ui.open {
             return;
         }
@@ -159,7 +158,7 @@ impl TilePalette {
         if self.ui.edit_initialized {
             let entry = &self.entries[self.ui.edit_index];
             
-            let tile_def = world_ecs.tile_defs
+            let tile_def = asset_manager.tile_defs
                 .get(&entry)
                 .expect("Could not find tile definition.");
 
@@ -183,7 +182,7 @@ impl TilePalette {
 
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);
-        if gui_button(sprite_rect, "Pick sprite") {
+        if Button::new(sprite_rect, "Pick sprite").show() {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("PNG images", &["png"])
                 .pick_file()
@@ -234,7 +233,7 @@ impl TilePalette {
 
         // Create/Update
         let btn_ok = Rect::new(panel.x + 30., panel.y + 220., 100., 30.);
-        if gui_button(btn_ok, btn_label) {
+        if Button::new(btn_ok, btn_label).show() {
             // Add the request to the queue, it will be excecuted next frame
             let cmd = match self.ui.mode {
                 TilePaletteUiMode::Create => PaletteCmd::Create,
@@ -246,14 +245,14 @@ impl TilePalette {
 
         // Cancel
         let btn_cancel = Rect::new(panel.x + 170., panel.y + 220., 100., 30.);
-        if gui_button(btn_cancel, "Cancel") {
+        if Button::new(btn_cancel, "Cancel").show() {
             self.ui.open = false;
         }
 
         // Draw delete button if in edit mode
         if self.ui.mode == TilePaletteUiMode::Edit {
             let btn_del = Rect::new(panel.x + 30., panel.y + 260., 240., 30.);
-            if gui_button(btn_del, "Delete") {
+            if Button::new(btn_del, "Delete").show() {
                 //Add the request to the queue
                 let cmd = PaletteCmd::Delete(self.ui.edit_index);
                 self.command_queue.push_back(cmd);
@@ -264,7 +263,7 @@ impl TilePalette {
 
     pub async fn create_tile(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
     ) {
         // Build TileDef
         let mut comps = vec![
@@ -282,7 +281,7 @@ impl TilePalette {
         };
 
         // Insert the definition into the world ecs tile_def map
-        let def_id = world_ecs.insert_tile_def(tile_def);
+        let def_id = asset_manager.insert_tile_def(tile_def);
 
         // Persist the palette entry
         self.entries.push(def_id);
@@ -297,7 +296,7 @@ impl TilePalette {
 
     pub async fn edit_tile(
         &mut self,
-        world_ecs: &mut WorldEcs,
+        asset_manager: &mut AssetManager,
     ) {
         // Build TileDef
         let mut comps = vec![
@@ -314,16 +313,16 @@ impl TilePalette {
 
         // Overwrite the existing definition.
         let entry = &self.entries[self.ui.edit_index];
-        world_ecs.tile_defs.insert(*entry, def);
+        asset_manager.tile_defs.insert(*entry, def);
 
         // Update the palette entry.
         self.entries[self.ui.edit_index] = *entry;
     }
 
-    pub async fn delete_tile(&mut self, idx: usize, world_ecs: &mut WorldEcs) {
+    pub async fn delete_tile(&mut self, idx: usize, asset_manager: &mut AssetManager) {
         // Remove the definition from the world
         let def_id = self.entries[idx];
-        world_ecs.tile_defs.remove(&def_id);
+        asset_manager.tile_defs.remove(&def_id);
 
         // Remove palette entry and sprite id
         self.entries.remove(idx);
