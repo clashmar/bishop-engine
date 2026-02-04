@@ -4,6 +4,7 @@ use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::ecs::transform::Transform;
 use crate::with_lua_async;
+use engine_core::animation::animation_clip::{Animation, ClipId};
 use engine_core::engine_global::set_game_name;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
@@ -17,6 +18,7 @@ use engine_core::game::game::*;
 use engine_core::constants::*;
 use engine_core::ecs::ecs::*;
 use macroquad::prelude::*;
+use std::collections::HashSet;
 use std::time::SystemTime;
 use std::io::ErrorKind;
 use std::path::PathBuf;
@@ -104,16 +106,38 @@ pub fn save_game(game: &Game) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
         .separate_tuple_members(true)
         .enumerate_arrays(true);
-    
+
     let ron_string = ron::ser::to_string_pretty(game, pretty)
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
     let resources_folder = resources_folder_current();
     let file_path = resources_folder.join(GAME_RON);
-    
+
     fs::create_dir_all(&resources_folder)?;
+
+    // Regenerate animations.lua with custom clips
+    let custom_clips = collect_custom_clip_names(&game.ecs);
+    if let Err(e) = crate::editor_assets::write_animations_lua(&scripts_folder(), &custom_clips) {
+        onscreen_error!("Could not write animations.lua: {e}");
+    }
+
     onscreen_info!("Game saved to: {}", file_path.display());
     fs::write(file_path, ron_string)
+}
+
+/// Collects all custom clip names from the ECS.
+pub fn collect_custom_clip_names(ecs: &Ecs) -> Vec<String> {
+    let mut names = HashSet::new();
+
+    for animation in ecs.get_store::<Animation>().data.values() {
+        for clip_id in animation.clips.keys() {
+            if let ClipId::Custom(name) = clip_id {
+                names.insert(name.clone());
+            }
+        }
+    }
+
+    names.into_iter().collect()
 }
 
 /// Load a `Game` from the folder that matches the supplied name.

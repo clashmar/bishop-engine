@@ -60,10 +60,15 @@ pub fn update_physics(
         }
 
         update_entity_position(ecs, entity, new_pos);
-        
+
         {
             let vel_mut = ecs.get_mut::<Velocity>(entity).unwrap();
             *vel_mut = new_vel;
+        }
+
+        // Update Grounded component - grounded when blocked_y while moving down
+        if let Some(grounded) = ecs.get_mut::<Grounded>(entity) {
+            grounded.0 = sweep.blocked_y && vel_cur.y >= 0.0;
         }
     }
 }

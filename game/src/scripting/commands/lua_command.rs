@@ -198,6 +198,8 @@ fn string_to_clip_id(name: &str) -> ClipId {
         "walk" => ClipId::Walk,
         "run" => ClipId::Run,
         "attack" => ClipId::Attack,
+        "jump" => ClipId::Jump,
+        "fall" => ClipId::Fall,
         _ => ClipId::Custom(name.to_string()),
     }
 }

@@ -3,6 +3,7 @@
 use std::hash::Hasher;
 use std::hash::BuildHasherDefault;
 use std::hash::DefaultHasher;
+use engine_core::animation::animation_clip::generate_animations_lua;
 use engine_core::assets::core_assets::load_rgba_resized;
 use futures::executor::block_on;
 use std::{env, fs, io};
@@ -135,4 +136,11 @@ fn hide_folder(path: &Path) {
             .args(["hidden", &path.to_string_lossy()])
             .output();
     }
+}
+
+/// Writes animations.lua with both built-in and custom clips.
+pub fn write_animations_lua(scripts_folder: &Path, custom_clips: &[String]) -> io::Result<()> {
+    let engine_folder = scripts_folder.join("_engine");
+    fs::create_dir_all(&engine_folder)?;
+    fs::write(engine_folder.join("animations.lua"), generate_animations_lua(custom_clips))
 }
