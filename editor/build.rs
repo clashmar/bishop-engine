@@ -1,6 +1,9 @@
 // editor/build.rs
+use engine_core::animation::animation_clip::generate_animations_lua;
 use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::input::input_table::*;
+use engine_core::scripting::lua_constants::ENGINE_DIR;
+use engine_core::scripting::lua_constants::SCRIPTS_DIR;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::env;
@@ -10,6 +13,7 @@ fn main() -> std::io::Result<()> {
     generate_lua_script();
     generate_lua_components();
     generate_lua_input();
+    generate_lua_animations();
     generate_engine_scripts_rs();
 
     if cfg!(target_os = "windows") {
@@ -47,14 +51,19 @@ fn generate_lua_components() {
         ---@alias vec3 { x: number, y: number, z: number }\n\n"
     );
     
-    // TODO: convert to enum
     // Generate class definitions for each component with their schema
     for reg in COMPONENTS.iter() {
         let schema = (reg.lua_schema)();
-        
-        // Always generate a class definition, even for empty components
+
+        // Check if this is an alias type (single-value tuple struct)
+        if schema.len() == 1 && schema[0].0 == "__alias__" {
+            lua.push_str(&format!("---@alias {} {}\n\n", reg.type_name, schema[0].1));
+            continue;
+        }
+
+        // Generate a class definition
         lua.push_str(&format!("---@class {}\n", reg.type_name));
-        
+
         if schema.is_empty() {
             // For marker/unit structs, add a comment
             lua.push_str("--- Marker component\n");
@@ -64,7 +73,7 @@ fn generate_lua_components() {
                 lua.push_str(&format!("---@field {} {}\n", field_name, field_type));
             }
         }
-        
+
         lua.push_str("\n");
     }
     
@@ -132,6 +141,19 @@ fn generate_lua_input() {
     // Write the file
     let target = out_dir.join("input.lua");
     fs::write(&target, lua).expect("Cannot write input.lua");
+    println!("cargo:warning=generated {}", target.display());
+}
+
+fn generate_lua_animations() {
+    let out_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap())
+        .join(SCRIPTS_DIR)
+        .join(ENGINE_DIR);
+
+    fs::create_dir_all(&out_dir).expect("cannot create _engine folder");
+
+    let lua = generate_animations_lua(&[]);
+    let target = out_dir.join("animations.lua");
+    fs::write(&target, lua).expect("Cannot write animations.lua");
     println!("cargo:warning=generated {}", target.display());
 }
 

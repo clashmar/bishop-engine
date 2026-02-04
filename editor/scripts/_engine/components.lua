@@ -3,46 +3,6 @@
 ---@alias vec2 { x: number, y: number }
 ---@alias vec3 { x: number, y: number, z: number }
 
----@class CurrentFrame
----@field clip_id number
----@field col number
----@field row number
----@field offset vec2
----@field sprite_id number
----@field frame_size vec2
----@field flip_x boolean
-
----@class FacingDirection
----@field value table
-
----@class Interactable
----@field range number
-
----@class Sprite
----@field sprite number
-
----@class Children
----@field entities table
-
----@class Parent
----@field value table
-
----@class Glow
----@field color vec3
----@field intensity number
----@field brightness number
----@field emission number
----@field sprite_id number
-
----@class Transform
----@field position vec2
-
----@class RoomCamera
----@field zoom vec2
----@field room_id number
----@field zoom_mode table
----@field camera_mode table
-
 ---@class Animation
 ---@field clips table
 ---@field variant table
@@ -52,8 +12,37 @@
 ---@field flip_x boolean
 ---@field speed_multiplier number
 
----@class Grounded
----@field value boolean
+---@class Light
+---@field pos vec2
+---@field color vec3
+---@field intensity number
+---@field radius number
+---@field spread number
+---@field alpha number
+---@field brightness number
+
+---@class Transform
+---@field position vec2
+
+---@class Interactable
+---@field range number
+
+---@class RoomCamera
+---@field zoom vec2
+---@field room_id number
+---@field zoom_mode table
+---@field camera_mode table
+
+---@class CurrentFrame
+---@field clip_id number
+---@field col number
+---@field row number
+---@field offset vec2
+---@field sprite_id number
+---@field frame_size vec2
+---@field flip_x boolean
+
+---@alias Grounded boolean
 
 ---@class Player
 --- Marker component
@@ -61,8 +50,7 @@
 ---@class Damage
 ---@field amount number
 
----@class Solid
----@field value boolean
+---@alias Solid boolean
 
 ---@class Collider
 ---@field width number
@@ -81,42 +69,43 @@
 ---@field x number
 ---@field y number
 
----@class Name
----@field value string
+---@alias Name string
 
 ---@class Global
 --- Marker component
 
----@class Walkable
----@field value boolean
+---@alias Walkable boolean
 
----@class CurrentRoom
----@field value number
+---@alias CurrentRoom number
 
----@class Light
----@field pos vec2
+---@class Glow
 ---@field color vec3
 ---@field intensity number
----@field radius number
----@field spread number
----@field alpha number
 ---@field brightness number
+---@field emission number
+---@field sprite_id number
 
 ---@class Script
 ---@field script_id number
 ---@field data table
 
+---@alias FacingDirection table
+
+---@class Sprite
+---@field sprite number
+
+---@class Children
+---@field entities table
+
+---@alias Parent table
+
 ---@class ComponentId
----@field CurrentFrame string
----@field FacingDirection string
----@field Interactable string
----@field Sprite string
----@field Children string
----@field Parent string
----@field Glow string
----@field Transform string
----@field RoomCamera string
 ---@field Animation string
+---@field Light string
+---@field Transform string
+---@field Interactable string
+---@field RoomCamera string
+---@field CurrentFrame string
 ---@field Grounded string
 ---@field Player string
 ---@field Damage string
@@ -130,21 +119,21 @@
 ---@field Global string
 ---@field Walkable string
 ---@field CurrentRoom string
----@field Light string
+---@field Glow string
 ---@field Script string
+---@field FacingDirection string
+---@field Sprite string
+---@field Children string
+---@field Parent string
 
 local C = {}
 
-C.CurrentFrame = "CurrentFrame"
-C.FacingDirection = "FacingDirection"
-C.Interactable = "Interactable"
-C.Sprite = "Sprite"
-C.Children = "Children"
-C.Parent = "Parent"
-C.Glow = "Glow"
-C.Transform = "Transform"
-C.RoomCamera = "RoomCamera"
 C.Animation = "Animation"
+C.Light = "Light"
+C.Transform = "Transform"
+C.Interactable = "Interactable"
+C.RoomCamera = "RoomCamera"
+C.CurrentFrame = "CurrentFrame"
 C.Grounded = "Grounded"
 C.Player = "Player"
 C.Damage = "Damage"
@@ -158,7 +147,11 @@ C.Name = "Name"
 C.Global = "Global"
 C.Walkable = "Walkable"
 C.CurrentRoom = "CurrentRoom"
-C.Light = "Light"
+C.Glow = "Glow"
 C.Script = "Script"
+C.FacingDirection = "FacingDirection"
+C.Sprite = "Sprite"
+C.Children = "Children"
+C.Parent = "Parent"
 
 return C

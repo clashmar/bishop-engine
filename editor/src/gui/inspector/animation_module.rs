@@ -22,11 +22,12 @@ const LABEL_FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 const COLON_GAP: f32 = 10.0;
 const FIELD_GAP: f32 = 20.0;
 
-#[derive(Default)]   
+#[derive(Default)]
 pub struct AnimationModule {
     pending_rename: bool,
     rename_initial_value: String,
     warning: Option<Toast>,
+    has_clips: bool,
     select_dropdown_id: WidgetId,
     set_dropdown_id: WidgetId,
     rename_field_id: WidgetId,
@@ -73,23 +74,32 @@ impl InspectorModule for AnimationModule {
         let mut y = rect.y + WIDGET_SPACING;
         let full_w = rect.w - 2.0 * WIDGET_PADDING;
 
-        // Add-clip button
+        // Track whether we have clips for dynamic height
+        self.has_clips = !animation.clips.is_empty();
+
+        // Button dimensions
         const ADD_LABEL: &str = "Add Clip";
-        let txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
-        let btn_w = txt.width + 12.0;   
-        let btn_h = txt.height + 8.0;
+        const REMOVE_LABEL: &str = "Remove Clip";
+        let add_txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
+        let remove_txt = measure_text_ui(REMOVE_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
+        let btn_h = add_txt.height + 8.0;
+        let add_btn_w = add_txt.width + 12.0;
+        let remove_btn_w = remove_txt.width + 12.0;
+        let btn_gap = 8.0;
 
-        // Center the button horizontally in the whole module
-        let btn_x = rect.x + (rect.w - btn_w) / 2.0;
-        let btn_rect = Rect::new(btn_x, y, btn_w, btn_h);
+        // Center both buttons together
+        let total_btn_w = add_btn_w + btn_gap + remove_btn_w;
+        let btn_start_x = rect.x + (rect.w - total_btn_w) / 2.0;
 
-        // Button press
+        let add_rect = Rect::new(btn_start_x, y, add_btn_w, btn_h);
+        let remove_rect = Rect::new(btn_start_x + add_btn_w + btn_gap, y, remove_btn_w, btn_h);
+
+        // Add clip button
         let mut clip_added = false;
-        if Button::new(btn_rect, ADD_LABEL).blocked(blocked).show() {
+        if Button::new(add_rect, ADD_LABEL).blocked(blocked).show() {
             let new_id = if animation.clips.is_empty() {
                 ClipId::Idle
             } else {
-                // All concrete ids that are not yet used
                 let used: HashSet<_> = animation.clips.keys().cloned().collect();
                 let next_builtin = ClipId::iter()
                     .filter(|id| !matches!(id, ClipId::New | ClipId::Custom(_)))
@@ -103,11 +113,33 @@ impl InspectorModule for AnimationModule {
             animation.states.insert(new_id.clone(), ClipState::default());
             animation.current = Some(new_id);
             clip_added = true;
+            self.has_clips = true;
+        }
+
+        // Remove clip button
+        let can_remove = animation.current.is_some();
+        if Button::new(remove_rect, REMOVE_LABEL).blocked(blocked || !can_remove).show() {
+            if let Some(current_id) = animation.current.take() {
+                animation.clips.remove(&current_id);
+                animation.states.remove(&current_id);
+                animation.sprite_cache.remove(&current_id);
+
+                // Select next available clip or clear
+                animation.current = if animation.clips.is_empty() {
+                    None
+                } else if animation.clips.contains_key(&ClipId::Idle) {
+                    Some(ClipId::Idle)
+                } else {
+                    Some(animation.clips.keys().next().unwrap().clone())
+                };
+
+                self.has_clips = !animation.clips.is_empty();
+            }
         }
 
         y += MARGIN + WIDGET_PADDING;
-        
-        // Return if there is no current id
+
+        // Return if there is no current clip
         if animation.current.is_none() {
             return;
         }
@@ -193,7 +225,11 @@ impl InspectorModule for AnimationModule {
     }
 
     fn height(&self) -> f32 {
-        300.0
+        if self.has_clips {
+            300.0
+        } else {
+            50.0
+        }
     }
 }
 
