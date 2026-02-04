@@ -43,6 +43,7 @@ pub async fn update_animation_sytem(
     let anim_store = ecs.get_store_mut::<Animation>();
 
     let mut frames: Vec<(Entity, CurrentFrame)> = vec![];
+    let mut to_remove: Vec<Entity> = vec![];
 
     for (entity, animation) in anim_store.data.iter_mut() {
         if !entities.contains(entity) {
@@ -50,7 +51,10 @@ pub async fn update_animation_sytem(
         }
 
         // Bail out early if there is no active clip.
-        let Some(current_id) = &animation.current.clone() else { continue };
+        let Some(current_id) = &animation.current.clone() else {
+            to_remove.push(*entity);
+            continue;
+        };
 
         // Get the sprite id
         let (sprite_id, resolved) = get_sprite_id(animation, current_id, asset_manager).await;
@@ -101,6 +105,12 @@ pub async fn update_animation_sytem(
 
     for (entity, frame) in frames {
         ecs.add_component_to_entity(entity, frame)
+    }
+
+    // Remove stale CurrentFrame components from entities with no active clip
+    let frame_store = ecs.get_store_mut::<CurrentFrame>();
+    for entity in to_remove {
+        frame_store.remove(entity);
     }
 }
 
