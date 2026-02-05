@@ -2,6 +2,7 @@
 use std::borrow::Cow;
 use macroquad::math::{Vec2, Vec3};
 use crate::assets::sprite::SpriteId;
+use crate::ecs::transform::Pivot;
 
 /// One mutable field value.
 pub enum FieldValue<'a> {
@@ -12,6 +13,7 @@ pub enum FieldValue<'a> {
     Vec2(&'a mut Vec2),
     Vec3(&'a mut Vec3),
     SpriteId(&'a mut SpriteId),
+    Pivot(&'a mut Pivot),
 }
 
 /// Metadata that the inspector consumes.
@@ -103,10 +105,20 @@ impl ReflectField for Vec3 {
 
 impl ReflectField for SpriteId {
     fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
-        FieldInfo { 
-            name, 
+        FieldInfo {
+            name,
             value: FieldValue::SpriteId(field),
-            widget_hint: None, 
+            widget_hint: None,
+        }
+    }
+}
+
+impl ReflectField for Pivot {
+    fn field_info<'a>(field: &'a mut Self, name: &'static str) -> FieldInfo<'a> {
+        FieldInfo {
+            name,
+            value: FieldValue::Pivot(field),
+            widget_hint: None,
         }
     }
 }
