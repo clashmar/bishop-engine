@@ -1,11 +1,17 @@
 // game/src/main.rs
+use crate::rendering::render_system::RenderSystem;
 use engine_core::storage::path_utils::resources_dir_from_exe;
 use engine_core::assets::core_assets::load_rgba_resized;
 use engine_core::camera::camera_manager::CameraManager;
+use game_lib::scripting::lua_game_ctx::LuaGameCtx;
+use game_lib::diagnostics::DiagnosticsOverlay;
 use game_lib::game_state::GameState;
 use macroquad::miniquad::conf::Icon;
+use game_lib::engine::Engine;
 use macroquad::prelude::*;
+use std::cell::RefCell;
 use engine_core::*;
+use std::rc::Rc;
 use mlua::Lua;
 use std::env;
 use std::fs;
@@ -54,17 +60,21 @@ async fn main() {
     // Pre-cache font to avoid black rectangle rendering bug
     engine_core::assets::core_assets::precache_font();
 
-    // let lua = Lua::new();
-    // let game_state = std::rc::Rc::new(std::cell::RefCell::new(GameState::new(&lua).await));
-    // let script_mgr = &mut game_state.borrow_mut().game.script_manager;
-    // let ctx = game_lib::engine::LuaGameCtx { game_state: game_state.clone() };
-    // let _ = ctx.set_lua_game_ctx(&script_mgr);
+    let lua = Lua::new();
+    let mut camera_manager = CameraManager::default();
 
-    // let mut engine = game_lib::engine::Engine { 
-    //     game_state: game_state.clone(), 
-    //     lua, 
-    //     camera_manager: CameraManager::default(),
-    // };
+    let game_state = Rc::new(RefCell::new(GameState::new(&lua, &mut camera_manager).await));
 
-    // engine.run().await;
+    let ctx = LuaGameCtx { game_state: game_state.clone() };
+    let _ = ctx.set_lua_game_ctx(&lua);
+
+    let mut engine = Engine {
+        game_state: game_state.clone(),
+        lua,
+        camera_manager,
+        render_system: RenderSystem::new(),
+        diagnostics: DiagnosticsOverlay::new(),
+    };
+
+    engine.run().await;
 }

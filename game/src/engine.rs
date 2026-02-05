@@ -45,6 +45,12 @@ impl Engine {
             self.diagnostics.update(frame_dt);
             self.diagnostics.handle_input();
 
+            // Store positions once per frame before physics loop for correct interpolation
+            {
+                let mut game_state = self.game_state.borrow_mut();
+                game_state.store_previous_positions(&mut self.camera_manager);
+            }
+
             // Fixed‑step physics
             while accumulator >= FIXED_DT {
                 self.fixed_update(FIXED_DT);
@@ -67,10 +73,6 @@ impl Engine {
 
     pub fn fixed_update(&mut self, dt: f32) {
         let mut game_state = self.game_state.borrow_mut();
-
-        // Store the current positions for the next frame
-        game_state.store_previous_positions(&mut self.camera_manager);
-
         let game_ctx = game_state.game.ctx_mut();
         let ecs = game_ctx.ecs;
         let current_room = game_ctx.cur_world.current_room().unwrap();

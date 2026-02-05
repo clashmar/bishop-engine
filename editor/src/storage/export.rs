@@ -148,13 +148,14 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 
     // Copy Icon.icns
     onscreen_debug!("Copying Icon.icns.");
-    let src_icns = mac_os_folder()
-        .join("Icon.icns");
+    let src_icns = mac_os_folder().join("Icon.icns");
+    let target_icns = target_resources.join("Icon.icns");
 
-    let target_icns = target_resources
-        .join("Icon.icns");
-
-    fs::copy(src_icns, target_icns)?;
+    if src_icns.exists() {
+        fs::copy(&src_icns, &target_icns)?;
+    } else {
+        onscreen_debug!("Icon.icns not found, skipping.");
+    }
 
     // Copy Info.plist
     if let Some(bundle_assets) = bundle_assets_folder() {
