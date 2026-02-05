@@ -107,7 +107,7 @@ impl<'a> TextInput<'a> {
         let mouse = mouse_position();
         let mouse_over = self.rect.contains(vec2(mouse.0, mouse.1));
 
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if is_mouse_button_pressed(MouseButton::Left) && !is_click_consumed() {
             if !focused && mouse_over {
                 just_gained_focus = true;
             }

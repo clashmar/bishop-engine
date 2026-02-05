@@ -218,14 +218,13 @@ where
                     }
                 }
                 (FieldValue::Pivot(pivot), _) => {
-                    if let Some(selected) = gui_dropdown(
+                    if let Some(selected) = Dropdown::new(
                         base_id,
                         widget_rect,
                         pivot.label(),
                         Pivot::all(),
                         |p| p.label().to_string(),
-                        blocked,
-                    ) {
+                    ).blocked(blocked).show() {
                         *pivot = selected;
                     }
                 }

@@ -85,14 +85,35 @@ thread_local! {
     pub static DROPDOWN_OPEN: RefCell<bool> = const { RefCell::new(false) };
 }
 
+thread_local! {
+    pub static CLICK_CONSUMED: RefCell<bool> = const { RefCell::new(false) };
+}
+
 pub fn is_dropdown_open() -> bool {
     DROPDOWN_OPEN.with(|f| *f.borrow())
 }
 
+/// Marks the current click as consumed, preventing other widgets from processing it.
+pub fn consume_click() {
+    CLICK_CONSUMED.with(|f| *f.borrow_mut() = true);
+}
+
+/// Returns true if the current click has been consumed by another widget.
+pub fn is_click_consumed() -> bool {
+    CLICK_CONSUMED.with(|f| *f.borrow())
+}
+
+/// Resets the click consumed flag. Call at the start of each frame.
+pub fn reset_click_consumed() {
+    CLICK_CONSUMED.with(|f| *f.borrow_mut() = false);
+}
+
 pub fn widgets_frame_start() {
     tab_registry_clear();
+    reset_click_consumed();
 }
 
 pub fn widgets_frame_end() {
     resolve_pending_tab();
+    flush_dropdown_lists();
 }
