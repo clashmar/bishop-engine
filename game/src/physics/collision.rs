@@ -1,8 +1,8 @@
 // game/src/physics/collision.rs
 use engine_core::assets::asset_manager::AssetManager;
+use engine_core::ecs::transform::{pivot_offset, Pivot, Transform};
 use engine_core::tiles::tile::TileComponent;
 use engine_core::engine_global::tile_size;
-use engine_core::ecs::transform::Transform;
 use engine_core::tiles::tilemap::TileMap;
 use engine_core::ecs::component::*;
 use engine_core::world::room::Exit;
@@ -22,11 +22,13 @@ pub struct SweepResult {
     pub blocked_y: bool,
 }
 
-/// Build an axis‑aligned bounding box (AABB) from a position + collider.
+/// Build an axis‑aligned bounding box (AABB) from a position + collider + pivot.
+/// The pivot determines which point on the collider aligns with the position.
 #[inline]
-fn aabb(position: Vec2, collider: Collider) -> (Vec2, Vec2) {
-    // (min, max)
-    (position, position + Vec2::new(collider.width, collider.height))
+fn aabb(position: Vec2, collider: Collider, pivot: Pivot) -> (Vec2, Vec2) {
+    let size = Vec2::new(collider.width, collider.height);
+    let top_left = pivot_offset(position, size, pivot);
+    (top_left, top_left + size)
 }
 
 /// Resolve a single axis (X or Y).
@@ -100,10 +102,11 @@ pub fn sweep_move(
     asset_manager: &AssetManager,
     ecs: &mut Ecs,
     tilemap: &TileMap,
-    room_origin: Vec2,               
-    entity_position: Vec2,                 
+    room_origin: Vec2,
+    entity_position: Vec2,
     desired_delta: Vec2,
     collider: Collider,
+    pivot: Pivot,
     exits: &[Exit],
 ) -> SweepResult {
     // Gather every solid AABB to test against
@@ -140,32 +143,34 @@ pub fn sweep_move(
         // Only solid entities block movement
         if let Some(solid) = ecs.get::<Solid>(*other_entity) {
             if solid.0 {
-                if let Some(other_pos) =
-                    ecs.get::<Transform>(*other_entity)
-                {
-                    let aabb = aabb(other_pos.position, *other_coll);
-                    obstacles.push(aabb);
+                if let Some(other_transform) = ecs.get::<Transform>(*other_entity) {
+                    let other_aabb = aabb(other_transform.position, *other_coll, other_transform.pivot);
+                    obstacles.push(other_aabb);
                 }
             }
         }
     }
 
+    // Calculate the collider's top-left position using pivot
+    let collider_size = Vec2::new(collider.width, collider.height);
+    let collider_pos = pivot_offset(entity_position, collider_size, pivot);
+
     // Sweep X axis, then Y axis
     let (allowed_x, blocked_x) = resolve_axis(
-        entity_position,
+        collider_pos,
         desired_delta.x,
         0,
-        Vec2::new(collider.width, collider.height),
+        collider_size,
         &obstacles,
     );
 
     // Apply the X movement before testing Y
-    let pos_after_x = entity_position + Vec2::new(allowed_x, 0.0);
+    let pos_after_x = collider_pos + Vec2::new(allowed_x, 0.0);
     let (allowed_y, blocked_y) = resolve_axis(
         pos_after_x,
         desired_delta.y,
         1,
-        Vec2::new(collider.width, collider.height),
+        collider_size,
         &obstacles,
     );
 

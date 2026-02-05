@@ -9,7 +9,87 @@ use serde_with::serde_as;
 use serde_with::FromInto;
 use reflect_derive::Reflect;
 
-/// Transform component containing position, rotation, and scale of an entity.
+/// Pivot point for sprite rendering. Defines which point on the sprite
+/// aligns with the entity's Transform position.
+#[derive(Clone, Copy, Default, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub enum Pivot {
+    TopLeft,
+    TopCenter,
+    TopRight,
+    CenterLeft,
+    Center,
+    CenterRight,
+    BottomLeft,
+    #[default]
+    BottomCenter,
+    BottomRight,
+}
+
+impl Pivot {
+    /// Returns normalized offset (0.0-1.0) where (0,0)=top-left, (1,1)=bottom-right.
+    pub fn as_normalized(&self) -> Vec2 {
+        match self {
+            Pivot::TopLeft => vec2(0.0, 0.0),
+            Pivot::TopCenter => vec2(0.5, 0.0),
+            Pivot::TopRight => vec2(1.0, 0.0),
+            Pivot::CenterLeft => vec2(0.0, 0.5),
+            Pivot::Center => vec2(0.5, 0.5),
+            Pivot::CenterRight => vec2(1.0, 0.5),
+            Pivot::BottomLeft => vec2(0.0, 1.0),
+            Pivot::BottomCenter => vec2(0.5, 1.0),
+            Pivot::BottomRight => vec2(1.0, 1.0),
+        }
+    }
+
+    /// All variants for UI dropdowns.
+    pub fn all() -> &'static [Pivot] {
+        &[
+            Pivot::TopLeft,
+            Pivot::TopCenter,
+            Pivot::TopRight,
+            Pivot::CenterLeft,
+            Pivot::Center,
+            Pivot::CenterRight,
+            Pivot::BottomLeft,
+            Pivot::BottomCenter,
+            Pivot::BottomRight,
+        ]
+    }
+
+    /// Display label for UI.
+    pub fn label(&self) -> &'static str {
+        match self {
+            Pivot::TopLeft => "Top Left",
+            Pivot::TopCenter => "Top Center",
+            Pivot::TopRight => "Top Right",
+            Pivot::CenterLeft => "Center Left",
+            Pivot::Center => "Center",
+            Pivot::CenterRight => "Center Right",
+            Pivot::BottomLeft => "Bottom Left",
+            Pivot::BottomCenter => "Bottom Center",
+            Pivot::BottomRight => "Bottom Right",
+        }
+    }
+}
+
+impl std::fmt::Display for Pivot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.label())
+    }
+}
+
+/// Calculates the top-left corner position for a rectangle 
+/// given an entity position, the rectangle's size, and a pivot point.
+#[inline]
+pub fn pivot_offset(entity_pos: Vec2, size: Vec2, pivot: Pivot) -> Vec2 {
+    let offset = pivot.as_normalized();
+    vec2(
+        entity_pos.x - size.x * offset.x,
+        entity_pos.y - size.y * offset.y,
+    )
+}
+
+/// Transform component for entities.
 #[ecs_component]
 #[serde_as]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
@@ -17,6 +97,8 @@ use reflect_derive::Reflect;
 pub struct Transform {
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
+    /// Pivot point for rendering. Defaults to BottomCenter.
+    pub pivot: Pivot,
 }
 inspector_module!(Transform, removable = false);
 

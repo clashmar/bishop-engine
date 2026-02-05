@@ -34,6 +34,7 @@
 
 ---@class Transform
 ---@field position vec2
+---@field pivot table
 
 ---@class RoomCamera
 ---@field zoom vec2

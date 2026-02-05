@@ -228,7 +228,7 @@ pub fn create_new_world(ecs: &mut Ecs) -> World {
     let _player = ecs
         .create_entity()
         .with(Player)
-        .with(Transform { position: starting_position })
+        .with(Transform { position: starting_position, ..Default::default() })
         .with(PhysicsBody)
         .with(CurrentRoom(room_id))
         .with(Name(format!("Player")))

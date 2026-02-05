@@ -1,6 +1,6 @@
 // editor/src/room/room_editor_actions.rs
 use crate::editor_camera_controller::*;
-use crate::ecs::transform::Transform;
+use crate::ecs::transform::{Pivot, Transform};
 use crate::gui::gui_constants::*;
 use crate::room::room_editor::*;
 use crate::gui::menu_bar::*;
@@ -147,12 +147,14 @@ pub fn draw_collider(
         .get(entity)
         .filter(|c| c.width > 0.0 && c.height > 0.0)
         .map(|c| (c.width, c.height)) {
-            let pos = match ecs.get_store::<Transform>().get(entity) {
-                Some(p) => p.position,
+            let transform = match ecs.get_store::<Transform>().get(entity) {
+                Some(t) => t,
                 None => return,
             };
 
-            draw_rectangle_lines(pos.x, pos.y, width, height, 2.0, PINK);
+            // Apply pivot offset to collider position
+            let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
+            draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, PINK);
      }
 }
 
@@ -172,9 +174,15 @@ pub fn entity_hitbox(
     let corrected_pos = if ecs.has_any::<(RoomCamera, Light)>(entity) {
         position - vec2(tile_size() * 0.5, tile_size() * 0.5)
     } else {
-        position
+        // Apply pivot offset for regular entities
+        let pivot = ecs
+            .get_store::<Transform>()
+            .get(entity)
+            .map(|t| t.pivot)
+            .unwrap_or(Pivot::TopLeft);
+        pivot_adjusted_position(position, vec2(width, height), pivot)
     };
-    
+
     // Convert the two opposite corners of the entity to screen coords
     let top_left = coord::world_to_screen(camera, corrected_pos);
     let bottom_right = coord::world_to_screen(camera, corrected_pos + vec2(width, height));
