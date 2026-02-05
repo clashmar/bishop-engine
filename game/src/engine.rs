@@ -45,19 +45,20 @@ impl Engine {
             self.diagnostics.update(frame_dt);
             self.diagnostics.handle_input();
 
-            // Store positions once per frame before physics loop for correct interpolation
-            {
-                let mut game_state = self.game_state.borrow_mut();
-                game_state.store_previous_positions(&mut self.camera_manager);
-            }
-
-            // Fixed‑step physics
             while accumulator >= FIXED_DT {
+                // Store positions before each physics step
+                {
+                    let mut game_state = self.game_state.borrow_mut();
+                    game_state.store_previous_positions(&mut self.camera_manager);
+                }
+                
+                // Physics, camera...
                 self.fixed_update(FIXED_DT);
+
                 accumulator -= FIXED_DT;
             }
 
-            // Per‑frame async work (input, animation, camera …)
+            // Per‑frame async work (input, animation)
             self.update_async(frame_dt).await;
 
             // Update diagnostics metrics before render (playtest only)
@@ -75,10 +76,14 @@ impl Engine {
         let mut game_state = self.game_state.borrow_mut();
         let game_ctx = game_state.game.ctx_mut();
         let ecs = game_ctx.ecs;
-        let current_room = game_ctx.cur_world.current_room().unwrap();
+        let Some(current_room) = game_ctx.cur_world.current_room() else {
+            return;
+        };
         let asset_manager = game_ctx.asset_manager;
 
-        update_physics(asset_manager, ecs, current_room, dt)
+        update_physics(asset_manager, ecs, current_room, dt);
+
+        self.camera_manager.update_active(ecs, current_room);
     }
 
     pub async fn update_async(&mut self, dt: f32) {
@@ -90,15 +95,10 @@ impl Engine {
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
-            let current_room = game_ctx.cur_world.current_room().unwrap();
 
-            let player_pos = ecs.get_player_position().position;
-
-            // Update the camera
-            self.camera_manager
-                .update_active(ecs, current_room, player_pos);
-
-            update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
+            if let Some(current_room) = game_ctx.cur_world.current_room() {
+                update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
+            }
 
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
             let ctx = game_state.game.ctx_mut();
@@ -111,30 +111,6 @@ impl Engine {
         if let Err(e) = ScriptSystem::run_scripts(dt, self) {
             onscreen_error!("Error running scripts: {}", e);
         }
-    }
-
-    /// Update diagnostics metrics from game state.
-    pub fn update_diagnostics_metrics(&mut self) {
-        let game_state = self.game_state.borrow();
-        let game = &game_state.game;
-
-        let entity_count = game.ecs.get_store::<Transform>().data.len();
-        let texture_count = game.asset_manager.texture_count();
-        let script_instances = game.script_manager.instances.len();
-        let listener_count = game.script_manager.event_bus.listener_count();
-        let script_id_count = game.script_manager.script_id_to_path.len();
-        let sprite_id_count = game.asset_manager.sprite_id_to_path.len();
-        let render_time_ms = self.render_system.render_time_ms;
-
-        self.diagnostics.update_metrics(
-            entity_count,
-            texture_count,
-            script_instances,
-            listener_count,
-            script_id_count,
-            sprite_id_count,
-            render_time_ms,
-        );
     }
 
     pub fn render(&mut self, alpha: f32, cur_window_size: &mut (u32, u32)) {
@@ -153,7 +129,9 @@ impl Engine {
 
         let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
-        let current_room = game_ctx.cur_world.current_room().unwrap();
+        let Some(current_room) = game_ctx.cur_world.current_room() else {
+            return;
+        };
 
         let interpolated_target = lerp(
             self.camera_manager.previous_position.unwrap_or_default(),
@@ -182,5 +160,29 @@ impl Engine {
 
         // Draw diagnostics overlay after game rendering
         self.diagnostics.draw();
+    }
+
+    /// Update diagnostics metrics from game state.
+    pub fn update_diagnostics_metrics(&mut self) {
+        let game_state = self.game_state.borrow();
+        let game = &game_state.game;
+
+        let entity_count = game.ecs.get_store::<Transform>().data.len();
+        let texture_count = game.asset_manager.texture_count();
+        let script_instances = game.script_manager.instances.len();
+        let listener_count = game.script_manager.event_bus.listener_count();
+        let script_id_count = game.script_manager.script_id_to_path.len();
+        let sprite_id_count = game.asset_manager.sprite_id_to_path.len();
+        let render_time_ms = self.render_system.render_time_ms;
+
+        self.diagnostics.update_metrics(
+            entity_count,
+            texture_count,
+            script_instances,
+            listener_count,
+            script_id_count,
+            sprite_id_count,
+            render_time_ms,
+        );
     }
 }
