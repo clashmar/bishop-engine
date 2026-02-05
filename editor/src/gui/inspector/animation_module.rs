@@ -247,14 +247,13 @@ pub fn draw_current_clip_dropdowns(
     // Select clip
     let select_rect = Rect::new(rect.x, rect.y, width, rect.h);
 
-    if let Some(selected) = gui_dropdown(
+    if let Some(selected) = Dropdown::new(
         module.select_dropdown_id,
         select_rect,
         &clip_label,
         &existing_clip_ids(&animation.clips),
         |id| id.ui_label(),
-        blocked
-    ) {
+    ).blocked(blocked).show() {
         animation.set_clip(&selected);
         return;
     }
@@ -270,14 +269,13 @@ pub fn draw_current_clip_dropdowns(
     // Show the type selector
     let type_label = "Set Type";
 
-    let chosen = gui_dropdown(
+    let chosen = Dropdown::new(
         module.set_dropdown_id,
         right_rect,
         &type_label,
         &all_ids,
         |id| id.ui_label(),
-        blocked,
-    );
+    ).blocked(blocked).show();
 
     if let Some(chosen) = chosen {
         match chosen {

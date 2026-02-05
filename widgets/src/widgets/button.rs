@@ -104,5 +104,6 @@ impl<'a> Button<'a> {
         && hovered
         && !self.blocked
         && !is_dropdown_open()
+        && !is_click_consumed()
     }
 }
