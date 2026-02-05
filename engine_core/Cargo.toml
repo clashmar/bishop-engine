@@ -11,18 +11,15 @@ macroquad = "0.4.14"
 mlua = { version = "0.11.5", features = ["lua54", "vendored", "serde" ] }
 log = "0.4"
 flexi_logger = "0.27"
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_with = "3.14.0"
-serde_json = "1.0.145"
-erased-serde = { version = "0.3", features = ["alloc"] }
-inventory = "0.1"  
+inventory = "0.1"
 ron = "0.9"
 uuid = { version = "1.18", features = ["serde", "v4"] }
 once_cell = "1"
-futures = "0.3"
-ctor = "0.2"
+futures = { version = "0.3", default-features = false, features = ["executor"] }
 strum = "0.26"
 strum_macros = "0.26"
 rfd = "0.13"
 directories-next = "2.0"
-image = "0.25.9"
+image = { version = "0.25.9", default-features = false, features = ["png"] }
