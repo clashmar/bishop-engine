@@ -40,8 +40,8 @@ pub fn render_room(
     }
 
     // Clear composite textures before each run
-    RenderSystem::clear_cam(&render_system.scene_comp_rt);
-    RenderSystem::clear_cam(&render_system.final_comp_rt);
+    render_system.clear_cam(&render_system.scene_comp_rt.clone());
+    render_system.clear_cam(&render_system.final_comp_rt.clone());
 
     // Draw each blocking texture in black onto a white background
     // To be implemented but it needs to happen BEFORE the loop

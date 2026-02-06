@@ -33,7 +33,6 @@ pub struct Engine {
 impl Engine {
     pub async fn run(&mut self) {
         let mut accumulator: f32 = 0.0;
-        let mut cur_window_size = (screen_width() as u32, screen_height() as u32);
 
         // Main loop
         loop {
@@ -66,7 +65,7 @@ impl Engine {
 
             // Render with interpolation
             let alpha = accumulator / FIXED_DT;
-            self.render(alpha, &mut cur_window_size);
+            self.render(alpha);
 
             next_frame().await;
         }
@@ -113,15 +112,8 @@ impl Engine {
         }
     }
 
-    pub fn render(&mut self, alpha: f32, cur_window_size: &mut (u32, u32)) {
+    pub fn render(&mut self, alpha: f32) {
         clear_background(BLACK);
-
-        // Update the render system if the window is resized
-        let cur_screen = (screen_width() as u32, screen_height() as u32);
-        if cur_screen != *cur_window_size {
-            self.render_system.resize(cur_screen.0, cur_screen.1);
-            *cur_window_size = cur_screen;
-        }
 
         let mut game_state = self.game_state.borrow_mut();
         let prev_positions = &game_state.prev_positions.clone();
