@@ -127,34 +127,31 @@ fn draw_entity(
 
     // Animate/Draw sprite
     if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
-        let src = Rect::new(
-            cf.col as f32 * cf.frame_size.x,
-            cf.row as f32 * cf.frame_size.y,
-            cf.frame_size.x,
-            cf.frame_size.y,
-        );
         let tex = asset_manager.get_texture_from_id(cf.sprite_id);
 
-        // Apply manual offset and handle flip
-        let draw_x = if cf.flip_x {
-            draw_base.x + cf.offset.x + width
-        } else {
-            draw_base.x + cf.offset.x
-        };
-        let draw_y = draw_base.y + cf.offset.y;
+        let frame_w = cf.frame_size.x;
+        let frame_h = cf.frame_size.y;
 
-        // Draws individual entities
+        let src = Rect::new(
+            cf.col as f32 * frame_w,
+            cf.row as f32 * frame_h,
+            frame_w,
+            frame_h,
+        );
+
+        // Floor coordinates for pixel-perfect alignment
+        let draw_x = (draw_base.x + cf.offset.x).floor();
+        let draw_y = (draw_base.y + cf.offset.y).floor();
+
         draw_texture_ex(
             tex,
             draw_x,
             draw_y,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(
-                    if cf.flip_x { -width } else { width },
-                    height
-                )),
+                dest_size: Some(vec2(frame_w, frame_h)),
                 source: Some(src),
+                flip_x: cf.flip_x,
                 ..Default::default()
             },
         );

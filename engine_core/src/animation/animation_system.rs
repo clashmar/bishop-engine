@@ -69,8 +69,22 @@ pub async fn update_animation_sytem(
         // Advance the timer with speed multiplier applied (0.0 means default speed of 1.0)
         let speed = if animation.speed_multiplier == 0.0 { 1.0 } else { animation.speed_multiplier };
         clip_state.timer += dt * speed;
-        let frame_time = 1.0 / clip.fps.max(0.001);
-        while clip_state.timer >= frame_time {
+
+        loop {
+            let frame_index = clip_state.row * clip.cols + clip_state.col;
+            let frame_time = if !clip.frame_durations.is_empty() {
+                clip.frame_durations
+                    .get(frame_index)
+                    .copied()
+                    .unwrap_or(1.0 / clip.fps.max(0.001))
+            } else {
+                1.0 / clip.fps.max(0.001)
+            };
+
+            if clip_state.timer < frame_time {
+                break;
+            }
+
             clip_state.timer -= frame_time;
             clip_state.col += 1;
             if clip_state.col >= clip.cols {
@@ -83,6 +97,7 @@ pub async fn update_animation_sytem(
                         clip_state.finished = true;
                         clip_state.row = clip.rows - 1;
                         clip_state.col = clip.cols - 1;
+                        break;
                     }
                 }
             }
