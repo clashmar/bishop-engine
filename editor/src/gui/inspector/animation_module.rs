@@ -3,9 +3,11 @@ use crate::gui::gui_constants::*;
 use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use engine_core::ecs::inpsector_module::CollapsibleModule;
-use engine_core::animation::animation_system::*;
-use engine_core::animation::animation_clip::*;
 use engine_core::ecs::inpsector_module::InspectorModule;
+use engine_core::animation::animation_system::*;
+use engine_core::animation::aseprite_import::*;
+use engine_core::storage::path_utils::assets_folder;
+use engine_core::animation::animation_clip::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::toast::Toast;
 use engine_core::ui::widgets::*;
@@ -139,6 +141,42 @@ impl InspectorModule for AnimationModule {
 
         y += MARGIN + WIDGET_PADDING;
 
+        // Variant picker (before clip selector so it appears first)
+        let has_variant = !animation.variant.0.as_os_str().is_empty();
+        let variant_btn_w = full_w / 2.0;
+        let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, variant_btn_w, MARGIN);
+
+        if Button::new(sprite_btn, if has_variant { "Edit Variant" } else { "Choose Variant" }).blocked(blocked).show() {
+            if let Some(path) = rfd::FileDialog::new()
+                .pick_folder()
+            {
+                let normalized_path = asset_manager.normalize_path(path);
+                animation.variant = VariantFolder(normalized_path);
+                variant_changed = true;
+            }
+        }
+
+        let full_path = Path::new(&animation.variant.0);
+
+        let variant_label = if has_variant {
+            full_path
+                .file_name()
+                .map(|n| Cow::Owned(format!("/{}", n.to_string_lossy().into_owned())))
+                .unwrap_or_else(|| Cow::Borrowed("/..."))
+        } else {
+            Cow::Borrowed("/...")
+        };
+
+        draw_text_ui(
+            &variant_label,
+            sprite_btn.x + sprite_btn.w + WIDGET_SPACING,
+            y + LABEL_Y_OFFSET,
+            DEFAULT_FONT_SIZE_16,
+            FIELD_TEXT_COLOR
+        );
+
+        y += MARGIN + WIDGET_PADDING;
+
         // Return if there is no current clip
         if animation.current.is_none() {
             return;
@@ -146,45 +184,13 @@ impl InspectorModule for AnimationModule {
 
         // Calculate clip selector dropdown here
         let clip_dropdown_rect = Rect::new(rect.x + WIDGET_PADDING, y, full_w, BTN_HEIGHT);
-        
+
         y += MARGIN + WIDGET_PADDING;
 
+        let current_clip_id = animation.current.clone().unwrap();
+
         // Edit the currently selected clip
-        if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
-            // Variant picker
-            let has_variant = !animation.variant.0.as_os_str().is_empty();
-            let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, full_w / 2., MARGIN);
-
-            if Button::new(sprite_btn, if has_variant { "Edit Variant" } else { "Choose Variant" }).blocked(blocked).show() {
-                if let Some(path) = rfd::FileDialog::new()
-                    .pick_folder()
-                {
-                    let normalized_path = asset_manager.normalize_path(path);
-                    animation.variant = VariantFolder(normalized_path);
-                    variant_changed = true;
-                }
-            }
-
-            let full_path = Path::new(&animation.variant.0);
-
-            let variant_label = if has_variant {
-                full_path
-                    .file_name()
-                    .map(|n| Cow::Owned(format!("/{}", n.to_string_lossy().into_owned())))
-                    .unwrap_or_else(|| Cow::Borrowed("/..."))
-            } else {
-                Cow::Borrowed("/...")
-            };
-
-            draw_text_ui(
-                &variant_label, 
-                rect.x + sprite_btn.w + WIDGET_SPACING + WIDGET_PADDING, 
-                y + LABEL_Y_OFFSET, 
-                DEFAULT_FONT_SIZE_16, 
-                FIELD_TEXT_COLOR
-            );
-
-            y += MARGIN + WIDGET_PADDING;
+        if let Some(clip) = animation.clips.get_mut(&current_clip_id) {
 
             // Frame size
             draw_frame_size_fields(self, y, rect, clip, blocked);
@@ -200,6 +206,101 @@ impl InspectorModule for AnimationModule {
 
             // Optional offset
             draw_offset_fields(self, y, rect, clip, blocked);
+            y += MARGIN + WIDGET_PADDING;
+
+            // Import buttons at the bottom: "Import: [JSON] [Variant]"
+            const IMPORT_LABEL: &str = "Import:";
+            const JSON_LABEL: &str = "JSON";
+            const VARIANT_LABEL: &str = "Variant";
+
+            let import_label_w = measure_text_ui(IMPORT_LABEL, LABEL_FONT_SIZE, 1.0).width + COLON_GAP;
+            let json_btn_w = measure_text_ui(JSON_LABEL, DEFAULT_FONT_SIZE_16, 1.0).width + 16.0;
+            let variant_btn_w = measure_text_ui(VARIANT_LABEL, DEFAULT_FONT_SIZE_16, 1.0).width + 16.0;
+            let btn_gap = 8.0;
+
+            let start_x = rect.x + WIDGET_PADDING;
+
+            draw_text_ui(IMPORT_LABEL, start_x, y + LABEL_Y_OFFSET, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+
+            let import_json_btn = Rect::new(start_x + import_label_w, y, json_btn_w, MARGIN);
+            let import_variant_btn = Rect::new(import_json_btn.x + json_btn_w + btn_gap, y, variant_btn_w, MARGIN);
+
+            // Import JSON button - imports metadata for the current clip only
+            if Button::new(import_json_btn, JSON_LABEL).blocked(blocked || !has_variant).show() {
+                let json_path = resolve_json_path(&animation.variant, &current_clip_id);
+                match import_aseprite_metadata(&json_path) {
+                    JsonImportResult::Success(imported) => {
+                        clip.frame_size = imported.frame_size;
+                        clip.cols = imported.cols;
+                        clip.rows = imported.rows;
+                        clip.fps = imported.fps;
+                        clip.frame_durations = imported.frame_durations;
+                        clip.offset = imported.offset;
+                        clip.mirrored = imported.mirrored;
+                        self.warning = Some(Toast::new("Import successful".to_string(), 2.0));
+                    }
+                    JsonImportResult::NotFound => {
+                        self.warning = Some(Toast::new(
+                            format!("JSON not found: {}", json_path.display()),
+                            3.0,
+                        ));
+                    }
+                    JsonImportResult::Error(msg) => {
+                        self.warning = Some(Toast::new(format!("Import error: {}", msg), 3.0));
+                    }
+                }
+            }
+
+            // Import Variant button - one-click full import from Aseprite files
+            if Button::new(import_variant_btn, VARIANT_LABEL).blocked(blocked || !has_variant).show() {
+                let full_path = assets_folder().join(&animation.variant.0);
+
+                // Export all Aseprite files to PNG + JSON
+                match export_aseprite_folder(&full_path) {
+                    AseExportResult::Success => {}
+                    AseExportResult::AsepriteNotFound => {
+                        self.warning = Some(Toast::new("Aseprite not found in PATH".to_string(), 3.0));
+                        return;
+                    }
+                    AseExportResult::ExportFailed { file, error } => {
+                        self.warning = Some(Toast::new(
+                            format!("Export failed: {}: {}", file, error),
+                            3.0,
+                        ));
+                        return;
+                    }
+                }
+
+                // Import all JSON files (skips malformed JSON, not fatal)
+                match import_variant_folder(&full_path) {
+                    Ok(result) => {
+                        // Clear existing clips and add new ones
+                        animation.clips = result.clips;
+                        animation.states.clear();
+                        for id in animation.clips.keys() {
+                            animation.states.insert(id.clone(), ClipState::default());
+                        }
+                        animation.current = animation.clips.keys().next().cloned();
+
+                        let count = animation.clips.len();
+                        let msg = if result.skipped.is_empty() {
+                            format!("Imported {} clips", count)
+                        } else {
+                            format!("Imported {} clips ({} skipped)", count, result.skipped.len())
+                        };
+                        self.warning = Some(Toast::new(msg, 2.0));
+
+                        // Refresh sprite cache after importing
+                        let has_variant_folder = !animation.variant.0.as_os_str().is_empty();
+                        if has_variant_folder {
+                            futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
+                        }
+                    }
+                    Err(e) => {
+                        self.warning = Some(Toast::new(format!("Import failed: {}", e), 3.0));
+                    }
+                }
+            }
         }
 
         draw_current_clip_dropdowns(
@@ -226,7 +327,7 @@ impl InspectorModule for AnimationModule {
 
     fn height(&self) -> f32 {
         if self.has_clips {
-            300.0
+            340.0
         } else {
             50.0
         }

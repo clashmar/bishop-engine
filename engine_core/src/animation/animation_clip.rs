@@ -152,8 +152,10 @@ pub struct ClipDef {
     pub cols: usize,
     /// Number of rows that belong to this clip.
     pub rows: usize,
-    /// Playback speed in frames per second.
+    /// Playback speed in frames per second (used when frame_durations is empty).
     pub fps: f32,
+    /// Per-frame durations in seconds. If empty, uniform timing from fps is used.
+    pub frame_durations: Vec<f32>,
     /// Whether the clip loops.
     pub looping: bool,
     /// Optional offset for drawing.
@@ -170,6 +172,7 @@ impl Default for ClipDef {
             cols: 5,
             rows: 1,
             fps: 4.0,
+            frame_durations: Vec::new(),
             looping: true,
             offset: Vec2::ZERO,
             mirrored: false,
