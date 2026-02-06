@@ -96,9 +96,20 @@ impl LuaCommand for SetClipCmd {
         let mut game_state = engine.game_state.borrow_mut();
         let ecs = &mut game_state.game.ecs;
 
+        // Get facing direction first (before mutable borrow of Animation)
+        let facing_left = ecs
+            .get::<FacingDirection>(self.entity)
+            .map(|f| f.0.is_left())
+            .unwrap_or(false);
+
         if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
             let clip_id = string_to_clip_id(&self.clip_name);
             animation.set_clip(&clip_id);
+
+            // Recalculate flip_x based on new clip's mirrored property
+            if let Some(clip) = animation.clips.get(&clip_id) {
+                animation.flip_x = clip.mirrored && facing_left;
+            }
         }
     }
 }
