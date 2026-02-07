@@ -5,6 +5,7 @@ use crate::gui::gui_constants::*;
 use crate::room::room_editor::*;
 use crate::gui::menu_bar::*;
 use crate::world::coord;
+use engine_core::animation::animation_system::CurrentFrame;
 use engine_core::animation::animation_clip::Animation;
 use engine_core::assets::asset_manager::AssetManager;
 use engine_core::camera::game_camera::RoomCamera;
@@ -169,12 +170,14 @@ pub fn entity_hitbox(
 ) -> Rect {
     let (width, height) = entity_dimensions(ecs, asset_manager, entity);
 
-    // If this is a camera or light, move the position from the top left
-    // corner to the visual centre to match how it's drawn
-    let corrected_pos = if ecs.has_any::<(RoomCamera, Light)>(entity) {
+    // Only use the center-offset for pure placeholder entities (Camera/Light without sprites)
+    let is_pure_placeholder = ecs.has::<RoomCamera>(entity)
+        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
+
+    let corrected_pos = if is_pure_placeholder {
         position - vec2(tile_size() * 0.5, tile_size() * 0.5)
     } else {
-        // Apply pivot offset for regular entities
+        // Apply pivot offset for regular entities (including Light+Sprite)
         let pivot = ecs
             .get_store::<Transform>()
             .get(entity)
@@ -306,7 +309,7 @@ pub fn draw_light_placeholders(
 
 /// Draw a placeholder for a `Glow` that has no other visual component.
 pub fn draw_glow_placeholders(
-    ecs: &Ecs, 
+    ecs: &Ecs,
     asset_manager: &mut AssetManager,
     room_id: RoomId,
 ) {
@@ -358,4 +361,21 @@ pub fn draw_glow_placeholders(
             );
         }
     }
+}
+
+/// Draws a small white dot at the pivot point of the selected entity.
+pub fn draw_pivot_marker(ecs: &Ecs, entity: Entity) {
+    let transform = match ecs.get_store::<Transform>().get(entity) {
+        Some(t) => t,
+        None => return,
+    };
+
+    const PIVOT_RADIUS: f32 = 1.0;
+    draw_circle(transform.position.x, transform.position.y, PIVOT_RADIUS, WHITE);
+}
+
+/// Returns true if the entity is a pure placeholder (Camera or Light without visible sprites).
+pub fn is_pure_placeholder(ecs: &Ecs, entity: Entity) -> bool {
+    ecs.has::<RoomCamera>(entity)
+        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity))
 }

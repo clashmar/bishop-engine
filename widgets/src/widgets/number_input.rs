@@ -104,7 +104,9 @@ where
         if is_mouse_button_pressed(MouseButton::Left) && !is_click_consumed() {
             focused = mouse_over && !self.blocked;
 
-            if focused && mouse_over {
+            if !focused {
+                selection_anchor = None;
+            } else if mouse_over {
                 let click_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
                 cursor_char = click_pos;
                 selection_anchor = Some(click_pos);
