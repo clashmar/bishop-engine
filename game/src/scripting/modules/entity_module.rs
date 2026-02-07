@@ -1,10 +1,12 @@
 // game/src/scripting/modules/entity_module.rs
+use crate::scripting::commands::dialogue_commands::*;
 use crate::scripting::commands::lua_command::*;
 use crate::scripting::lua_game_ctx::LuaGameCtx;
 use crate::game_global::push_command;
 use crate::scripting::lua_helpers::*;
 use engine_core::animation::animation_clip::Animation;
 use engine_core::animation::animation_system::CurrentFrame;
+use engine_core::dialogue::SpeechBubble;
 use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::scripting::interactable::find_best_interactable;
 use engine_core::scripting::modules::lua_module::*;
@@ -15,6 +17,7 @@ use mlua::UserDataRegistry;
 use mlua::UserDataMethods;
 use mlua::Variadic;
 use mlua::UserData;
+use mlua::Table;
 use engine_core::*;
 use mlua::Value;
 use mlua::Lua;
@@ -100,6 +103,10 @@ pub enum EntityHandleMethod {
     SetAnimSpeed(SetAnimSpeedMethod),
     GetCurrentFrame(GetCurrentFrameMethod),
     IsClipFinished(IsClipFinishedMethod),
+    Say(SayMethod),
+    SayDialogue(SayDialogueMethod),
+    ClearSpeech(ClearSpeechMethod),
+    IsSpeaking(IsSpeakingMethod),
 }
 
 /// Returns all entity handle methods.
@@ -119,6 +126,10 @@ fn entity_handle_methods() -> Vec<EntityHandleMethod> {
         EntityHandleMethod::SetAnimSpeed(SetAnimSpeedMethod),
         EntityHandleMethod::GetCurrentFrame(GetCurrentFrameMethod),
         EntityHandleMethod::IsClipFinished(IsClipFinishedMethod),
+        EntityHandleMethod::Say(SayMethod),
+        EntityHandleMethod::SayDialogue(SayDialogueMethod),
+        EntityHandleMethod::ClearSpeech(ClearSpeechMethod),
+        EntityHandleMethod::IsSpeaking(IsSpeakingMethod),
     ]
 }
 
@@ -139,6 +150,10 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::SetAnimSpeed(m) => m.register(methods),
             EntityHandleMethod::GetCurrentFrame(m) => m.register(methods),
             EntityHandleMethod::IsClipFinished(m) => m.register(methods),
+            EntityHandleMethod::Say(m) => m.register(methods),
+            EntityHandleMethod::SayDialogue(m) => m.register(methods),
+            EntityHandleMethod::ClearSpeech(m) => m.register(methods),
+            EntityHandleMethod::IsSpeaking(m) => m.register(methods),
         }
     }
 
@@ -158,6 +173,10 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::SetAnimSpeed(m) => m.emit_api(out),
             EntityHandleMethod::GetCurrentFrame(m) => m.emit_api(out),
             EntityHandleMethod::IsClipFinished(m) => m.emit_api(out),
+            EntityHandleMethod::Say(m) => m.emit_api(out),
+            EntityHandleMethod::SayDialogue(m) => m.emit_api(out),
+            EntityHandleMethod::ClearSpeech(m) => m.emit_api(out),
+            EntityHandleMethod::IsSpeaking(m) => m.emit_api(out),
         }
     }
 }
@@ -572,6 +591,195 @@ impl LuaMethod<EntityHandle> for IsClipFinishedMethod {
         out.line("--- Checks if the current non-looping clip has finished.");
         out.line("---@return boolean");
         out.line(&format!("function Entity:{}() end", IS_CLIP_FINISHED));
+        out.line("");
+    }
+}
+
+/// Method: `entity:say(text, opts)`
+pub struct SayMethod;
+impl LuaMethod<EntityHandle> for SayMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(SAY, |lua, this, (text, opts): (String, Option<Table>)| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let config = &game_state.game.dialogue_manager.config;
+
+            let duration = opts
+                .as_ref()
+                .and_then(|t| t.get::<f32>("duration").ok())
+                .unwrap_or(config.default_duration);
+
+            let color = opts.as_ref().and_then(|t| {
+                t.get::<Table>("color").ok().and_then(|c| {
+                    Some([
+                        c.get::<f32>(1).ok()?,
+                        c.get::<f32>(2).ok()?,
+                        c.get::<f32>(3).ok()?,
+                        c.get::<f32>(4).ok().unwrap_or(1.0),
+                    ])
+                })
+            });
+
+            let offset = opts.as_ref().and_then(|t| {
+                t.get::<Table>("offset").ok().and_then(|o| {
+                    Some((o.get::<f32>(1).ok()?, o.get::<f32>(2).ok()?))
+                })
+            });
+
+            let font_size = opts.as_ref().and_then(|t| t.get::<f32>("font_size").ok());
+            let max_width = opts.as_ref().and_then(|t| t.get::<f32>("max_width").ok());
+            let show_background = opts.as_ref().and_then(|t| t.get::<bool>("show_background").ok());
+
+            let background_color = opts.as_ref().and_then(|t| {
+                t.get::<Table>("background_color").ok().and_then(|c| {
+                    Some([
+                        c.get::<f32>(1).ok()?,
+                        c.get::<f32>(2).ok()?,
+                        c.get::<f32>(3).ok()?,
+                        c.get::<f32>(4).ok().unwrap_or(0.7),
+                    ])
+                })
+            });
+
+            push_command(Box::new(ShowSpeechCmd {
+                entity: this.entity,
+                text,
+                duration,
+                color,
+                offset,
+                font_size,
+                max_width,
+                show_background,
+                background_color,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Shows a speech bubble with raw text above the entity.");
+        out.line("---@param text string The text to display");
+        out.line("---@param opts? {duration?: number, color?: number[], offset?: number[], font_size?: number, max_width?: number, show_background?: boolean, background_color?: number[]}");
+        out.line(&format!("function Entity:{}(text, opts) end", SAY));
+        out.line("");
+    }
+}
+
+/// Method: `entity:say_dialogue(dialogue_id, key, opts)`
+pub struct SayDialogueMethod;
+impl LuaMethod<EntityHandle> for SayDialogueMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(SAY_DIALOGUE, |lua, this, (dialogue_id, key, opts): (String, String, Option<Table>)| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let config = game_state.game.dialogue_manager.config.clone();
+
+            let text = match game_state.game.dialogue_manager.select_text(&dialogue_id, &key) {
+                Some(t) => t,
+                None => {
+                    log::warn!("Dialogue not found: {}:{}", dialogue_id, key);
+                    return Ok(());
+                }
+            };
+            drop(game_state);
+
+            let duration = opts
+                .as_ref()
+                .and_then(|t| t.get::<f32>("duration").ok())
+                .unwrap_or(config.default_duration);
+
+            let color = opts.as_ref().and_then(|t| {
+                t.get::<Table>("color").ok().and_then(|c| {
+                    Some([
+                        c.get::<f32>(1).ok()?,
+                        c.get::<f32>(2).ok()?,
+                        c.get::<f32>(3).ok()?,
+                        c.get::<f32>(4).ok().unwrap_or(1.0),
+                    ])
+                })
+            });
+
+            let offset = opts.as_ref().and_then(|t| {
+                t.get::<Table>("offset").ok().and_then(|o| {
+                    Some((o.get::<f32>(1).ok()?, o.get::<f32>(2).ok()?))
+                })
+            });
+
+            let font_size = opts.as_ref().and_then(|t| t.get::<f32>("font_size").ok());
+            let max_width = opts.as_ref().and_then(|t| t.get::<f32>("max_width").ok());
+            let show_background = opts.as_ref().and_then(|t| t.get::<bool>("show_background").ok());
+
+            let background_color = opts.as_ref().and_then(|t| {
+                t.get::<Table>("background_color").ok().and_then(|c| {
+                    Some([
+                        c.get::<f32>(1).ok()?,
+                        c.get::<f32>(2).ok()?,
+                        c.get::<f32>(3).ok()?,
+                        c.get::<f32>(4).ok().unwrap_or(0.7),
+                    ])
+                })
+            });
+
+            push_command(Box::new(ShowSpeechCmd {
+                entity: this.entity,
+                text,
+                duration,
+                color,
+                offset,
+                font_size,
+                max_width,
+                show_background,
+                background_color,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Shows a speech bubble with text from a dialogue file.");
+        out.line("---@param dialogue_id string The dialogue file ID (e.g. \"npc_merchant\")");
+        out.line("---@param key string The dialogue key (e.g. \"greeting\")");
+        out.line("---@param opts? {duration?: number, color?: number[], offset?: number[], font_size?: number, max_width?: number, show_background?: boolean, background_color?: number[]}");
+        out.line(&format!("function Entity:{}(dialogue_id, key, opts) end", SAY_DIALOGUE));
+        out.line("");
+    }
+}
+
+/// Method: `entity:clear_speech()`
+pub struct ClearSpeechMethod;
+impl LuaMethod<EntityHandle> for ClearSpeechMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(CLEAR_SPEECH, |_lua, this, ()| {
+            push_command(Box::new(ClearSpeechCmd {
+                entity: this.entity,
+            }));
+            Ok(())
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Removes any speech bubble from the entity.");
+        out.line(&format!("function Entity:{}() end", CLEAR_SPEECH));
+        out.line("");
+    }
+}
+
+/// Method: `entity:is_speaking() -> bool`
+pub struct IsSpeakingMethod;
+impl LuaMethod<EntityHandle> for IsSpeakingMethod {
+    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
+        methods.add_method(IS_SPEAKING, |lua, this, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+            Ok(ecs.has::<SpeechBubble>(this.entity))
+        });
+    }
+
+    fn emit_api(&self, out: &mut LuaApiWriter) {
+        out.line("--- Checks if the entity currently has a speech bubble.");
+        out.line("---@return boolean");
+        out.line(&format!("function Entity:{}() end", IS_SPEAKING));
         out.line("");
     }
 }

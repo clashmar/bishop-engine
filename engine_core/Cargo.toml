@@ -24,3 +24,5 @@ strum_macros = "0.26"
 rfd = "0.13"
 directories-next = "2.0"
 image = { version = "0.25.9", default-features = false, features = ["png"] }
+toml = "0.8"
+rand = "0.8"
