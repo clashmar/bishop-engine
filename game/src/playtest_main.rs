@@ -70,6 +70,7 @@ async fn main() {
         camera_manager,
         render_system: RenderSystem::new(),
         diagnostics: DiagnosticsOverlay::new(),
+        is_playtest: true,
     };
 
     engine.run().await;
