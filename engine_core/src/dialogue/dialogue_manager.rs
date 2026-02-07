@@ -79,16 +79,19 @@ impl DialogueManager {
         &self.available_languages
     }
 
-    /// Loads a dialogue file by ID (filename without extension).
+    /// Loads a dialogue file by ID, supporting subfolders (e.g., "npcs/npc" -> "npcs/npc.toml").
     fn load_dialogue_file(&self, dialogue_id: &str) -> bool {
         if self.cache.borrow().contains_key(dialogue_id) {
             return true;
         }
 
-        let file_path = self
-            .dialogue_root
-            .join(&self.current_language)
-            .join(format!("{}.toml", dialogue_id));
+        // Build path from dialogue_id, supporting subfolders (e.g., "npcs/npc")
+        let normalized_id = dialogue_id.replace('\\', "/");
+        let mut file_path = self.dialogue_root.join(&self.current_language);
+        for component in normalized_id.split('/') {
+            file_path = file_path.join(component);
+        }
+        file_path.set_extension("toml");
 
         let content = match fs::read_to_string(&file_path) {
             Ok(c) => c,
