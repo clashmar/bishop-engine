@@ -139,9 +139,21 @@ impl DialogueManager {
                 Some(entry.variants[idx].clone())
             }
             SelectionMode::Sequential => {
-                let text = entry.variants.get(state.index).cloned();
-                state.index = (state.index + 1) % entry.variants.len();
-                text
+                if entry.exhausted.is_some() {
+                    if state.exhausted {
+                        return entry.exhausted.clone();
+                    }
+                    let text = entry.variants.get(state.index).cloned();
+                    state.index += 1;
+                    if state.index >= entry.variants.len() {
+                        state.exhausted = true;
+                    }
+                    text.or_else(|| entry.exhausted.clone())
+                } else {
+                    let text = entry.variants.get(state.index).cloned();
+                    state.index = (state.index + 1) % entry.variants.len();
+                    text
+                }
             }
             SelectionMode::Once => {
                 if state.exhausted {
@@ -155,15 +167,31 @@ impl DialogueManager {
                 text.or_else(|| entry.exhausted.clone())
             }
             SelectionMode::Shuffle => {
-                if state.shuffle_order.is_empty() || state.shuffle_index >= state.shuffle_order.len()
+                if entry.exhausted.is_some() && state.exhausted {
+                    return entry.exhausted.clone();
+                }
+
+                if state.shuffle_order.is_empty()
+                    || (entry.exhausted.is_none() && state.shuffle_index >= state.shuffle_order.len())
                 {
                     let mut rng = rand::thread_rng();
                     state.shuffle_order = (0..entry.variants.len()).collect();
                     state.shuffle_order.shuffle(&mut rng);
                     state.shuffle_index = 0;
                 }
+
+                if state.shuffle_index >= state.shuffle_order.len() {
+                    state.exhausted = true;
+                    return entry.exhausted.clone();
+                }
+
                 let idx = state.shuffle_order[state.shuffle_index];
                 state.shuffle_index += 1;
+
+                if entry.exhausted.is_some() && state.shuffle_index >= state.shuffle_order.len() {
+                    state.exhausted = true;
+                }
+
                 entry.variants.get(idx).cloned()
             }
         }
