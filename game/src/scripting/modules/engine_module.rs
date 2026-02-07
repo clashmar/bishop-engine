@@ -6,6 +6,7 @@ use engine_core::scripting::script::Script;
 use engine_core::ecs::component::*;
 use mlua::prelude::LuaResult;
 use mlua::MultiValue;
+use engine_core::register_lua_api;
 use engine_core::*;
 use mlua::Function;
 use mlua::Variadic;
@@ -155,6 +156,37 @@ impl LuaModule for EngineModule {
         })?;
         engine_tbl.set(GLOBAL, global_fn)?;
 
+        // engine.player() - returns the player entity's script instance table
+        let player_fn = lua.create_function(|lua, ()| {
+            let ctx = LuaGameCtx::borrow_ctx(lua)?;
+            let game_state = ctx.game_state.borrow();
+            let ecs = &game_state.game.ecs;
+            let script_manager = &game_state.game.script_manager;
+
+            // Find player entity via Player component
+            let player_entity = ecs.get_store::<Player>()
+                .data.keys().next().copied();
+
+            let entity = match player_entity {
+                Some(e) => e,
+                None => return Ok(Value::Nil),
+            };
+
+            // Get script component
+            let script_id = match ecs.get_store::<Script>().get(entity) {
+                Some(s) => s.script_id,
+                None => return Ok(Value::Nil),
+            };
+
+            // Get script instance
+            let instance = match script_manager.instances.get(&(entity, script_id)) {
+                Some(i) => i.clone(),
+                None => return Ok(Value::Nil),
+            };
+
+            Ok(Value::Table(instance))
+        })?;
+        engine_tbl.set("player", player_fn)?;
 
         // global.call(name, method_name, ...)
         let call_fn = lua.create_function(|lua, args: Variadic<Value>| {
@@ -264,8 +296,16 @@ impl LuaModule for EngineModule {
     }
 }
 
+register_lua_api!(EngineModule, ENGINE_FILE);
+
 impl LuaApi for EngineModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
+        // engine.player
+        out.line("--- Get the player entity's script instance table");
+        out.line("--- @return table|nil The player's script instance, or nil if not found");
+        out.line("function engine.player() end");
+        out.line("");
+
         // engine.call
         out.line("--- Call a method on a global entity script");
         out.line("--- @param name string The name of the global entity");

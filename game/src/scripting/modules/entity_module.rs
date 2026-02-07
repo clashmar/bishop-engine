@@ -6,7 +6,7 @@ use crate::game_global::push_command;
 use crate::scripting::lua_helpers::*;
 use engine_core::animation::animation_clip::Animation;
 use engine_core::animation::animation_system::CurrentFrame;
-use engine_core::dialogue::SpeechBubble;
+use engine_core::dialogue::{interpolate, SpeechBubble};
 use engine_core::ecs::component_registry::COMPONENTS;
 use engine_core::scripting::interactable::find_best_interactable;
 use engine_core::scripting::modules::lua_module::*;
@@ -21,6 +21,7 @@ use mlua::Table;
 use engine_core::*;
 use mlua::Value;
 use mlua::Lua;
+use std::collections::HashMap;
 
 /// Lua module that exposes a constructor for `EntityHandle`.
 #[derive(Default)]
@@ -683,6 +684,23 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
             };
             drop(game_state);
 
+            // Extract vars table and apply interpolation
+            let text = if let Some(ref opts_table) = opts {
+                if let Ok(vars_table) = opts_table.get::<Table>("vars") {
+                    let mut vars = HashMap::new();
+                    for pair in vars_table.pairs::<String, String>() {
+                        if let Ok((k, v)) = pair {
+                            vars.insert(k, v);
+                        }
+                    }
+                    interpolate(&text, &vars)
+                } else {
+                    text
+                }
+            } else {
+                text
+            };
+
             let duration = opts
                 .as_ref()
                 .and_then(|t| t.get::<f32>("duration").ok())
@@ -739,7 +757,7 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
         out.line("--- Shows a speech bubble with text from a dialogue file.");
         out.line("---@param dialogue_id string The dialogue file ID (e.g. \"npc_merchant\")");
         out.line("---@param key string The dialogue key (e.g. \"greeting\")");
-        out.line("---@param opts? {duration?: number, color?: number[], offset?: number[], font_size?: number, max_width?: number, show_background?: boolean, background_color?: number[]}");
+        out.line("---@param opts? {vars?: table<string, string>, duration?: number, color?: number[], offset?: number[], font_size?: number, max_width?: number, show_background?: boolean, background_color?: number[]}");
         out.line(&format!("function Entity:{}(dialogue_id, key, opts) end", SAY_DIALOGUE));
         out.line("");
     }
