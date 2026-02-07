@@ -8,8 +8,8 @@ use crate::room::room_editor_rendering::*;
 use crate::gui::panels::panel_manager::*;
 use crate::commands::entity_commands::*;
 use crate::gui::modal::is_modal_open;
-use crate::ecs::transform::Transform;
 use crate::gui::mode_selector::*;
+use crate::ecs::transform::*;
 use crate::editor_global::*;
 use crate::world::coord;
 use crate::canvas::grid;
@@ -20,7 +20,6 @@ use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::animation::animation_system::*;
 use engine_core::controls::controls::Controls;
 use engine_core::rendering::render_room::*;
-use engine_core::lighting::light::Light;
 use engine_core::camera::game_camera::*;
 use engine_core::controls::controls::*;
 use engine_core::world::world::World;
@@ -183,7 +182,7 @@ impl RoomEditor {
                     // Build the entity
                     let entity = ecs
                         .create_entity()
-                        .with(Transform { position: room.position })
+                        .with(Transform { position: room.position, ..Default::default() })
                         .with(CurrentRoom(room.id))
                         .with(Name(format!("Entity")))
                         .finish();
@@ -298,12 +297,13 @@ impl RoomEditor {
                     draw_glow_placeholders(ecs, asset_manager, room_id);
 
                     if let Some(selected_entity) = self.selected_entity {
-                        if !ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
+                        if !is_pure_placeholder(ecs, selected_entity) {
                             highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW);
                         }
 
                         draw_collider(ecs, selected_entity);
                         self.draw_camera_viewport(camera, ecs, selected_entity);
+                        draw_pivot_marker(ecs, selected_entity);
                     }
                 }
             }
@@ -354,16 +354,24 @@ impl RoomEditor {
         // Execute the drag while the button is held
         if self.dragging {
             if let Some(entity) = self.selected_entity {
-                let (w, h) = entity_dimensions(ecs, asset_manager, entity);
                 let mouse_world = coord::mouse_world_pos(camera);
                 let mut new_pos = mouse_world + self.drag_offset;
 
                 // Snap to grid while S is held
                 if is_key_down(KeyCode::S) {
+                    // Get the entity's pivot
+                    let pivot = ecs
+                        .get_store::<Transform>()
+                        .get(entity)
+                        .map(|t| t.pivot)
+                        .unwrap_or(Pivot::BottomCenter);
+                    let pn = pivot.as_normalized();
+
+                    // Snap pivot to appropriate grid position
                     let tile = (mouse_world / tile_size()).floor();
-                    let tile_center_x = tile.x * tile_size() + tile_size() * 0.5;
-                    let tile_bottom_y = tile.y * tile_size() + tile_size();
-                    new_pos = vec2(tile_center_x - w * 0.5, tile_bottom_y - h);
+                    let snap_x = tile.x * tile_size() + tile_size() * pn.x;
+                    let snap_y = tile.y * tile_size() + tile_size() * pn.y;
+                    new_pos = vec2(snap_x, snap_y);
                 }
                 update_entity_position(ecs, entity, new_pos);
             }

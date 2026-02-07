@@ -3,8 +3,8 @@ use crate::animation::animation_system::CurrentFrame;
 use crate::rendering::render_system::RenderSystem;
 use crate::assets::asset_manager::AssetManager;
 use crate::camera::game_camera::RoomCamera;
+use crate::ecs::transform::{Pivot, Transform};
 use crate::engine_global::tile_size;
-use crate::ecs::transform::Transform;
 use crate::assets::sprite::Sprite;
 use crate::lighting::light::Light;
 use crate::lighting::glow::Glow;
@@ -30,17 +30,24 @@ pub fn render_room(
     // Cache the needed stores
     let sprite_store = ecs.get_store::<Sprite>();
     let frame_store = ecs.get_store::<CurrentFrame>();
+    let transform_store = ecs.get_store::<Transform>();
 
     // Organize entities by layer
-    let mut layer_map = collect_interpolated_layer_map(ecs, room, alpha, prev_positions);
+    let mut layer_map = collect_interpolated_layer_map(
+        ecs, 
+        room, 
+        asset_manager, 
+        alpha, 
+        prev_positions
+    );
 
     if layer_map.is_empty() {
         layer_map.insert(0, (Vec::new(), Vec::new()));
     }
 
     // Clear composite textures before each run
-    RenderSystem::clear_cam(&render_system.scene_comp_rt);
-    RenderSystem::clear_cam(&render_system.final_comp_rt);
+    render_system.clear_cam(&render_system.scene_comp_rt.clone());
+    render_system.clear_cam(&render_system.final_comp_rt.clone());
 
     // Draw each blocking texture in black onto a white background
     // To be implemented but it needs to happen BEFORE the loop
@@ -63,12 +70,13 @@ pub fn render_room(
         // Draw all entities
         for (entity, pos) in entities {
             draw_entity(
-            ecs,
-            asset_manager,
-            frame_store,
-            sprite_store,
-            entity,
-            pos,
+                ecs,
+                asset_manager,
+                frame_store,
+                sprite_store,
+                transform_store,
+                entity,
+                pos,
             );
         }
 
@@ -108,30 +116,48 @@ fn draw_entity(
     asset_manager: &mut AssetManager,
     frame_store: &ComponentStore<CurrentFrame>,
     sprite_store: &ComponentStore<Sprite>,
+    transform_store: &ComponentStore<Transform>,
     entity: Entity,
     pos: Vec2,
 ) {
     let (width, height) = entity_dimensions(ecs, asset_manager, entity);
 
+    // Get pivot from transform (default to TopLeft if missing for backward compatibility)
+    let pivot = transform_store
+        .get(entity)
+        .map(|t| t.pivot)
+        .unwrap_or(Pivot::TopLeft);
+
+    // Calculate pivot-adjusted draw position
+    let draw_base = pivot_adjusted_position(pos, vec2(width, height), pivot);
+
     // Animate/Draw sprite
     if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
-        let src = Rect::new(
-            cf.col as f32 * cf.frame_size.x,
-            cf.row as f32 * cf.frame_size.y,
-            cf.frame_size.x,
-            cf.frame_size.y,
-        );
         let tex = asset_manager.get_texture_from_id(cf.sprite_id);
 
-        // Draws individual entites
+        let frame_w = cf.frame_size.x;
+        let frame_h = cf.frame_size.y;
+
+        let src = Rect::new(
+            cf.col as f32 * frame_w,
+            cf.row as f32 * frame_h,
+            frame_w,
+            frame_h,
+        );
+
+        // Floor coordinates for pixel-perfect alignment
+        let draw_x = (draw_base.x + cf.offset.x).floor();
+        let draw_y = (draw_base.y + cf.offset.y).floor();
+
         draw_texture_ex(
             tex,
-            pos.x + cf.offset.x,
-            pos.y + cf.offset.y,
+            draw_x,
+            draw_y,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(width, height)),
+                dest_size: Some(vec2(frame_w, frame_h)),
                 source: Some(src),
+                flip_x: cf.flip_x,
                 ..Default::default()
             },
         );
@@ -139,12 +165,11 @@ fn draw_entity(
     } else if let Some(sprite) = sprite_store.get(entity) {
         // No animation
         if asset_manager.contains(sprite.sprite) {
-            
             let tex = asset_manager.get_texture_from_id(sprite.sprite);
             draw_texture_ex(
                 tex,
-                pos.x,
-                pos.y,
+                draw_base.x,
+                draw_base.y,
                 WHITE,
                 DrawTextureParams {
                     dest_size: Some(vec2(width, height)),
@@ -161,7 +186,7 @@ fn draw_entity(
     }
 
     // Fallback placeholder (no sprite or missing texture)
-    draw_entity_placeholder(pos);
+    draw_entity_placeholder(draw_base);
 }
 
 pub fn highlight_selected_entity(
@@ -170,14 +195,15 @@ pub fn highlight_selected_entity(
     asset_manager: &mut AssetManager,
     color: Color
 ) {
-    let pos = match ecs.get_store::<Transform>().get(entity) {
-        Some(p) => p,
+    let transform = match ecs.get_store::<Transform>().get(entity) {
+        Some(t) => t,
         None => return,
     };
 
     let (width, height) = entity_dimensions(ecs, asset_manager, entity);
+    let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
 
-    draw_rectangle_lines(pos.position.x, pos.position.y, width, height, 2.0, color);
+    draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);
 }
 
 pub fn entity_dimensions(
@@ -220,11 +246,12 @@ pub fn draw_entity_placeholder(pos: Vec2) {
     );
 }
 
-/// Sorts entites by their z-layer, filters out entities that should not be 
+/// Sorts entites by their z-layer, filters out entities that should not be
 /// drawn and interpolates the draw positions. BTreeMap automatically sorts keys.
 fn collect_interpolated_layer_map<'a>(
     ecs: &'a Ecs,
     room: &Room,
+    asset_manager: &AssetManager,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
@@ -236,7 +263,7 @@ fn collect_interpolated_layer_map<'a>(
     let layer_store = ecs.get_store::<Layer>();
     let glow_store = ecs.get_store::<Glow>();
 
-    for (entity, pos) in &pos_store.data {
+    for (entity, transform) in &pos_store.data {
         // Skip camera
         if cam_store.get(*entity).is_some() {
             continue;
@@ -244,18 +271,18 @@ fn collect_interpolated_layer_map<'a>(
 
         // Filter by current room
         if let Some(cr) = room_store.get(*entity) {
-            if cr.0 != room.id { 
-                continue; 
+            if cr.0 != room.id {
+                continue;
             }
-        } else { 
-            continue; 
+        } else {
+            continue;
         }
 
         // Interpolate the draw position
         let draw_pos = interpolate_draw_position(
-            *entity, 
-            pos.position, 
-            alpha, 
+            *entity,
+            transform.position,
+            alpha,
             prev_positions
         );
 
@@ -267,9 +294,15 @@ fn collect_interpolated_layer_map<'a>(
         let entry = map.entry(z).or_default();
         entry.0.push((*entity, draw_pos));
 
-        // If the entity also has a Glow component
+        // If the entity also has a Glow component, apply pivot to glow position
         if let Some(glow) = glow_store.get(*entity) {
-            entry.1.push((glow, draw_pos));
+            let glow_size = asset_manager
+                .texture_size(glow.sprite_id)
+                .map(|(w, h)| vec2(w, h))
+                .unwrap_or(vec2(tile_size(), tile_size()));
+
+            let glow_draw_pos = pivot_adjusted_position(draw_pos, glow_size, transform.pivot);
+            entry.1.push((glow, glow_draw_pos));
         }
     }
 
@@ -341,4 +374,15 @@ fn interpolate_draw_position(
 #[inline]
 pub fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
     a + (b - a) * t
+}
+
+/// Calculates draw position adjusted for pivot.
+/// Returns the top-left corner where the texture should be drawn.
+#[inline]
+pub fn pivot_adjusted_position(entity_pos: Vec2, texture_size: Vec2, pivot: Pivot) -> Vec2 {
+    let offset = pivot.as_normalized();
+    vec2(
+        entity_pos.x - texture_size.x * offset.x,
+        entity_pos.y - texture_size.y * offset.y,
+    )
 }

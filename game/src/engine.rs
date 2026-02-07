@@ -33,7 +33,6 @@ pub struct Engine {
 impl Engine {
     pub async fn run(&mut self) {
         let mut accumulator: f32 = 0.0;
-        let mut cur_window_size = (screen_width() as u32, screen_height() as u32);
 
         // Main loop
         loop {
@@ -45,13 +44,20 @@ impl Engine {
             self.diagnostics.update(frame_dt);
             self.diagnostics.handle_input();
 
-            // Fixed‑step physics
             while accumulator >= FIXED_DT {
+                // Store positions before each physics step
+                {
+                    let mut game_state = self.game_state.borrow_mut();
+                    game_state.store_previous_positions(&mut self.camera_manager);
+                }
+                
+                // Physics, camera...
                 self.fixed_update(FIXED_DT);
+
                 accumulator -= FIXED_DT;
             }
 
-            // Per‑frame async work (input, animation, camera …)
+            // Per‑frame async work (input, animation)
             self.update_async(frame_dt).await;
 
             // Update diagnostics metrics before render (playtest only)
@@ -59,7 +65,7 @@ impl Engine {
 
             // Render with interpolation
             let alpha = accumulator / FIXED_DT;
-            self.render(alpha, &mut cur_window_size);
+            self.render(alpha);
 
             next_frame().await;
         }
@@ -67,16 +73,16 @@ impl Engine {
 
     pub fn fixed_update(&mut self, dt: f32) {
         let mut game_state = self.game_state.borrow_mut();
-
-        // Store the current positions for the next frame
-        game_state.store_previous_positions(&mut self.camera_manager);
-
         let game_ctx = game_state.game.ctx_mut();
         let ecs = game_ctx.ecs;
-        let current_room = game_ctx.cur_world.current_room().unwrap();
+        let Some(current_room) = game_ctx.cur_world.current_room() else {
+            return;
+        };
         let asset_manager = game_ctx.asset_manager;
 
-        update_physics(asset_manager, ecs, current_room, dt)
+        update_physics(asset_manager, ecs, current_room, dt);
+
+        self.camera_manager.update_active(ecs, current_room);
     }
 
     pub async fn update_async(&mut self, dt: f32) {
@@ -88,15 +94,10 @@ impl Engine {
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
-            let current_room = game_ctx.cur_world.current_room().unwrap();
 
-            let player_pos = ecs.get_player_position().position;
-
-            // Update the camera
-            self.camera_manager
-                .update_active(ecs, current_room, player_pos);
-
-            update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
+            if let Some(current_room) = game_ctx.cur_world.current_room() {
+                update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
+            }
 
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
             let ctx = game_state.game.ctx_mut();
@@ -111,39 +112,8 @@ impl Engine {
         }
     }
 
-    /// Update diagnostics metrics from game state.
-    pub fn update_diagnostics_metrics(&mut self) {
-        let game_state = self.game_state.borrow();
-        let game = &game_state.game;
-
-        let entity_count = game.ecs.get_store::<Transform>().data.len();
-        let texture_count = game.asset_manager.texture_count();
-        let script_instances = game.script_manager.instances.len();
-        let listener_count = game.script_manager.event_bus.listener_count();
-        let script_id_count = game.script_manager.script_id_to_path.len();
-        let sprite_id_count = game.asset_manager.sprite_id_to_path.len();
-        let render_time_ms = self.render_system.render_time_ms;
-
-        self.diagnostics.update_metrics(
-            entity_count,
-            texture_count,
-            script_instances,
-            listener_count,
-            script_id_count,
-            sprite_id_count,
-            render_time_ms,
-        );
-    }
-
-    pub fn render(&mut self, alpha: f32, cur_window_size: &mut (u32, u32)) {
+    pub fn render(&mut self, alpha: f32) {
         clear_background(BLACK);
-
-        // Update the render system if the window is resized
-        let cur_screen = (screen_width() as u32, screen_height() as u32);
-        if cur_screen != *cur_window_size {
-            self.render_system.resize(cur_screen.0, cur_screen.1);
-            *cur_window_size = cur_screen;
-        }
 
         let mut game_state = self.game_state.borrow_mut();
         let prev_positions = &game_state.prev_positions.clone();
@@ -151,7 +121,9 @@ impl Engine {
 
         let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
-        let current_room = game_ctx.cur_world.current_room().unwrap();
+        let Some(current_room) = game_ctx.cur_world.current_room() else {
+            return;
+        };
 
         let interpolated_target = lerp(
             self.camera_manager.previous_position.unwrap_or_default(),
@@ -180,5 +152,29 @@ impl Engine {
 
         // Draw diagnostics overlay after game rendering
         self.diagnostics.draw();
+    }
+
+    /// Update diagnostics metrics from game state.
+    pub fn update_diagnostics_metrics(&mut self) {
+        let game_state = self.game_state.borrow();
+        let game = &game_state.game;
+
+        let entity_count = game.ecs.get_store::<Transform>().data.len();
+        let texture_count = game.asset_manager.texture_count();
+        let script_instances = game.script_manager.instances.len();
+        let listener_count = game.script_manager.event_bus.listener_count();
+        let script_id_count = game.script_manager.script_id_to_path.len();
+        let sprite_id_count = game.asset_manager.sprite_id_to_path.len();
+        let render_time_ms = self.render_system.render_time_ms;
+
+        self.diagnostics.update_metrics(
+            entity_count,
+            texture_count,
+            script_instances,
+            listener_count,
+            script_id_count,
+            sprite_id_count,
+            render_time_ms,
+        );
     }
 }

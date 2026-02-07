@@ -301,11 +301,12 @@ fn generate_lua_schema(fields: &Fields) -> proc_macro2::TokenStream {
         // Tuple struct: struct Foo(T)
         Fields::Unnamed(unnamed) => {
             if unnamed.unnamed.len() == 1 {
+                // Mark single-field tuple structs as aliases using the inner type directly
                 let field = unnamed.unnamed.first().unwrap();
                 let lua_type = rust_type_to_lua(&field.ty);
 
                 quote! {
-                    &[("value", #lua_type)]
+                    &[("__alias__", #lua_type)]
                 }
             } else {
                 // Multi-field tuple structs: generate field_0, field_1, etc.

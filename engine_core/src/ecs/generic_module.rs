@@ -1,5 +1,6 @@
 // engine_core/src/ecs/generic_module.rs
 use crate::ecs::inpsector_module::InspectorModule;
+use crate::ecs::transform::Pivot;
 use crate::ecs::component::Component;
 use crate::ecs::reflect_field::*;
 use crate::ecs::entity::Entity;
@@ -214,6 +215,17 @@ where
                     let new_z = NumberInput::new(id_z, rect_z, v.z).blocked(blocked).show();
                     if (new_z - v.z).abs() > f32::EPSILON {
                         v.z = new_z;
+                    }
+                }
+                (FieldValue::Pivot(pivot), _) => {
+                    if let Some(selected) = Dropdown::new(
+                        base_id,
+                        widget_rect,
+                        pivot.label(),
+                        Pivot::all(),
+                        |p| p.label().to_string(),
+                    ).blocked(blocked).show() {
+                        *pivot = selected;
                     }
                 }
             }

@@ -53,13 +53,16 @@ pub struct RenderSystem {
     glow_bufffers: [GlowBuffer; MAX_LIGHTS],
     /// Time spent rendering last frame (ms)
     pub render_time_ms: f32,
+    /// Current render target dimensions
+    rt_width: f32,
+    rt_height: f32,
 }
 
 impl RenderSystem {
     pub fn new() -> Self {
-        // Render targets are created with the screen size
-        let width = screen_width() as u32;
-        let height = screen_height() as u32;
+        // Render targets are created at the fixed virtual resolution
+        let width = world_virtual_width() as u32;
+        let height = world_virtual_height() as u32;
 
         let make_render_target = || {
             let rt = render_target(width, height);
@@ -198,6 +201,8 @@ impl RenderSystem {
             light_bufffers: [LightBuffer::default(); MAX_LIGHTS],
             glow_bufffers: [GlowBuffer::default(); MAX_LIGHTS],
             render_time_ms: 0.0,
+            rt_width: width as f32,
+            rt_height: height as f32,
         }
     }
 
@@ -206,7 +211,7 @@ impl RenderSystem {
         &mut self,
         darkness: f32,
     ) {
-        RenderSystem::clear_cam(&self.ambient_rt);
+        self.clear_cam(&self.ambient_rt);
 
         self.ambient_mat.set_texture("tex", self.scene_rt.texture.clone());
         self.ambient_mat.set_uniform("Darkness", darkness);
@@ -221,7 +226,7 @@ impl RenderSystem {
         glows: Vec<(&Glow, Vec2)>,
         asset_manager: &mut AssetManager,
     ) {
-        RenderSystem::clear_cam(&self.glow_rt);
+        self.clear_cam(&self.glow_rt);
         self.clear_glow_buffers();
         if glows.is_empty() {
             return;
@@ -279,8 +284,8 @@ impl RenderSystem {
     /// on an undimmed texture.
     pub fn run_undarkened_pass(&mut self) {
         let cam = Camera2D {
-            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
-            zoom:   vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            target: vec2(self.rt_width * 0.5, self.rt_height * 0.5),
+            zoom:   vec2(2.0 / self.rt_width, 2.0 / self.rt_height),
             render_target: Some(self.undarkened_rt.clone()),
             ..Default::default()
         };
@@ -296,11 +301,11 @@ impl RenderSystem {
     /// Renders spotlights using the undarkened scene texture.
     pub fn run_spotlight_pass(
         &mut self,
-        render_cam: &Camera2D, 
+        render_cam: &Camera2D,
         lights: Vec<(Vec2, Light)>,
         darkness: f32,
     ) {
-        RenderSystem::clear_cam(&self.spot_rt);
+        self.clear_cam(&self.spot_rt);
         self.clear_light_buffers();
 
         if !lights.is_empty() {
@@ -351,8 +356,8 @@ impl RenderSystem {
     /// Composites the per-layer room textures.
     pub fn run_scene_pass(&mut self) {
         let scene_comp_cam = Camera2D {
-            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
-            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            target: vec2(self.rt_width * 0.5, self.rt_height * 0.5),
+            zoom: vec2(2.0 / self.rt_width, 2.0 / self.rt_height),
             render_target: Some(self.scene_comp_rt.clone()),
             ..Default::default()
         };
@@ -368,7 +373,7 @@ impl RenderSystem {
 
     /// The last composite stage for rendering a room before post-processing.
     pub fn run_final_pass(&mut self) {
-        RenderSystem::clear_cam(&self.final_comp_rt);
+        self.clear_cam(&self.final_comp_rt);
 
         self.final_comp_mat.set_texture("scene_comp_tex", self.scene_comp_rt.texture.clone());
         self.final_comp_mat.set_texture("spot_tex", self.spot_rt.texture.clone());
@@ -437,8 +442,8 @@ impl RenderSystem {
     /// Sets the mask render target background to white.
     pub fn init_mask_cam(&self) {
         let mask_cam = Camera2D {
-            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
-            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            target: vec2(self.rt_width * 0.5, self.rt_height * 0.5),
+            zoom: vec2(2.0 / self.rt_width, 2.0 / self.rt_height),
             render_target: Some(self.mask_rt.clone()),
             ..Default::default()
         };
@@ -463,10 +468,10 @@ impl RenderSystem {
     }
 
     /// Sets, clears the given render target and returns the camera for it.
-    pub fn clear_cam(rt: &RenderTarget) -> Camera2D {
+    pub fn clear_cam(&self, rt: &RenderTarget) -> Camera2D {
         let cam = Camera2D {
-            target: vec2(screen_width() * 0.5, screen_height() * 0.5),
-            zoom: vec2(2.0 / screen_width(), 2.0 / screen_height()),
+            target: vec2(self.rt_width * 0.5, self.rt_height * 0.5),
+            zoom: vec2(2.0 / self.rt_width, 2.0 / self.rt_height),
             render_target: Some(rt.clone()),
             ..Default::default()
         };
@@ -491,6 +496,9 @@ impl RenderSystem {
 
     /// Re-creates every render target with the supplied size.
     pub fn resize(&mut self, width: u32, height: u32) {
+        self.rt_width = width as f32;
+        self.rt_height = height as f32;
+
         let make = || {
             let rt = render_target(width, height);
             rt.texture.set_filter(FilterMode::Nearest);

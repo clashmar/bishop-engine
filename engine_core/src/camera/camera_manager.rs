@@ -37,8 +37,7 @@ impl CameraManager {
     pub fn update_active(
         &mut self, 
         ecs: &Ecs, 
-        room: &Room,
-        player_pos: Vec2) 
+        room: &Room) 
         {
         // If the player moved to another room get the new cameras
         if self.current_room != Some(room.id) {
@@ -49,7 +48,7 @@ impl CameraManager {
         // Pick the best camera
         if let Some((best_cam, mode)) = Self::find_best_camera_for_room(
             ecs, 
-            &self.room_cameras, player_pos
+            &self.room_cameras, ecs.get_player_position().position
         ) {
             // Prevent interpolation with the previous camera
             if best_cam.id != self.active.id {
@@ -59,7 +58,7 @@ impl CameraManager {
 
             // Apply follow if needed
             if let CameraMode::Follow(restriction) = mode {
-                self.apply_follow(&restriction, player_pos);
+                self.apply_follow(&restriction, ecs.get_player_position().position);
             }
         }
     }

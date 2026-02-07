@@ -3,6 +3,7 @@ pub mod component;
 pub mod component_registry;
 pub mod entity;
 pub mod ecs;
+pub mod facing_direction;
 pub mod generic_module;
 pub mod has_any;
 pub mod inpsector_module;

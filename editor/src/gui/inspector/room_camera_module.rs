@@ -127,27 +127,25 @@ impl InspectorModule for RoomCameraModule {
         // y += cam_mode_rect.h + SPACING;
 
         // Render the dropdowns in reverse order
-        if let Some(new_cam_mode) = gui_dropdown(
+        if let Some(new_cam_mode) = Dropdown::new(
             self.cam_mode_id,
             cam_mode_rect,
             &current_cam_label,
             &cam_mode_options,
             |mode| mode.ui_label(),
-            blocked,
-        ) {
+        ).blocked(blocked).show() {
             if new_cam_mode != current_cam_mode {
                 cam.camera_mode = new_cam_mode;
             }
         }
-        
-        if let Some(new_mode) = gui_dropdown(
-            self.mode_id, 
-            mode_rect, 
-            &current_label, 
+
+        if let Some(new_mode) = Dropdown::new(
+            self.mode_id,
+            mode_rect,
+            &current_label,
             &zoom_options,
             |mode| mode.ui_label(),
-            blocked
-        ) {
+        ).blocked(blocked).show() {
             if new_mode != current_mode {
                 cam.zoom_mode = new_mode;
             }

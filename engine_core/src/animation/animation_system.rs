@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use macroquad::prelude::*;
 
+/// Current frame data for rendering animated entities.
 #[ecs_component]
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct CurrentFrame {
@@ -25,6 +26,9 @@ pub struct CurrentFrame {
     pub sprite_id: SpriteId,
     #[serde(skip)]
     pub frame_size: Vec2,
+    /// Whether to flip the sprite horizontally when rendering.
+    #[serde(skip)]
+    pub flip_x: bool,
 }
 
 pub async fn update_animation_sytem(
@@ -39,6 +43,7 @@ pub async fn update_animation_sytem(
     let anim_store = ecs.get_store_mut::<Animation>();
 
     let mut frames: Vec<(Entity, CurrentFrame)> = vec![];
+    let mut to_remove: Vec<Entity> = vec![];
 
     for (entity, animation) in anim_store.data.iter_mut() {
         if !entities.contains(entity) {
@@ -46,7 +51,10 @@ pub async fn update_animation_sytem(
         }
 
         // Bail out early if there is no active clip.
-        let Some(current_id) = &animation.current.clone() else { continue };
+        let Some(current_id) = &animation.current.clone() else {
+            to_remove.push(*entity);
+            continue;
+        };
 
         // Get the sprite id
         let (sprite_id, resolved) = get_sprite_id(animation, current_id, asset_manager).await;
@@ -58,10 +66,25 @@ pub async fn update_animation_sytem(
         let Some(clip) = animation.clips.get(current_id) else { continue };
         let clip_state = animation.states.get_mut(current_id).unwrap();
 
-        // Advance the timer
-        clip_state.timer += dt;
-        let frame_time = 1.0 / clip.fps.max(0.001);
-        while clip_state.timer >= frame_time {
+        // Advance the timer with speed multiplier applied (0.0 means default speed of 1.0)
+        let speed = if animation.speed_multiplier == 0.0 { 1.0 } else { animation.speed_multiplier };
+        clip_state.timer += dt * speed;
+
+        loop {
+            let frame_index = clip_state.row * clip.cols + clip_state.col;
+            let frame_time = if !clip.frame_durations.is_empty() {
+                clip.frame_durations
+                    .get(frame_index)
+                    .copied()
+                    .unwrap_or(1.0 / clip.fps.max(0.001))
+            } else {
+                1.0 / clip.fps.max(0.001)
+            };
+
+            if clip_state.timer < frame_time {
+                break;
+            }
+
             clip_state.timer -= frame_time;
             clip_state.col += 1;
             if clip_state.col >= clip.cols {
@@ -74,19 +97,20 @@ pub async fn update_animation_sytem(
                         clip_state.finished = true;
                         clip_state.row = clip.rows - 1;
                         clip_state.col = clip.cols - 1;
+                        break;
                     }
                 }
             }
         }
-
 
         let frame = CurrentFrame {
             clip_id: animation.current.clone().unwrap(),
             col: clip_state.col,
             row: clip_state.row,
             offset: clip.offset,
-            sprite_id: sprite_id,
+            sprite_id,
             frame_size: clip.frame_size,
+            flip_x: animation.flip_x,
         };
 
         frames.push((*entity, frame));
@@ -96,6 +120,12 @@ pub async fn update_animation_sytem(
 
     for (entity, frame) in frames {
         ecs.add_component_to_entity(entity, frame)
+    }
+
+    // Remove stale CurrentFrame components from entities with no active clip
+    let frame_store = ecs.get_store_mut::<CurrentFrame>();
+    for entity in to_remove {
+        frame_store.remove(entity);
     }
 }
 

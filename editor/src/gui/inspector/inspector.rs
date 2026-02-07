@@ -184,7 +184,7 @@ impl Inspector {
 
                 let total_content_h = self.total_content_height(&game_ctx.ecs, entity);
 
-                if inner.contains(mouse_position().into()) {
+                if inner.contains(mouse_position().into()) && !is_mouse_over_dropdown_list() {
                     let (_, dy) = mouse_wheel();
                     if dy != 0.0 {
                         let max_offset = (total_content_h - inner.h).max(0.0);
@@ -209,6 +209,9 @@ impl Inspector {
                         y += h + WIDGET_SPACING;
                     }
                 }
+
+                // Render deferred dropdown lists on top of modules
+                flush_dropdown_lists();
 
                 // Scroll bar
                 if total_content_h > inner.h {
