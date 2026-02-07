@@ -119,6 +119,7 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         update_global_dropdown_flag();
 
         if button_clicked {
+            consume_click();
             state.open = !state.open;
         }
 
@@ -161,6 +162,9 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             let mouse_pos: Vec2 = mouse_position().into();
 
             if list_rect.contains(mouse_pos) {
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    consume_click();
+                }
                 let (_, wheel_y) = mouse_wheel();
                 if wheel_y != 0.0 {
                     let delta = wheel_y * SCROLL_SPEED;

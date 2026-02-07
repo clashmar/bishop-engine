@@ -27,8 +27,10 @@ pub struct Engine {
     pub camera_manager: CameraManager,
     /// Rendering system for the game.
     pub render_system: RenderSystem,
-    /// Runtime diagnostics overlay.
+    /// Runtime diagnostics overlay (playtest only).
     pub diagnostics: DiagnosticsOverlay,
+    /// Whether the engine is running in playtest mode.
+    pub is_playtest: bool,
 }
 
 impl Engine {
@@ -41,9 +43,11 @@ impl Engine {
             let frame_dt = get_frame_time();
             accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
 
-            // Update diagnostics timing
-            self.diagnostics.update(frame_dt);
-            self.diagnostics.handle_input();
+            // Update diagnostics timing (playtest only)
+            if self.is_playtest {
+                self.diagnostics.update(frame_dt);
+                self.diagnostics.handle_input();
+            }
 
             while accumulator >= FIXED_DT {
                 // Store positions before each physics step
@@ -62,7 +66,9 @@ impl Engine {
             self.update_async(frame_dt).await;
 
             // Update diagnostics metrics before render (playtest only)
-            self.update_diagnostics_metrics();
+            if self.is_playtest {
+                self.update_diagnostics_metrics();
+            }
 
             // Render with interpolation
             let alpha = accumulator / FIXED_DT;
@@ -168,9 +174,11 @@ impl Engine {
         // Render speech bubbles in screen space
         render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam);
 
-        // Draw diagnostics overlay after game rendering
+        // Draw diagnostics overlay after game rendering (playtest only)
         drop(game_state);
-        self.diagnostics.draw();
+        if self.is_playtest {
+            self.diagnostics.draw();
+        }
     }
 
     /// Update diagnostics metrics from game state.
