@@ -20,7 +20,6 @@ use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::animation::animation_system::*;
 use engine_core::controls::controls::Controls;
 use engine_core::rendering::render_room::*;
-use engine_core::lighting::light::Light;
 use engine_core::camera::game_camera::*;
 use engine_core::controls::controls::*;
 use engine_core::world::world::World;
@@ -298,12 +297,13 @@ impl RoomEditor {
                     draw_glow_placeholders(ecs, asset_manager, room_id);
 
                     if let Some(selected_entity) = self.selected_entity {
-                        if !ecs.has_any::<(RoomCamera, Light)>(selected_entity) {
+                        if !is_pure_placeholder(ecs, selected_entity) {
                             highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW);
                         }
 
                         draw_collider(ecs, selected_entity);
                         self.draw_camera_viewport(camera, ecs, selected_entity);
+                        draw_pivot_marker(ecs, selected_entity);
                     }
                 }
             }

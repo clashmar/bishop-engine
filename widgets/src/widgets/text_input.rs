@@ -115,6 +115,7 @@ impl<'a> TextInput<'a> {
 
             if !focused {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+                selection_anchor = None;
             }
 
             if focused && mouse_over {

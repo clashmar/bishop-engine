@@ -33,7 +33,13 @@ pub fn render_room(
     let transform_store = ecs.get_store::<Transform>();
 
     // Organize entities by layer
-    let mut layer_map = collect_interpolated_layer_map(ecs, room, asset_manager, alpha, prev_positions);
+    let mut layer_map = collect_interpolated_layer_map(
+        ecs, 
+        room, 
+        asset_manager, 
+        alpha, 
+        prev_positions
+    );
 
     if layer_map.is_empty() {
         layer_map.insert(0, (Vec::new(), Vec::new()));
