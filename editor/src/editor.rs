@@ -5,6 +5,7 @@ use crate::world::world_editor::WorldEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
 use crate::storage::editor_storage::*;
+use crate::playtest::playtest_process::PlaytestProcess;
 use crate::playtest::room_playtest::*;
 use crate::storage::editor_storage;
 use crate::gui::menu_bar::MenuBar;
@@ -42,6 +43,7 @@ pub struct Editor {
     pub menu_bar: MenuBar,
     pub modal: Modal,
     pub toast: Option<Toast>,
+    pub playtest_process: Option<PlaytestProcess>,
 }
 
 impl Editor {
@@ -90,6 +92,12 @@ impl Editor {
     }
 
     pub async fn update(&mut self) {
+        if let Some(ref mut process) = self.playtest_process {
+            if !process.poll() {
+                self.playtest_process = None;
+            }
+        }
+
         if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui() {
             EditorCameraController::update(&mut self.camera);
         }
@@ -200,12 +208,17 @@ impl Editor {
                     // If in dev mode the binary will be built first
                     match resolve_playtest_binary().await {
                         Ok(exe_path) => {
-                            // Launch the binary
-                            if let Err(e) = std::process::Command::new(&exe_path)
-                                .arg(&payload_path)
-                                .spawn()
-                            {
-                                onscreen_error!("Failed to launch playtest: {e}");
+                            if let Some(ref mut old_process) = self.playtest_process {
+                                old_process.kill();
+                            }
+
+                            match PlaytestProcess::spawn(&exe_path, &payload_path) {
+                                Ok(process) => {
+                                    self.playtest_process = Some(process);
+                                }
+                                Err(e) => {
+                                    onscreen_error!("Failed to launch playtest: {e}");
+                                }
                             }
                         }
                         Err(e) => {
