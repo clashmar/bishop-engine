@@ -17,19 +17,25 @@ use std::fmt;
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Animation {
-    /// Defineds the animations that belong to the entity.
+    /// Defines the animations that belong to the entity.
     pub clips: HashMap<ClipId, ClipDef>,
     /// Which animation variant to show.
     pub variant: VariantFolder,
     /// Which clip is currently active.
     #[serde(skip)]
     pub current: Option<ClipId>,
-    /// Per‑clip runtime data.
+    /// Per-clip runtime data.
     #[serde(skip)]
     pub states: HashMap<ClipId, ClipState>,
     /// Cached SpriteId for each clip in the current variant.
     #[serde(skip)]
     pub sprite_cache: HashMap<ClipId, SpriteId>,
+    /// Whether to flip the sprite horizontally (runtime state).
+    #[serde(skip)]
+    pub flip_x: bool,
+    /// Playback speed multiplier (runtime state, defaults to 1.0).
+    #[serde(skip)]
+    pub speed_multiplier: f32,
 }
 
 impl Animation {
@@ -40,20 +46,33 @@ impl Animation {
             self.states.insert(id.clone(), ClipState::default());
         }
 
-        // If there is at least one clip but `current` is None, pick the first
+        // If there is at least one clip but `current` is None, prefer Idle
         if self.current.is_none() && !self.clips.is_empty() {
-            self.current = Some(self.clips.keys().next().unwrap().clone());
+            self.current = if self.clips.contains_key(&ClipId::Idle) {
+                Some(ClipId::Idle)
+            } else {
+                Some(self.clips.keys().next().unwrap().clone())
+            };
+        }
+
+        // Initialize speed multiplier to 1.0 if not set
+        if self.speed_multiplier == 0.0 {
+            self.speed_multiplier = 1.0;
         }
     }
 
-    /// Switch to another clip safely.
+    /// Switch to another clip safely. Only resets if switching to a different clip.
     pub fn set_clip(&mut self, id: &ClipId) {
-        if self.clips.contains_key(&id) {
-            self.current = Some(id.clone());
-            // Reset its timer so the new clip starts from frame 0.
-            if let Some(state) = self.states.get_mut(&id) {
-                *state = ClipState::default();
-            }
+        if !self.clips.contains_key(id) {
+            return;
+        }
+        if self.current.as_ref() == Some(id) {
+            return;
+        }
+
+        self.current = Some(id.clone());
+        if let Some(state) = self.states.get_mut(id) {
+            *state = ClipState::default();
         }
     }
 
@@ -87,7 +106,7 @@ impl Animation {
 }
 
 /// Logical name of a clip.
-#[derive(EnumIter, Debug, Default, 
+#[derive(EnumIter, Debug, Default,
     Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ClipId {
     #[default]
@@ -95,6 +114,8 @@ pub enum ClipId {
     Walk,
     Run,
     Attack,
+    Jump,
+    Fall,
     Custom(String),
     New,
 }
@@ -105,9 +126,9 @@ impl ClipId {
         match self {
             // Empty
             ClipId::New => "New".to_string(),
-            // Any non‑empty custom name
+            // Any non-empty custom name
             ClipId::Custom(name) => name.clone(),
-            // Built‑in variants
+            // Built-in variants
             _ => format!("{self:?}"),
         }
     }
@@ -131,13 +152,17 @@ pub struct ClipDef {
     pub cols: usize,
     /// Number of rows that belong to this clip.
     pub rows: usize,
-    /// Playback speed in frames per second.
+    /// Playback speed in frames per second (used when frame_durations is empty).
     pub fps: f32,
+    /// Per-frame durations in seconds. If empty, uniform timing from fps is used.
+    pub frame_durations: Vec<f32>,
     /// Whether the clip loops.
     pub looping: bool,
     /// Optional offset for drawing.
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub offset: Vec2,
+    /// Whether to auto-flip based on FacingDirection component.
+    pub mirrored: bool,
 }
 
 impl Default for ClipDef {
@@ -147,8 +172,10 @@ impl Default for ClipDef {
             cols: 5,
             rows: 1,
             fps: 4.0,
+            frame_durations: Vec::new(),
             looping: true,
             offset: Vec2::ZERO,
+            mirrored: false,
         }
     }
 }
@@ -170,9 +197,9 @@ pub struct VariantFolder(pub PathBuf);
 pub struct ClipState {
     /// Accumulated time since the last frame change.
     pub timer: f32,
-    /// Current column index (0‑based).
+    /// Current column index (0-based).
     pub col: usize,
-    /// Current row index (0‑based, relative to the clip’s `rows`).
+    /// Current row index (0-based, relative to the clip's `rows`).
     pub row: usize,
     /// Whether the clip has finished playing yet.
     pub finished: bool,
@@ -190,14 +217,16 @@ pub async fn resolve_sprite_id(
         ClipId::Walk => "Walk.png",
         ClipId::Run => "Run.png",
         ClipId::Attack => "Attack.png",
+        ClipId::Jump => "Jump.png",
+        ClipId::Fall => "Fall.png",
         ClipId::Custom(name) => &format!("{}.png", name),
         ClipId::New => unreachable!(),
     };
-      
+
     // Build the path
     let path: PathBuf = Path::new(&variant_folder.0).join(filename);
-    
-    // Fast‑path if already cached in AssetManager
+
+    // Fast-path if already cached in AssetManager
     if let Some(&id) = asset_manager.path_to_sprite_id.get(&path) {
         return id;
     }
@@ -215,4 +244,69 @@ pub fn post_create(
     _ctx: &mut GameCtxMut,
 ) {
     anim.init_runtime();
+}
+
+/// Generates the content for animations.lua with built-in and optional custom clips.
+pub fn generate_animations_lua(custom_clips: &[String]) -> String {
+    use std::collections::HashSet;
+    use strum::IntoEnumIterator;
+
+    let mut lua = String::from(
+        "-- Auto-generated. Do not edit.\n\
+        ---@meta\n\n\
+        ---@enum ClipId\n\
+        local ClipId = {\n"
+    );
+
+    // Built-in clips from ClipId enum
+    let mut builtin_names = HashSet::new();
+    for clip_id in ClipId::iter() {
+        match clip_id {
+            ClipId::Custom(_) | ClipId::New => continue,
+            _ => {
+                let name = format!("{:?}", clip_id);
+                builtin_names.insert(name.clone());
+                lua.push_str(&format!("    {} = \"{}\",\n", name, name));
+            }
+        }
+    }
+
+    // Custom clips (deduplicated, sorted, excluding built-in names)
+    let mut custom_sorted: Vec<&String> = custom_clips
+        .iter()
+        .filter(|c| !builtin_names.contains(*c))
+        .collect();
+    custom_sorted.sort();
+    custom_sorted.dedup();
+
+    for clip in custom_sorted {
+        let key = sanitize_lua_identifier(clip);
+        lua.push_str(&format!("    {} = \"{}\",\n", key, clip));
+    }
+
+    lua.push_str("}\n\nreturn ClipId\n");
+    lua
+}
+
+/// Converts a clip name to a valid Lua identifier.
+fn sanitize_lua_identifier(s: &str) -> String {
+    let mut out = String::new();
+    let mut capitalize = true;
+    for ch in s.chars() {
+        if ch.is_ascii_alphanumeric() {
+            if capitalize {
+                out.push(ch.to_ascii_uppercase());
+                capitalize = false;
+            } else {
+                out.push(ch);
+            }
+        } else {
+            capitalize = true;
+        }
+    }
+    if out.is_empty() || out.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+        format!("Clip_{}", s.replace(|c: char| !c.is_ascii_alphanumeric(), "_"))
+    } else {
+        out
+    }
 }

@@ -338,6 +338,11 @@ pub fn ensure_inside_save_root(path: &Path) -> Result<(), String> {
 
 /// Recursively copy the directory and all of its contents.
 pub fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
+    copy_dir_filtered(src, dest, &[])
+}
+
+/// Recursively copy the directory, skipping files with the given extensions.
+pub fn copy_dir_filtered(src: &PathBuf, dest: &PathBuf, skip_extensions: &[&str]) -> io::Result<()> {
     if !src.is_dir() {
         return Err(Error::new(
             ErrorKind::InvalidInput,
@@ -351,12 +356,20 @@ pub fn copy_dir_recursive(src: &PathBuf, dest: &PathBuf) -> io::Result<()> {
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let src_path = entry.path();
-        let dst_path = dest.join(entry.file_name()); 
+        let dst_path = dest.join(entry.file_name());
 
         if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
+            copy_dir_filtered(&src_path, &dst_path, skip_extensions)?;
         } else {
-            fs::copy(&src_path, &dst_path)?;
+            let should_skip = src_path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| skip_extensions.iter().any(|&skip| skip.eq_ignore_ascii_case(ext)))
+                .unwrap_or(false);
+
+            if !should_skip {
+                fs::copy(&src_path, &dst_path)?;
+            }
         }
     }
     Ok(())

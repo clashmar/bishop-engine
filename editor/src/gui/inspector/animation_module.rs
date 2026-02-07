@@ -3,16 +3,14 @@ use crate::gui::gui_constants::*;
 use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
 use engine_core::ecs::inpsector_module::CollapsibleModule;
-use engine_core::animation::animation_system::*;
-use engine_core::animation::animation_clip::*;
 use engine_core::ecs::inpsector_module::InspectorModule;
+use engine_core::animation::animation_system::*;
+use engine_core::animation::aseprite_import::*;
+use engine_core::storage::path_utils::assets_folder;
+use engine_core::animation::animation_clip::*;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::toast::Toast;
-use engine_core::ui::widgets::{
-    Button, gui_dropdown, TextInput, text_input_reset,
-    NumberInput, gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR,
-    WIDGET_PADDING, WIDGET_SPACING,
-};
+use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use engine_core::ui::text::*;
@@ -26,11 +24,12 @@ const LABEL_FONT_SIZE: f32 = DEFAULT_FONT_SIZE_16;
 const COLON_GAP: f32 = 10.0;
 const FIELD_GAP: f32 = 20.0;
 
-#[derive(Default)]   
+#[derive(Default)]
 pub struct AnimationModule {
     pending_rename: bool,
     rename_initial_value: String,
     warning: Option<Toast>,
+    has_clips: bool,
     select_dropdown_id: WidgetId,
     set_dropdown_id: WidgetId,
     rename_field_id: WidgetId,
@@ -77,22 +76,32 @@ impl InspectorModule for AnimationModule {
         let mut y = rect.y + WIDGET_SPACING;
         let full_w = rect.w - 2.0 * WIDGET_PADDING;
 
-        // Add-clip button
+        // Track whether we have clips for dynamic height
+        self.has_clips = !animation.clips.is_empty();
+
+        // Button dimensions
         const ADD_LABEL: &str = "Add Clip";
-        let txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
-        let btn_w = txt.width + 12.0;   
-        let btn_h = txt.height + 8.0;
+        const REMOVE_LABEL: &str = "Remove Clip";
+        let add_txt = measure_text_ui(ADD_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
+        let remove_txt = measure_text_ui(REMOVE_LABEL, DEFAULT_FONT_SIZE_16, 1.0);
+        let btn_h = add_txt.height + 8.0;
+        let add_btn_w = add_txt.width + 12.0;
+        let remove_btn_w = remove_txt.width + 12.0;
+        let btn_gap = 8.0;
 
-        // Center the button horizontally in the whole module
-        let btn_x = rect.x + (rect.w - btn_w) / 2.0;
-        let btn_rect = Rect::new(btn_x, y, btn_w, btn_h);
+        // Center both buttons together
+        let total_btn_w = add_btn_w + btn_gap + remove_btn_w;
+        let btn_start_x = rect.x + (rect.w - total_btn_w) / 2.0;
 
-        // Button press
-        if Button::new(btn_rect, ADD_LABEL).blocked(blocked).show() {
+        let add_rect = Rect::new(btn_start_x, y, add_btn_w, btn_h);
+        let remove_rect = Rect::new(btn_start_x + add_btn_w + btn_gap, y, remove_btn_w, btn_h);
+
+        // Add clip button
+        let mut clip_added = false;
+        if Button::new(add_rect, ADD_LABEL).blocked(blocked).show() {
             let new_id = if animation.clips.is_empty() {
                 ClipId::Idle
             } else {
-                // All concrete ids that are not yet used
                 let used: HashSet<_> = animation.clips.keys().cloned().collect();
                 let next_builtin = ClipId::iter()
                     .filter(|id| !matches!(id, ClipId::New | ClipId::Custom(_)))
@@ -105,56 +114,83 @@ impl InspectorModule for AnimationModule {
             animation.clips.insert(new_id.clone(), ClipDef::default());
             animation.states.insert(new_id.clone(), ClipState::default());
             animation.current = Some(new_id);
+            clip_added = true;
+            self.has_clips = true;
+        }
+
+        // Remove clip button
+        let can_remove = animation.current.is_some();
+        if Button::new(remove_rect, REMOVE_LABEL).blocked(blocked || !can_remove).show() {
+            if let Some(current_id) = animation.current.take() {
+                animation.clips.remove(&current_id);
+                animation.states.remove(&current_id);
+                animation.sprite_cache.remove(&current_id);
+
+                // Select next available clip or clear
+                animation.current = if animation.clips.is_empty() {
+                    None
+                } else if animation.clips.contains_key(&ClipId::Idle) {
+                    Some(ClipId::Idle)
+                } else {
+                    Some(animation.clips.keys().next().unwrap().clone())
+                };
+
+                self.has_clips = !animation.clips.is_empty();
+            }
         }
 
         y += MARGIN + WIDGET_PADDING;
-        
-        // Return if there is no current id
+
+        // Variant picker (before clip selector so it appears first)
+        let has_variant = !animation.variant.0.as_os_str().is_empty();
+        let variant_btn_w = full_w / 2.0;
+        let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, variant_btn_w, MARGIN);
+
+        if Button::new(sprite_btn, if has_variant { "Edit Variant" } else { "Choose Variant" }).blocked(blocked).show() {
+            if let Some(path) = rfd::FileDialog::new()
+                .pick_folder()
+            {
+                let normalized_path = asset_manager.normalize_path(path);
+                animation.variant = VariantFolder(normalized_path);
+                variant_changed = true;
+            }
+        }
+
+        let full_path = Path::new(&animation.variant.0);
+
+        let variant_label = if has_variant {
+            full_path
+                .file_name()
+                .map(|n| Cow::Owned(format!("/{}", n.to_string_lossy().into_owned())))
+                .unwrap_or_else(|| Cow::Borrowed("/..."))
+        } else {
+            Cow::Borrowed("/...")
+        };
+
+        draw_text_ui(
+            &variant_label,
+            sprite_btn.x + sprite_btn.w + WIDGET_SPACING,
+            y + LABEL_Y_OFFSET,
+            DEFAULT_FONT_SIZE_16,
+            FIELD_TEXT_COLOR
+        );
+
+        y += MARGIN + WIDGET_PADDING;
+
+        // Return if there is no current clip
         if animation.current.is_none() {
             return;
         }
 
         // Calculate clip selector dropdown here
         let clip_dropdown_rect = Rect::new(rect.x + WIDGET_PADDING, y, full_w, BTN_HEIGHT);
-        
+
         y += MARGIN + WIDGET_PADDING;
 
+        let current_clip_id = animation.current.clone().unwrap();
+
         // Edit the currently selected clip
-        if let Some(clip) = animation.clips.get_mut(&animation.current.as_ref().unwrap()) {
-            // Variant picker
-            let has_variant = !animation.variant.0.as_os_str().is_empty();
-            let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, full_w / 2., MARGIN);
-
-            if Button::new(sprite_btn, if has_variant { "Edit Variant" } else { "Choose Variant" }).blocked(blocked).show() {
-                if let Some(path) = rfd::FileDialog::new()
-                    .pick_folder()
-                {
-                    let normalized_path = asset_manager.normalize_path(path);
-                    animation.variant = VariantFolder(normalized_path);
-                    variant_changed = true;
-                }
-            }
-
-            let full_path = Path::new(&animation.variant.0);
-
-            let variant_label = if has_variant {
-                full_path
-                    .file_name()
-                    .map(|n| Cow::Owned(format!("/{}", n.to_string_lossy().into_owned())))
-                    .unwrap_or_else(|| Cow::Borrowed("/..."))
-            } else {
-                Cow::Borrowed("/...")
-            };
-
-            draw_text_ui(
-                &variant_label, 
-                rect.x + sprite_btn.w + WIDGET_SPACING + WIDGET_PADDING, 
-                y + LABEL_Y_OFFSET, 
-                DEFAULT_FONT_SIZE_16, 
-                FIELD_TEXT_COLOR
-            );
-
-            y += MARGIN + WIDGET_PADDING;
+        if let Some(clip) = animation.clips.get_mut(&current_clip_id) {
 
             // Frame size
             draw_frame_size_fields(self, y, rect, clip, blocked);
@@ -164,12 +200,107 @@ impl InspectorModule for AnimationModule {
             draw_spritesheet_dimension_fields(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
-            // FPS / Loop toggle
-            draw_fps_and_loop(self, y, rect, clip, blocked);
+            // FPS / Loop / Mirrored toggles
+            draw_fps_loop_and_mirrored(self, y, rect, clip, blocked);
             y += MARGIN + WIDGET_PADDING;
 
             // Optional offset
             draw_offset_fields(self, y, rect, clip, blocked);
+            y += MARGIN + WIDGET_PADDING;
+
+            // Import buttons at the bottom: "Import: [JSON] [Variant]"
+            const IMPORT_LABEL: &str = "Import:";
+            const JSON_LABEL: &str = "JSON";
+            const VARIANT_LABEL: &str = "Variant";
+
+            let import_label_w = measure_text_ui(IMPORT_LABEL, LABEL_FONT_SIZE, 1.0).width + COLON_GAP;
+            let json_btn_w = measure_text_ui(JSON_LABEL, DEFAULT_FONT_SIZE_16, 1.0).width + 16.0;
+            let variant_btn_w = measure_text_ui(VARIANT_LABEL, DEFAULT_FONT_SIZE_16, 1.0).width + 16.0;
+            let btn_gap = 8.0;
+
+            let start_x = rect.x + WIDGET_PADDING;
+
+            draw_text_ui(IMPORT_LABEL, start_x, y + LABEL_Y_OFFSET, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+
+            let import_json_btn = Rect::new(start_x + import_label_w, y, json_btn_w, MARGIN);
+            let import_variant_btn = Rect::new(import_json_btn.x + json_btn_w + btn_gap, y, variant_btn_w, MARGIN);
+
+            // Import JSON button - imports metadata for the current clip only
+            if Button::new(import_json_btn, JSON_LABEL).blocked(blocked || !has_variant).show() {
+                let json_path = resolve_json_path(&animation.variant, &current_clip_id);
+                match import_aseprite_metadata(&json_path) {
+                    JsonImportResult::Success(imported) => {
+                        clip.frame_size = imported.frame_size;
+                        clip.cols = imported.cols;
+                        clip.rows = imported.rows;
+                        clip.fps = imported.fps;
+                        clip.frame_durations = imported.frame_durations;
+                        clip.offset = imported.offset;
+                        clip.mirrored = imported.mirrored;
+                        self.warning = Some(Toast::new("Import successful".to_string(), 2.0));
+                    }
+                    JsonImportResult::NotFound => {
+                        self.warning = Some(Toast::new(
+                            format!("JSON not found: {}", json_path.display()),
+                            3.0,
+                        ));
+                    }
+                    JsonImportResult::Error(msg) => {
+                        self.warning = Some(Toast::new(format!("Import error: {}", msg), 3.0));
+                    }
+                }
+            }
+
+            // Import Variant button - one-click full import from Aseprite files
+            if Button::new(import_variant_btn, VARIANT_LABEL).blocked(blocked || !has_variant).show() {
+                let full_path = assets_folder().join(&animation.variant.0);
+
+                // Export all Aseprite files to PNG + JSON
+                match export_aseprite_folder(&full_path) {
+                    AseExportResult::Success => {}
+                    AseExportResult::AsepriteNotFound => {
+                        self.warning = Some(Toast::new("Aseprite not found in PATH".to_string(), 3.0));
+                        return;
+                    }
+                    AseExportResult::ExportFailed { file, error } => {
+                        self.warning = Some(Toast::new(
+                            format!("Export failed: {}: {}", file, error),
+                            3.0,
+                        ));
+                        return;
+                    }
+                }
+
+                // Import all JSON files (skips malformed JSON, not fatal)
+                match import_variant_folder(&full_path) {
+                    Ok(result) => {
+                        // Clear existing clips and add new ones
+                        animation.clips = result.clips;
+                        animation.states.clear();
+                        for id in animation.clips.keys() {
+                            animation.states.insert(id.clone(), ClipState::default());
+                        }
+                        animation.current = animation.clips.keys().next().cloned();
+
+                        let count = animation.clips.len();
+                        let msg = if result.skipped.is_empty() {
+                            format!("Imported {} clips", count)
+                        } else {
+                            format!("Imported {} clips ({} skipped)", count, result.skipped.len())
+                        };
+                        self.warning = Some(Toast::new(msg, 2.0));
+
+                        // Refresh sprite cache after importing
+                        let has_variant_folder = !animation.variant.0.as_os_str().is_empty();
+                        if has_variant_folder {
+                            futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
+                        }
+                    }
+                    Err(e) => {
+                        self.warning = Some(Toast::new(format!("Import failed: {}", e), 3.0));
+                    }
+                }
+            }
         }
 
         draw_current_clip_dropdowns(
@@ -186,13 +317,20 @@ impl InspectorModule for AnimationModule {
                 self.warning = None;
             }
         }
-        if variant_changed {
+
+        // Refresh sprite cache when variant changes or a new clip is added (only if variant is set)
+        let has_variant = !animation.variant.0.as_os_str().is_empty();
+        if (variant_changed || clip_added) && has_variant {
             futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
         }
     }
 
     fn height(&self) -> f32 {
-        300.0
+        if self.has_clips {
+            340.0
+        } else {
+            50.0
+        }
     }
 }
 
@@ -210,14 +348,13 @@ pub fn draw_current_clip_dropdowns(
     // Select clip
     let select_rect = Rect::new(rect.x, rect.y, width, rect.h);
 
-    if let Some(selected) = gui_dropdown(
+    if let Some(selected) = Dropdown::new(
         module.select_dropdown_id,
         select_rect,
         &clip_label,
         &existing_clip_ids(&animation.clips),
         |id| id.ui_label(),
-        blocked
-    ) {
+    ).blocked(blocked).show() {
         animation.set_clip(&selected);
         return;
     }
@@ -233,14 +370,13 @@ pub fn draw_current_clip_dropdowns(
     // Show the type selector
     let type_label = "Set Type";
 
-    let chosen = gui_dropdown(
+    let chosen = Dropdown::new(
         module.set_dropdown_id,
         right_rect,
         &type_label,
         &all_ids,
         |id| id.ui_label(),
-        blocked,
-    );
+    ).blocked(blocked).show();
 
     if let Some(chosen) = chosen {
         match chosen {
@@ -341,10 +477,10 @@ pub fn draw_spritesheet_dimension_fields(
     clip.rows = NumberInput::new(module.rows_id, inp_r, clip.rows as f32).blocked(blocked).show() as usize;
 }
 
-pub fn draw_fps_and_loop(
+pub fn draw_fps_loop_and_mirrored(
     module: &mut AnimationModule,
-    y: f32, 
-    rect: Rect, 
+    y: f32,
+    rect: Rect,
     clip: &mut ClipDef,
     blocked: bool,
 ) {
@@ -359,6 +495,20 @@ pub fn draw_fps_and_loop(
 
     clip.fps = NumberInput::new(module.fps_id, inp_fps, clip.fps).blocked(blocked).show();
     gui_checkbox(inp_loop, &mut clip.looping);
+
+    // Mirrored checkbox
+    let mirrored_label = "Mirror:";
+    let mirrored_label_w = measure_text_ui(mirrored_label, LABEL_FONT_SIZE, 1.0).width + COLON_GAP;
+    let mirrored_lbl_x = inp_loop.x + inp_loop.w + FIELD_GAP;
+    draw_text_ui(mirrored_label, mirrored_lbl_x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
+
+    let inp_mirrored = Rect::new(
+        mirrored_lbl_x + mirrored_label_w,
+        inp_loop.y,
+        CHECKBOX_SIZE,
+        CHECKBOX_SIZE,
+    );
+    gui_checkbox(inp_mirrored, &mut clip.mirrored);
 }
 
 pub fn draw_offset_fields(

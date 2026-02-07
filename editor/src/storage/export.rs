@@ -96,9 +96,11 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     }
 
     // Everything else goes in /Resources to mirror macOS structure
+    // Skip source files that aren't needed for the final game
     let src_resources = resources_folder_current();
     let target_resources = target_package.join(RESOURCES_FOLDER);
-    copy_dir_recursive(&src_resources, &target_resources)?;
+    let skip_extensions = &["json", "aseprite", "ase"];
+    copy_dir_filtered(&src_resources, &target_resources, skip_extensions)?;
 
     // TODO: Write manifest for game
     
@@ -137,24 +139,26 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
     permissions.set_mode(0o755);
     fs::set_permissions(&bin_path, permissions)?;
 
-    // Copy /Resources
+    // Copy /Resources, skipping source files not needed for the final game
     onscreen_debug!("Copying /Resources.");
     let src_resources = resources_folder_current();
     let target_resources = bundle_path
         .join(CONTENTS_FOLDER)
         .join(RESOURCES_FOLDER);
 
-    copy_dir_recursive(&src_resources, &target_resources)?;
+    let skip_extensions = &["json", "aseprite", "ase"];
+    copy_dir_filtered(&src_resources, &target_resources, skip_extensions)?;
 
     // Copy Icon.icns
     onscreen_debug!("Copying Icon.icns.");
-    let src_icns = mac_os_folder()
-        .join("Icon.icns");
+    let src_icns = mac_os_folder().join("Icon.icns");
+    let target_icns = target_resources.join("Icon.icns");
 
-    let target_icns = target_resources
-        .join("Icon.icns");
-
-    fs::copy(src_icns, target_icns)?;
+    if src_icns.exists() {
+        fs::copy(&src_icns, &target_icns)?;
+    } else {
+        onscreen_debug!("Icon.icns not found, skipping.");
+    }
 
     // Copy Info.plist
     if let Some(bundle_assets) = bundle_assets_folder() {

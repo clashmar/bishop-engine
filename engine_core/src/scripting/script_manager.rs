@@ -279,13 +279,15 @@ impl ScriptManager {
 
     /// Load all .lua files to the package.path
     fn load_to_package(lua: &Lua) {
-        let scripts_dir = scripts_folder();
+        let dir = scripts_folder().to_string_lossy().replace('\\', "/");
+
+        onscreen_debug!("package.path loaded from: {}", dir);
+
         let add_path = format!(
             r#"
             local p = package.path
             package.path = p .. ';{dir}/?.lua;{dir}/?/init.lua'
             "#,
-            dir = scripts_dir.to_string_lossy().replace('\\', "/")
         );
         
         lua.load(&add_path).exec().expect("Cannot set package.path");

@@ -9,10 +9,14 @@ pub const ENTITY_FILE: &str = "entity.lua";
 pub const LUA_GAME_CTX: &str = "lua_game_ctx";
 pub const ENTITY: &str = "entity";
 
+// Directories
+pub const ENGINE_DIR: &str = "_engine";
+pub const SCRIPTS_DIR: &str = "scripts";
+
 /// Field name for script public fields.
 pub const PUBLIC: &str = "public";
 
-// .engine APIS
+// _engine APIS
 pub const ENGINE: &str = "engine";
 pub const GLOBAL: &str = "global";
 pub const ENGINE_CALL: &str = "call";
@@ -31,6 +35,18 @@ pub const HAS_ANY: &str = "has_any";
 pub const HAS_ALL: &str = "has_all";
 pub const INTERACT: &str = "interact";
 pub const FIND_BEST_INTERACTABLE: &str = "find_best_interactable";
+
+// Animation methods
+pub const SET_CLIP: &str = "set_clip";
+pub const GET_CLIP: &str = "get_clip";
+pub const RESET_CLIP: &str = "reset_clip";
+pub const SET_FLIP_X: &str = "set_flip_x";
+pub const GET_FLIP_X: &str = "get_flip_x";
+pub const SET_FACING: &str = "set_facing";
+pub const SET_ANIM_SPEED: &str = "set_anim_speed";
+pub const GET_CURRENT_FRAME: &str = "get_current_frame";
+pub const IS_CLIP_FINISHED: &str = "is_clip_finished";
+pub const ON_CLIP_FINISHED: &str = "on_clip_finished";
 
 // Entity fields
 pub const ID: &str = "id";

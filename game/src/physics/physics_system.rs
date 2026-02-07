@@ -2,7 +2,7 @@
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY;
 use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::transform::{Transform, update_entity_position};
+use engine_core::ecs::transform::*;
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use engine_core::ecs::ecs::Ecs;
@@ -24,14 +24,14 @@ pub fn update_physics(
         .collect();
 
     for entity in entities {
-        let (pos_cur, mut vel_cur, collider) = {
-            let p = ecs.get::<Transform>(entity).unwrap();
+        let (pos_cur, pivot, mut vel_cur, collider) = {
+            let t = ecs.get::<Transform>(entity).unwrap();
             let v = ecs.get::<Velocity>(entity).unwrap();
             let c = ecs
                 .get::<Collider>(entity)
                 .cloned()
                 .unwrap_or_default();
-            (p.position, *v, c)
+            (t.position, t.pivot, *v, c)
         };
 
         vel_cur.y += GRAVITY * dt;
@@ -46,6 +46,7 @@ pub fn update_physics(
             pos_cur,
             delta,
             collider,
+            pivot,
             &room.exits
         );
 
@@ -60,10 +61,15 @@ pub fn update_physics(
         }
 
         update_entity_position(ecs, entity, new_pos);
-        
+
         {
             let vel_mut = ecs.get_mut::<Velocity>(entity).unwrap();
             *vel_mut = new_vel;
+        }
+
+        // Update Grounded component - grounded when blocked_y while moving down
+        if let Some(grounded) = ecs.get_mut::<Grounded>(entity) {
+            grounded.0 = sweep.blocked_y && vel_cur.y >= 0.0;
         }
     }
 }

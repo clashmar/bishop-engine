@@ -74,7 +74,7 @@ async fn main() -> std::io::Result<()> {
     // This allows global access to services
     set_editor(editor);
 
-    let mut current_window_size = (screen_width() as u32, screen_height() as u32);
+    let mut current_window_size = (0, 0);
 
     loop {
         // Update the render targets with the current window size
