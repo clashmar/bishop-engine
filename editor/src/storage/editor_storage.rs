@@ -5,6 +5,7 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::ecs::transform::Transform;
 use crate::with_lua_async;
 use engine_core::animation::animation_clip::{Animation, ClipId};
+use engine_core::dialogue::DialogueManager;
 use engine_core::engine_global::set_game_name;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
@@ -61,6 +62,7 @@ pub async fn create_new_game(name: String) -> Game {
         worlds: vec![world],
         asset_manager,
         script_manager,
+        dialogue_manager: DialogueManager::default(),
         current_world_id: current_id,
         tile_size: DEFAULT_TILE_SIZE,
         game_map: GameMap::default(),

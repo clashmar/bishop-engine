@@ -4,18 +4,19 @@ use crate::physics::physics_system::*;
 use crate::game_state::GameState;
 use crate::scripting::script_system::ScriptSystem;
 use crate::transitions::transition_manager::TransitionManager;
-use engine_core::animation::animation_system::*;
+use engine_core::rendering::render_system::RenderSystem;
 use engine_core::camera::camera_manager::CameraManager;
-use engine_core::constants::*;
+use engine_core::animation::animation_system::*;
+use engine_core::rendering::render_room::*;
 use engine_core::ecs::transform::Transform;
 use engine_core::onscreen_error;
-use engine_core::rendering::render_room::*;
-use engine_core::rendering::render_system::RenderSystem;
-use engine_core::*;
+use engine_core::constants::*;
+use engine_core::dialogue::*;
 use macroquad::prelude::*;
-use mlua::Lua;
 use std::cell::RefCell;
+use engine_core::*;
 use std::rc::Rc;
+use mlua::Lua;
 
 pub struct Engine {
     /// Handle for the game.
@@ -90,6 +91,7 @@ impl Engine {
             // Keep borrow_mut in this scope
             let mut game_state = self.game_state.borrow_mut();
             TransitionManager::handle_transitions(&mut game_state);
+            update_speech_timers(&mut game_state.game.ecs, dt);
 
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
@@ -116,7 +118,9 @@ impl Engine {
         clear_background(BLACK);
 
         let mut game_state = self.game_state.borrow_mut();
-        let prev_positions = &game_state.prev_positions.clone();
+        let prev_positions = game_state.prev_positions.clone();
+        let dialogue_config = game_state.game.dialogue_manager.config.clone();
+
         let game_ctx = game_state.game.ctx_mut();
 
         let asset_manager = game_ctx.asset_manager;
@@ -124,6 +128,8 @@ impl Engine {
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
+
+        let current_room_id = current_room.id;
 
         let interpolated_target = lerp(
             self.camera_manager.previous_position.unwrap_or_default(),
@@ -145,12 +151,25 @@ impl Engine {
             &mut self.render_system,
             &render_cam,
             alpha,
-            Some(prev_positions),
+            Some(&prev_positions),
         );
-
+        
         self.render_system.present_game();
 
+        // Collect speech bubble data
+        let speech_bubbles = collect_speech_bubbles(
+            ecs,
+            asset_manager,
+            current_room_id,
+            alpha,
+            Some(&prev_positions),
+        );
+
+        // Render speech bubbles in screen space
+        render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam);
+
         // Draw diagnostics overlay after game rendering
+        drop(game_state);
         self.diagnostics.draw();
     }
 

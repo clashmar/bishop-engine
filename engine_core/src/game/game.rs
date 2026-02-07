@@ -1,4 +1,5 @@
 // engine_core/src/game/game.rs
+use crate::dialogue::DialogueManager;
 use crate::scripting::script_manager::ScriptManager;
 use crate::assets::asset_manager::AssetManager;
 use crate::game::game_map::GameMap;
@@ -27,6 +28,9 @@ pub struct Game {
     pub asset_manager: AssetManager,
     /// Script manager for the game.
     pub script_manager: ScriptManager,
+    /// Dialogue manager for the game.
+    #[serde(skip)]
+    pub dialogue_manager: DialogueManager,
     /// Id of the currently active world.
     pub current_world_id: WorldId, // TODO: Change this to an option
     /// Tile size of the game that the world scales to.
@@ -141,5 +145,13 @@ impl Game {
         set_global_tile_size(self.tile_size);
         AssetManager::init_manager(self).await;
         ScriptManager::init_manager(self, lua).await;
+        self.init_dialogue_manager();
+    }
+
+    /// Initializes the dialogue manager with the correct path.
+    fn init_dialogue_manager(&mut self) {
+        use crate::storage::path_utils::dialogue_folder;
+        let dialogue_root = dialogue_folder();
+        self.dialogue_manager.set_dialogue_root(dialogue_root);
     }
 }
