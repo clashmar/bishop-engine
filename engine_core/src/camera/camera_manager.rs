@@ -117,10 +117,10 @@ impl CameraManager {
                 self.active.camera.target = player_pos;
             }
             FollowRestriction::ClampX => {
-                self.active.camera.target.x = player_pos.x;
+                self.active.camera.target.y = player_pos.y;
             }
             FollowRestriction::ClampY => {
-                self.active.camera.target.y = player_pos.y;
+                self.active.camera.target.x = player_pos.x;
             }
         }
     }

@@ -16,6 +16,8 @@ use std::fmt;
 pub struct GameCamera {
     pub camera: Camera2D,
     pub id: usize,
+    /// The camera entity's original transform position (used for clamped follow modes).
+    pub origin: Vec2,
 }
 
 impl Clone for GameCamera {
@@ -30,6 +32,7 @@ impl Clone for GameCamera {
                 ..Default::default()
             },
             id: self.id,
+            origin: self.origin,
         }
     }
 }
@@ -165,26 +168,25 @@ pub fn get_room_cameras(ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)>
 
 /// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
 pub fn room_to_game_camera(
-    ecs: &Ecs, 
-    entity: &Entity, 
+    ecs: &Ecs,
+    entity: &Entity,
     room_camera: &RoomCamera,
-    player_pos: Vec2, 
+    player_pos: Vec2,
 ) -> GameCamera {
-    let pos_store  = ecs.get_store::<Transform>();
+    let pos_store = ecs.get_store::<Transform>();
+    let origin = pos_store
+        .data
+        .get(entity)
+        .expect("Camera should always have a Transform component")
+        .position;
 
-    // If the camera is a Follow cam user the player as the target
     let target = match room_camera.camera_mode {
-        CameraMode::Follow(_) => player_pos,
-        CameraMode::Fixed => {
-            pos_store
-                .data
-                .get(entity)
-                .expect("Camera should always have a Transform component")
-                .position
-        }
+        CameraMode::Fixed => origin,
+        CameraMode::Follow(FollowRestriction::Free) => player_pos,
+        CameraMode::Follow(FollowRestriction::ClampX) => vec2(origin.x, player_pos.y),
+        CameraMode::Follow(FollowRestriction::ClampY) => vec2(player_pos.x, origin.y),
     };
 
-    // Build the GameCamera
     let camera = Camera2D {
         target,
         zoom: room_camera.zoom,
@@ -192,7 +194,7 @@ pub fn room_to_game_camera(
         ..Default::default()
     };
 
-    GameCamera { camera, id: entity.0 }  
+    GameCamera { camera, id: entity.0, origin }
 }
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
@@ -205,19 +207,19 @@ pub fn get_room_camera(ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
         if let Some(current_room) = room_store.get(*entity) {
             if current_room.0 != room_id { continue; }
 
-            let position = pos_store.data
+            let origin = pos_store.data
                 .get(entity)
                 .expect("Camera should always have position.")
                 .position;
 
             let camera = Camera2D {
-                target: position,
+                target: origin,
                 zoom: room_cam.zoom,
                 render_target: Some(game_render_target()),
                 ..Default::default()
             };
 
-            return Some(GameCamera { camera, id: entity.0});
+            return Some(GameCamera { camera, id: entity.0, origin });
         }
     }
     None
