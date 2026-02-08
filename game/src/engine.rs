@@ -43,29 +43,21 @@ impl Engine {
             let frame_dt = get_frame_time();
             accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
 
-            // Update diagnostics timing (playtest only)
+            // Update diagnostics timing
             if self.is_playtest {
                 self.diagnostics.update(frame_dt);
                 self.diagnostics.handle_input();
             }
 
             while accumulator >= FIXED_DT {
-                // Store positions before each physics step
-                {
-                    let mut game_state = self.game_state.borrow_mut();
-                    game_state.store_previous_positions(&mut self.camera_manager);
-                }
-                
-                // Physics, camera...
                 self.fixed_update(FIXED_DT);
-
                 accumulator -= FIXED_DT;
             }
 
             // Per‑frame async work (input, animation)
             self.update_async(frame_dt).await;
 
-            // Update diagnostics metrics before render (playtest only)
+            // Update diagnostics metrics before render
             if self.is_playtest {
                 self.update_diagnostics_metrics();
             }
@@ -80,16 +72,19 @@ impl Engine {
 
     pub fn fixed_update(&mut self, dt: f32) {
         let mut game_state = self.game_state.borrow_mut();
+
+        // Store the current positions for the next frame
+        game_state.store_previous_positions(&mut self.camera_manager);
+
         let game_ctx = game_state.game.ctx_mut();
+        let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
+
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
-        let asset_manager = game_ctx.asset_manager;
 
         update_physics(asset_manager, ecs, current_room, dt);
-
-        self.camera_manager.update_active(ecs, current_room);
     }
 
     pub async fn update_async(&mut self, dt: f32) {
@@ -102,6 +97,12 @@ impl Engine {
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
+
+            let Some(current_room) = game_ctx.cur_world.current_room() else {
+                return;
+            };
+
+            self.camera_manager.update_active(ecs, current_room);
 
             if let Some(current_room) = game_ctx.cur_world.current_room() {
                 update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
@@ -125,27 +126,20 @@ impl Engine {
 
         let mut game_state = self.game_state.borrow_mut();
         let prev_positions = game_state.prev_positions.clone();
-        let dialogue_config = game_state.game.dialogue_manager.config.clone();
 
         let game_ctx = game_state.game.ctx_mut();
 
         let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
+        
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
 
         let current_room_id = current_room.id;
 
-        let interpolated_target = lerp(
-            self.camera_manager.previous_position.unwrap_or_default(),
-            self.camera_manager.active.camera.target,
-            alpha,
-        );
-
-        // Create a new interpolated camera
         let render_cam = Camera2D {
-            target: interpolated_target,
+            target: self.camera_manager.interpolated_target(alpha),
             zoom: self.camera_manager.active.camera.zoom,
             ..Default::default()
         };
@@ -172,6 +166,7 @@ impl Engine {
         );
 
         // Render speech bubbles in screen space
+        let dialogue_config = game_state.game.dialogue_manager.config.clone();
         render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam);
 
         // Draw diagnostics overlay after game rendering (playtest only)
