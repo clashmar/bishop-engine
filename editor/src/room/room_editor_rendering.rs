@@ -10,13 +10,13 @@ use engine_core::animation::animation_clip::Animation;
 use engine_core::assets::asset_manager::AssetManager;
 use engine_core::camera::game_camera::RoomCamera;
 use engine_core::rendering::render_room::*;
+use engine_core::constants::DEFAULT_GRID_SIZE;
 use engine_core::lighting::light::Light;
 use engine_core::assets::sprite::Sprite;
 use engine_core::game::game::GameCtxMut;
 use engine_core::lighting::glow::Glow;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
-use engine_core::engine_global::*;
 use engine_core::ui::widgets::*;
 use engine_core::world::room::*;
 use engine_core::ecs::ecs::Ecs;
@@ -24,7 +24,7 @@ use engine_core::ui::text::*;
 use macroquad::prelude::*;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
-fn thickness() -> f32 { (tile_size() * 0.175).max(1.0) }
+fn thickness() -> f32 { (DEFAULT_GRID_SIZE * 0.175).max(1.0) }
 
 impl RoomEditor {
     /// Draw static UI for the scene editor
@@ -36,7 +36,7 @@ impl RoomEditor {
         // Reset to static camera
         set_default_camera();
 
-        self.draw_coordinates(camera, game_ctx.cur_world.current_room().unwrap());
+        self.draw_coordinates(camera, game_ctx.cur_world.current_room().unwrap(), game_ctx.cur_world.grid_size);
 
         match self.mode {
             RoomEditorMode::Tilemap => {
@@ -74,8 +74,8 @@ impl RoomEditor {
     }
 
     /// Draw the cursor coordinates in world space.
-    pub fn draw_coordinates(&self, camera: &Camera2D, room: &Room) {
-        let local_grid = coord::mouse_world_grid(camera);
+    pub fn draw_coordinates(&self, camera: &Camera2D, room: &Room, grid_size: f32) {
+        let local_grid = coord::mouse_world_grid(camera, grid_size);
         let world_grid = local_grid + room.position;
         
         let txt = format!(
@@ -167,17 +167,18 @@ pub fn entity_hitbox(
     camera: &Camera2D,
     ecs: &Ecs,
     asset_manager: &mut AssetManager,
+    grid_size: f32,
 ) -> Rect {
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
 
     // Only use the center-offset for pure placeholder entities (Camera/Light without sprites)
     let is_pure_placeholder = ecs.has::<RoomCamera>(entity)
         || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
 
     let corrected_pos = if is_pure_placeholder {
-        position - vec2(tile_size() * 0.5, tile_size() * 0.5)
+        position - vec2(grid_size * 0.5, grid_size * 0.5)
     } else {
-        // Apply pivot offset for regular entities (including Light+Sprite)
+        // Apply pivot offset for regular entities
         let pivot = ecs
             .get_store::<Transform>()
             .get(entity)
@@ -200,7 +201,7 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId) {
+pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId, grid_size: f32) {
     let cam_store = ecs.get_store::<RoomCamera>();
     let pos_store = ecs.get_store::<Transform>();
     let room_store = ecs.get_store::<CurrentRoom>();
@@ -220,12 +221,12 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId) {
     
     for pos in positions {
         // Offset the camera placeholder 
-        let half_tile = tile_size() * 0.5;
+        let half_tile = grid_size * 0.5;
         let body = Rect::new(
             pos.x - half_tile,   
             pos.y - half_tile,
-            tile_size(),
-            tile_size(),
+            grid_size,
+            grid_size,
         );
 
         let green = Color::new(0.0, 0.89, 0.19, PLACEHOLDER_OPACITY);
@@ -234,8 +235,8 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId) {
 
         draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
 
-        let finder_w = tile_size() * 0.3;
-        let finder_h = tile_size() * 0.6;
+        let finder_w = grid_size * 0.3;
+        let finder_h = grid_size * 0.6;
         let finder = Rect::new(
             body.x + thickness(),                     
             body.y + (body.h - finder_h) / 2.0,
@@ -245,20 +246,21 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId) {
         draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
                             thickness() * 0.75, blue);
 
-        let lens_radius = tile_size() * 0.1;
+        let lens_radius = grid_size * 0.1;
         let lens_center = vec2(
             body.x + body.w - lens_radius * 2.0 - thickness(),
             body.y + body.h / 2.0,
         );
         draw_circle_lines(lens_center.x, lens_center.y,
                         lens_radius, thickness() * 0.75, red);
-        }
+    }
 }
 
 /// Draw an icon for a `Light` that has no other visual component.
 pub fn draw_light_placeholders(
     ecs: &Ecs,
     room_id: RoomId,
+    grid_size: f32
 ) {
     let room_store = ecs.get_store::<CurrentRoom>();
     for (entity, _light) in ecs.get_store::<Light>().data.iter() {
@@ -275,12 +277,12 @@ pub fn draw_light_placeholders(
         if let Some(position) = ecs.get_store::<Transform>().get(*entity) {
             let pos = position.position;
 
-            let half_tile = tile_size() * 0.5;
+            let half_tile = grid_size * 0.5;
             let body = Rect::new(
                 pos.x - half_tile,
                 pos.y - half_tile,
-                tile_size(),
-                tile_size(),
+                grid_size,
+                grid_size,
             );
 
             let cyan = Color::new(0.0, 0.78, 0.78, PLACEHOLDER_OPACITY);
@@ -290,7 +292,7 @@ pub fn draw_light_placeholders(
             draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), cyan);
 
             // Lens
-            let lens_radius = tile_size() * 0.2;
+            let lens_radius = grid_size * 0.2;
             let lens_center = vec2(
                 body.x + body.w / 2.,
                 body.y + body.h / 2.,
@@ -312,6 +314,7 @@ pub fn draw_glow_placeholders(
     ecs: &Ecs,
     asset_manager: &mut AssetManager,
     room_id: RoomId,
+    grid_size: f32,
 ) {
     let room_store = ecs.get_store::<CurrentRoom>();
     for (entity, glow) in ecs.get_store::<Glow>().data.iter() {
@@ -329,14 +332,14 @@ pub fn draw_glow_placeholders(
             let mut pos = position.position;
 
             if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
-                pos = pos + vec2((w / 2.) - tile_size() / 2., (h / 2.) - tile_size() / 2.);
+                pos = pos + vec2((w / 2.) - grid_size / 2., (h / 2.) - grid_size / 2.);
             }
 
             let body = Rect::new(
                 pos.x,
                 pos.y,
-                tile_size(),
-                tile_size(),
+                grid_size,
+                grid_size,
             );
 
             let cyan = Color::new(0.0, 0.78, 0.78, PLACEHOLDER_OPACITY);
@@ -346,7 +349,7 @@ pub fn draw_glow_placeholders(
             draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), cyan);
 
             // Lens
-            let lens_radius = tile_size() * 0.2;
+            let lens_radius = grid_size * 0.2;
             let lens_center = vec2(
                 body.x + body.w / 2.,
                 body.y + body.h / 2.,

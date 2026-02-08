@@ -3,7 +3,7 @@ use crate::ecs::component::CurrentRoom;
 use crate::ecs::transform::Transform;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
-use crate::engine_global::*;
+use crate::engine_global::cam_tile_dims;
 use crate::ecs::ecs::Ecs;
 use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
@@ -37,8 +37,11 @@ impl Clone for GameCamera {
     }
 }
 
-pub fn world_virtual_width() -> f32 { cam_tile_dims().0 * tile_size() }
-pub fn world_virtual_height() -> f32 { cam_tile_dims().1 * tile_size() }
+/// Returns the virtual width in pixels for the given grid size.
+pub fn world_virtual_width(grid_size: f32) -> f32 { cam_tile_dims().0 * grid_size }
+
+/// Returns the virtual height in pixels for the given grid size.
+pub fn world_virtual_height(grid_size: f32) -> f32 { cam_tile_dims().1 * grid_size }
 
 /// Component for a room camera used by the game.
 #[ecs_component]
@@ -54,10 +57,28 @@ pub struct RoomCamera {
 }
 
 impl RoomCamera {
-    pub fn new(room_id: RoomId) -> Self {
-        let zoom = vec2(1.0 / world_virtual_width() * 2.0, 1.0 / world_virtual_height() * 2.0);
-        RoomCamera { 
-            zoom, 
+    /// Creates a new RoomCamera with the world grid size.
+    pub fn new(room_id: RoomId, grid_size: f32) -> Self {
+        let zoom = vec2(
+            1.0 / world_virtual_width(grid_size) * 2.0,
+            1.0 / world_virtual_height(grid_size) * 2.0,
+        );
+        RoomCamera {
+            zoom,
+            room_id,
+            zoom_mode: ZoomMode::Step,
+            camera_mode: CameraMode::Fixed,
+        }
+    }
+
+    /// Creates a new RoomCamera with zoom calculated for the given grid size.
+    pub fn with_grid_size(room_id: RoomId, grid_size: f32) -> Self {
+        let zoom = vec2(
+            1.0 / world_virtual_width(grid_size) * 2.0,
+            1.0 / world_virtual_height(grid_size) * 2.0,
+        );
+        RoomCamera {
+            zoom,
             room_id,
             zoom_mode: ZoomMode::Step,
             camera_mode: CameraMode::Fixed,
@@ -135,14 +156,12 @@ impl fmt::Display for FollowRestriction {
     }
 }
 
-pub fn game_render_target() -> RenderTarget {
-    let width = world_virtual_width() as u32;
-    let height = world_virtual_height() as u32;
-    
-    let rt = render_target(
-        width,
-        height,
-    );
+/// Creates a render target sized for the given grid size.
+pub fn game_render_target(grid_size: f32) -> RenderTarget {
+    let width = world_virtual_width(grid_size) as u32;
+    let height = world_virtual_height(grid_size) as u32;
+
+    let rt = render_target(width, height);
     // Always use Nearest
     rt.texture.set_filter(FilterMode::Nearest);
     rt
@@ -172,6 +191,7 @@ pub fn room_to_game_camera(
     entity: &Entity,
     room_camera: &RoomCamera,
     player_pos: Vec2,
+    grid_size: f32,
 ) -> GameCamera {
     let pos_store = ecs.get_store::<Transform>();
     let origin = pos_store
@@ -190,7 +210,7 @@ pub fn room_to_game_camera(
     let camera = Camera2D {
         target,
         zoom: room_camera.zoom,
-        render_target: Some(game_render_target()),
+        render_target: Some(game_render_target(grid_size)),
         ..Default::default()
     };
 
@@ -198,24 +218,27 @@ pub fn room_to_game_camera(
 }
 
 /// Returns a `GameCamera` for a room from its id, if one exists.
-pub fn get_room_camera(ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
-    let pos_store = ecs.get_store::<Transform>();
+pub fn get_room_camera(ecs: &Ecs, room_id: RoomId, grid_size: f32) -> Option<GameCamera> {
+    let trans_store = ecs.get_store::<Transform>();
     let cam_store = ecs.get_store::<RoomCamera>();
     let room_store = ecs.get_store::<CurrentRoom>();
 
     for (entity, room_cam) in cam_store.data.iter() {
         if let Some(current_room) = room_store.get(*entity) {
-            if current_room.0 != room_id { continue; }
+            if current_room.0 != room_id {
+                continue;
+            }
 
-            let origin = pos_store.data
+            let origin = trans_store
+                .data
                 .get(entity)
-                .expect("Camera should always have position.")
+                .expect("Camera should always have a transform.")
                 .position;
 
             let camera = Camera2D {
                 target: origin,
                 zoom: room_cam.zoom,
-                render_target: Some(game_render_target()),
+                render_target: Some(game_render_target(grid_size)),
                 ..Default::default()
             };
 
@@ -225,9 +248,10 @@ pub fn get_room_camera(ecs: &Ecs, room_id: RoomId) -> Option<GameCamera> {
     None
 }
 
-pub fn zoom_from_scalar(scalar: f32) -> Vec2 {
+/// Compute zoom vector from a scalar value.
+pub fn zoom_from_scalar(scalar: f32, grid_size: f32) -> Vec2 {
     // Fixed virtual aspect
-    let aspect = world_virtual_width() / world_virtual_height();
+    let aspect = world_virtual_width(grid_size) / world_virtual_height(grid_size);
 
     if aspect >= 1.0 {
         vec2(scalar / aspect, scalar)

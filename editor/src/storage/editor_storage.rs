@@ -11,10 +11,7 @@ use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
 use engine_core::assets::asset_manager::*;
 use engine_core::game::game_map::GameMap;
-use engine_core::storage::path_utils::{
-    absolute_save_root, assets_folder, dialogue_folder, game_folder, mac_os_folder,
-    resources_folder, resources_folder_current, scripts_folder, windows_folder, copy_dir_recursive,
-};
+use engine_core::storage::path_utils::*;
 use engine_core::world::room::Room;
 use engine_core::ecs::component::*;
 use engine_core::world::world::*;
@@ -67,7 +64,6 @@ pub async fn create_new_game(name: String) -> Game {
         script_manager,
         dialogue_manager: DialogueManager::default(),
         current_world_id: current_id,
-        tile_size: DEFAULT_TILE_SIZE,
         game_map: GameMap::default(),
     };
 
@@ -242,7 +238,7 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
 pub fn create_new_world(ecs: &mut Ecs) -> World {
     let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
-    let first_room = Room::default(ecs);
+    let first_room = Room::default(ecs, DEFAULT_GRID_SIZE);
     let room_id = first_room.id;
     let starting_position = vec2(1.0, 1.0);
 
@@ -253,7 +249,8 @@ pub fn create_new_world(ecs: &mut Ecs) -> World {
         current_room_id: None,
         starting_room_id: Some(room_id),
         starting_position: Some(starting_position),
-        meta: WorldMeta::default()
+        meta: WorldMeta::default(),
+        grid_size: DEFAULT_GRID_SIZE,
     };
 
     let _player = ecs

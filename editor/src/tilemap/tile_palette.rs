@@ -1,16 +1,16 @@
 // editor/src/tilemap/tile_palette.rs
 use crate::assets::asset_manager::AssetManager;
-use crate::tiles::tile::TileComponent;
 use crate::assets::sprite::SpriteId;
-use crate::engine_global::tile_size;
-use crate::ui::text::draw_text_ui;
+use crate::tiles::tile::TileComponent;
 use crate::tiles::tile::TileDef;
-use crate::ui::widgets::{Button, gui_checkbox};
+use crate::ui::text::draw_text_ui;
+use crate::ui::widgets::{gui_checkbox, Button};
+use engine_core::constants::DEFAULT_GRID_SIZE;
 use engine_core::tiles::tile::TileDefId;
-use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
 use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use std::collections::VecDeque;
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
@@ -51,7 +51,7 @@ impl TilePalette {
     pub fn new() -> Self {
         Self {
             ui: TilePaletteUi::default(),
-            tile_size: tile_size(),
+            tile_size: DEFAULT_GRID_SIZE,
             columns: 1,
             rows: 0,
             selected_index: 0,
@@ -80,27 +80,23 @@ impl TilePalette {
         self.entries.get(self.selected_index).copied()
     }
 
-    pub async fn draw(
-        &mut self,
-        rect: Rect,
-        asset_manager: &mut AssetManager,
-    ) {
+    pub async fn draw(&mut self, rect: Rect, asset_manager: &mut AssetManager) {
         // Draw grid
         for i in 0..self.entries.len() {
             let col = i % self.columns;
             let row = i / self.columns;
-            let y = rect.y + (row as f32 * tile_size());
+            let y = rect.y + (row as f32 * self.tile_size);
 
             // Skip rows that are completely outside the visible area
-            if y + self.tile_size < rect.y
-                || y > rect.y + tile_size() * 5.0
-            {
+            if y + self.tile_size < rect.y || y > rect.y + self.tile_size * 5.0 {
                 continue;
             }
 
             let x = rect.x + col as f32 * self.tile_size;
 
-            let sprite_id = asset_manager.tile_defs.get(&self.entries[i])
+            let sprite_id = asset_manager
+                .tile_defs
+                .get(&self.entries[i])
                 .expect("Could not find tile definition.")
                 .sprite_id;
 

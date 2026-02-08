@@ -83,8 +83,9 @@ impl Engine {
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
+        let grid_size = game_ctx.cur_world.grid_size;
 
-        update_physics(asset_manager, ecs, current_room, dt);
+        update_physics(asset_manager, ecs, current_room, dt, grid_size);
     }
 
     pub async fn update_async(&mut self, dt: f32) {
@@ -102,7 +103,7 @@ impl Engine {
                 return;
             };
 
-            self.camera_manager.update_active(ecs, current_room);
+            self.camera_manager.update_active(ecs, current_room, game_ctx.cur_world.grid_size);
 
             if let Some(current_room) = game_ctx.cur_world.current_room() {
                 update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
@@ -137,6 +138,7 @@ impl Engine {
         };
 
         let current_room_id = current_room.id;
+        let grid_size = game_ctx.cur_world.grid_size;
 
         let render_cam = Camera2D {
             target: self.camera_manager.interpolated_target(alpha),
@@ -152,8 +154,9 @@ impl Engine {
             &render_cam,
             alpha,
             Some(&prev_positions),
+            grid_size,
         );
-        
+
         self.render_system.present_game();
 
         // Collect speech bubble data
@@ -163,11 +166,12 @@ impl Engine {
             current_room_id,
             alpha,
             Some(&prev_positions),
+            grid_size,
         );
 
         // Render speech bubbles in screen space
         let dialogue_config = game_state.game.dialogue_manager.config.clone();
-        render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam);
+        render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam, grid_size);
 
         // Draw diagnostics overlay after game rendering (playtest only)
         drop(game_state);

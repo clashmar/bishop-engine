@@ -286,7 +286,7 @@ impl Inspector {
                 // Create a new RoomCamera entity that belongs to the current room
                 let ecs = &mut game_ctx.ecs;
                 let cur_room = game_ctx.cur_world.current_room().unwrap();
-                let _ = cur_room.create_room_camera(ecs, cur_room.id);
+                let _ = cur_room.create_room_camera(ecs, cur_room.id, game_ctx.cur_world.grid_size);
             }
 
             let cur_room = game_ctx.cur_world.current_room_mut().unwrap();

@@ -1,6 +1,5 @@
 // engine_core/src/world/world.rs
 use crate::assets::sprite::SpriteId;
-use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
 use crate::world::room::*;
 use serde::{Deserialize, Serialize};
@@ -12,6 +11,11 @@ use uuid::Uuid;
 /// Identifier for a world.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct WorldId(pub Uuid);
+
+/// Default grid size in pixels.
+fn default_grid_size() -> f32 {
+    16.0
+}
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -25,6 +29,9 @@ pub struct World {
     pub starting_position: Option<Vec2>,
     /// Meta information about the world.
     pub meta: WorldMeta,
+    /// Grid size in pixels for this world.
+    #[serde(default = "default_grid_size")]
+    pub grid_size: f32,
 }
 
 #[serde_as]
@@ -38,8 +45,10 @@ pub struct WorldMeta {
 }
 
 impl World {
+    /// Links all exits in all rooms of this world.
     pub fn link_all_exits(&mut self) {
         let len = self.rooms.len();
+        let grid_size = self.grid_size;
 
         for i in 0..len {
             // Split the rooms vector into two disjoint mutable slices
@@ -49,7 +58,7 @@ impl World {
             // Create a slice of immutable references to all other rooms
             let other_rooms: Vec<&Room> = left.iter().chain(right.iter()).collect();
 
-            room.link_exits(&other_rooms);
+            room.link_exits(&other_rooms, grid_size);
         }
     }
 
@@ -99,11 +108,11 @@ impl GridPos {
             && self.0.y < height as i32
     }
 
-    /// Convert from world coordinates to tile coordinates
-    pub fn from_world(world_pos: Vec2) -> Self {
+    /// Convert from world coordinates to tile coordinates.
+    pub fn from_world(world_pos: Vec2, grid_size: f32) -> Self {
         GridPos::new(
-            (world_pos.x / tile_size()) as i32,
-            (world_pos.y / tile_size()) as i32,
+            (world_pos.x / grid_size) as i32,
+            (world_pos.y / grid_size) as i32,
         )
     }
 
@@ -116,9 +125,10 @@ impl GridPos {
         }
     }
     
-    pub fn from_world_edge(world_pos: Vec2, map: &TileMap) -> Self {
-        let mut x = (world_pos.x / tile_size()).floor() as i32;
-        let mut y = (world_pos.y / tile_size()).floor() as i32;
+    /// Convert from world coordinates to tile coordinates, snapping to map edges.
+    pub fn from_world_edge(world_pos: Vec2, map: &TileMap, grid_size: f32) -> Self {
+        let mut x = (world_pos.x / grid_size).floor() as i32;
+        let mut y = (world_pos.y / grid_size).floor() as i32;
 
         // Snap to map edges
         if x < 0 { x = -1; }

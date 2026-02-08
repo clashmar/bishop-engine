@@ -59,10 +59,10 @@ pub struct RenderSystem {
 }
 
 impl RenderSystem {
-    pub fn new() -> Self {
-        // Render targets are created at the fixed virtual resolution
-        let width = world_virtual_width() as u32;
-        let height = world_virtual_height() as u32;
+    /// Create a new render system with render targets sized for the given grid size.
+    pub fn with_grid_size(grid_size: f32) -> Self {
+        let width = world_virtual_width(grid_size) as u32;
+        let height = world_virtual_height(grid_size) as u32;
 
         let make_render_target = || {
             let rt = render_target(width, height);
@@ -206,6 +206,11 @@ impl RenderSystem {
         }
     }
 
+    /// Create a new render system with default grid size (16.0).
+    pub fn new() -> Self {
+        Self::with_grid_size(crate::constants::DEFAULT_GRID_SIZE)
+    }
+
     /// Applies darkness to the scene.
     pub fn run_ambient_pass(
         &mut self,
@@ -232,7 +237,12 @@ impl RenderSystem {
             return;
         }
 
-        let (preview, target_w, target_h) = determine_resolution(render_cam); 
+        let preview = render_cam.render_target.is_some();
+        let (target_w, target_h) = if preview {
+            (self.rt_width, self.rt_height)
+        } else {
+            (screen_width(), screen_height())
+        };
 
         self.glow_mat.set_texture("scene_tex", self.scene_rt.texture.clone());
 
@@ -309,7 +319,12 @@ impl RenderSystem {
         self.clear_light_buffers();
 
         if !lights.is_empty() {
-            let (preview, target_w, target_h) = determine_resolution(render_cam); 
+            let preview = render_cam.render_target.is_some();
+            let (target_w, target_h) = if preview {
+                (self.rt_width, self.rt_height)
+            } else {
+                (screen_width(), screen_height())
+            };
 
             let light_count = lights.len(); 
 
@@ -382,14 +397,14 @@ impl RenderSystem {
         self.draw_pass(&self.final_comp_mat, &self.final_comp_rt.texture);
     }
 
-    // Presents the final visual of the game.
+    /// Presents the final visual of the game.
     pub fn present_game(&self) {
         set_default_camera();
         let tex = &self.final_comp_rt.texture;
 
-        // Fixed logical size of the virtual render target.
-        let virt_w = world_virtual_width();
-        let virt_h = world_virtual_height(); 
+        // Use cached render target dimensions.
+        let virt_w = self.rt_width;
+        let virt_h = self.rt_height;
         let win_w = screen_width();
         let win_h = screen_height();
         let scale_w = win_w / virt_w;
@@ -517,18 +532,6 @@ impl RenderSystem {
         // Reset the mask cam
         self.init_mask_cam();
     }
-}
-
-/// Returns whether to use screen or virtual height with appropriate dimensions.
-fn determine_resolution(render_cam: &Camera2D) -> (bool, f32, f32) {
-    let preview = render_cam.render_target.is_some();
-    let (target_w, target_h) = if preview {
-        (world_virtual_width(), world_virtual_height())
-    } else {
-        (screen_width(), screen_height())
-    };
-
-    (preview, target_w, target_h)
 }
 
 /// Distance conversion for shader uniforms.

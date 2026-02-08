@@ -9,9 +9,10 @@ pub trait DynamicTilemapUiElement {
     fn on_click(
         &mut self,
         room: &mut Room,
-        mouse_pos: Vec2, 
+        mouse_pos: Vec2,
         camera: &Camera2D,
         other_bounds: &[(Vec2, Vec2)],
         ecs: &mut Ecs,
+        grid_size: f32,
     );
 }

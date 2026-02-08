@@ -1,10 +1,6 @@
 // editor/src/editor_camera_controller.rs
+use engine_core::{constants::*, world::room::Room};
 use macroquad::prelude::*;
-use engine_core::{
-    constants::*, 
-    engine_global::*, 
-    world::room::Room
-};
 
 pub const ZOOM_SPEED_FACTOR: f32 = 0.05;
 pub const MIN_ZOOM: f32 = 0.0005;
@@ -67,9 +63,9 @@ impl EditorCameraController {
     }
 
     /// Returns a camera centered on a room.
-    pub fn camera_for_room(room_size: Vec2, room_position: Vec2) -> Camera2D {
-        let max_dim_px = (room_size * tile_size()).max_element() / 1.5;
-        let scalar = editor_zoom_factor() / max_dim_px;
+    pub fn camera_for_room(room_size: Vec2, room_position: Vec2, grid_size: f32) -> Camera2D {
+        let max_dim_px = (room_size * grid_size).max_element() / 1.5;
+        let scalar = editor_zoom_factor(grid_size) / max_dim_px;
 
         let aspect = screen_width() / screen_height();
         let (zoom_x, zoom_y) = if aspect > 1.0 {
@@ -79,24 +75,26 @@ impl EditorCameraController {
         };
 
         Camera2D {
-            target: (room_position + (room_size * tile_size()) / 2.0),
+            target: (room_position + (room_size * grid_size) / 2.0),
             zoom: vec2(zoom_x, zoom_y),
             ..Default::default()
         }
     }
 
     /// Reset a `Camera2D` so that the whole room fits the screen.
-    pub fn reset_room_editor_camera(camera: &mut Camera2D, room: &Room) {
-        let map_size = vec2(room.variants[0].tilemap.width as f32, room.variants[0].tilemap.height as f32);
-        *camera = Self::camera_for_room(map_size, room.position);
+    pub fn reset_room_editor_camera(camera: &mut Camera2D, room: &Room, grid_size: f32) {
+        let map_size = vec2(
+            room.variants[0].tilemap.width as f32,
+            room.variants[0].tilemap.height as f32,
+        );
+        *camera = Self::camera_for_room(map_size, room.position, grid_size);
     }
 
     /// Returns a zoom vector that makes the whole `size` fit the screen,
-    /// respecting the current aspect ratio.
-    /// Zoom factor decides how 'zoomed in' the camera is (higher = more zoom).
-    pub fn zoom_for_size(size: Vec2, zoom_factor: f32) -> Vec2 {
+    /// respecting the current aspect ratio (higher = more zoom).
+    pub fn zoom_for_size(size: Vec2, zoom_factor: f32, grid_size: f32) -> Vec2 {
         let max_dim_px = size.max_element() / zoom_factor;
-        let scalar = editor_zoom_factor() / max_dim_px;
+        let scalar = editor_zoom_factor(grid_size) / max_dim_px;
 
         let mut temp = Camera2D::default();
         temp.zoom = vec2(scalar, scalar);

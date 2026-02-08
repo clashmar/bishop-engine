@@ -26,7 +26,6 @@ use engine_core::world::world::World;
 use engine_core::ecs::entity::Entity;
 use macroquad::miniquad::CursorIcon;
 use engine_core::ecs::component::*;
-use engine_core::engine_global::*;
 use engine_core::world::room::*;
 use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
@@ -128,8 +127,10 @@ impl RoomEditor {
             clear_all_input_focus();
         }
 
+        let grid_size = current_world.grid_size;
+
         if !self.initialized {
-            EditorCameraController::reset_room_editor_camera(camera, room);
+            EditorCameraController::reset_room_editor_camera(camera, room, grid_size);
             self.initialized = true;
         }
 
@@ -154,9 +155,10 @@ impl RoomEditor {
                 self.tilemap_editor.update(
                     asset_manager,
                     camera,
-                    room, 
+                    room,
                     &other_bounds,
                     ecs,
+                    grid_size,
                 ).await;
             }
             RoomEditorMode::Scene => {
@@ -171,6 +173,7 @@ impl RoomEditor {
                     asset_manager,
                     mouse_screen,
                     ui_was_clicked,
+                    grid_size,
                 );
 
                 if !drag_handled {
@@ -205,11 +208,11 @@ impl RoomEditor {
             }
         }
 
-        self.handle_shortcuts(camera, room);
+        self.handle_shortcuts(camera, room, grid_size);
     }
 
     pub async fn draw(
-        &mut self, 
+        &mut self,
         camera: &Camera2D,
         room_id: RoomId,
         game: &mut Game,
@@ -219,6 +222,7 @@ impl RoomEditor {
         self.active_rects.clear();
 
         let mut game_ctx = game.ctx_mut();
+        let grid_size = game_ctx.cur_world.grid_size;
         let ecs = &mut game_ctx.ecs;
         let room = &mut game_ctx.cur_world.current_room_mut().unwrap();
         let asset_manager = &mut game_ctx.asset_manager;
@@ -228,9 +232,9 @@ impl RoomEditor {
 
         // Panel rect for inspector and tilemap editor
         let inspector_rect = Rect::new(
-            screen_width() * 0.75, 
-            0.0, 
-            screen_width() * 0.25, 
+            screen_width() * 0.75,
+            0.0,
+            screen_width() * 0.25,
             screen_height()
         );
 
@@ -238,21 +242,22 @@ impl RoomEditor {
             RoomEditorMode::Tilemap => {
                 self.tilemap_editor.tilemap_panel.set_rect(inspector_rect);
                 self.tilemap_editor.draw(
-                    camera, 
-                    tilemap, 
+                    camera,
+                    tilemap,
                     exits,
                     asset_manager,
                     room.position,
+                    grid_size,
                 ).await;
 
-                if self.show_grid { 
+                if self.show_grid {
                     set_camera(camera);
-                    grid::draw_grid(camera);
+                    grid::draw_grid(camera, grid_size);
                 }
             }
             RoomEditorMode::Scene => {
                 // TODO: Pick best camera for preview from room cameras
-                let room_camera = get_room_camera(ecs, room_id)
+                let room_camera = get_room_camera(ecs, room_id, grid_size)
                     .expect("This room should have at least one camera.");
 
                 let render_cam = if self.view_preview {
@@ -265,13 +270,14 @@ impl RoomEditor {
 
                 // Draws everything in the room. Same implementation as the game.
                 render_room(
-                    ecs, 
-                    room, 
+                    ecs,
+                    room,
                     asset_manager,
                     render_system,
                     render_cam,
                     0.0,
                     None,
+                    grid_size,
                 );
 
                 // Present room depending on view mode
@@ -280,7 +286,7 @@ impl RoomEditor {
                 } else {
                     set_default_camera();
                     render_system.draw_pass(
-                        &render_system.final_comp_mat, 
+                        &render_system.final_comp_mat,
                         &render_system.final_comp_rt.texture
                     );
                 }
@@ -288,17 +294,17 @@ impl RoomEditor {
                 if !self.view_preview {
                     set_camera(camera);
 
-                    if self.show_grid { 
-                        grid::draw_grid(camera);
+                    if self.show_grid {
+                        grid::draw_grid(camera, grid_size);
                     }
-                    
-                    draw_camera_placeholders(&ecs, room_id);
-                    draw_light_placeholders(ecs, room_id);
-                    draw_glow_placeholders(ecs, asset_manager, room_id);
+
+                    draw_camera_placeholders(&ecs, room_id, grid_size);
+                    draw_light_placeholders(ecs, room_id, grid_size);
+                    draw_glow_placeholders(ecs, asset_manager, room_id, grid_size);
 
                     if let Some(selected_entity) = self.selected_entity {
                         if !is_pure_placeholder(ecs, selected_entity) {
-                            highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW);
+                            highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW, grid_size);
                         }
 
                         draw_collider(ecs, selected_entity);
@@ -322,6 +328,7 @@ impl RoomEditor {
         asset_manager: &mut AssetManager,
         mouse_screen: Vec2,
         ui_was_clicked: bool,
+        grid_size: f32,
     ) -> bool {
         if !ui_was_clicked
             && is_mouse_button_pressed(MouseButton::Left)
@@ -339,6 +346,7 @@ impl RoomEditor {
                     camera,
                     ecs,
                     asset_manager,
+                    grid_size,
                 );
                 if hitbox.contains(mouse_screen) {
                     self.selected_entity = Some(*entity);
@@ -368,9 +376,9 @@ impl RoomEditor {
                     let pn = pivot.as_normalized();
 
                     // Snap pivot to appropriate grid position
-                    let tile = (mouse_world / tile_size()).floor();
-                    let snap_x = tile.x * tile_size() + tile_size() * pn.x;
-                    let snap_y = tile.y * tile_size() + tile_size() * pn.y;
+                    let tile = (mouse_world / grid_size).floor();
+                    let snap_x = tile.x * grid_size + grid_size * pn.x;
+                    let snap_y = tile.y * grid_size + grid_size * pn.y;
                     new_pos = vec2(snap_x, snap_y);
                 }
                 update_entity_position(ecs, entity, new_pos);
@@ -447,7 +455,7 @@ impl RoomEditor {
         self.inspector.set_target(entity);
     }
 
-    fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &mut Room) {
+    fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &mut Room, grid_size: f32) {
         if input_is_focused() {
             return;
         }
@@ -458,7 +466,7 @@ impl RoomEditor {
         }
 
         if Controls::r() {
-            EditorCameraController::reset_room_editor_camera(camera, room);
+            EditorCameraController::reset_room_editor_camera(camera, room, grid_size);
         }
 
         for mode in RoomEditorMode::iter() {

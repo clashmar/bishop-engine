@@ -35,6 +35,7 @@ pub fn collect_speech_bubbles(
     current_room: RoomId,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
+    grid_size: f32,
 ) -> Vec<SpeechBubbleRenderData> {
     let mut bubbles = Vec::new();
     let bubble_store = ecs.get_store::<SpeechBubble>();
@@ -55,7 +56,7 @@ pub fn collect_speech_bubbles(
         };
 
         let world_pos = interpolate_position(*entity, transform.position, alpha, prev_positions);
-        let (entity_width, entity_height) = entity_dimensions(ecs, asset_manager, *entity);
+        let (entity_width, entity_height) = entity_dimensions(ecs, asset_manager, *entity, grid_size);
 
         bubbles.push(SpeechBubbleRenderData {
             text: bubble.text.clone(),
@@ -81,9 +82,10 @@ pub fn render_speech_bubbles(
     bubbles: &[SpeechBubbleRenderData],
     config: &DialogueConfig,
     render_cam: &Camera2D,
+    grid_size: f32,
 ) {
-    let virt_w = world_virtual_width();
-    let virt_h = world_virtual_height();
+    let virt_w = world_virtual_width(grid_size);
+    let virt_h = world_virtual_height(grid_size);
     let win_w = screen_width();
     let win_h = screen_height();
 
