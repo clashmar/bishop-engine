@@ -1,6 +1,5 @@
 // engine_core/src/world/room.rs
 use crate::camera::game_camera::RoomCamera;
-use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
 use crate::ecs::entity::Entity;
 use crate::ecs::component::*;
@@ -47,7 +46,7 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn default(ecs: &mut Ecs) -> Self {
+    pub fn default(ecs: &mut Ecs, grid_size: f32) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
@@ -66,24 +65,25 @@ impl Room {
         darkness: 0.,
         };
 
-        let _camera = room.create_room_camera(ecs, id);
+        let _camera = room.create_room_camera(ecs, id, grid_size);
 
         room
     }
 
-    pub fn link_exits(&mut self, other_rooms: &[&Room]) {
+    /// Link exits to adjacent rooms based on their positions.
+    pub fn link_exits(&mut self, other_rooms: &[&Room], grid_size: f32) {
         let epsilon = 0.01; // tolerance for floating-point comparisons
 
         for exit in self.exits.iter_mut() {
             exit.target_room_id = None;
 
             // Local to world position
-            let exit_world_pos = ( self.position / tile_size() ) + exit.position;
+            let exit_world_pos = (self.position / grid_size) + exit.position;
 
             'other_rooms: for (_, other_room) in other_rooms.iter().enumerate() {
                 for other_exit in &other_room.exits {
                     // World position of the other room's exit
-                    let other_world_pos = (other_room.position / tile_size()) + other_exit.position;
+                    let other_world_pos = (other_room.position / grid_size) + other_exit.position;
 
                     let linked = match exit.direction {
                         ExitDirection::Up => {
@@ -98,12 +98,12 @@ impl Room {
                         }
                         ExitDirection::Left => {
                             other_exit.direction == ExitDirection::Right &&
-                            (exit_world_pos.x - other_world_pos.x + 1.0).abs() < epsilon && 
-                            (exit_world_pos.y - other_world_pos.y).abs() < epsilon    
+                            (exit_world_pos.x - other_world_pos.x + 1.0).abs() < epsilon &&
+                            (exit_world_pos.y - other_world_pos.y).abs() < epsilon
                         }
                         ExitDirection::Right => {
                             other_exit.direction == ExitDirection::Left &&
-                            (exit_world_pos.x - other_world_pos.x - 1.0).abs() < epsilon && 
+                            (exit_world_pos.x - other_world_pos.x - 1.0).abs() < epsilon &&
                             (exit_world_pos.y - other_world_pos.y).abs() < epsilon
                         }
                     };
@@ -117,13 +117,14 @@ impl Room {
         }
     }
 
-    pub fn world_exit_positions(&self) -> Vec<(Vec2, ExitDirection)> {
+    /// Returns the world exit positions for this room.
+    pub fn world_exit_positions(&self, grid_size: f32) -> Vec<(Vec2, ExitDirection)> {
         self.exits.iter().map(|exit| {
-            (self.position / tile_size() + exit.position, exit.direction)
+            (self.position / grid_size + exit.position, exit.direction)
         }).collect()
     }
 
-    pub fn create_room_camera(&self, ecs: &mut Ecs, room_id: RoomId) {
+    pub fn create_room_camera(&self, ecs: &mut Ecs, room_id: RoomId, grid_size: f32) {
         const CAMERA_PREFIX: &str = "Camera ";
         let name_store = ecs.get_store::<Name>();
         let cur_room_store = ecs.get_store::<CurrentRoom>();
@@ -152,16 +153,16 @@ impl Room {
 
         ecs.create_entity()
             .with(Transform { position: self.position, pivot: Pivot::TopLeft })
-            .with(RoomCamera::new(room_id))
+            .with(RoomCamera::new(room_id, grid_size))
             .with(CurrentRoom(self.id))
             .with(Name(format!("{}{}", CAMERA_PREFIX, next_idx)));
     }
 
     /// Returns the axis‑aligned rectangle that a room occupies in world space.
     #[inline]
-    pub fn room_bounds(&self) -> (Vec2, Vec2) {
+    pub fn room_bounds(&self, grid_size: f32) -> (Vec2, Vec2) {
         let min = self.position;
-        let max = self.position + self.size * tile_size();
+        let max = self.position + self.size * grid_size;
         (min, max)
     }
 

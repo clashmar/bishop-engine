@@ -46,7 +46,8 @@ impl GameState {
 
         let ecs = &game.ecs;
         let player_pos = ecs.get_player_position().position;
-        *camera_manager = CameraManager::new(ecs, current_room.id, player_pos);
+        let grid_size = game.current_world().grid_size;
+        *camera_manager = CameraManager::new(ecs, current_room.id, player_pos, grid_size);
 
         ScriptSystem::init(lua);
 
@@ -57,10 +58,11 @@ impl GameState {
     }
 
     pub async fn for_room(
-        room: Room, 
-        mut game: Game, 
+        room: Room,
+        mut game: Game,
         lua: &Lua,
         camera_manager: &mut CameraManager,
+        grid_size: f32,
     ) -> Self {
         // Allows the shared engine features to make decisions
         // set_engine_mode(EngineMode::Game); TODO: figure this out
@@ -68,7 +70,7 @@ impl GameState {
         game.initialize(lua).await;
         let ecs = &game.ecs;
         let player_pos = ecs.get_player_position().position;
-        *camera_manager = CameraManager::new(ecs, room.id, player_pos);
+        *camera_manager = CameraManager::new(ecs, room.id, player_pos, grid_size);
 
         ScriptSystem::init(lua);
 

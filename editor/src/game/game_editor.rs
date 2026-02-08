@@ -481,7 +481,11 @@ impl GameEditor {
         let size = max - min;
 
         // Get the zoom for the whole area 
-        let zoom = EditorCameraController::zoom_for_size(size, 2.0);
+        let zoom = EditorCameraController::zoom_for_size(
+            size, 
+            2.0, 
+            game.current_world().grid_size
+        );
 
         // Apply the results
         camera.target = center;

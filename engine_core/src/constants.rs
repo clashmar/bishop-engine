@@ -1,6 +1,5 @@
 // engine_core/src/constants.rs
 use macroquad::prelude::*;
-use crate::engine_global::tile_size;
 
 /// 60Hz pysics.
 pub const FIXED_DT: f32 = 1.0 / 60.0;
@@ -8,7 +7,7 @@ pub const FIXED_DT: f32 = 1.0 / 60.0;
 pub const MAX_ACCUM: f32 = 0.5; 
 
 /// Default tile size that the world scales to.
-pub const DEFAULT_TILE_SIZE: f32 = 16.0;
+pub const DEFAULT_GRID_SIZE: f32 = 16.0;
 pub const MINIMUM_TILE_SIZE: f32 = 9.0;
 
 /// Base tile size for editor scaling.
@@ -51,7 +50,7 @@ pub const CONTENTS_FOLDER: &str = "Contents";
 pub const BUNDLE_ASSETS: &str = "bundle_assets";
 
 /// Scale to the base resolution.
-pub fn editor_zoom_factor() -> f32 { tile_size() / BASE_TILE_SIZE }
+pub fn editor_zoom_factor(grid_size: f32) -> f32 { grid_size / BASE_TILE_SIZE }
 
 pub const DEFAULT_CAM_TILES_X: f32 = 16.0;     
 pub const DEFAULT_CAM_TILES_Y: f32 = 10.0;

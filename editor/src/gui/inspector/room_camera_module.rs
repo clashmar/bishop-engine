@@ -32,6 +32,7 @@ impl InspectorModule for RoomCameraModule {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
+        let grid_size = game_ctx.cur_world.grid_size;
         let ecs = &mut game_ctx.ecs;
 
         let cam = ecs
@@ -61,17 +62,17 @@ impl InspectorModule for RoomCameraModule {
                     rect.x,
                     y,
                     rect.w,
-                    40.0,               
+                    40.0,
                 );
 
                 const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 3.0];
-                
-                let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width());
+
+                let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
                 let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar, blocked);
 
                 if !blocked && (new_scalar - current_scalar).abs() > f32::EPSILON {
-                    let width = world_virtual_width() * new_scalar;
-                    let height = world_virtual_height() * new_scalar;
+                    let width = world_virtual_width(grid_size) * new_scalar;
+                    let height = world_virtual_height(grid_size) * new_scalar;
                     cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
                 }
             }
@@ -88,6 +89,7 @@ impl InspectorModule for RoomCameraModule {
                     zoom_rect,
                     cam,
                     blocked,
+                    grid_size,
                 );
             }
         }
@@ -154,14 +156,15 @@ impl InspectorModule for RoomCameraModule {
 }
 
 impl RoomCameraModule {
-    // Draw a single numeric field that edits the scalar zoom.
+    /// Draw a single numeric field that edits the scalar zoom.
     fn draw_freeform_mode(
         &self,
         rect: Rect,
         cam: &mut RoomCamera,
         blocked: bool,
+        grid_size: f32,
     ) {
-        let scalar = 2.0 / (cam.zoom.x * world_virtual_width());
+        let scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
 
         const MIN: f32 = 0.5;
         const MAX: f32 = 3.0;
@@ -173,7 +176,7 @@ impl RoomCameraModule {
         let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE_16, 1.0).width;
         draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
-        // Numeric field 
+        // Numeric field
         let num_rect = Rect::new(
             rect.x + label_width,
             rect.y - FIELD_TEXT_SIZE_16,
@@ -201,7 +204,7 @@ impl RoomCameraModule {
             MIN, // min
             MAX, // max
             round_to_dp(scalar, 2),
-        );      
+        );
 
         // Resolve the new scalar
         let mut new_scalar = scalar;
@@ -211,11 +214,11 @@ impl RoomCameraModule {
         if slider_changed {
             new_scalar = round_to_dp(slider_val, 2).clamp(MIN, MAX);
         }
-        
+
         // Write back if anything changed
         if (new_scalar - scalar).abs() > f32::EPSILON {
-            let width = world_virtual_width() * new_scalar;
-            let height = world_virtual_height() * new_scalar;
+            let width = world_virtual_width(grid_size) * new_scalar;
+            let height = world_virtual_height(grid_size) * new_scalar;
             cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
         }
     }

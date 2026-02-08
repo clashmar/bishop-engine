@@ -58,8 +58,12 @@ async fn main() {
     // TODO: Tidy up
     let lua = Lua::new();
     let mut camera_manager = CameraManager::default();
+    let grid_size = game.current_world().grid_size;
 
-    let game_state = Rc::new(RefCell::new(GameState::for_room(room, game, &lua, &mut camera_manager).await));
+    // Pre-cache font to avoid black rectangle rendering bug
+    engine_core::assets::core_assets::precache_font();
+
+    let game_state = Rc::new(RefCell::new(GameState::for_room(room, game, &lua, &mut camera_manager, grid_size).await));
 
     let ctx = LuaGameCtx { game_state: game_state.clone() };
     let _ = ctx.set_lua_game_ctx(&lua);
@@ -68,7 +72,7 @@ async fn main() {
         game_state: game_state.clone(),
         lua,
         camera_manager,
-        render_system: RenderSystem::new(),
+        render_system: RenderSystem::with_grid_size(grid_size),
         diagnostics: DiagnosticsOverlay::new(),
         is_playtest: true,
     };

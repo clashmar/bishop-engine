@@ -13,6 +13,7 @@ pub struct MenuBar {
     file_id: WidgetId,
     edit_id: WidgetId,
     view_id: WidgetId,
+    options_id: WidgetId,
     title_id: WidgetId,
     pub pending: Option<MenuAction>,
 }
@@ -35,6 +36,8 @@ pub enum MenuAction {
     ViewHierarchyPanel,
     ViewConsolePanel,
     ViewDiagnosticsPanel,
+    // Options actions
+    WorldSettings,
 }
 
 impl MenuAction {
@@ -51,6 +54,7 @@ impl MenuAction {
             MenuAction::ViewHierarchyPanel => "Hierarchy".to_string(),
             MenuAction::ViewConsolePanel => "Console".to_string(),
             MenuAction::ViewDiagnosticsPanel => "Diagnostics".to_string(),
+            MenuAction::WorldSettings => "World Settings".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -108,6 +112,7 @@ impl MenuBar {
             file_id: WidgetId::default(),
             edit_id: WidgetId::default(),
             view_id: WidgetId::default(),
+            options_id: WidgetId::default(),
             pending: None,
         }
     }
@@ -244,6 +249,39 @@ impl MenuBar {
             |a| a.shortcut(),
         ) {
             self.pending = Some(selected);
+        }
+
+        x += view_rect.w + SPACING;
+
+        // Options dropdown (only visible in World/Room modes)
+        let mut options_actions: Vec<MenuAction> = Vec::new();
+        match editor_mode {
+            EditorMode::World(_) | EditorMode::Room(_) => {
+                options_actions.push(MenuAction::WorldSettings);
+            }
+            EditorMode::Game => {}
+        }
+
+        if !options_actions.is_empty() {
+            let options_label = "Options";
+
+            let options_rect = Rect::new(
+                x,
+                y,
+                rect_width_for_text(options_label, HEADER_FONT_SIZE_20),
+                HEIGHT
+            );
+
+            if let Some(selected) = menu_dropdown(
+                self.options_id,
+                options_rect,
+                options_label,
+                &options_actions,
+                |a| a.ui_label(),
+                |a| a.shortcut(),
+            ) {
+                self.pending = Some(selected);
+            }
         }
 
         // Return the action

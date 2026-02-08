@@ -6,17 +6,19 @@ use crate::*;
 
 /// A numeric input widget using the builder pattern.
 ///
-/// Supports any numeric type that implements `FromStr`, `Display`, `Default`, `Copy`, and `PartialEq`.
+/// Supports any numeric type that implements `FromStr`, `Display`, `Default`, `Copy`, `PartialEq`, and `PartialOrd`.
 pub struct NumberInput<T> {
     id: WidgetId,
     rect: Rect,
     current: T,
     blocked: bool,
+    min: Option<T>,
+    max: Option<T>,
 }
 
 impl<T> NumberInput<T>
 where
-    T: FromStr + Display + Default + Copy + PartialEq,
+    T: FromStr + Display + Default + Copy + PartialEq + PartialOrd,
     <T as FromStr>::Err: std::fmt::Debug,
 {
     /// Creates a new number input with the given id, rect, and current value.
@@ -26,12 +28,26 @@ where
             rect,
             current,
             blocked: false,
+            min: None,
+            max: None,
         }
     }
 
     /// Sets whether the input is blocked from interaction.
     pub fn blocked(mut self, blocked: bool) -> Self {
         self.blocked = blocked;
+        self
+    }
+
+    /// Sets the minimum allowed value.
+    pub fn min(mut self, min: T) -> Self {
+        self.min = Some(min);
+        self
+    }
+
+    /// Sets the maximum allowed value.
+    pub fn max(mut self, max: T) -> Self {
+        self.max = Some(max);
         self
     }
 
@@ -373,7 +389,18 @@ where
             });
         });
 
-        text.parse::<T>().unwrap_or(self.current)
+        let mut result = text.parse::<T>().unwrap_or(self.current);
+        if let Some(min) = self.min {
+            if result < min {
+                result = min;
+            }
+        }
+        if let Some(max) = self.max {
+            if result > max {
+                result = max;
+            }
+        }
+        result
     }
 }
 

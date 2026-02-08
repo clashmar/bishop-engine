@@ -2,7 +2,6 @@
 use engine_core::assets::asset_manager::AssetManager;
 use engine_core::ecs::transform::{pivot_offset, Pivot, Transform};
 use engine_core::tiles::tile::TileComponent;
-use engine_core::engine_global::tile_size;
 use engine_core::tiles::tilemap::TileMap;
 use engine_core::ecs::component::*;
 use engine_core::world::room::Exit;
@@ -108,6 +107,7 @@ pub fn sweep_move(
     collider: Collider,
     pivot: Pivot,
     exits: &[Exit],
+    grid_size: f32,
 ) -> SweepResult {
     // Gather every solid AABB to test against
     let mut obstacles: Vec<(Vec2, Vec2)> = Vec::new();
@@ -118,14 +118,14 @@ pub fn sweep_move(
         let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) else {continue};
 
         if tile_def.components.contains(&TileComponent::Solid(true)) {
-            let tile_pos = room_origin + vec2(*x as f32 * tile_size(), *y as f32 * tile_size());
-            let tile_aabb = (tile_pos, tile_pos + vec2(tile_size(), tile_size()));
+            let tile_pos = room_origin + vec2(*x as f32 * grid_size, *y as f32 * grid_size);
+            let tile_aabb = (tile_pos, tile_pos + vec2(grid_size, grid_size));
             obstacles.push(tile_aabb);
         }
     }
 
     // Create an invisible border around the edge of the room except where exits are placed
-    add_border_obstacles(&mut obstacles, room_origin, tilemap, exits);
+    add_border_obstacles(&mut obstacles, room_origin, tilemap, exits, grid_size);
 
     // Other solid entities
     // Iterate over every Collider component in the world, skip the moving one
@@ -187,8 +187,9 @@ fn add_border_obstacles(
     room_origin: Vec2,
     tilemap: &TileMap,
     exits: &[Exit],
+    grid_size: f32,
 ) {
-    let ts = tile_size();
+    let ts = grid_size;
     let w = tilemap.width as i32;
     let h = tilemap.height as i32;
 

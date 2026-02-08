@@ -3,7 +3,7 @@ use crate::dialogue::DialogueManager;
 use crate::scripting::script_manager::ScriptManager;
 use crate::assets::asset_manager::AssetManager;
 use crate::game::game_map::GameMap;
-use crate::engine_global::*;
+use crate::engine_global::set_game_name;
 use crate::world::world::*;
 use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
@@ -33,8 +33,6 @@ pub struct Game {
     pub dialogue_manager: DialogueManager,
     /// Id of the currently active world.
     pub current_world_id: WorldId, // TODO: Change this to an option
-    /// Tile size of the game that the world scales to.
-    pub tile_size: f32,
     /// Top level map of the whole game.
     pub game_map: GameMap,
 }
@@ -139,10 +137,9 @@ impl Game {
         }
     }
 
-    /// Syncs all assets/scripts that belong to this game, sets the global tile size and inits input.
+    /// Syncs all assets/scripts that belong to this game, sets the game name, and inits managers.
     pub async fn initialize(&mut self, lua: &Lua) {
         set_game_name(self.name.clone());
-        set_global_tile_size(self.tile_size);
         AssetManager::init_manager(self).await;
         ScriptManager::init_manager(self, lua).await;
         self.init_dialogue_manager();

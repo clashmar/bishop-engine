@@ -14,6 +14,7 @@ pub fn update_physics(
     ecs: &mut Ecs,
     room: &Room,
     dt: f32,
+    grid_size: f32,
 ) {
     let tilemap = &room.variants[0].tilemap;
     let entities: Vec<_> = ecs
@@ -47,7 +48,8 @@ pub fn update_physics(
             delta,
             collider,
             pivot,
-            &room.exits
+            &room.exits,
+            grid_size,
         );
 
         let new_pos = pos_cur + sweep.allowed_delta;

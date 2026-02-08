@@ -1,13 +1,11 @@
 // editor/src/world/world_editor_actions.rs
 use crate::ui::widgets::DEFAULT_FONT_SIZE_16;
 use crate::world::world_editor::WorldEditor;
-use crate::engine_global::tile_size;
 use crate::tiles::tilemap::TileMap;
 use crate::ecs::ecs::Ecs;
 use crate::world::coord;
 use engine_core::ecs::component::CurrentRoom;
 use engine_core::game::game::GameCtxMut;
-use engine_core::world::room::RoomVariant;
 use engine_core::world::world::World;
 use engine_core::world::room::*;
 use engine_core::ui::text::*;
@@ -44,7 +42,7 @@ impl WorldEditor {
                 darkness: 0.
             };
             
-            let _camera = room.create_room_camera(ecs, id);
+            let _camera = room.create_room_camera(ecs, id, world.grid_size);
 
             world.rooms.push(room);
             id
@@ -124,8 +122,9 @@ impl WorldEditor {
         world: &mut World,
         top_left: Vec2,
         size: Vec2,
+        grid_size: f32,
     ) -> RoomId {
-        let origin_in_pixels = top_left * tile_size();
+        let origin_in_pixels = top_left * grid_size;
         let new_id = self.create_room(ecs, world, "untitled", origin_in_pixels, size);
         new_id
     }
@@ -145,8 +144,8 @@ impl WorldEditor {
     }
 
     /// Draws the coordinates of the grid square the mouse is over.
-    pub fn draw_coordinates(&self, camera: &Camera2D) {
-        let world_grid = coord::mouse_world_grid(camera);
+    pub fn draw_coordinates(&self, camera: &Camera2D, grid_size: f32) {
+        let world_grid = coord::mouse_world_grid(camera, grid_size);
 
         let txt = format!(
             "({:.0}, {:.0})",

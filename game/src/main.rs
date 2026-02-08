@@ -66,6 +66,7 @@ async fn main() {
     let mut camera_manager = CameraManager::default();
 
     let game_state = Rc::new(RefCell::new(GameState::new(&lua, &mut camera_manager).await));
+    let grid_size = game_state.borrow().game.current_world().grid_size;
 
     let ctx = LuaGameCtx { game_state: game_state.clone() };
     let _ = ctx.set_lua_game_ctx(&lua);
@@ -74,7 +75,7 @@ async fn main() {
         game_state: game_state.clone(),
         lua,
         camera_manager,
-        render_system: RenderSystem::new(),
+        render_system: RenderSystem::with_grid_size(grid_size),
         diagnostics: DiagnosticsOverlay::new(),
         is_playtest: false,
     };

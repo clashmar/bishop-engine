@@ -1,7 +1,7 @@
 // engine_core/src/animation/animation_clip.rs
 use crate::assets::asset_manager::AssetManager;
-use crate::engine_global::tile_size;
 use crate::assets::sprite::SpriteId;
+use crate::constants::DEFAULT_GRID_SIZE;
 use crate::ecs::entity::Entity;
 use crate::game::game::*;
 use std::{collections::HashMap, path::{Path, PathBuf}};
@@ -168,7 +168,7 @@ pub struct ClipDef {
 impl Default for ClipDef {
     fn default() -> ClipDef {
         ClipDef {
-            frame_size: vec2(tile_size(), tile_size()),
+            frame_size: vec2(DEFAULT_GRID_SIZE, DEFAULT_GRID_SIZE),
             cols: 5,
             rows: 1,
             fps: 4.0,

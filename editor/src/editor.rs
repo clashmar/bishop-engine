@@ -111,7 +111,7 @@ impl Editor {
                 ).await {
                     self.world_editor.init_camera(
                         &mut self.camera, 
-                        self.game.get_world_mut(world_id)
+                        self.game.get_world_mut(world_id),
                     );
                     self.game.current_world_id = world_id;
                     self.cur_world_id = Some(world_id);
@@ -180,7 +180,7 @@ impl Editor {
                         // Find the room we just left for center_on_room
                         if let Some(room) = current_world.rooms.iter()
                             .find(|m| m.id == room_id) {
-                            self.world_editor.center_on_room(&mut self.camera, room);
+                            self.world_editor.center_on_room(&mut self.camera, room, current_world.grid_size);
                         }
 
                         // Clean up

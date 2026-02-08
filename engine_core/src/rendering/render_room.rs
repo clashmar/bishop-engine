@@ -4,7 +4,6 @@ use crate::rendering::render_system::RenderSystem;
 use crate::assets::asset_manager::AssetManager;
 use crate::camera::game_camera::RoomCamera;
 use crate::ecs::transform::{Pivot, Transform};
-use crate::engine_global::tile_size;
 use crate::assets::sprite::Sprite;
 use crate::lighting::light::Light;
 use crate::lighting::glow::Glow;
@@ -24,6 +23,7 @@ pub fn render_room(
     render_cam: &Camera2D,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
+    grid_size: f32,
 ) {
     let render_start = std::time::Instant::now();
 
@@ -34,11 +34,12 @@ pub fn render_room(
 
     // Organize entities by layer
     let mut layer_map = collect_interpolated_layer_map(
-        ecs, 
-        room, 
-        asset_manager, 
-        alpha, 
-        prev_positions
+        ecs,
+        room,
+        asset_manager,
+        alpha,
+        prev_positions,
+        grid_size,
     );
 
     if layer_map.is_empty() {
@@ -55,7 +56,7 @@ pub fn render_room(
 
     // Flag for the tilemap
     let mut first_pass = true;
-    let tilemap = &room.current_variant().tilemap; 
+    let tilemap = &room.current_variant().tilemap;
 
     for (_z, (entities, glows)) in layer_map {
         // Scene cam needs to draw to the current render cam
@@ -63,7 +64,7 @@ pub fn render_room(
 
         // Draw the tilemap as the first layer
         if first_pass {
-            tilemap.draw(&room.exits, asset_manager, room.position);
+            tilemap.draw(&room.exits, asset_manager, room.position, grid_size);
             first_pass = false;
         }
 
@@ -77,6 +78,7 @@ pub fn render_room(
                 transform_store,
                 entity,
                 pos,
+                grid_size,
             );
         }
 
@@ -84,11 +86,7 @@ pub fn render_room(
         render_system.run_ambient_pass(room.darkness);
 
         // Render glow per layer
-        render_system.run_glow_pass(
-            render_cam, 
-            glows, 
-            asset_manager,
-        );
+        render_system.run_glow_pass(render_cam, glows, asset_manager);
 
         // Render the undarkened room for lighting pass
         render_system.run_undarkened_pass();
@@ -99,12 +97,8 @@ pub fn render_room(
 
     // Lighting pass
     let lights = collect_lights(ecs, room, alpha, prev_positions);
-    render_system.run_spotlight_pass(
-        render_cam, 
-        lights, 
-        room.darkness
-    );
-    
+    render_system.run_spotlight_pass(render_cam, lights, room.darkness);
+
     // Composite the final render
     render_system.run_final_pass();
 
@@ -119,8 +113,9 @@ fn draw_entity(
     transform_store: &ComponentStore<Transform>,
     entity: Entity,
     pos: Vec2,
+    grid_size: f32,
 ) {
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
 
     // Get pivot from transform (default to TopLeft if missing for backward compatibility)
     let pivot = transform_store
@@ -186,30 +181,34 @@ fn draw_entity(
     }
 
     // Fallback placeholder (no sprite or missing texture)
-    draw_entity_placeholder(draw_base);
+    draw_entity_placeholder(draw_base, grid_size);
 }
 
+/// Highlight a selected entity with a colored outline.
 pub fn highlight_selected_entity(
     ecs: &Ecs,
     entity: Entity,
     asset_manager: &mut AssetManager,
-    color: Color
+    color: Color,
+    grid_size: f32,
 ) {
     let transform = match ecs.get_store::<Transform>().get(entity) {
         Some(t) => t,
         None => return,
     };
 
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity);
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
     let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
 
     draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);
 }
 
+/// Get the dimensions of an entity for rendering.
 pub fn entity_dimensions(
     ecs: &Ecs,
     asset_manager: &AssetManager,
     entity: Entity,
+    grid_size: f32,
 ) -> (f32, f32) {
     let from_anim = ecs
         .get_store::<CurrentFrame>()
@@ -217,15 +216,13 @@ pub fn entity_dimensions(
         .map(|cf| (cf.frame_size.x, cf.frame_size.y));
 
     let from_sprite = || {
-        ecs
-            .get_store::<Sprite>()
+        ecs.get_store::<Sprite>()
             .get(entity)
             .and_then(|sprite| asset_manager.texture_size(sprite.sprite))
     };
 
     let from_glow = || {
-        ecs
-            .get_store::<Glow>()
+        ecs.get_store::<Glow>()
             .get(entity)
             .and_then(|glow| asset_manager.texture_size(glow.sprite_id))
     };
@@ -233,17 +230,12 @@ pub fn entity_dimensions(
     from_anim
         .or_else(from_sprite)
         .or_else(from_glow)
-        .unwrap_or((tile_size(), tile_size()))
+        .unwrap_or((grid_size, grid_size))
 }
 
-pub fn draw_entity_placeholder(pos: Vec2) {
-    draw_rectangle(
-        pos.x,
-        pos.y,
-        tile_size(),
-        tile_size(),
-        GREEN,
-    );
+/// Draw a placeholder for an entity without a sprite.
+pub fn draw_entity_placeholder(pos: Vec2, grid_size: f32) {
+    draw_rectangle(pos.x, pos.y, grid_size, grid_size, GREEN);
 }
 
 /// Sorts entites by their z-layer, filters out entities that should not be
@@ -254,16 +246,17 @@ fn collect_interpolated_layer_map<'a>(
     asset_manager: &AssetManager,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
+    grid_size: f32,
 ) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
     let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
-    let pos_store = ecs.get_store::<Transform>();
+    let trans_store = ecs.get_store::<Transform>();
     let cam_store = ecs.get_store::<RoomCamera>();
     let room_store = ecs.get_store::<CurrentRoom>();
     let layer_store = ecs.get_store::<Layer>();
     let glow_store = ecs.get_store::<Glow>();
 
-    for (entity, transform) in &pos_store.data {
+    for (entity, transform) in &trans_store.data {
         // Skip camera
         if cam_store.get(*entity).is_some() {
             continue;
@@ -279,17 +272,11 @@ fn collect_interpolated_layer_map<'a>(
         }
 
         // Interpolate the draw position
-        let draw_pos = interpolate_draw_position(
-            *entity,
-            transform.position,
-            alpha,
-            prev_positions
-        );
+        let draw_pos =
+            interpolate_draw_position(*entity, transform.position, alpha, prev_positions);
 
         // Default layer is 0 if missing
-        let z = layer_store
-            .get(*entity)
-            .map_or(0, |l| l.z);
+        let z = layer_store.get(*entity).map_or(0, |l| l.z);
 
         let entry = map.entry(z).or_default();
         entry.0.push((*entity, draw_pos));
@@ -299,7 +286,7 @@ fn collect_interpolated_layer_map<'a>(
             let glow_size = asset_manager
                 .texture_size(glow.sprite_id)
                 .map(|(w, h)| vec2(w, h))
-                .unwrap_or(vec2(tile_size(), tile_size()));
+                .unwrap_or(vec2(grid_size, grid_size));
 
             let glow_draw_pos = pivot_adjusted_position(draw_pos, glow_size, transform.pivot);
             entry.1.push((glow, glow_draw_pos));
@@ -323,7 +310,7 @@ fn collect_lights(
     let mut lights: Vec<(Vec2, Light)> = Vec::new();
 
     let light_store = ecs.get_store::<Light>();
-    let pos_store = ecs.get_store::<Transform>();
+    let trans_store = ecs.get_store::<Transform>();
     let room_store = ecs.get_store::<CurrentRoom>();
 
     for (entity, light) in &light_store.data {
@@ -336,7 +323,7 @@ fn collect_lights(
             continue; 
         }
 
-        if let Some(pos) = pos_store.get(*entity) {
+        if let Some(pos) = trans_store.get(*entity) {
             // Interpolate the draw position
             let draw_pos = interpolate_draw_position(
                 *entity, 

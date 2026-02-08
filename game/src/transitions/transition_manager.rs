@@ -1,6 +1,5 @@
 // engine_core/src/world/transition_manager.rs
 use crate::game_state::GameState;
-use engine_core::engine_global::tile_size;
 use engine_core::ecs::transform::Transform;
 use engine_core::ecs::component::*;
 use engine_core::world::room::*;
@@ -63,6 +62,7 @@ impl TransitionManager {
     pub fn handle_transitions(
         game_state: &mut GameState,
     ) {
+        let grid_size = game_state.game.current_world().grid_size;
         let rooms = game_state.game.current_world().rooms.clone();
         
         let entities: Vec<_> = game_state.game.ecs
@@ -86,7 +86,7 @@ impl TransitionManager {
             };
 
             // Find the room that now contains the entity
-            let target_id = match room_of_entity(pos, &rooms) {
+            let target_id = match room_of_entity(pos, &rooms, grid_size) {
                 Some(id) => id,
                 None => return,
             }; 
@@ -108,12 +108,12 @@ impl TransitionManager {
     }
 }
 
-/// Return the id of the room whose bounds contain the entity’s AABB.
-pub fn room_of_entity(pos: Vec2, rooms: &[Room]) -> Option<RoomId> {
+/// Return the id of the room whose bounds contain the entity's AABB.
+pub fn room_of_entity(pos: Vec2, rooms: &[Room], grid_size: f32) -> Option<RoomId> {
     // TODO: work out position based on collider?
     for room in rooms {
         let min = room.position;
-        let max = room.position + room.size * tile_size();
+        let max = room.position + room.size * grid_size;
 
         if pos.x >= min.x
             && pos.x <= max.x
