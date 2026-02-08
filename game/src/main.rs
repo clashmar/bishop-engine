@@ -57,6 +57,8 @@ fn load_icon(png_bytes: &[u8]) -> Icon {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    onscreen_info!("Initializing game.");
+
     // Pre-cache font to avoid black rectangle rendering bug
     engine_core::assets::core_assets::precache_font();
 
@@ -74,6 +76,7 @@ async fn main() {
         camera_manager,
         render_system: RenderSystem::new(),
         diagnostics: DiagnosticsOverlay::new(),
+        is_playtest: false,
     };
 
     engine.run().await;

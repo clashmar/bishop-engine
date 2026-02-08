@@ -100,10 +100,16 @@ impl<'a> Button<'a> {
 
         draw_text_ui(self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, FIELD_TEXT_SIZE_16, self.text_color);
 
-        is_mouse_button_pressed(MouseButton::Left)
-        && hovered
-        && !self.blocked
-        && !is_dropdown_open()
-        && !is_click_consumed()
+        let clicked = is_mouse_button_pressed(MouseButton::Left)
+            && hovered
+            && !self.blocked
+            && !is_dropdown_open()
+            && !is_click_consumed();
+
+        if clicked {
+            consume_click();
+        }
+
+        clicked
     }
 }

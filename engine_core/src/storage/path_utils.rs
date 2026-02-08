@@ -52,6 +52,11 @@ pub fn scripts_folder() -> PathBuf {
     resources_folder_current().join(SCRIPTS_FOLDER)
 }
 
+/// Path to the dialogue folder inside the resources folder (Editor/Game).
+pub fn dialogue_folder() -> PathBuf {
+    resources_folder_current().join(DIALOGUE_FOLDER)
+}
+
 /// Path to the windows folder inside the game folder (Editor).
 pub fn windows_folder() -> PathBuf {
     game_folder(&game_name()).join(WINDOWS_FOLDER)

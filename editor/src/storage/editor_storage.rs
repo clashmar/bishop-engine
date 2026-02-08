@@ -5,12 +5,16 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::ecs::transform::Transform;
 use crate::with_lua_async;
 use engine_core::animation::animation_clip::{Animation, ClipId};
+use engine_core::dialogue::DialogueManager;
 use engine_core::engine_global::set_game_name;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
 use engine_core::assets::asset_manager::*;
 use engine_core::game::game_map::GameMap;
-use engine_core::storage::path_utils::*;
+use engine_core::storage::path_utils::{
+    absolute_save_root, assets_folder, dialogue_folder, game_folder, mac_os_folder,
+    resources_folder, resources_folder_current, scripts_folder, windows_folder, copy_dir_recursive,
+};
 use engine_core::world::room::Room;
 use engine_core::ecs::component::*;
 use engine_core::world::world::*;
@@ -61,6 +65,7 @@ pub async fn create_new_game(name: String) -> Game {
         worlds: vec![world],
         asset_manager,
         script_manager,
+        dialogue_manager: DialogueManager::default(),
         current_world_id: current_id,
         tile_size: DEFAULT_TILE_SIZE,
         game_map: GameMap::default(),
@@ -75,10 +80,11 @@ pub async fn create_new_game(name: String) -> Game {
 }
 
 fn create_game_folders(name: &String) {
-    let folders: [(PathBuf, &str); 5] = [
+    let folders: [(PathBuf, &str); 6] = [
         (resources_folder_current(), RESOURCES_FOLDER),
         (assets_folder(), ASSETS_FOLDER),
         (scripts_folder(), SCRIPTS_FOLDER),
+        (dialogue_folder(), DIALOGUE_FOLDER),
         (windows_folder(), WINDOWS_FOLDER),
         (mac_os_folder(), MAC_OS_FOLDER),
     ];
@@ -98,6 +104,31 @@ fn create_game_folders(name: &String) {
     let main_lua = scripts_folder().join("main.lua");
     if let Err(e) = fs::write(&main_lua, "") {
         onscreen_error!("Could not create main.lua: {e}");
+    }
+
+    // Create default dialogue structure
+    create_default_dialogue_files();
+}
+
+/// Creates the default dialogue manifest and language folder.
+fn create_default_dialogue_files() {
+    let dialogue_root = dialogue_folder();
+
+    // Create _manifest.toml with default config
+    let manifest_path = dialogue_root.join("_manifest.toml");
+    if !manifest_path.exists() {
+        let manifest_content = r#"# Dialogue manifest configuration
+default_language = "en"
+"#;
+        if let Err(e) = fs::write(&manifest_path, manifest_content) {
+            onscreen_error!("Could not create dialogue manifest: {e}");
+        }
+    }
+
+    // Create default language folder (en)
+    let en_folder = dialogue_root.join("en");
+    if let Err(e) = fs::create_dir_all(&en_folder) {
+        onscreen_error!("Could not create dialogue/en folder: {e}");
     }
 }
 

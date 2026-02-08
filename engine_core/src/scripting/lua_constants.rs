@@ -51,5 +51,19 @@ pub const ON_CLIP_FINISHED: &str = "on_clip_finished";
 // Entity fields
 pub const ID: &str = "id";
 
+// Dialogue methods
+pub const SAY: &str = "say";
+pub const SAY_DIALOGUE: &str = "say_dialogue";
+pub const CLEAR_SPEECH: &str = "clear_speech";
+pub const IS_SPEAKING: &str = "is_speaking";
+
+// Dialogue module
+pub const DIALOGUE: &str = "dialogue";
+pub const DIALOGUE_FILE: &str = "dialogue.lua";
+pub const SET_LANGUAGE: &str = "set_language";
+pub const GET_LANGUAGE: &str = "get_language";
+pub const GET_LANGUAGES: &str = "get_languages";
+pub const GET_CONFIG: &str = "get_config";
+
 
 

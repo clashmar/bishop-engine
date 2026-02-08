@@ -40,6 +40,7 @@ impl Default for Editor {
             menu_bar: MenuBar::new(),
             modal: Modal::default(),
             toast: None,
+            playtest_process: None,
         }
     }
 }
