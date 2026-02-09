@@ -9,21 +9,21 @@ use crate::game::game_editor::GameEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::ui::widgets::input_is_focused;
 use crate::storage::export::export_game;
+use crate::storage::editor_storage::*;
 use crate::ecs::transform::Transform;
-use engine_core::ui::widgets::*;
 use crate::gui::menu_bar::*;
 use crate::editor_global::*;
+use crate::gui::prompts::*;
 use crate::editor::Editor;
 use crate::gui::modal::*;
 use crate::editor::*;
-use crate::storage::editor_storage::*;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::controls::controls::Controls;
 use engine_core::storage::path_utils::*;
 use engine_core::ui::toast::Toast;
 use engine_core::game::game::Game;
+use engine_core::ui::widgets::*;
 use engine_core::world::room::*;
-use engine_core::ui::prompt::*;
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use engine_core::*;
@@ -279,9 +279,9 @@ impl Editor {
         self.modal.open(widgets);
     }
 
-    fn set_prompt_modal(&mut self, prompt_message: &str) -> StringPromptWidget {
+    fn set_prompt_modal(&mut self, prompt_message: &str) -> StringPrompt {
         self.modal = Modal::new(400.0, 180.0);
-        StringPromptWidget::new(self.modal.rect, prompt_message)
+        StringPrompt::new(self.modal.rect, prompt_message)
     }
 
     fn open_world_settings_modal(&mut self) {
