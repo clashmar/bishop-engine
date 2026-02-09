@@ -127,7 +127,7 @@ impl EditorCommand for CreateWorldCmd {
     fn execute(&mut self) {
         with_editor(|editor| {
             let game = &mut editor.game;
-            let world = create_new_world(&mut game.ecs);
+            let world = create_new_world(game);
             self.world_id = Some(world.id);
             game.add_world(world);
         });

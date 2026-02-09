@@ -115,7 +115,14 @@ fn draw_entity(
     pos: Vec2,
     grid_size: f32,
 ) {
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
+    // If this is a player proxy, render using Player's visual components
+    let visual_entity = if ecs.has::<PlayerProxy>(entity) {
+        ecs.get_player_entity().unwrap_or(entity)
+    } else {
+        entity
+    };
+
+    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
 
     // Get pivot from transform (default to TopLeft if missing for backward compatibility)
     let pivot = transform_store
@@ -126,8 +133,8 @@ fn draw_entity(
     // Calculate pivot-adjusted draw position
     let draw_base = pivot_adjusted_position(pos, vec2(width, height), pivot);
 
-    // Animate/Draw sprite
-    if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
+    // Animate/Draw sprite (use visual_entity for sprite lookup)
+    if let Some(cf) = frame_store.get(visual_entity) && asset_manager.contains(cf.sprite_id) {
         let tex = asset_manager.get_texture_from_id(cf.sprite_id);
 
         let frame_w = cf.frame_size.x;
@@ -157,7 +164,7 @@ fn draw_entity(
             },
         );
         return;
-    } else if let Some(sprite) = sprite_store.get(entity) {
+    } else if let Some(sprite) = sprite_store.get(visual_entity) {
         // No animation
         if asset_manager.contains(sprite.sprite) {
             let tex = asset_manager.get_texture_from_id(sprite.sprite);
@@ -176,7 +183,7 @@ fn draw_entity(
     }
 
     // Don't draw placeholders for these components
-    if ecs.has_any::<(Light, Glow)>(entity) {
+    if ecs.has_any::<(Light, Glow)>(visual_entity) {
         return;
     }
 
@@ -197,7 +204,14 @@ pub fn highlight_selected_entity(
         None => return,
     };
 
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
+    // If this is a proxy, use Player's visual components for dimensions
+    let visual_entity = if ecs.has::<PlayerProxy>(entity) {
+        ecs.get_player_entity().unwrap_or(entity)
+    } else {
+        entity
+    };
+
+    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
     let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
 
     draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);

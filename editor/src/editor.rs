@@ -119,12 +119,10 @@ impl Editor {
                 }
             }
             EditorMode::World(world_id) => {
-                let mut ctx = self.game.ctx_mut();
-
                 // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
-                    &mut self.camera, 
-                    &mut ctx,
+                    &mut self.camera,
+                    &mut self.game,
                 ).await {
                     self.cur_room_id = Some(room_id);
                     self.mode = EditorMode::Room(room_id);

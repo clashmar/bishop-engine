@@ -58,6 +58,9 @@
 ---@class PhysicsBody
 --- Marker component
 
+---@class PlayerProxy
+--- Marker component
+
 ---@class Layer
 ---@field z number
 
@@ -125,6 +128,7 @@
 ---@field Collider string
 ---@field Kinematic string
 ---@field PhysicsBody string
+---@field PlayerProxy string
 ---@field Layer string
 ---@field Velocity string
 ---@field Name string
@@ -154,6 +158,7 @@ C.Solid = "Solid"
 C.Collider = "Collider"
 C.Kinematic = "Kinematic"
 C.PhysicsBody = "PhysicsBody"
+C.PlayerProxy = "PlayerProxy"
 C.Layer = "Layer"
 C.Velocity = "Velocity"
 C.Name = "Name"

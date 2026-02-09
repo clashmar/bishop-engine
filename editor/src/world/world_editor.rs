@@ -6,7 +6,6 @@ use crate::gui::mode_selector::*;
 use crate::miniquad::CursorIcon;
 use crate::gui::menu_bar::*;
 use crate::world::coord::*;
-use crate::ecs::ecs::Ecs;
 use crate::canvas::grid;
 use crate::*;
 use macroquad::miniquad::window::set_mouse_cursor;
@@ -14,7 +13,6 @@ use engine_core::controls::controls::Controls;
 use engine_core::game::game::Game;
 use engine_core::world::world::*;
 use engine_core::world::room::*;
-use engine_core::game::game::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use once_cell::sync::Lazy;
@@ -28,7 +26,7 @@ const HOVER_LINE_THICKNESS: f32 = 0.02;
 #[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum WorldEditorMode {
     SelectRoom,
-    CreateRoom,
+    NewRoom,
     DeleteRoom,
 }
 
@@ -36,21 +34,21 @@ impl ModeInfo for WorldEditorMode {
     fn label(&self) -> &'static str {
         match self {
             WorldEditorMode::SelectRoom => "Select: S",
-            WorldEditorMode::CreateRoom => "Create Room: C",
+            WorldEditorMode::NewRoom => "New Room: N",
             WorldEditorMode::DeleteRoom => "Delete Room: D",
         }
     }
     fn icon(&self) -> &'static Texture2D {
         match self {
             WorldEditorMode::SelectRoom => &SELECT_ICON,
-            WorldEditorMode::CreateRoom => &CREATE_ICON,
+            WorldEditorMode::NewRoom => &CREATE_ICON,
             WorldEditorMode::DeleteRoom => &DELETE_ICON,
         }
     }
     fn shortcut(self) -> Option<fn() -> bool> {
         match self {
             WorldEditorMode::SelectRoom => Some(Controls::s),
-            WorldEditorMode::CreateRoom => Some(Controls::c),
+            WorldEditorMode::NewRoom => Some(Controls::n),
             WorldEditorMode::DeleteRoom => Some(Controls::d),
         }
     }
@@ -84,20 +82,20 @@ impl WorldEditor {
     }
 
     /// Returns `Some(room_id)` if a room is clicked on.
-    pub async fn update<'a>(
-        &mut self, 
-        camera: &mut Camera2D, 
-        ctx: &'a mut GameCtxMut<'a>,
+    pub async fn update(
+        &mut self,
+        camera: &mut Camera2D,
+        game: &mut Game,
     ) -> Option<RoomId> {
-        ctx.cur_world.link_all_exits();
+        game.current_world_mut().link_all_exits();
 
         self.handle_mouse_cursor();
         self.handle_shortcuts();
 
         match self.mode {
-            WorldEditorMode::SelectRoom => self.update_selecting_mode(camera, ctx.cur_world),
-            WorldEditorMode::CreateRoom => self.update_placing_mode(camera, ctx.ecs, ctx.cur_world),
-            WorldEditorMode::DeleteRoom => self.update_deleting_mode(camera, ctx),
+            WorldEditorMode::SelectRoom => self.update_selecting_mode(camera, game.current_world_mut()),
+            WorldEditorMode::NewRoom => self.update_placing_mode(camera, game),
+            WorldEditorMode::DeleteRoom => self.update_deleting_mode(camera, game),
         }
     }
 
@@ -119,16 +117,19 @@ impl WorldEditor {
     }
 
     fn update_deleting_mode(
-        &mut self, 
-        camera: &Camera2D, 
-        ctx: &mut GameCtxMut,
+        &mut self,
+        camera: &Camera2D,
+        game: &mut Game,
     ) -> Option<RoomId> {
         if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
             let world_mouse = mouse_world_pos(camera);
-            for room in &ctx.cur_world.rooms {
-                let rect = scaled_room_rect(room, ctx.cur_world.grid_size);
+            let cur_world = game.current_world();
+            for room in &cur_world.rooms {
+                let rect = scaled_room_rect(room, cur_world.grid_size);
                 if rect.contains(world_mouse) {
-                    self.delete_room(ctx, room.id);
+                    let room_id = room.id;
+                    let mut ctx = game.ctx_mut();
+                    self.delete_room(&mut ctx, room_id);
                     return None;
                 }
             }
@@ -137,16 +138,16 @@ impl WorldEditor {
     }
 
     fn update_placing_mode(
-        &mut self, 
-        camera: &Camera2D, 
-        ecs: &mut Ecs,
-        world: &mut World
+        &mut self,
+        camera: &Camera2D,
+        game: &mut Game,
     ) -> Option<RoomId> {
         if self.is_mouse_over_ui() {
             return None;
         }
-        
-        let mouse_tile = snap_to_grid(mouse_world_grid(camera, world.grid_size));
+
+        let grid_size = game.current_world().grid_size;
+        let mouse_tile = snap_to_grid(mouse_world_grid(camera, grid_size));
 
         if is_mouse_button_pressed(MouseButton::Left) {
             self.placing_start = Some(mouse_tile);
@@ -160,9 +161,12 @@ impl WorldEditor {
         if is_mouse_button_released(MouseButton::Left) {
             if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
                 let (top_left, size) = rect_from_points(start, end);
-                if !self.intersects_existing_room(&world.rooms, top_left, size, world.grid_size) {
+                let rooms = &game.current_world().rooms;
+                let should_create = !self.intersects_existing_room(rooms, top_left, size, grid_size);
+
+                if should_create {
                     // Create the room and get its id back.
-                    let new_id = self.place_room_from_drag(ecs, world, top_left, size, world.grid_size);
+                    let new_id = self.place_room_from_drag(game, top_left, size, grid_size);
                     self.reset_placing();
                     self.mode = WorldEditorMode::SelectRoom;
                     return Some(new_id);
@@ -222,7 +226,7 @@ impl WorldEditor {
                     self.draw_hovered_room(camera, rooms, world.grid_size);
                 }
             }
-            WorldEditorMode::CreateRoom => {
+            WorldEditorMode::NewRoom => {
                 if !self.is_mouse_over_ui() {
                     self.draw_placing_preview(camera, rooms, world.grid_size);
                 }
@@ -480,7 +484,7 @@ impl WorldEditor {
                 WorldEditorMode::SelectRoom => {
                     set_mouse_cursor(CursorIcon::Pointer);
                 }
-                WorldEditorMode::CreateRoom => {
+                WorldEditorMode::NewRoom => {
                     set_mouse_cursor(CursorIcon::Crosshair);
                 }
                 WorldEditorMode::DeleteRoom => {

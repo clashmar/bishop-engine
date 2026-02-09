@@ -6,6 +6,7 @@ use crate::editor_global::push_command;
 use crate::gui::menu_bar::menu_button;
 use crate::gui::gui_constants::*;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
+use engine_core::ecs::component::{Player, PlayerProxy};
 use engine_core::ecs::module_factory::MODULES;
 use engine_core::controls::controls::Controls;
 use engine_core::ecs::component_registry::*;
@@ -21,7 +22,22 @@ use engine_core::ui::text::*;
 use macroquad::prelude::*;
 use engine_core::*;
 
-const SCROLL_SPEED: f32 = 5.0; 
+const SCROLL_SPEED: f32 = 5.0;
+
+/// Returns the entity that should be used for component operations.
+fn component_target(ecs: &Ecs, entity: Entity) -> Entity {
+    if ecs.has::<PlayerProxy>(entity) {
+        ecs.get_player_entity().unwrap_or(entity)
+    } else {
+        entity
+    }
+}
+
+/// Returns true if this module should use the proxy entity directly.
+fn is_proxy_local_module(module_title: &str) -> bool {
+    module_title == comp_type_name::<Transform>()
+        || module_title == "PlayerModule"
+} 
 
 /// The panel that lives on the right‑hand side of the room editor window
 pub struct Inspector {
@@ -196,14 +212,22 @@ impl Inspector {
                 // Render modules inside the scroll‑view
                 let mut y = inner.y + INSET - self.scroll_offset;
                 let blocked = self.is_blocked();
+                let comp_target = component_target(game_ctx.ecs, entity);
                 for module in &mut self.modules {
-                    if module.visible(game_ctx.ecs, entity) {
+                    // Transform uses the proxy directly, others use Player
+                    let module_entity = if is_proxy_local_module(module.title()) {
+                        entity
+                    } else {
+                        comp_target
+                    };
+
+                    if module.visible(game_ctx.ecs, module_entity) {
                         let h = module.height();
-                        
+
                         // Only draw when the module intersects the visible area
                         if y + h > inner.y && y < inner.y + inner.h {
                             let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
-                            module.draw(blocked, sub_rect, game_ctx, entity);
+                            module.draw(blocked, sub_rect, game_ctx, module_entity);
                         }
 
                         y += h + WIDGET_SPACING;
@@ -324,8 +348,10 @@ impl Inspector {
 
         // Process pending component addition
         if let (Some(name), Some(entity)) = (self.pending_add.take(), self.target) {
+            // Add components to Player entity when proxy is selected
+            let target = component_target(game_ctx.ecs, entity);
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == name) {
-                (reg.factory)(game_ctx.ecs, entity);
+                (reg.factory)(game_ctx.ecs, target);
             } else {
                 onscreen_error!("Component `{}` not found in registry", name);
             }
@@ -343,6 +369,10 @@ impl Inspector {
             Some(e) => e,
             None => return,
         };
+
+        // For proxies, add components to the Player entity
+        let comp_target = component_target(ecs, entity);
+
         // Collect the components that can be added
         let mut shown: Vec<&ComponentRegistry> = Vec::new();
 
@@ -352,8 +382,12 @@ impl Inspector {
             if type_name == ROOM_CAMERA_MODULE_TITLE {
                 continue;
             }
+            // Transform is local to proxy, skip it in add menu for proxies
+            if is_proxy_local_module(type_name) && ecs.has::<PlayerProxy>(entity) {
+                continue;
+            }
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
-                if !entity_has_component(ecs, entity, reg) {
+                if !entity_has_component(ecs, comp_target, reg) {
                     shown.push(reg);
                 }
             } else {
@@ -433,10 +467,16 @@ impl Inspector {
             Some(e) => e,
             None => return false,
         };
+        let comp_target = component_target(ecs, entity);
+        let is_spawn_point = ecs.has::<PlayerProxy>(entity);
         for entry in MODULES.iter() {
             let type_name = entry.title;
+            // Skip Transform for proxies
+            if is_proxy_local_module(type_name) && is_spawn_point {
+                continue;
+            }
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
-                if !entity_has_component(ecs, entity, reg) {
+                if !entity_has_component(ecs, comp_target, reg) {
                     return true;
                 }
             }
@@ -458,8 +498,14 @@ impl Inspector {
 
     fn total_content_height(&self, ecs: &Ecs, entity: Entity) -> f32 {
         let mut total_content_h = 0.0;
+        let comp_target = component_target(ecs, entity);
         for module in &self.modules {
-            if module.visible(ecs, entity) {
+            let module_entity = if is_proxy_local_module(module.title()) {
+                entity
+            } else {
+                comp_target
+            };
+            if module.visible(ecs, module_entity) {
                 total_content_h += module.height() + WIDGET_SPACING;
             }
         }
@@ -469,7 +515,7 @@ impl Inspector {
         }
 
         total_content_h += INSET * 2.0; // Top and bottom inset
-         
+
         total_content_h
     }
 

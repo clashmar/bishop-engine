@@ -5,6 +5,7 @@ use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
 use crate::ecs::entity::*;
 use crate::game::game::GameCtxMut;
+use crate::world::room::RoomId;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -155,25 +156,70 @@ impl Ecs {
         self.get_store_mut::<T>().insert(entity, component);
     }
 
-    /// Returns the player Entity. // TODO wrap in option and move out of here
-    pub fn get_player_entity(&self) -> Entity {
-        // There should only ever be one player
-        let player = self.get_store::<Player>().data
+    /// Returns the player Entity if one exists.
+    pub fn get_player_entity(&self) -> Option<Entity> {
+        self.get_store::<Player>().data
             .keys()
             .next()
-            .expect("There should always be a player entity.");
-
-        *player
+            .copied()
     }
 
-    /// Returns the player Transform.
-    pub fn get_player_position(&self) -> Transform {
-        let player_entity = self.get_player_entity();
+    /// Returns the player Transform if a player exists.
+    pub fn get_player_transform(&self) -> Option<Transform> {
+        let player_entity = self.get_player_entity()?;
 
         self.get_store::<Transform>()
             .get(player_entity)
             .cloned()
-            .expect("Player should always have a Transform component.")
+    }
+
+    /// Returns the player proxy for a given room, if one exists.
+    pub fn get_player_proxy(&self, room_id: RoomId) -> Option<Entity> {
+        let proxy_store = self.get_store::<PlayerProxy>();
+        let room_store = self.get_store::<CurrentRoom>();
+
+        proxy_store.data.keys()
+            .find(|e| room_store.get(**e).map_or(false, |r| r.0 == room_id))
+            .copied()
+    }
+
+    /// Sets the player's spawn position from the proxy in the given room.
+    /// Call this before purging proxies to preserve the spawn location.
+    pub fn set_player_spawn_from_proxy(&mut self, room_id: RoomId) {
+        let spawn_pos = self.get_player_proxy(room_id)
+            .and_then(|e| self.get::<Transform>(e))
+            .map(|t| t.position);
+
+        if let Some(pos) = spawn_pos {
+            if let Some(player_entity) = self.get_player_entity() {
+                if let Some(transform) = self.get_mut::<Transform>(player_entity) {
+                    transform.position = pos;
+                } else {
+                    self.add_component_to_entity(player_entity, Transform {
+                        position: pos,
+                        ..Default::default()
+                    });
+                }
+                self.add_component_to_entity(player_entity, CurrentRoom(room_id));
+            }
+        }
+    }
+
+    /// Removes all PlayerProxy entities from the ECS.
+    /// Used when preparing game data for playtest or export.
+    pub fn purge_proxies(&mut self) {
+        let proxy_entities: Vec<Entity> = self
+            .get_store::<PlayerProxy>()
+            .data
+            .keys()
+            .copied()
+            .collect();
+
+        for entity in proxy_entities {
+            for reg in inventory::iter::<ComponentRegistry> {
+                (reg.remove)(self, entity);
+            }
+        }
     }
 }
 
