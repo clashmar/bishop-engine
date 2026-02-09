@@ -1,6 +1,7 @@
 // editor/src/gui/inspector/modal.rs
+use crate::gui::prompts::confirm_prompt::*;
 use std::{cell::RefCell, thread::LocalKey};
-use engine_core::{assets::asset_manager::AssetManager, ui::prompt::*};
+use engine_core::assets::asset_manager::AssetManager;
 use macroquad::prelude::*;
 
 #[derive(Default)]
@@ -141,7 +142,7 @@ impl Modal {
         let prompt_message = "Are You Sure?";
         let mut modal = Modal::new(300.0, 120.0);
 
-        let mut prompt = ConfirmPromptWidget::new(modal.rect, prompt_message);
+        let mut prompt = ConfirmPrompt::new(modal.rect, prompt_message);
 
         let widgets: Vec<BoxedWidget> = vec![ 
             Box::new(move |_| {

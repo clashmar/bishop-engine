@@ -8,3 +8,4 @@ pub mod mode_selector;
 pub mod menu_bar;
 pub mod modal;
 pub mod panels;
+pub mod prompts;
