@@ -2,68 +2,15 @@
 use crate::ui::widgets::DEFAULT_FONT_SIZE_16;
 use crate::world::world_editor::WorldEditor;
 use crate::tiles::tilemap::TileMap;
-use crate::ecs::ecs::Ecs;
 use crate::world::coord;
 use engine_core::ecs::component::CurrentRoom;
-use engine_core::game::game::GameCtxMut;
-use engine_core::world::world::World;
 use engine_core::world::room::*;
+use engine_core::game::game::*;
+use engine_core::ecs::ecs::Ecs;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
 
 impl WorldEditor {
-    /// Create a new room and return its id.
-    pub fn create_room(
-        &mut self,
-        ecs: &mut Ecs,
-        world: &mut World,
-        name: &str,
-        position: Vec2,
-        size: Vec2,
-    ) -> RoomId {
-        let new_id = {
-            let tilemap = TileMap::new(size.x as usize, size.y as usize);
-
-            let variant = RoomVariant {
-                id: "default".to_string(),
-                tilemap,
-            };
-
-            let id = self.allocate_room_id(&world);
-
-            let room = Room {
-                id,
-                name: name.to_string(),
-                position,
-                size,
-                exits: vec![],
-                adjacent_rooms: vec![],
-                variants: vec![variant],
-                darkness: 0.
-            };
-            
-            let _camera = room.create_room_camera(ecs, id, world.grid_size);
-
-            world.rooms.push(room);
-            id
-        };
-
-        let len = world.rooms.len(); 
-
-        // Split the vector into “old rooms” and “the new room”
-        let (old_slice, new_slice) = world.rooms.split_at_mut(len - 1);
-        let new_room = &mut new_slice[0];
-
-        for old_room in old_slice.iter_mut() {
-            if Self::are_rooms_adjacent(old_room, new_room) {
-                old_room.adjacent_rooms.push(new_id);
-                new_room.adjacent_rooms.push(old_room.id);
-            }
-        }
-
-        new_id
-    }
-
     /// Delete a room by its RoomId.
     pub fn delete_room(
         &mut self, 
@@ -116,17 +63,67 @@ impl WorldEditor {
     }
 
     /// Helper used by the UI when the user finishes a drag‑to‑place.
+    /// Places a room in the current world.
     pub fn place_room_from_drag(
         &mut self,
-        ecs: &mut Ecs,
-        world: &mut World,
+        game: &mut Game,
         top_left: Vec2,
         size: Vec2,
         grid_size: f32,
     ) -> RoomId {
         let origin_in_pixels = top_left * grid_size;
-        let new_id = self.create_room(ecs, world, "untitled", origin_in_pixels, size);
+        let new_id = self.create_new_room(game, "untitled", origin_in_pixels, size);
         new_id
+    }
+
+    /// Create a new room in the current world and return its id.
+    pub fn create_new_room(
+        &mut self,
+        game: &mut Game,
+        name: &str,
+        position: Vec2,
+        size: Vec2,
+    ) -> RoomId {
+        let tilemap = TileMap::new(size.x as usize, size.y as usize);
+
+        let variant = RoomVariant {
+            id: "default".to_string(),
+            tilemap,
+        };
+
+        let id = game.allocate_room_id();
+        let grid_size = game.current_world().grid_size;
+
+        let room = Room {
+            id,
+            name: name.to_string(),
+            position,
+            size,
+            exits: vec![],
+            adjacent_rooms: vec![],
+            variants: vec![variant],
+            darkness: 0.
+        };
+
+        let _camera = room.create_room_camera(&mut game.ecs, id, grid_size);
+
+        let cur_world = game.current_world_mut();
+        cur_world.rooms.push(room);
+
+        let len = cur_world.rooms.len();
+
+        // Split the vector into "old rooms" and "the new room"
+        let (old_slice, new_slice) = cur_world.rooms.split_at_mut(len - 1);
+        let new_room = &mut new_slice[0];
+
+        for old_room in old_slice.iter_mut() {
+            if Self::are_rooms_adjacent(old_room, new_room) {
+                old_room.adjacent_rooms.push(id);
+                new_room.adjacent_rooms.push(old_room.id);
+            }
+        }
+
+        id
     }
 
     fn are_rooms_adjacent(a: &Room, b: &Room) -> bool {
@@ -159,15 +156,6 @@ impl WorldEditor {
         let y = screen_height() - margin;
 
         draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLACK);
-    }
-
-    /// Returns the highest room id in this world + 1.
-    fn allocate_room_id(&self, world: &World) -> RoomId {
-        if let Some(max_id) = world.rooms.iter().map(|r| r.id.0).max() {
-            RoomId(max_id + 1)
-        } else {
-            RoomId(1)
-        }
     }
 }
 

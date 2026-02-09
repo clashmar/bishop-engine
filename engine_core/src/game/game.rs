@@ -4,6 +4,7 @@ use crate::scripting::script_manager::ScriptManager;
 use crate::assets::asset_manager::AssetManager;
 use crate::game::game_map::GameMap;
 use crate::engine_global::set_game_name;
+use crate::world::room::RoomId;
 use crate::world::world::*;
 use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,8 @@ pub struct Game {
     pub current_world_id: WorldId, // TODO: Change this to an option
     /// Top level map of the whole game.
     pub game_map: GameMap,
+    /// Counter for allocating globally unique room Ids.
+    pub next_room_id: usize,
 }
 
 /// Bundles together common immutable systems.
@@ -150,5 +153,11 @@ impl Game {
         use crate::storage::path_utils::dialogue_folder;
         let dialogue_root = dialogue_folder();
         self.dialogue_manager.set_dialogue_root(dialogue_root);
+    }
+
+    /// Allocates a globally unique room ID.
+    pub fn allocate_room_id(&mut self) -> RoomId {
+        self.next_room_id += 1;
+        RoomId(self.next_room_id)
     }
 }

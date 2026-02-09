@@ -43,10 +43,14 @@ impl CameraManager {
         }
 
         // Pick the best camera
+        let player_pos = ecs.get_player_transform()
+            .map(|t| t.position)
+            .unwrap_or_default();
+
         if let Some((best_cam, mode)) = Self::find_best_camera_for_room(
             ecs,
             &self.room_cameras,
-            ecs.get_player_position().position,
+            player_pos,
             grid_size,
         ) {
             // Prevent interpolation with the previous camera
@@ -57,7 +61,7 @@ impl CameraManager {
 
             // Apply follow if needed
             if let CameraMode::Follow(restriction) = mode {
-                self.apply_follow(&restriction, ecs.get_player_position().position);
+                self.apply_follow(&restriction, player_pos);
             }
         }
     }

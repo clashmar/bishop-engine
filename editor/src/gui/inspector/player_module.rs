@@ -1,7 +1,9 @@
 // editor/src/gui/inspector/player_module.rs
-use engine_core::{ecs::component::Player, game::game::GameCtxMut, ui::{text::*, widgets::*}};
+use engine_core::ecs::component::{Player, PlayerProxy};
 use engine_core::ecs::inpsector_module::InspectorModule;
+use engine_core::game::game::GameCtxMut;
 use engine_core::ecs::entity::Entity;
+use engine_core::ui::{text::*, widgets::*};
 use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::*;
 
@@ -10,7 +12,7 @@ pub struct PlayerModule {}
 
 impl InspectorModule for PlayerModule {
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
-        ecs.get::<Player>(entity).is_some()
+        ecs.has::<Player>(entity) || ecs.has::<PlayerProxy>(entity)
     }
 
     fn draw(
@@ -20,15 +22,17 @@ impl InspectorModule for PlayerModule {
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let ecs = &mut game_ctx.ecs;
+        let ecs = &game_ctx.ecs;
 
-        if let Some(_player) = ecs.get::<Player>(entity) {
+        if ecs.has::<Player>(entity) {
             draw_text_ui("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
+        } else if ecs.has::<PlayerProxy>(entity) {
+            draw_text_ui("Player Proxy", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
     }
 
     fn height(&self) -> f32 {
-        25.0
+        45.0
     }
 
     fn title(&self) -> &str {

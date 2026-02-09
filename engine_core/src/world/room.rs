@@ -12,7 +12,7 @@ use macroquad::prelude::*;
 use serde_with::FromInto;
 use serde_with::serde_as;
 
-/// Identifier for a room. TODO: Make sure this is unique across worlds.
+/// Identifier for a room, globally unique across all worlds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub struct RoomId(pub usize);
 
@@ -46,26 +46,25 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn default(ecs: &mut Ecs, grid_size: f32) -> Self {
+    /// Creates a default room with the given pre-allocated room ID.
+    pub fn default(ecs: &mut Ecs, room_id: RoomId, grid_size: f32) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),
         };
 
-        let id = RoomId(0);
-
         let room = Room {
-        id,
-        name: "untitled".to_string(),
-        position: DEFAULT_ROOM_POSITION,
-        size: DEFAULT_ROOM_SIZE,
-        exits: vec![],
-        adjacent_rooms: vec![],
-        variants: vec![first_variant],
-        darkness: 0.,
+            id: room_id,
+            name: "untitled".to_string(),
+            position: DEFAULT_ROOM_POSITION,
+            size: DEFAULT_ROOM_SIZE,
+            exits: vec![],
+            adjacent_rooms: vec![],
+            variants: vec![first_variant],
+            darkness: 0.,
         };
 
-        let _camera = room.create_room_camera(ecs, id, grid_size);
+        let _camera = room.create_room_camera(ecs, room_id, grid_size);
 
         room
     }

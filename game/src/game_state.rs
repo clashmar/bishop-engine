@@ -2,11 +2,11 @@
 use crate::scripting::script_system::ScriptSystem;
 use engine_core::camera::camera_manager::CameraManager;
 use engine_core::storage::core_storage::load_game_ron;
-use engine_core::ecs::component::CurrentRoom;
 use engine_core::ecs::transform::Transform;
 use engine_core::ecs::entity::Entity;
-use engine_core::world::room::Room;
+use engine_core::ecs::component::*;
 use engine_core::engine_global::*;
+use engine_core::world::room::*;
 use engine_core::game::game::*;
 use std::collections::HashMap;
 use macroquad::prelude::*;
@@ -25,7 +25,7 @@ impl GameState {
     pub async fn new(lua: &Lua, camera_manager: &mut CameraManager) -> Self {
         // Allows the shared engine features to make decisions
         set_engine_mode(EngineMode::Game);
-        
+
         let mut game = match load_game_ron().await {
             Ok(game) => game,
             Err(e) => panic!("{e}")
@@ -45,7 +45,9 @@ impl GameState {
             .clone();
 
         let ecs = &game.ecs;
-        let player_pos = ecs.get_player_position().position;
+        let player_pos = ecs.get_player_transform()
+            .map(|t| t.position)
+            .unwrap_or_default();
         let grid_size = game.current_world().grid_size;
         *camera_manager = CameraManager::new(ecs, current_room.id, player_pos, grid_size);
 
@@ -65,11 +67,14 @@ impl GameState {
         grid_size: f32,
     ) -> Self {
         // Allows the shared engine features to make decisions
-        // set_engine_mode(EngineMode::Game); TODO: figure this out
+        set_engine_mode(EngineMode::Game);
 
         game.initialize(lua).await;
+
         let ecs = &game.ecs;
-        let player_pos = ecs.get_player_position().position;
+        let player_pos = ecs.get_player_transform()
+            .map(|t| t.position)
+            .unwrap_or_default();
         *camera_manager = CameraManager::new(ecs, room.id, player_pos, grid_size);
 
         ScriptSystem::init(lua);

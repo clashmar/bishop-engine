@@ -1,6 +1,7 @@
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::room::room_editor::RoomEditor;
 use crate::ecs::component::Name;
+use crate::ecs::transform::Transform;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::Editor;
@@ -8,6 +9,7 @@ use engine_core::ui::text::draw_text_ui;
 use engine_core::ecs::entity::Entity;
 use engine_core::ecs::component::*;
 use engine_core::ui::widgets::Button;
+use engine_core::world::room::RoomId;
 use std::collections::HashSet;
 use macroquad::prelude::*;
 
@@ -59,9 +61,18 @@ impl PanelDefinition for HierarchyPanel {
             self.scroll_y += wheel_y * SCROLL_SPEED;
         }
 
+        let cur_room_id = editor.cur_room_id;
+
+        // Get room position before borrowing ecs mutably
+        let room_pos = cur_room_id.and_then(|room_id| {
+            editor.game.current_world()
+                .rooms.iter()
+                .find(|r| r.id == room_id)
+                .map(|r| r.position)
+        });
+
         let ecs = &mut editor.game.ecs;
         let room_editor = &mut editor.room_editor;
-        let cur_room_id = editor.cur_room_id;
 
         let global_entities = {
             let store = ecs.get_store::<Global>();
@@ -96,8 +107,15 @@ impl PanelDefinition for HierarchyPanel {
             layout_entity_tree(*entity, &mut layout_y, &self.expanded, ecs);
         }
 
-        layout_y += 10.0;                                       
-        layout_y += HEADER_HEIGHT;  
+        layout_y += 10.0;
+        layout_y += HEADER_HEIGHT;
+
+        // Account for proxy button if room doesn't have one
+        if let Some(room_id) = cur_room_id {
+            if ecs.get_player_proxy(room_id).is_none() {
+                layout_y += ADD_BUTTON_HEIGHT + ROW_SPACING;
+            }
+        }
 
         for entity in &room_entities {
             layout_entity_tree(*entity, &mut layout_y, &self.expanded, ecs);
@@ -170,6 +188,28 @@ impl PanelDefinition for HierarchyPanel {
             },
         );
         y += HEADER_HEIGHT;
+
+        // Add proxy button if the room has none already
+        if let Some(room_id) = cur_room_id {
+            let has_spawn = ecs.get_player_proxy(room_id).is_some();
+            if !has_spawn {
+                let spawn_pos = room_pos.unwrap_or_default();
+                draw_block(
+                    Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
+                    rect,
+                    || {
+                        let clicked = Button::new(
+                            Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
+                            "+ Player Proxy",
+                        ).blocked(blocked).show();
+                        if !blocked && clicked {
+                            create_spawn_point(ecs, room_id, spawn_pos);
+                        }
+                    },
+                );
+                y += ADD_BUTTON_HEIGHT + ROW_SPACING;
+            }
+        }
 
         // Room entities
         for entity in room_entities {
@@ -398,4 +438,13 @@ fn get_entity_name(ecs: &Ecs, entity: Entity) -> String {
     ecs.get::<Name>(entity)
         .map(|n| n.to_string())
         .unwrap_or_else(|| format!("{:?}", entity))
+}
+
+/// Creates a player proxy entity at the room's origin.
+fn create_spawn_point(ecs: &mut Ecs, room_id: RoomId, room_position: Vec2) {
+    ecs.create_entity()
+        .with(PlayerProxy)
+        .with(Transform { position: room_position, ..Default::default() })
+        .with(CurrentRoom(room_id))
+        .with(Name("Player Proxy".to_string()));
 }

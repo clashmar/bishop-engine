@@ -16,14 +16,23 @@ pub fn write_playtest_payload(
     room: &Room,
     game: &Game,
 ) -> io::Result<PathBuf> {
+    // Clone game via serialization and prepare for playtest
+    let game_ron = ron::to_string(game)
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not serialize game: {e}")))?;
+    let mut game_copy: Game = ron::from_str(&game_ron)
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not deserialize game: {e}")))?;
+
+    // Set player spawn position from proxy before purging
+    game_copy.ecs.set_player_spawn_from_proxy(room.id);
+    game_copy.ecs.purge_proxies();
 
     #[derive(serde::Serialize)]
     struct Payload<'a> {
         room: &'a Room,
         game: &'a Game,
     }
-    
-    let payload = Payload { room, game };
+
+    let payload = Payload { room, game: &game_copy };
 
     let ron = to_string_pretty(&payload, PrettyConfig::default())
         .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not serialize payload: {e}")))?;

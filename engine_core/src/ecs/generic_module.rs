@@ -1,13 +1,13 @@
 // engine_core/src/ecs/generic_module.rs
 use crate::ecs::inpsector_module::InspectorModule;
-use crate::ecs::transform::Pivot;
 use crate::ecs::component::Component;
+use crate::ecs::transform::Pivot;
 use crate::ecs::reflect_field::*;
 use crate::ecs::entity::Entity;
 use crate::ui::widgets::*;
-use crate::ui::text::{draw_text_ui, measure_text_ui};
 use crate::game::game::*;
 use crate::ecs::ecs::Ecs;
+use crate::ui::text::*;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use macroquad::prelude::*;

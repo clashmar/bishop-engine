@@ -74,6 +74,10 @@ impl Controls {
         is_key_pressed(KeyCode::M) && modifier_not_pressed()
     }
 
+    pub fn n() -> bool {
+        is_key_pressed(KeyCode::N) && modifier_not_pressed()
+    }
+
     pub fn r() -> bool {
         is_key_pressed(KeyCode::R) && modifier_not_pressed()
     }

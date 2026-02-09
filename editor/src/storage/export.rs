@@ -102,8 +102,27 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     let skip_extensions = &["json", "aseprite", "ase"];
     copy_dir_filtered(&src_resources, &target_resources, skip_extensions)?;
 
+    // Overwrite game.ron purging player proxies
+    let game_ron = ron::to_string(game)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    let mut game_copy: Game = ron::from_str(&game_ron)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+
+    // Set player spawn position from proxy before purging
+    if let Some(start_room_id) = game_copy.current_world().starting_room_id {
+        game_copy.ecs.set_player_spawn_from_proxy(start_room_id);
+    }
+    game_copy.ecs.purge_proxies();
+
+    let pretty = ron::ser::PrettyConfig::new()
+        .separate_tuple_members(true)
+        .enumerate_arrays(true);
+    let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    fs::write(target_resources.join(GAME_RON), ron_string)?;
+
     // TODO: Write manifest for game
-    
+
     // Tell the guard to keep the folder
     guard.success();
     Ok(target_package)
@@ -148,6 +167,25 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 
     let skip_extensions = &["json", "aseprite", "ase"];
     copy_dir_filtered(&src_resources, &target_resources, skip_extensions)?;
+
+    // Overwrite game.ron purging player proxies
+    let game_ron = ron::to_string(game)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    let mut game_copy: Game = ron::from_str(&game_ron)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+
+    // Set player spawn position from proxy before purging
+    if let Some(start_room_id) = game_copy.current_world().starting_room_id {
+        game_copy.ecs.set_player_spawn_from_proxy(start_room_id);
+    }
+    game_copy.ecs.purge_proxies();
+
+    let pretty = ron::ser::PrettyConfig::new()
+        .separate_tuple_members(true)
+        .enumerate_arrays(true);
+    let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    fs::write(target_resources.join(GAME_RON), ron_string)?;
 
     // Copy Icon.icns
     onscreen_debug!("Copying Icon.icns.");

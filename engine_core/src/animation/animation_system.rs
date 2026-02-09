@@ -3,6 +3,7 @@ use crate::assets::asset_manager::AssetManager;
 use crate::world::room::entities_in_room;
 use crate::animation::animation_clip::*;
 use crate::assets::sprite::SpriteId;
+use crate::ecs::component::PlayerProxy;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
@@ -38,7 +39,15 @@ pub async fn update_animation_sytem(
     room_id: RoomId,
 ) {
     // Gather the ids of all entities that are in the current room
-    let entities = entities_in_room(ecs, room_id);
+    let mut entities = entities_in_room(ecs, room_id);
+
+    // Process the player entity if there's a player proxy
+    let has_spawn_point = entities.iter().any(|e| ecs.has::<PlayerProxy>(*e));
+    if has_spawn_point {
+        if let Some(player) = ecs.get_player_entity() {
+            entities.insert(player);
+        }
+    }
 
     let anim_store = ecs.get_store_mut::<Animation>();
 

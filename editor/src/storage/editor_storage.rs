@@ -45,27 +45,35 @@ pub async fn create_new_game(name: String) -> Game {
 
     // Ensure the folder structure exists.
     create_game_folders(&name);
-    
-    // Build the game
-    let mut ecs = Ecs::default();
-    let world = create_new_world(&mut ecs);
-    let current_id = world.id;
 
     let asset_manager = AssetManager::new().await;
     let script_manager = ScriptManager::new().await;
 
-    let game = Game {
+    // Build the game first so we can allocate room IDs globally
+    let mut game = Game {
         save_version: 1,
         id: Uuid::new_v4(),
         name,
-        ecs: ecs,
-        worlds: vec![world],
+        ecs: Ecs::default(),
+        worlds: vec![],
         asset_manager,
         script_manager,
         dialogue_manager: DialogueManager::default(),
-        current_world_id: current_id,
+        current_world_id: WorldId(Uuid::nil()),
         game_map: GameMap::default(),
+        next_room_id: 0,
     };
+
+    let world = create_new_world(&mut game);
+    game.current_world_id = world.id;
+    game.worlds.push(world);
+
+    // Create the global Player entity
+    game.ecs.create_entity()
+        .with(Player)
+        .with(Global {})
+        .with(PhysicsBody)
+        .with(Name("Player".to_string()));
 
     // Save the game.
     if let Err(e) = save_game(&game) {
@@ -235,31 +243,30 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
 }
 
 /// Create a fresh world with a single default room.
-pub fn create_new_world(ecs: &mut Ecs) -> World {
+pub fn create_new_world(game: &mut Game) -> World {
     let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
-    let first_room = Room::default(ecs, DEFAULT_GRID_SIZE);
-    let room_id = first_room.id;
-    let starting_position = vec2(1.0, 1.0);
+    let room_id = game.allocate_room_id();
+    let first_room = Room::default(&mut game.ecs, room_id, DEFAULT_GRID_SIZE);
+    let room_origin = first_room.position;
 
-    let mut world = World {
+    let world = World {
         id,
         name: name.clone(),
         rooms: vec![first_room],
         current_room_id: None,
         starting_room_id: Some(room_id),
-        starting_position: Some(starting_position),
+        starting_position: Some(room_origin),
         meta: WorldMeta::default(),
         grid_size: DEFAULT_GRID_SIZE,
     };
 
-    let _player = ecs
+    let _spawn_point = game.ecs
         .create_entity()
-        .with(Player)
-        .with(Transform { position: starting_position, ..Default::default() })
-        .with(PhysicsBody)
+        .with(PlayerProxy)
+        .with(Transform { position: room_origin, ..Default::default() })
         .with(CurrentRoom(room_id))
-        .with(Name(format!("Player")))
+        .with(Name("Player Proxy".to_string()))
         .finish();
 
     world

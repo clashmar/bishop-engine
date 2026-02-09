@@ -24,8 +24,8 @@ inspector_module!(Interactable);
 
 /// Returns the best interactable entity candidate for the player in the `CurrentRoom` or `None`.
 pub fn find_best_interactable(ecs: &Ecs) -> Option<Entity> {
-    let player = ecs.get_player_entity();
-    let player_pos = ecs.get_player_position().position;
+    let player = ecs.get_player_entity()?;
+    let player_pos = ecs.get_player_transform()?.position;
 
     let player_room = ecs
         .get::<CurrentRoom>(player)
