@@ -13,7 +13,7 @@ use macroquad::prelude::*;
 use std::fmt;
 
 /// The animation component for an entity.
-#[ecs_component(post_create = post_create)]
+#[ecs_component(post_create = post_create, post_remove = post_remove)]
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Animation {
@@ -84,23 +84,39 @@ impl Animation {
     /// Populate `sprite_cache` for the current variant.
     /// Called when the variant folder changes or a new clip is added.
     pub async fn refresh_sprite_cache(&mut self, asset_manager: &mut AssetManager) {
+        // Decrement refs for old cache entries before clearing
+        for &sprite_id in self.sprite_cache.values() {
+            asset_manager.decrement_ref(sprite_id);
+        }
         self.sprite_cache.clear();
 
+        // Resolve and cache new sprite ids, incrementing refs
         for (clip_id, _) in &self.clips {
             let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
+            if sprite_id.0 != 0 {
+                asset_manager.increment_ref(sprite_id);
+            }
             self.sprite_cache.insert(clip_id.clone(), sprite_id);
         }
     }
 
-    /// Creates cache for a clip with a new SpriteId.
+    /// Updates cache for a clip with a new SpriteId, handling ref counting.
     pub fn update_cache_entry(
         &mut self,
         current_id: &ClipId,
         sprite_id: SpriteId,
+        asset_manager: &mut AssetManager,
     ) {
+        // Decrement ref for old sprite if present
+        if let Some(&old_id) = self.sprite_cache.get(current_id) {
+            asset_manager.decrement_ref(old_id);
+        }
+
         if sprite_id.0 != 0 {
-            self.sprite_cache
-                .insert(current_id.clone(), sprite_id);
+            asset_manager.increment_ref(sprite_id);
+            self.sprite_cache.insert(current_id.clone(), sprite_id);
+        } else {
+            self.sprite_cache.remove(current_id);
         }
     }
 }
@@ -241,9 +257,26 @@ pub async fn resolve_sprite_id(
 pub fn post_create(
     anim: &mut Animation,
     _entity: &Entity,
-    _ctx: &mut GameCtxMut,
+    ctx: &mut GameCtxMut,
 ) {
     anim.init_runtime();
+
+    // Increment refs for any pre-populated sprite_cache entries
+    for &sprite_id in anim.sprite_cache.values() {
+        ctx.asset_manager.increment_ref(sprite_id);
+    }
+}
+
+/// Cleans up when the component is removed from an entity.
+pub fn post_remove(
+    anim: &mut Animation,
+    _entity: &Entity,
+    ctx: &mut GameCtxMut,
+) {
+    // Decrement refs for all sprite_cache entries
+    for &sprite_id in anim.sprite_cache.values() {
+        ctx.asset_manager.decrement_ref(sprite_id);
+    }
 }
 
 /// Generates the content for animations.lua with built-in and optional custom clips.

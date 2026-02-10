@@ -1,4 +1,5 @@
 // engine_core/src/world/world.rs
+use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::tiles::tilemap::TileMap;
 use crate::world::room::*;
@@ -40,8 +41,15 @@ pub struct WorldMeta {
     /// Position on the game map.
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
-    /// Sprite of the world or None. 
+    /// Sprite of the world or None.
     pub sprite_id: Option<SpriteId>,
+}
+
+impl WorldMeta {
+    /// Sets the sprite, handling ref counting for the change.
+    pub fn set_sprite(&mut self, new_id: Option<SpriteId>, asset_manager: &mut AssetManager) {
+        asset_manager.change_sprite_option(&mut self.sprite_id, new_id);
+    }
 }
 
 impl World {

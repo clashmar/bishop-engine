@@ -40,11 +40,7 @@ impl InspectorModule for ScriptModule {
     fn removable(&self) -> bool { true }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
-        let store = game_ctx.ecs.get_store_mut::<Script>();
-        if let Some(comp) = store.get(entity) {
-            game_ctx.script_manager.unload(entity, comp.script_id);
-        }
-        store.remove(entity);
+        Ecs::remove_component::<Script>(game_ctx, entity);
     }
 
     fn draw(

@@ -244,11 +244,11 @@ where
         TOP_PADDING + field_count * (DEFAULT_FIELD_HEIGHT + SPACING)
     }
 
-    fn removable(&self) -> bool { 
-        self.removable 
+    fn removable(&self) -> bool {
+        self.removable
     }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
-        game_ctx.ecs.get_store_mut::<T>().remove(entity);
+        Ecs::remove_component::<T>(game_ctx, entity);
     }
 }

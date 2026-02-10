@@ -50,7 +50,7 @@ pub fn gui_sprite_picker(
                 let normalized = asset_manager.normalize_path(path);
                 match asset_manager.get_or_load(&normalized) {
                     Some(new_id) => {
-                        *id = new_id;
+                        asset_manager.change_sprite(id, new_id);
                         changed = true;
                     }
                     None => {
@@ -62,6 +62,7 @@ pub fn gui_sprite_picker(
     }
 
     if Button::new(remove_rect, "x").blocked(blocked).show() && id.0 != 0 {
+        asset_manager.decrement_ref(*id);
         *id = SpriteId(0);
         changed = true;
     }

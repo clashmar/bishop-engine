@@ -294,7 +294,7 @@ impl TilePalette {
         &mut self,
         asset_manager: &mut AssetManager,
     ) {
-        // Build TileDef
+        // Build TileDef components
         let mut comps = vec![
             TileComponent::Walkable(self.ui.walkable),
             TileComponent::Solid(self.ui.solid),
@@ -302,31 +302,31 @@ impl TilePalette {
         if self.ui.damage > 0.0 {
             comps.push(TileComponent::Damage(self.ui.damage));
         }
-        let def = TileDef {
-            sprite_id: self.ui.sprite_id,
-            components: comps,
-        };
 
-        // Overwrite the existing definition.
-        let entry = &self.entries[self.ui.edit_index];
-        asset_manager.tile_defs.insert(*entry, def);
+        // Get the existing entry id
+        let entry = self.entries[self.ui.edit_index];
 
-        // Update the palette entry.
-        self.entries[self.ui.edit_index] = *entry;
+        // Update sprite ref if it changed
+        asset_manager.update_tile_def_sprite(entry, self.ui.sprite_id);
+
+        // Update non-sprite fields
+        if let Some(def) = asset_manager.tile_defs.get_mut(&entry) {
+            def.components = comps;
+        }
     }
 
     pub async fn delete_tile(&mut self, idx: usize, asset_manager: &mut AssetManager) {
-        // Remove the definition from the world
+        // Remove the definition and decrement sprite ref
         let def_id = self.entries[idx];
-        asset_manager.tile_defs.remove(&def_id);
+        asset_manager.delete_tile_def(def_id);
 
-        // Remove palette entry and sprite id
+        // Remove palette entry
         self.entries.remove(idx);
 
         // Adjust selected index safely
         self.selected_index = self.entries.len().saturating_sub(1);
-        
-        // Re‑compute rows
+
+        // Re-compute rows
         self.rows = (self.entries.len() + self.columns - 1) / self.columns;
     }
 

@@ -50,8 +50,8 @@ impl InspectorModule for AnimationModule {
     fn removable(&self) -> bool { true }
 
     fn remove(&mut self, game_ctx: &mut GameCtxMut, entity: Entity) {
-        game_ctx.ecs.get_store_mut::<Animation>().remove(entity);
-        game_ctx.ecs.get_store_mut::<CurrentFrame>().remove(entity);
+        Ecs::remove_component::<Animation>(game_ctx, entity);
+        Ecs::remove_component::<CurrentFrame>(game_ctx, entity);
     }
 
     fn draw(

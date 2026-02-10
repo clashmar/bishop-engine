@@ -398,7 +398,7 @@ impl RoomEditor {
                         // Push a command only if the entity actually moved
                         if (final_pos - start_pos).length_squared() > 0.0 {
                             push_command(Box::new(MoveEntityCmd::new(
-                                entity, start_pos, final_pos,
+                                entity, room_id, start_pos, final_pos,
                             )));
                         }
                     }
@@ -443,6 +443,7 @@ impl RoomEditor {
 
             push_command(Box::new(MoveEntityCmd::new(
                 entity,
+                room_id,
                 old,
                 position.position,
             )));
@@ -489,7 +490,7 @@ impl RoomEditor {
                 }
 
                 if Controls::paste() {
-                    push_command(Box::new(PasteEntityCmd::new()));
+                    push_command(Box::new(PasteEntityCmd::new(room.id)));
                 }
 
                 if Controls::h() {

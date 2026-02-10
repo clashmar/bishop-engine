@@ -274,8 +274,10 @@ impl Inspector {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
                 if menu_button(remove_rect, remove_label, false) || Controls::delete() && !input_is_focused() {
+                    let room_id = game_ctx.cur_world.current_room_id.unwrap_or_default();
                     let command = DeleteEntityCmd {
                         entity,
+                        room_id,
                         saved: None,
                     };
                     push_command(Box::new(command));

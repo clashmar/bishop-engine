@@ -96,6 +96,30 @@ impl Ecs {
         }
     }
 
+    /// Remove a single component from an entity, calling its post_remove hook.
+    pub fn remove_component<T>(ctx: &mut GameCtxMut, entity: Entity)
+    where
+        T: Component + 'static,
+    {
+        let type_name = std::any::type_name::<T>()
+            .rsplit("::")
+            .next()
+            .unwrap_or("");
+
+        // Find the registry entry for this component type
+        let reg = inventory::iter::<ComponentRegistry>
+            .into_iter()
+            .find(|r| r.type_name == type_name);
+
+        if let Some(reg) = reg {
+            if (reg.has)(ctx.ecs, entity) {
+                let mut boxed = (reg.clone)(ctx.ecs, entity);
+                (reg.post_remove)(&mut *boxed, &entity, ctx);
+                (reg.remove)(ctx.ecs, entity);
+            }
+        }
+    }
+
     /// Return an immutable reference to the store for Component `T`.
     pub fn get_store<T>(&self) -> &ComponentStore<T>
     where
