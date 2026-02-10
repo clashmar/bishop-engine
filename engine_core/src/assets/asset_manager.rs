@@ -1,7 +1,6 @@
 // engine_core/src/assets/asset_manager.rs
 use crate::animation::animation_clip::Animation;
 use crate::storage::path_utils::assets_folder;
-use crate::lighting::glow::Glow;
 use crate::assets::sprite::*;
 use crate::game::game::Game;
 use crate::tiles::tile::*;
@@ -177,58 +176,16 @@ impl AssetManager {
             .map(|(id, path)| (*id, path.clone()))
             .collect();
 
-        // Reload all textures first (before animation cache refresh)
+        // Reload all textures first
         for (id, path) in sprites {
             let _ = game.asset_manager.reload_texture(&id, &path).await;
         }
 
-        // Initialize reference counts from existing data
-        Self::init_ref_counts(game);
-
-        // Load and initialize all animations (refresh_sprite_cache handles ref counting)
+        // Load and initialize all animations
         for animation in game.ecs.get_store_mut::<Animation>().data.values_mut() {
             animation.refresh_sprite_cache(&mut game.asset_manager).await;
             animation.init_runtime();
         }
-    }
-
-    /// Populates ref_counts from existing game data after loading.
-    fn init_ref_counts(game: &mut Game) {
-        game.asset_manager.ref_counts.clear();
-
-        // Count refs from tile_defs
-        for tile_def in game.asset_manager.tile_defs.values() {
-            if tile_def.sprite_id.0 != 0 {
-                *game.asset_manager.ref_counts.entry(tile_def.sprite_id).or_insert(0) += 1;
-            }
-        }
-
-        // Count refs from world sprites
-        for world in &game.worlds {
-            if let Some(id) = world.meta.sprite_id {
-                if id.0 != 0 {
-                    *game.asset_manager.ref_counts.entry(id).or_insert(0) += 1;
-                }
-            }
-        }
-
-        // Count refs from Sprite components
-        let sprite_store = game.ecs.get_store::<Sprite>();
-        for sprite in sprite_store.data.values() {
-            if sprite.sprite.0 != 0 {
-                *game.asset_manager.ref_counts.entry(sprite.sprite).or_insert(0) += 1;
-            }
-        }
-
-        // Count refs from Glow components
-        let glow_store = game.ecs.get_store::<Glow>();
-        for glow in glow_store.data.values() {
-            if glow.sprite_id.0 != 0 {
-                *game.asset_manager.ref_counts.entry(glow.sprite_id).or_insert(0) += 1;
-            }
-        }
-
-        // Note: Animation sprite_cache refs are handled by refresh_sprite_cache
     }
 
     /// Returns a path normalized relative to the game's assets folder.
@@ -346,9 +303,18 @@ impl AssetManager {
 
     /// Calculates the next sprite id.
     pub fn restore_next_sprite_id(&mut self) {
-        let used: HashSet<_> = self.sprite_id_to_path
+        let used: HashSet<_> = self
+            .sprite_id_to_path
             .keys()
-            .map(|sid| sid.0)
+            .filter_map(|sid| {
+                let id = sid.0;
+                if id == 0 {
+                    // Skip sentinel value 0
+                    None
+                } else {
+                    Some(id)
+                }
+            })
             .collect();
 
         let mut candidate = 1usize;

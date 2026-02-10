@@ -6,7 +6,7 @@ use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
 use crate::editor_assets::editor_assets::*;
 use crate::room::room_editor_rendering::*;
 use crate::gui::panels::panel_manager::*;
-use crate::commands::entity_commands::*;
+use crate::commands::room::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::ecs::transform::*;
@@ -256,7 +256,7 @@ impl RoomEditor {
                 }
             }
             RoomEditorMode::Scene => {
-                // TODO: Pick best camera for preview from room cameras
+                // TODO: Pick best camera for preview from room cameras and add tab through
                 let room_camera = get_room_camera(ecs, room_id, grid_size)
                     .expect("This room should have at least one camera.");
 
@@ -280,16 +280,7 @@ impl RoomEditor {
                     grid_size,
                 );
 
-                // Present room depending on view mode
-                if self.view_preview {
-                    render_system.present_game();
-                } else {
-                    set_default_camera();
-                    render_system.draw_pass(
-                        &render_system.final_comp_mat,
-                        &render_system.final_comp_rt.texture
-                    );
-                }
+                render_system.present_game();
 
                 if !self.view_preview {
                     set_camera(camera);

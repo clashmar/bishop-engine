@@ -1,7 +1,7 @@
 // editor/src/gui/inspector/inspector.rs
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::inspector::player_module::PlayerModule;
-use crate::commands::entity_commands::*;
+use crate::commands::room::*;
 use crate::editor_global::push_command;
 use crate::gui::menu_bar::menu_button;
 use crate::gui::gui_constants::*;

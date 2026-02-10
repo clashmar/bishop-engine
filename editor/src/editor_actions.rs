@@ -1,22 +1,20 @@
 // editor/src/editor_actions.rs
-use crate::gui::panels::diagnostics_panel::DIAGNOSTICS_PANEL;
-use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
-use crate::commands::game_editor_commands::RenameGameCmd;
-use crate::gui::panels::console_panel::CONSOLE_PANEL;
-use crate::editor_actions::world::world::WorldId;
 use crate::world::world_editor::WorldEditor;
 use crate::game::game_editor::GameEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::ui::widgets::input_is_focused;
 use crate::storage::export::export_game;
 use crate::storage::editor_storage::*;
-use crate::ecs::transform::Transform;
+use crate::commands::world::*;
+use crate::commands::game::*;
 use crate::gui::menu_bar::*;
 use crate::editor_global::*;
 use crate::gui::prompts::*;
 use crate::editor::Editor;
+use crate::gui::panels::*;
 use crate::gui::modal::*;
 use crate::editor::*;
+use engine_core::engine_global::set_game_name;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::controls::controls::Controls;
 use engine_core::storage::path_utils::*;
@@ -113,7 +111,7 @@ impl Editor {
                                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                                         match load_game_by_name(name).await {
                                             Ok(game) => {
-                                                self.reset(game);
+                                                self.reset(game).await;
                                                 self.toast = Some(Toast::new(
                                                     &format!("Loaded '{}'", name),
                                                     2.5,
@@ -331,7 +329,7 @@ impl Editor {
                             }
                             // Create the new game
                             let new_game = create_new_game(name.clone()).await;
-                            self.reset(new_game);
+                            self.reset(new_game).await;
                             self.modal.close();
                             return Some(ModalResult::String(name));
                         }
@@ -405,7 +403,12 @@ impl Editor {
 
             if let Some(result) = world_settings_opt {
                 if let Some(new_grid_size) = result.grid_size {
-                    self.apply_grid_size_change(result.id, new_grid_size);
+                    let old_grid_size = self.game.get_world_mut(result.id).grid_size;
+                    push_command(Box::new(ChangeGridSizeCmd::new(
+                        result.id,
+                        old_grid_size,
+                        new_grid_size,
+                    )));
                 }
                 self.modal.close();
             }
@@ -413,6 +416,7 @@ impl Editor {
         None
     }
 
+    // Updates and draws the toast to the screen.
     pub fn draw_toast(&mut self) {
         if let Some(toast) = &mut self.toast {
             toast.update();
@@ -422,12 +426,39 @@ impl Editor {
         }
     }
 
-    pub fn reset(&mut self, game: Game) {
+    pub async fn reset(&mut self, game: Game) {
+        // Update global game name for file system
+        set_game_name(game.name.clone());
+
+        // Resets the global services (command queue, clipboard etc)
+        reset_services();
+
+        let game = self.init_game_for_editor(game).await;
+
         *self = Self {
             game: game,
             camera: std::mem::take(&mut self.camera),
             ..Self::default()
         };
+
+        // Render system always needs a resize after switch
+        let cur_screen = (screen_width() as u32, screen_height() as u32);
+        self.render_system.resize(cur_screen.0, cur_screen.1)
+    }
+
+    // Returns an initialized game for the editor.
+    pub async fn init_game_for_editor(&mut self, game: Game) -> Game {
+        let mut game = with_lua_async(|lua| {
+            Box::pin(async move {
+                let mut game = game;
+                game.initialize(lua).await;
+                game
+            })
+        }).await;
+
+        self.game_editor.init_camera(&mut self.camera, &mut game);
+
+        game
     }
 
     /// Returns `true` and creates a toast notification if a duplicate game name exists.
@@ -440,53 +471,11 @@ impl Editor {
 
         duplicate_exists
     }
-
-    /// Applies a grid size change to the specified world, scaling room and entity positions.
-    fn apply_grid_size_change(
-        &mut self,
-        world_id: WorldId,
-        new_grid_size: f32,
-    ) {
-        let world = self.game.get_world_mut(world_id);
-        let old_grid_size = world.grid_size;
-
-        if (new_grid_size - old_grid_size).abs() < 0.001 {
-            return;
-        }
-
-        let scale_factor = new_grid_size / old_grid_size;
-        world.grid_size = new_grid_size;
-
-        // Scale room positions
-        for room in &mut world.rooms {
-            room.position *= scale_factor;
-        }
-
-        // Scale entity positions
-        let pos_store = self.game.ecs.get_store_mut::<Transform>();
-        for (_entity, transform) in &mut pos_store.data {
-            transform.position *= scale_factor;
-        }
-
-        self.toast = Some(Toast::new(
-            &format!("World grid size changed to {new_grid_size}"),
-            2.5,
-        ));
-    }
 }
 
 thread_local! {
     pub static NEW_GAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
-}
-
-thread_local! {
     pub static RENAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
-}
-
-thread_local! {
     pub static SAVE_AS_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
-}
-
-thread_local! {
     pub static WORLD_SETTINGS_RESULT: RefCell<Option<WorldSettingsResult>> = RefCell::new(None);
 }

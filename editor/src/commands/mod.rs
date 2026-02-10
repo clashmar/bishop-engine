@@ -1,3 +1,5 @@
+// editor/src/commands/mod.rs
 pub mod editor_command_manager;
-pub mod entity_commands;
-pub mod game_editor_commands;
+pub mod game;
+pub mod room;
+pub mod world;

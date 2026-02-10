@@ -84,8 +84,8 @@ impl EditorCameraController {
     /// Reset a `Camera2D` so that the whole room fits the screen.
     pub fn reset_room_editor_camera(camera: &mut Camera2D, room: &Room, grid_size: f32) {
         let map_size = vec2(
-            room.variants[0].tilemap.width as f32,
-            room.variants[0].tilemap.height as f32,
+            room.current_variant().tilemap.width as f32,
+            room.current_variant().tilemap.height as f32,
         );
         *camera = Self::camera_for_room(map_size, room.position, grid_size);
     }

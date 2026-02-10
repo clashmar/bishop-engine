@@ -23,7 +23,7 @@ use engine_core::world::room::*;
 use engine_core::game::game::*;
 use std::io;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EditorMode {
     Game,
     World(WorldId),
@@ -60,14 +60,6 @@ impl Editor {
             std::process::exit(0);
         };
 
-        let mut game = with_lua_async(|lua| {
-            Box::pin(async move {
-                let mut game = game;
-                game.initialize(lua).await;
-                game
-            })
-        }).await;
-
         // Register all panels
         with_panel_manager(|panel_manager| {
             panel_manager.register_all_panels();
@@ -82,8 +74,7 @@ impl Editor {
             }
         };
 
-        editor.game_editor.init_camera(&mut editor.camera, &mut game);
-        editor.game = game;
+        editor.game = editor.init_game_for_editor(game).await;
 
         // Give the palette to the tilemap editor
         editor.room_editor.tilemap_editor.tilemap_panel.palette = palette;

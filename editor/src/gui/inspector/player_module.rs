@@ -32,7 +32,7 @@ impl InspectorModule for PlayerModule {
     }
 
     fn height(&self) -> f32 {
-        30.0
+        28.0
     }
 
     fn title(&self) -> &str {

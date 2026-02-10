@@ -1,5 +1,8 @@
+use crate::commands::room::{SetParentCmd, RemoveParentCmd};
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::room::room_editor::RoomEditor;
+use crate::editor_global::push_command;
+use crate::editor::EditorMode;
 use crate::ecs::component::Name;
 use crate::ecs::transform::Transform;
 use crate::ecs::entity::*;
@@ -160,7 +163,7 @@ impl PanelDefinition for HierarchyPanel {
         );
         y += HEADER_HEIGHT;
 
-        // Global entities
+        // Global entities use EditorMode::Game for undo scope
         for entity in global_entities {
             draw_entity_tree(
                 entity,
@@ -174,6 +177,7 @@ impl PanelDefinition for HierarchyPanel {
                 ecs,
                 scroll_range,
                 blocked,
+                EditorMode::Game,
             );
         }
 
@@ -211,7 +215,8 @@ impl PanelDefinition for HierarchyPanel {
             }
         }
 
-        // Room entities
+        // Room entities use EditorMode::Room for undo scope
+        let room_mode = cur_room_id.map(EditorMode::Room).unwrap_or(EditorMode::Game);
         for entity in room_entities {
             draw_entity_tree(
                 entity,
@@ -225,6 +230,7 @@ impl PanelDefinition for HierarchyPanel {
                 ecs,
                 scroll_range,
                 blocked,
+                room_mode,
             );
         }
 
@@ -302,6 +308,7 @@ fn draw_entity_tree(
     ecs: &mut Ecs,
     scroll_range: f32,
     blocked: bool,
+    mode: EditorMode,
 ) {
     // Width that respects the scrollbar
     let usable_w = inner_width(panel_rect, scroll_range);
@@ -313,7 +320,11 @@ fn draw_entity_tree(
         ROW_HEIGHT,
     );
 
-    draw_block(row_rect, panel_rect, || {
+    // Track pending parent action to execute after drawing
+    let mut pending_set_parent: Option<(Entity, Entity)> = None;
+
+    // Check visibility before drawing
+    if row_rect.y >= panel_rect.y && row_rect.y + row_rect.h <= panel_rect.y + panel_rect.h {
         let has_children = has_children(ecs, entity);
         let is_expanded = expanded.contains(&entity);
         let mouse: Vec2 = mouse_position().into();
@@ -334,7 +345,12 @@ fn draw_entity_tree(
         if has_children {
             let btn = Rect::new(row_rect.x, row_rect.y, 14.0, ROW_HEIGHT);
             let symbol = if is_expanded { "-" } else { "+" };
-            let clicked = Button::new(btn, symbol).plain().text_color(WHITE).hover_color(GRAY).blocked(blocked).show();
+            let clicked = Button::new(btn, symbol)
+                .plain()
+                .text_color(WHITE)
+                .hover_color(GRAY)
+                .blocked(blocked)
+                .show();
             if !blocked && clicked {
                 if is_expanded {
                     expanded.remove(&entity);
@@ -367,7 +383,7 @@ fn draw_entity_tree(
                         Color::new(0.3, 0.7, 0.3, 0.3),
                     );
                     if is_mouse_button_released(MouseButton::Left) {
-                        set_parent(ecs, dragged, entity);
+                        pending_set_parent = Some((dragged, entity));
                         expanded.insert(entity);
                         *dragging = None;
                     }
@@ -383,7 +399,13 @@ fn draw_entity_tree(
             14.0,
             WHITE,
         );
-    });
+    }
+
+    // Execute pending set_parent action as undoable command
+    if let Some((child, new_parent)) = pending_set_parent {
+        let old_parent = get_parent(ecs, child);
+        push_command(Box::new(SetParentCmd::new(child, new_parent, old_parent, mode)));
+    }
 
     *y += ROW_HEIGHT;
 
@@ -402,6 +424,7 @@ fn draw_entity_tree(
                 ecs,
                 scroll_range,
                 blocked,
+                mode,
             );
         }
     }
@@ -412,7 +435,8 @@ fn draw_entity_tree(
             if dragged == entity {
                 let mouse: Vec2 = mouse_position().into();
                 if !panel_rect.contains(mouse) && is_mouse_button_released(MouseButton::Left) {
-                    remove_parent(ecs, dragged);
+                    let old_parent = get_parent(ecs, dragged);
+                    push_command(Box::new(RemoveParentCmd::new(dragged, old_parent, mode)));
                     *dragging = None;
                 }
             }

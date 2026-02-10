@@ -28,7 +28,7 @@ pub struct World {
     pub starting_room_id: Option<RoomId>,
     #[serde_as(as = "Option<FromInto<[f32; 2]>>")]
     pub starting_position: Option<Vec2>,
-    /// Meta information about the world.
+    /// Meta information about the world to display the world in the editor/game.
     pub meta: WorldMeta,
     /// Grid size in pixels for this world.
     #[serde(default = "default_grid_size")]

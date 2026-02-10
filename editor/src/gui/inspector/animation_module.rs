@@ -141,7 +141,12 @@ impl InspectorModule for AnimationModule {
 
         y += MARGIN + WIDGET_PADDING;
 
-        // Variant picker (before clip selector so it appears first)
+        // Return if there is no current clip
+        if animation.current.is_none() {
+            return;
+        }
+
+        // Variant picker
         let has_variant = !animation.variant.0.as_os_str().is_empty();
         let variant_btn_w = full_w / 2.0;
         let sprite_btn = Rect::new(rect.x + WIDGET_PADDING, y, variant_btn_w, MARGIN);
@@ -176,11 +181,6 @@ impl InspectorModule for AnimationModule {
         );
 
         y += MARGIN + WIDGET_PADDING;
-
-        // Return if there is no current clip
-        if animation.current.is_none() {
-            return;
-        }
 
         // Calculate clip selector dropdown here
         let clip_dropdown_rect = Rect::new(rect.x + WIDGET_PADDING, y, full_w, BTN_HEIGHT);

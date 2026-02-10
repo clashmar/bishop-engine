@@ -40,6 +40,16 @@ thread_local! {
     pub static EDITOR_SERVICES: Rc<EditorServices> = EditorServices::new();
 }
 
+/// Reset the global editor services.
+pub fn reset_services() {
+    EDITOR_SERVICES.with(|services| {
+        *services.command_manager.borrow_mut() = EditorCommandManager::new();
+        services.pending_undo.set(false);
+        services.pending_redo.set(false);
+        *services.entity_clipboard.borrow_mut() = None;
+    });
+}
+
 /// Store the `Editor` in global services.
 pub fn set_editor(editor: Editor) {
     EDITOR_SERVICES.with(|services| {

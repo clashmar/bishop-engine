@@ -8,6 +8,13 @@ pub trait EditorCommand: Debug {
     fn execute(&mut self);
     fn undo(&mut self);
     fn mode(&self) -> EditorMode;
+
+    /// Returns true if this command can be undone/redone in the given mode.
+    /// Default implementation requires exact mode match.
+    /// Override for commands that should apply across multiple modes.
+    fn applies_in_mode(&self, current_mode: EditorMode) -> bool {
+        self.mode() == current_mode
+    }
 }
 
 /// Stores and manages undo/redo stacks.
@@ -41,9 +48,9 @@ impl EditorCommandManager {
         // Temp buffer
         let mut buffer: Vec<Box<dyn EditorCommand>> = Vec::new();
 
-        // Find the first command that matches the current mode
+        // Find the first command that applies to the current mode
         while let Some(mut command) = self.undo_stack.pop() {
-            if command.mode() == current_mode {
+            if command.applies_in_mode(current_mode) {
                 command.undo();
                 self.redo_stack.push(command);
                 break;
@@ -67,9 +74,9 @@ impl EditorCommandManager {
         // Temp buffer
         let mut buffer: Vec<Box<dyn EditorCommand>> = Vec::new();
 
-        // Find the first command that matches the current mode
+        // Find the first command that applies to the current mode
         while let Some(mut cmd) = self.redo_stack.pop() {
-            if cmd.mode() == current_mode {
+            if cmd.applies_in_mode(current_mode) {
                 cmd.execute();
                 self.undo_stack.push(cmd);
                 break;
