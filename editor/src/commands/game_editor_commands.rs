@@ -181,7 +181,7 @@ impl EditWorldCmd {
                 world.name = name.to_owned();
             }
             if let Some(sprite_opt) = sprite {
-                world.meta.sprite_id = sprite_opt;
+                world.meta.set_sprite(sprite_opt, &mut game.asset_manager);
             }
         }
     }

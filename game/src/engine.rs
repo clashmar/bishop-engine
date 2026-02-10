@@ -174,7 +174,6 @@ impl Engine {
         render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam, grid_size);
 
         // Draw diagnostics overlay after game rendering (playtest only)
-        drop(game_state);
         if self.is_playtest {
             self.diagnostics.draw();
         }

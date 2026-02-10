@@ -1,24 +1,26 @@
 // engine_core/src/lighting/glow.rs
 use serde_with::{serde_as, FromInto};
 use crate::assets::sprite::SpriteId;
+use crate::game::game::GameCtxMut;
+use crate::ecs::entity::Entity;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use crate::inspector_module;
 use reflect_derive::Reflect;
 use macroquad::prelude::*;
 
-/// A single glow source.  
-#[ecs_component]
+/// A single glow source.
+#[ecs_component(post_create = post_create, post_remove = post_remove)]
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, Reflect)]
 #[serde(default)]
 pub struct Glow {
     #[serde_as(as = "FromInto<[f32; 3]>")]
-    pub color: Vec3,              
+    pub color: Vec3,
     pub intensity: f32,
     pub brightness: f32,
     pub emission: f32,
-    #[widget("png")]          
+    #[widget("png")]
     pub sprite_id: SpriteId,
 }
 
@@ -34,4 +36,12 @@ impl Default for Glow {
             sprite_id: SpriteId(0),
         }
     }
+}
+
+fn post_create(glow: &mut Glow, _entity: &Entity, ctx: &mut GameCtxMut) {
+    ctx.asset_manager.increment_ref(glow.sprite_id);
+}
+
+fn post_remove(glow: &mut Glow, _entity: &Entity, ctx: &mut GameCtxMut) {
+    ctx.asset_manager.decrement_ref(glow.sprite_id);
 }

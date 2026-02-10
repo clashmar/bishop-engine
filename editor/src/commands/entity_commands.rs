@@ -2,20 +2,22 @@
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
 use crate::editor::EditorMode;
-use engine_core::ecs::transform::update_entity_position;
 use crate::EDITOR_SERVICES;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::with_editor;
+use engine_core::ecs::transform::update_entity_position;
 use engine_core::ecs::component::comp_type_name;
 use engine_core::world::room::RoomId;
 use engine_core::ecs::capture::*;
 use std::collections::HashMap;
 use macroquad::prelude::*;
+use engine_core::*;
 
 #[derive(Debug)]
 pub struct DeleteEntityCmd {
     pub entity: Entity,
+    pub room_id: RoomId,
     pub saved: Option<Vec<(Entity, Vec<(String, String)>)>>,
 }
 
@@ -37,12 +39,13 @@ impl EditorCommand for DeleteEntityCmd {
                 // Restore every entity and its components
                 restore_subtree(ctx, &saved);
                 editor.room_editor.set_selected_entity(Some(self.entity));
+                onscreen_info!("undo delete")
             });
         }
     }
 
-    fn mode(&self) -> EditorMode { 
-        EditorMode::Room(RoomId::default())
+    fn mode(&self) -> EditorMode {
+        EditorMode::Room(self.room_id)
     }
 }
 
@@ -57,6 +60,7 @@ pub fn copy_entity(ecs: &mut Ecs, entity: Entity) {
 /// Creates a new entity from the entity clipboard.
 #[derive(Debug)]
 pub struct PasteEntityCmd {
+    room_id: RoomId,
     /// The entity that was created by the most recent paste.
     id_map: Option<HashMap<Entity, Entity>>,
     /// The component snapshot that was taken the first time the command ran.
@@ -64,8 +68,9 @@ pub struct PasteEntityCmd {
 }
 
 impl PasteEntityCmd {
-    pub fn new() -> Self {
-        Self { 
+    pub fn new(room_id: RoomId) -> Self {
+        Self {
+            room_id,
             id_map: None,
             snapshot: None,
          }
@@ -158,8 +163,8 @@ impl EditorCommand for PasteEntityCmd {
         }
     }
 
-    fn mode(&self) -> EditorMode { 
-        EditorMode::Room(RoomId::default())
+    fn mode(&self) -> EditorMode {
+        EditorMode::Room(self.room_id)
     }
 }
 
@@ -167,15 +172,17 @@ impl EditorCommand for PasteEntityCmd {
 #[derive(Debug)]
 pub struct MoveEntityCmd {
     entity: Entity,
+    room_id: RoomId,
     from: Vec2,
     to: Vec2,
     executed: bool,
 }
 
 impl MoveEntityCmd {
-    pub fn new(entity: Entity, from: Vec2, to: Vec2) -> Self {
+    pub fn new(entity: Entity, room_id: RoomId, from: Vec2, to: Vec2) -> Self {
         Self {
             entity,
+            room_id,
             from,
             to,
             executed: false,
@@ -202,7 +209,7 @@ impl EditorCommand for MoveEntityCmd {
         self.executed = false;
     }
 
-    fn mode(&self) -> EditorMode { 
-        EditorMode::Room(RoomId::default())
+    fn mode(&self) -> EditorMode {
+        EditorMode::Room(self.room_id)
     }
 }

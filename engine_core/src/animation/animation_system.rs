@@ -69,7 +69,7 @@ pub async fn update_animation_sytem(
         let (sprite_id, resolved) = get_sprite_id(animation, current_id, asset_manager).await;
 
         if resolved {
-            animation.update_cache_entry(current_id, sprite_id);
+            animation.update_cache_entry(current_id, sprite_id, asset_manager);
         }
 
         let Some(clip) = animation.clips.get(current_id) else { continue };
