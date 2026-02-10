@@ -1,7 +1,7 @@
 // editor/src/game/game_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use crate::commands::game_editor_commands::*;
+use crate::commands::game::*;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::ModeInfo;
@@ -478,7 +478,7 @@ impl GameEditor {
         let center = (min + max) * 0.5;
         let size = max - min;
 
-        // Get the zoom for the whole area 
+        // Get the zoom for the whole area
         let zoom = EditorCameraController::zoom_for_size(
             size, 
             2.0, 

@@ -1,11 +1,10 @@
 // engine_core/src/lighting/render_system.rs
 use macroquad::{miniquad::{BlendFactor, BlendState, BlendValue, Equation}, prelude::*};
-use crate::{
-    assets::asset_manager::AssetManager, camera::game_camera::*, lighting::{
-        glow::Glow, 
-        light::Light, 
-    }, shaders::shaders::*
-};
+use crate::assets::asset_manager::AssetManager;
+use crate::camera::game_camera::*; 
+use crate::lighting::light::Light;
+use crate::lighting::glow::Glow;
+use crate::shaders::shaders::*;
 
 /// Max lights per layer.
 pub const MAX_LIGHTS: usize = 10;

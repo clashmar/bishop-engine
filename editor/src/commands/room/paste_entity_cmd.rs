@@ -1,4 +1,4 @@
-// editor/src/commands/entity_commands.rs
+// editor/src/commands/room/paste_entity_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
 use crate::editor::EditorMode;
@@ -6,58 +6,11 @@ use crate::EDITOR_SERVICES;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::with_editor;
-use engine_core::ecs::transform::update_entity_position;
 use engine_core::ecs::component::comp_type_name;
 use engine_core::world::room::RoomId;
-use engine_core::ecs::capture::*;
 use std::collections::HashMap;
-use macroquad::prelude::*;
-use engine_core::*;
 
-#[derive(Debug)]
-pub struct DeleteEntityCmd {
-    pub entity: Entity,
-    pub room_id: RoomId,
-    pub saved: Option<Vec<(Entity, Vec<(String, String)>)>>,
-}
-
-impl EditorCommand for DeleteEntityCmd {
-    fn execute(&mut self) {
-        // Capture components before deleting
-        with_editor(|editor| {
-            let ctx = &mut editor.game.ctx_mut();
-            self.saved = Some(capture_subtree(ctx.ecs, self.entity));
-            Ecs::remove_entity(ctx, self.entity);
-            editor.room_editor.set_selected_entity(None);
-        });
-    }
-
-    fn undo(&mut self) {
-        if let Some(saved) = self.saved.take() {
-            with_editor(|editor| {
-                let ctx = &mut editor.game.ctx_mut();
-                // Restore every entity and its components
-                restore_subtree(ctx, &saved);
-                editor.room_editor.set_selected_entity(Some(self.entity));
-                onscreen_info!("undo delete")
-            });
-        }
-    }
-
-    fn mode(&self) -> EditorMode {
-        EditorMode::Room(self.room_id)
-    }
-}
-
-/// Copy a snapshot of the entity and its children to the global clipboard.
-pub fn copy_entity(ecs: &mut Ecs, entity: Entity) {
-    let snapshot = capture_subtree(ecs, entity);
-    EDITOR_SERVICES.with(|s| {
-        *s.entity_clipboard.borrow_mut() = Some(snapshot);
-    });
-}
-
-/// Creates a new entity from the entity clipboard.
+/// Undo-able command for pasting an entity from the clipboard.
 #[derive(Debug)]
 pub struct PasteEntityCmd {
     room_id: RoomId,
@@ -73,7 +26,7 @@ impl PasteEntityCmd {
             room_id,
             id_map: None,
             snapshot: None,
-         }
+        }
     }
 }
 
@@ -136,7 +89,7 @@ impl EditorCommand for PasteEntityCmd {
                         }
                     }
 
-                    // Run any post‑create logic the component may have
+                    // Run any post-create logic the component may have
                     (component_reg.post_create)(&mut *boxed, &new_id, ctx);
                     // Insert it into the world under the new id
                     (component_reg.inserter)(ctx.ecs, new_id, boxed);
@@ -161,52 +114,6 @@ impl EditorCommand for PasteEntityCmd {
                 }
             }
         }
-    }
-
-    fn mode(&self) -> EditorMode {
-        EditorMode::Room(self.room_id)
-    }
-}
-
-/// Undo-able move‑entity command.
-#[derive(Debug)]
-pub struct MoveEntityCmd {
-    entity: Entity,
-    room_id: RoomId,
-    from: Vec2,
-    to: Vec2,
-    executed: bool,
-}
-
-impl MoveEntityCmd {
-    pub fn new(entity: Entity, room_id: RoomId, from: Vec2, to: Vec2) -> Self {
-        Self {
-            entity,
-            room_id,
-            from,
-            to,
-            executed: false,
-        }
-    }
-}
-
-impl EditorCommand for MoveEntityCmd {
-    fn execute(&mut self) {
-        // Called the first time
-        with_editor(|editor| {
-            let ecs = &mut editor.game.ecs;
-            update_entity_position(ecs, self.entity, self.to);
-        });
-        self.executed = true;
-    }
-
-    fn undo(&mut self) {
-        // Restore the old position
-        with_editor(|editor| {
-            let ecs = &mut editor.game.ecs;
-            update_entity_position(ecs, self.entity, self.from);
-        });
-        self.executed = false;
     }
 
     fn mode(&self) -> EditorMode {
