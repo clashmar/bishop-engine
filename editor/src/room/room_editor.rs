@@ -77,6 +77,7 @@ pub struct RoomEditor {
     pub create_entity_requested: bool,
     pub request_play: bool,
     pub view_preview: bool,
+    preview_camera_id: Option<usize>,
 }
 
 impl RoomEditor {
@@ -98,6 +99,7 @@ impl RoomEditor {
             dragging: false,
             drag_start_position: None,
             initialized: false,
+            preview_camera_id: None,
             create_entity_requested: false,
             request_play: false,
             view_preview: false,
@@ -208,7 +210,7 @@ impl RoomEditor {
             }
         }
 
-        self.handle_shortcuts(camera, room, grid_size);
+        self.handle_shortcuts(camera, room, grid_size, ecs);
     }
 
     pub async fn draw(
@@ -256,12 +258,10 @@ impl RoomEditor {
                 }
             }
             RoomEditorMode::Scene => {
-                // TODO: Pick best camera for preview from room cameras and add tab through
-                let room_camera = get_room_camera(ecs, room_id, grid_size)
-                    .expect("This room should have at least one camera.");
+                let room_camera = get_next_room_camera(ecs, room_id, grid_size, self.preview_camera_id);
 
-                let render_cam = if self.view_preview {
-                    &room_camera.camera
+                let render_cam = if self.view_preview && room_camera.is_some() {
+                    room_camera.as_ref().map(|c| &c.camera).unwrap_or(camera)
                 } else {
                     camera
                 };
@@ -307,7 +307,9 @@ impl RoomEditor {
         }
 
         // Scene UI
-        self.draw_ui(&mut game_ctx, camera);
+        if !self.view_preview {
+            self.draw_ui(&mut game_ctx, camera);
+        }
     }
 
     /// Handles mouse selection / movement.
@@ -447,7 +449,7 @@ impl RoomEditor {
         self.inspector.set_target(entity);
     }
 
-    fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &mut Room, grid_size: f32) {
+    fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &Room, grid_size: f32, ecs: &Ecs) {
         if input_is_focused() {
             return;
         }
@@ -478,6 +480,17 @@ impl RoomEditor {
             RoomEditorMode::Scene => {
                 if Controls::v() {
                     self.view_preview = !self.view_preview;
+                    if self.view_preview {
+                        let first_camera = get_next_room_camera(ecs, room.id, grid_size, None);
+                        self.preview_camera_id = first_camera.map(|c| c.id);
+                    } else {
+                        self.preview_camera_id = None;
+                    }
+                }
+
+                if self.view_preview && Controls::tab() {
+                    let next_camera = get_next_room_camera(ecs, room.id, grid_size, self.preview_camera_id);
+                    self.preview_camera_id = next_camera.map(|c| c.id);
                 }
 
                 if Controls::paste() {
@@ -533,7 +546,8 @@ impl RoomEditor {
         self.selected_entity = None;
         self.initialized = false;
         self.request_play = false;
-        self.view_preview = false
+        self.view_preview = false;
+        self.preview_camera_id = None;
     }
 }
 

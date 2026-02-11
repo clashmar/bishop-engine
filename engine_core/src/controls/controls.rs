@@ -97,6 +97,10 @@ impl Controls {
     pub fn f3() -> bool {
         is_key_pressed(KeyCode::F3) && modifier_not_pressed()
     }
+
+    pub fn tab() -> bool {
+        is_key_pressed(KeyCode::Tab) && modifier_not_pressed()
+    }
 }
 
 fn modifier_not_pressed() -> bool {

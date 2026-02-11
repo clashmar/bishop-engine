@@ -265,21 +265,23 @@ impl Editor {
     }
 
     async fn draw_ui(&mut self) {
-        set_default_camera();
-
-        // Draw all panels
-        with_panel_manager(|panel_manager| {
-            panel_manager.update_and_draw(self.mode, self);
-        });
-
-        // Global menu options
-        self.draw_menu_bar().await;
-
-        // Draws and handles result of modal
-        if let Some(_) = self.handle_modal().await {
-            self.modal.close();
+        if !self.room_editor.view_preview {
+            set_default_camera();
+    
+            // Draw all panels
+            with_panel_manager(|panel_manager| {
+                panel_manager.update_and_draw(self.mode, self);
+            });
+    
+            // Global menu options
+            self.draw_menu_bar().await;
+    
+            // Draws and handles result of modal
+            if let Some(_) = self.handle_modal().await {
+                self.modal.close();
+            }
+    
+            self.draw_toast();
         }
-
-        self.draw_toast();
     }
 }
