@@ -51,7 +51,7 @@ impl ModeInfo for RoomEditorMode {
     fn icon(&self) -> &'static Texture2D {
         match self {
             RoomEditorMode::Scene => &ENTITY_ICON,
-            RoomEditorMode::Tilemap => &TILE_ICON,
+            RoomEditorMode::Tilemap => &GRID_ICON,
         }
     }
     fn shortcut(self) -> Option<fn() -> bool> {
@@ -161,6 +161,7 @@ impl RoomEditor {
                     &other_bounds,
                     ecs,
                     grid_size,
+                    room_id,
                 ).await;
             }
             RoomEditorMode::Scene => {
@@ -249,6 +250,7 @@ impl RoomEditor {
                     exits,
                     asset_manager,
                     room.position,
+                    room.size,
                     grid_size,
                 ).await;
 
@@ -515,7 +517,7 @@ impl RoomEditor {
     pub fn is_mouse_over_ui(&self) -> bool {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || self.inspector.is_mouse_over() // Inspector has its own check
+        || self.inspector.is_mouse_over()
         || is_dropdown_open()
         || is_modal_open()
         || is_mouse_over_panel()
@@ -548,6 +550,11 @@ impl RoomEditor {
         self.request_play = false;
         self.view_preview = false;
         self.preview_camera_id = None;
+    }
+
+    /// Takes any pending toast message from the room/tilemap editor.
+    pub fn take_pending_toast(&mut self) -> Option<&'static str> {
+        self.tilemap_editor.take_pending_toast()
     }
 }
 

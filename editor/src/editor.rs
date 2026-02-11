@@ -145,14 +145,17 @@ impl Editor {
                         .find(|w| w.id == self.game.current_world_id)
                         .expect("Current world id not present in game.");
 
-                    // Returns true if escaped
                     self.room_editor.update(
-                        &mut self.camera, 
+                        &mut self.camera,
                         room_id,
                         &mut self.game.ecs,
                         current_world,
                         &mut self.game.asset_manager,
                     ).await;
+
+                    if let Some(msg) = self.room_editor.take_pending_toast() {
+                        self.toast = Some(Toast::new(msg, 2.5));
+                    }
 
                     collider_system::update_colliders_from_sprites(
                         &mut self.game.ecs,

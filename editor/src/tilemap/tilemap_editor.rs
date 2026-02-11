@@ -1,10 +1,11 @@
 // editor/src/tilemap/tilemap_editor.rs
-use crate::gui::ui_element::DynamicTilemapUiElement;
 use crate::tilemap::tilemap_panel::TilemapPanel;
 use crate::assets::asset_manager::AssetManager;
 use crate::gui::menu_bar::draw_top_panel_full;
-use crate::gui::resize_button::ResizeButton;
+use crate::editor_global::push_command;
+use crate::tilemap::resize_handle::*;
 use crate::tiles::tilemap::TileMap;
+use crate::commands::room::*;
 use crate::ecs::ecs::Ecs;
 use engine_core::world::world::GridPos;
 use engine_core::world::room::*;
@@ -17,23 +18,27 @@ pub enum TilemapEditorMode {
 
 pub struct TileMapEditor {
     mode: TilemapEditorMode,
-    dynamic_ui: Vec<Box<dyn DynamicTilemapUiElement>>,
-    pub tilemap_panel: TilemapPanel, 
+    resize_handles: Vec<ResizeHandle>,
+    active_handle_index: Option<usize>,
+    preview_valid: bool,
+    toast: Option<&'static str>,
+    pub tilemap_panel: TilemapPanel,
     ui_was_clicked: bool,
-    initialized: bool, 
+    initialized: bool,
 }
 
-impl TileMapEditor  {
+impl TileMapEditor {
     pub fn new() -> Self {
-        let editor = Self {
+        Self {
             mode: TilemapEditorMode::Tiles,
-            dynamic_ui: Vec::new(),
+            resize_handles: Vec::new(),
+            active_handle_index: None,
+            preview_valid: true,
+            toast: None,
             tilemap_panel: TilemapPanel::new(),
             ui_was_clicked: false,
             initialized: false,
-        };
-
-        editor
+        }
     }
 
     pub async fn update(
@@ -42,8 +47,9 @@ impl TileMapEditor  {
         camera: &mut Camera2D,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
-        ecs: &mut Ecs,
+        _ecs: &mut Ecs,
         grid_size: f32,
+        room_id: RoomId,
     ) {
         if !self.initialized {
             self.ui_was_clicked = true; // Stop any initial tile placements
@@ -52,27 +58,47 @@ impl TileMapEditor  {
 
         self.tilemap_panel.update(asset_manager).await;
 
-        self.dynamic_ui.clear();
+        // Only rebuild handles when not dragging (to preserve drag state)
+        if self.active_handle_index.is_none() {
+            let idx = room.current_variant_index();
+            self.resize_handles = ResizeHandle::build_all(
+                &room.variants[idx].tilemap,
+                room.position,
+                grid_size,
+            );
+        }
 
-        ResizeButton::build_all(&room.variants[0].tilemap, &mut self.dynamic_ui, room.position, grid_size);
+        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_world = camera.screen_to_world(mouse_screen);
 
-        let mouse_pos = mouse_position().into();
-        self.consume_ui_click(camera, mouse_pos, room, other_bounds, ecs, grid_size);
+        // Handle resize drag before tile placement
+        let drag_active = self.handle_resize_drag(
+            camera,
+            mouse_world,
+            room,
+            other_bounds,
+            grid_size,
+            room_id,
+        );
 
-        if !self.ui_was_clicked {
+        // Consume UI clicks
+        self.consume_ui_click(mouse_screen);
+
+        if !self.ui_was_clicked && !drag_active {
+            let room_position = room.position;
+            let idx = room.current_variant_index();
             match self.mode {
                 TilemapEditorMode::Tiles => self.handle_tile_placement(
-                    camera, 
-                    mouse_pos, 
-                    &mut room.variants[0].tilemap,
-                    room.position,
+                    camera,
+                    &mut room.variants[idx].tilemap,
+                    room_position,
                     grid_size,
                 ),
                 TilemapEditorMode::Exits => self.handle_exit_placement(
-                    camera, 
-                    &room.variants[0].tilemap, 
+                    camera,
+                    &room.variants[idx].tilemap,
                     &mut room.exits,
-                    room.position,
+                    room_position,
                     grid_size,
                 ),
             }
@@ -90,56 +116,115 @@ impl TileMapEditor  {
         };
     }
 
-    fn consume_ui_click(
+    /// Handle resize handle drag operations.
+    /// Returns true if a drag is active (to block tile placement).
+    fn handle_resize_drag(
         &mut self,
-        camera: &mut Camera2D,
-        mouse_pos: Vec2,
-        room: &mut Room,
+        _camera: &Camera2D,
+        mouse_world: Vec2,
+        room: &Room,
         other_bounds: &[(Vec2, Vec2)],
-        ecs: &mut Ecs,
         grid_size: f32,
-    ) {
-        if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_pressed(MouseButton::Right) {
+        room_id: RoomId,
+    ) -> bool {
+        let idx = room.current_variant_index();
+        let map = &room.variants[idx].tilemap;
 
-            if self.tilemap_panel.handle_click(mouse_pos, self.tilemap_panel.rect) {
-                self.ui_was_clicked = true;
-                return;
-            }
-
-            for element in &mut self.dynamic_ui {
-                if element.is_mouse_over(mouse_pos, camera) {
-                    element.on_click(room, mouse_pos, camera, other_bounds, ecs, grid_size);
+        // Check for drag start
+        if is_mouse_button_pressed(MouseButton::Left) && self.active_handle_index.is_none() {
+            for (i, handle) in self.resize_handles.iter_mut().enumerate() {
+                if handle.is_hovered(mouse_world) {
+                    handle.begin_drag(mouse_world);
+                    self.active_handle_index = Some(i);
                     self.ui_was_clicked = true;
                     break;
                 }
             }
         }
 
+        // Update active drag
+        if let Some(handle_idx) = self.active_handle_index {
+            let handle = &mut self.resize_handles[handle_idx];
+            let delta = handle.update_drag(mouse_world, grid_size);
+
+            let (preview_pos, preview_size) =
+                handle.compute_preview_bounds(room.position, room.size, grid_size);
+
+            let resize_result = validate_resize(
+                map,
+                &room.exits,
+                handle.side,
+                delta,
+                other_bounds,
+                preview_pos,
+                preview_size,
+                grid_size,
+            );
+
+            self.preview_valid = matches!(resize_result, ResizeResult::Success);
+
+            // Check for drag end
+            if is_mouse_button_released(MouseButton::Left) {
+                let should_apply = self.preview_valid && delta != 0;
+
+                if should_apply {
+                    let cmd = ResizeTilemapCmd::new(room_id, idx, handle.side, delta);
+                    push_command(Box::new(cmd));
+                }
+                
+                handle.end_drag();
+                self.active_handle_index = None;
+                
+                if !should_apply {
+                    self.queue_resize_result_toast(resize_result);
+                }
+            }
+
+            return true;
+        }
+
+        false
+    }
+
+    fn consume_ui_click(&mut self, mouse_pos: Vec2) {
+        if is_mouse_button_pressed(MouseButton::Left)
+            || is_mouse_button_pressed(MouseButton::Right)
+        {
+            if self.tilemap_panel.handle_click(mouse_pos, self.tilemap_panel.rect) {
+                self.ui_was_clicked = true;
+                return;
+            }
+        }
+
         // Unblock UI
         if is_mouse_button_released(MouseButton::Left) || !is_mouse_button_down(MouseButton::Left) {
-            self.ui_was_clicked = false;
+            if self.active_handle_index.is_none() {
+                self.ui_was_clicked = false;
+            }
         }
     }
 
     fn handle_tile_placement(
-        &mut self, 
-        camera: &Camera2D, 
-        mouse_pos: Vec2, 
+        &mut self,
+        camera: &Camera2D,
         map: &mut TileMap,
         room_position: Vec2,
-        grid_size: f32
+        grid_size: f32,
     ) {
-        let mouse_over_ui = self.is_mouse_over_ui(camera, mouse_pos);
+        let mouse_over_ui = self.is_mouse_over_ui(camera);
         let hover = self.get_hovered_tile(camera, map, room_position, grid_size);
-        if mouse_over_ui || hover.is_none() { return; }
+        if mouse_over_ui || hover.is_none() {
+            return;
+        }
 
-        let (x, y) = hover.unwrap().as_usize().unwrap();
+        let (x, y) = match hover.and_then(|h| h.as_usize()) {
+            Some(coords) => coords,
+            None => return,
+        };
 
         // Remove
         if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
-            if let Some(_old_tile) = map.tiles.remove(&(x, y)) {
-                // TODO: Handle ecs/ sprite
-            }
+            map.tiles.remove(&(x, y));
             return;
         }
 
@@ -155,10 +240,10 @@ impl TileMapEditor  {
     }
 
     fn handle_exit_placement(
-        &mut self, 
-        camera: &Camera2D, 
-        map: &TileMap, 
-        exits: &mut Vec<Exit>, 
+        &mut self,
+        camera: &Camera2D,
+        map: &TileMap,
+        exits: &mut Vec<Exit>,
         room_position: Vec2,
         grid_size: f32,
     ) {
@@ -187,16 +272,27 @@ impl TileMapEditor  {
         exits: &Vec<Exit>,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
+        room_size: Vec2,
         grid_size: f32,
     ) {
         clear_background(BLACK);
         set_camera(camera);
         tilemap.draw(exits, asset_manager, room_position, grid_size);
         self.draw_hover_highlight(camera, tilemap, room_position, grid_size);
-        self.draw_ui(camera, asset_manager, tilemap).await;
+        self.draw_ui(camera, asset_manager, tilemap, room_position, room_size, grid_size).await;
     }
 
-    fn draw_hover_highlight(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2, grid_size: f32) {
+    fn draw_hover_highlight(
+        &self,
+        camera: &Camera2D,
+        map: &TileMap,
+        room_position: Vec2,
+        grid_size: f32,
+    ) {
+        if self.is_mouse_over_ui(camera) {
+            return;
+        }
+        
         let tile_pos = match self.mode {
             TilemapEditorMode::Tiles => self.get_hovered_tile(camera, map, room_position, grid_size),
             TilemapEditorMode::Exits => self.get_hovered_edge(camera, map, room_position, grid_size),
@@ -225,16 +321,25 @@ impl TileMapEditor  {
     }
 
     async fn draw_ui(
-        &mut self, 
-        camera: &Camera2D, 
+        &mut self,
+        camera: &Camera2D,
         asset_manager: &mut AssetManager,
         tilemap: &mut TileMap,
+        room_position: Vec2,
+        room_size: Vec2,
+        grid_size: f32,
     ) {
-        // Draw scaling UI
-        for element in &self.dynamic_ui {
-            element.draw(camera);
+        // Draw resize handles and preview
+        for (i, handle) in self.resize_handles.iter().enumerate() {
+            let is_active = self.active_handle_index == Some(i);
+            handle.draw(camera, is_active, self.preview_valid, grid_size);
+
+            // Draw preview if this handle is being dragged
+            if is_active {
+                handle.draw_preview(room_position, room_size, grid_size, self.preview_valid);
+            }
         }
-        
+
         // Static UI cam
         set_default_camera();
 
@@ -245,7 +350,13 @@ impl TileMapEditor  {
         self.tilemap_panel.draw(asset_manager, tilemap).await;
     }
 
-    fn get_hovered_tile(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2, grid_size: f32) -> Option<GridPos> {
+    fn get_hovered_tile(
+        &self,
+        camera: &Camera2D,
+        map: &TileMap,
+        room_position: Vec2,
+        grid_size: f32,
+    ) -> Option<GridPos> {
         let mouse_pos: Vec2 = mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
         let local_pos = world_pos - room_position;
@@ -258,7 +369,13 @@ impl TileMapEditor  {
         }
     }
 
-    fn get_hovered_edge(&self, camera: &Camera2D, map: &TileMap, room_position: Vec2, grid_size: f32) -> Option<GridPos> {
+    fn get_hovered_edge(
+        &self,
+        camera: &Camera2D,
+        map: &TileMap,
+        room_position: Vec2,
+        grid_size: f32,
+    ) -> Option<GridPos> {
         let mouse_pos: Vec2 = mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
         let local_pos = world_pos - room_position;
@@ -275,11 +392,12 @@ impl TileMapEditor  {
         }
     }
 
-    fn is_mouse_over_ui(&self, camera: &Camera2D, mouse_pos: Vec2) -> bool {
-        self.tilemap_panel.is_mouse_over(mouse_pos)
-        || self.dynamic_ui
-            .iter()
-            .any(|element| element.is_mouse_over(mouse_pos, camera))
+    fn is_mouse_over_ui(&self, camera: &Camera2D) -> bool {
+        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_world = camera.screen_to_world(mouse_screen);
+        self.tilemap_panel.is_mouse_over(mouse_screen)
+            || self.resize_handles.iter().any(|h| h.is_hovered(mouse_world))
+            || self.active_handle_index.is_some() // Checks active resizing
     }
 
     fn exit_direction_from_position(&self, tile_pos: GridPos, map: &TileMap) -> ExitDirection {
@@ -300,5 +418,22 @@ impl TileMapEditor  {
         self.mode = TilemapEditorMode::Tiles;
         self.initialized = false;
         self.ui_was_clicked = false;
+        self.active_handle_index = None;
+        self.resize_handles.clear();
+    }
+
+    /// Queues a toast message explaining why the resize failed.
+    fn queue_resize_result_toast(&mut self, failure: ResizeResult) {
+        self.toast = match failure {
+            ResizeResult::InvalidDimensions => Some("Invalid resize dimensions"),
+            ResizeResult::Overlap => Some("Resize can not overlap rooms"),
+            ResizeResult::StrandedExit => Some("Resize can not strand exits"),
+            ResizeResult::Success => None,
+        };
+    }
+
+    /// Takes any pending toast message, clearing it from the editor.
+    pub fn take_pending_toast(&mut self) -> Option<&'static str> {
+        self.toast.take()
     }
 }

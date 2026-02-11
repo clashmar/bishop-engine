@@ -72,6 +72,10 @@ pub static ENTITY_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
     load_texture_from_bytes(include_bytes!("icons/entity.png"))
 });
 
+pub static GRID_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
+    load_texture_from_bytes(include_bytes!("icons/grid.png"))
+});
+
 pub static CIRCLE_120PX: LazyLock<Texture2D> = LazyLock::new(|| {
     load_texture_from_bytes(include_bytes!("textures/circle120px.png"))
 });
