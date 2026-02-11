@@ -165,9 +165,20 @@ impl Room {
         (min, max)
     }
 
-    // Returns a reference to the current variant of the room.
+    /// Returns the index of the current variant.
+    pub fn current_variant_index(&self) -> usize {
+        0
+    }
+
+    /// Returns a reference to the current variant of the room.
     pub fn current_variant(&self) -> &RoomVariant {
-        &self.variants[0]
+        &self.variants[self.current_variant_index()]
+    }
+
+    /// Returns a mutable reference to the current variant of the room.
+    pub fn current_variant_mut(&mut self) -> &mut RoomVariant {
+        let idx = self.current_variant_index();
+        &mut self.variants[idx]
     }
 }
 
