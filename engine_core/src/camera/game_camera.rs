@@ -217,35 +217,46 @@ pub fn room_to_game_camera(
     GameCamera { camera, id: entity.0, origin }
 }
 
-/// Returns a `GameCamera` for a room from its id, if one exists.
-pub fn get_room_camera(ecs: &Ecs, room_id: RoomId, grid_size: f32) -> Option<GameCamera> {
+/// Returns the next `GameCamera` for a room, cycling through all available cameras.
+/// If `current_id` is None or not found, returns the first camera.
+pub fn get_next_room_camera(
+    ecs: &Ecs,
+    room_id: RoomId,
+    grid_size: f32,
+    current_id: Option<usize>,
+) -> Option<GameCamera> {
     let trans_store = ecs.get_store::<Transform>();
-    let cam_store = ecs.get_store::<RoomCamera>();
-    let room_store = ecs.get_store::<CurrentRoom>();
+    let room_cameras = get_room_cameras(ecs, room_id);
 
-    for (entity, room_cam) in cam_store.data.iter() {
-        if let Some(current_room) = room_store.get(*entity) {
-            if current_room.0 != room_id {
-                continue;
-            }
-
-            let origin = trans_store
-                .data
-                .get(entity)
-                .expect("Camera should always have a transform.")
-                .position;
-
-            let camera = Camera2D {
-                target: origin,
-                zoom: room_cam.zoom,
-                render_target: Some(game_render_target(grid_size)),
-                ..Default::default()
-            };
-
-            return Some(GameCamera { camera, id: entity.0, origin });
-        }
+    if room_cameras.is_empty() {
+        return None;
     }
-    None
+
+    let next_index = match current_id {
+        Some(id) => {
+            let current_index = room_cameras.iter().position(|(e, _)| e.0 == id);
+            match current_index {
+                Some(idx) => (idx + 1) % room_cameras.len(),
+                None => 0,
+            }
+        }
+        None => 0,
+    };
+
+    let (entity, room_cam) = &room_cameras[next_index];
+    let origin = trans_store
+        .data
+        .get(entity)?
+        .position;
+
+    let camera = Camera2D {
+        target: origin,
+        zoom: room_cam.zoom,
+        render_target: Some(game_render_target(grid_size)),
+        ..Default::default()
+    };
+
+    Some(GameCamera { camera, id: entity.0, origin })
 }
 
 /// Compute zoom vector from a scalar value.
