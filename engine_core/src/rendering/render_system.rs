@@ -396,49 +396,49 @@ impl RenderSystem {
         self.draw_pass(&self.final_comp_mat, &self.final_comp_rt.texture);
     }
 
-    /// Presents the final visual of the game.
+    /// Presents the final visual of the game with hybrid scaling.
+    /// Uses fractional scale to fill screen while maintaining aspect ratio, minimizing letterboxing.
     pub fn present_game(&self) {
         set_default_camera();
         let tex = &self.final_comp_rt.texture;
 
-        // Use cached render target dimensions.
         let virt_w = self.rt_width;
         let virt_h = self.rt_height;
         let win_w = screen_width();
         let win_h = screen_height();
-        let scale_w = win_w / virt_w;
-        let scaled_h = virt_h * scale_w;
-        
-        if scaled_h <= win_h {
-            // Full‑width, vertical letter‑boxing
-            let offset_y = (win_h - scaled_h) / 2.0;
-            draw_texture_ex(
-                tex,
-                0.0,
-                offset_y,
-                WHITE,
-                DrawTextureParams {
-                    dest_size: Some(vec2(win_w, scaled_h)),
-                    ..Default::default()
-                },
-            );
-        } else {
-            // Height‑limited, proportional shrink
-            let scale_h = win_h / virt_h;
-            let scaled_w = virt_w * scale_h;
-            let offset_x = (win_w - scaled_w) / 2.0;
-            draw_texture_ex(
-                tex,
-                offset_x,
-                0.0,
-                WHITE,
-                DrawTextureParams {
-                    dest_size: Some(vec2(scaled_w, win_h)),
-                    ..Default::default()
-                },
-            );
-        }
+
+        // Hybrid scaling: use fractional scale to fill screen while maintaining aspect ratio
+        let scale = (win_w / virt_w).min(win_h / virt_h);
+        let scaled_w = virt_w * scale;
+        let scaled_h = virt_h * scale;
+
+        let offset_x = ((win_w - scaled_w) / 2.0).floor();
+        let offset_y = ((win_h - scaled_h) / 2.0).floor();
+
+        draw_texture_ex(
+            tex,
+            offset_x,
+            offset_y,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(scaled_w, scaled_h)),
+                ..Default::default()
+            },
+        );
     }
+
+    /// Presents the render target directly at 1:1 for window-sized targets.
+    pub fn present(&self) {
+        set_default_camera();
+        draw_texture_ex(
+            &self.final_comp_rt.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams::default(),
+        );
+    }
+
 
     /// Sets and draws the supplied material and resets to default.
     pub fn draw_pass(&self, material: &Material, quad: &Texture2D) {
@@ -508,13 +508,23 @@ impl RenderSystem {
             .for_each(|slot| *slot = GlowBuffer::default());
     }
 
-    /// Resizes render targets if the camera zoom requires larger buffers.
+    /// Resizes render targets to match the camera zoom.
     pub fn resize_for_camera(&mut self, zoom: Vec2) {
-        let required_width = (2.0 / zoom.x) as u32;
-        let required_height = (2.0 / zoom.y) as u32;
+        let required_width = (2.0 / zoom.x).round() as u32;
+        let required_height = (2.0 / zoom.y).round() as u32;
 
-        if required_width > self.rt_width as u32 || required_height > self.rt_height as u32 {
+        if required_width != self.rt_width as u32 || required_height != self.rt_height as u32 {
             self.resize(required_width, required_height);
+        }
+    }
+
+    /// Resizes render targets to match window size if they don't already.
+    pub fn resize_to_window(&mut self) {
+        let win_w = screen_width() as u32;
+        let win_h = screen_height() as u32;
+
+        if win_w != self.rt_width as u32 || win_h != self.rt_height as u32 {
+            self.resize(win_w, win_h);
         }
     }
 

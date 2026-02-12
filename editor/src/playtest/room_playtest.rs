@@ -8,7 +8,6 @@ use std::io::{Error, ErrorKind};
 use ron::ser::to_string_pretty;
 use ron::ser::PrettyConfig;
 use std::process::Command;
-use engine_core::*;
 use std::io;
 
 /// Serialise everything the play‑test binary needs and return the
@@ -17,8 +16,6 @@ pub fn write_playtest_payload(
     room: &Room,
     game: &Game,
 ) -> io::Result<PathBuf> {
-    onscreen_info!("{:?}", game.current_world().current_room_id);
-
     // Clone game via serialization
     let game_ron = ron::to_string(game)
         .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not serialize game: {e}")))?;
@@ -29,8 +26,6 @@ pub fn write_playtest_payload(
     // Set player spawn position from proxy before purging
     game_copy.ecs.set_player_spawn_from_proxy(room.id);
     game_copy.ecs.purge_proxies();
-
-    onscreen_info!("{:?}", game_copy.current_world().current_room_id);
 
     #[derive(serde::Serialize)]
     struct Payload<'a> {

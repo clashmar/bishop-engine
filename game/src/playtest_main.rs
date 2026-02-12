@@ -6,12 +6,11 @@ use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::game_state::GameState;
 use engine_core::world::room::Room;
 use engine_core::game::game::Game;
-use engine_core::{constants::*, onscreen_info};
+use engine_core::constants::*;
 use game_lib::engine::Engine;
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use ron::de::from_str;
-use engine_core::*;
 use std::{env, fs};
 use std::rc::Rc;
 use mlua::Lua;
@@ -60,8 +59,6 @@ async fn main() {
     let lua = Lua::new();
     let mut camera_manager = CameraManager::default();
     let grid_size = game.current_world().grid_size;
-
-    onscreen_info!("{:?}", game.current_world().current_room_id);
 
     // Pre-cache font to avoid black rectangle rendering bug
     engine_core::assets::core_assets::precache_font();
