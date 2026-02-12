@@ -217,6 +217,42 @@ pub fn room_to_game_camera(
     GameCamera { camera, id: entity.0, origin }
 }
 
+/// Returns a `GameCamera` for a room by its entity id.
+/// If the id is None or not found, returns the first camera in the room.
+pub fn get_room_camera_by_id(
+    ecs: &Ecs,
+    room_id: RoomId,
+    grid_size: f32,
+    camera_id: Option<usize>,
+) -> Option<GameCamera> {
+    let trans_store = ecs.get_store::<Transform>();
+    let room_cameras = get_room_cameras(ecs, room_id);
+
+    if room_cameras.is_empty() {
+        return None;
+    }
+
+    let index = match camera_id {
+        Some(id) => room_cameras.iter().position(|(e, _)| e.0 == id).unwrap_or(0),
+        None => 0,
+    };
+
+    let (entity, room_cam) = &room_cameras[index];
+    let origin = trans_store
+        .data
+        .get(entity)?
+        .position;
+
+    let camera = Camera2D {
+        target: origin,
+        zoom: room_cam.zoom,
+        render_target: Some(game_render_target(grid_size)),
+        ..Default::default()
+    };
+
+    Some(GameCamera { camera, id: entity.0, origin })
+}
+
 /// Returns the next `GameCamera` for a room, cycling through all available cameras.
 /// If `current_id` is None or not found, returns the first camera.
 pub fn get_next_room_camera(

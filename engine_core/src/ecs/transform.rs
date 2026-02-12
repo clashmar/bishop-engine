@@ -92,13 +92,25 @@ pub fn pivot_offset(entity_pos: Vec2, size: Vec2, pivot: Pivot) -> Vec2 {
 /// Transform component for entities.
 #[ecs_component]
 #[serde_as]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, Reflect)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Reflect)]
 #[serde(default)]
 pub struct Transform {
+    /// Whether the entity is visible when rendering.
+    pub visible: bool,
     #[serde_as(as = "FromInto<[f32; 2]>")]
     pub position: Vec2,
     /// Pivot point for rendering. Defaults to BottomCenter.
     pub pivot: Pivot,
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self {
+            visible: true,
+            position: Vec2::ZERO,
+            pivot: Pivot::default(),
+        }
+    }
 }
 inspector_module!(Transform, removable = false);
 

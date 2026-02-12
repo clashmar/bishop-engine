@@ -6,7 +6,6 @@ use crate::ecs::ecs::Ecs;
 use engine_core::ecs::entity::Entity;
 use engine_core::world::room::RoomId;
 use engine_core::ecs::capture::*;
-use engine_core::*;
 
 /// Undo-able command for deleting an entity and its children.
 #[derive(Debug)]
@@ -34,7 +33,6 @@ impl EditorCommand for DeleteEntityCmd {
                 // Restore every entity and its components
                 restore_subtree(ctx, &saved);
                 editor.room_editor.set_selected_entity(Some(self.entity));
-                onscreen_info!("undo delete")
             });
         }
     }

@@ -331,7 +331,7 @@ fn draw_entity_tree(
         let mouse_over = row_rect.contains(mouse);
 
         // Selection highlight
-        if room_editor.selected_entity == Some(entity) {
+        if room_editor.is_selected(entity) {
             draw_rectangle(
                 row_rect.x,
                 row_rect.y,
@@ -360,9 +360,26 @@ fn draw_entity_tree(
             }
         }
 
-        // Selection
+        // Selection with Shift support for multi-select
         if !blocked && mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
-            room_editor.set_selected_entity(Some(entity));
+            let shift_held = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
+            if shift_held {
+                // Toggle entity in selection
+                if room_editor.is_selected(entity) {
+                    room_editor.selected_entities.remove(&entity);
+                    // Update inspector if we now have single or no selection
+                    if room_editor.selected_entities.len() == 1 {
+                        let remaining = *room_editor.selected_entities.iter().next().unwrap();
+                        room_editor.inspector.set_target(Some(remaining));
+                    } else {
+                        room_editor.inspector.set_target(None);
+                    }
+                } else {
+                    room_editor.add_to_selection(entity);
+                }
+            } else {
+                room_editor.set_selected_entity(Some(entity));
+            }
         }
 
         // Start drag

@@ -1,4 +1,5 @@
 // editor/src/tilemap/tilemap_editor.rs
+use crate::room::drawing::{draw_exit_arrow, draw_adjacent_exit_arrow, draw_all_camera_viewports};
 use crate::tilemap::tilemap_panel::TilemapPanel;
 use crate::assets::asset_manager::AssetManager;
 use crate::gui::menu_bar::draw_top_panel_full;
@@ -10,6 +11,7 @@ use crate::commands::room::*;
 use crate::gui::modal::*;
 use crate::ecs::ecs::Ecs;
 use engine_core::world::world::GridPos;
+use engine_core::controls::controls::Controls;
 use engine_core::ui::widgets::*;
 use engine_core::world::room::*;
 use macroquad::prelude::*;
@@ -28,6 +30,7 @@ pub struct TileMapEditor {
     pub tilemap_panel: TilemapPanel,
     ui_was_clicked: bool,
     initialized: bool,
+    adjacent_exits: Vec<(Vec2, ExitDirection)>,
 }
 
 impl TileMapEditor {
@@ -41,6 +44,7 @@ impl TileMapEditor {
             tilemap_panel: TilemapPanel::new(),
             ui_was_clicked: false,
             initialized: false,
+            adjacent_exits: Vec::new(),
         }
     }
 
@@ -50,10 +54,14 @@ impl TileMapEditor {
         camera: &mut Camera2D,
         room: &mut Room,
         other_bounds: &[(Vec2, Vec2)],
+        adjacent_exits: &[(Vec2, ExitDirection)],
         _ecs: &mut Ecs,
         grid_size: f32,
         room_id: RoomId,
     ) {
+        // Store adjacent exits for drawing
+        self.adjacent_exits.clear();
+        self.adjacent_exits.extend_from_slice(adjacent_exits);
         if !self.initialized {
             self.ui_was_clicked = true; // Stop any initial tile placements
             self.initialized = true;
@@ -147,6 +155,13 @@ impl TileMapEditor {
 
         // Update active drag
         if let Some(handle_idx) = self.active_handle_index {
+            // Cancel drag on any key press
+            if Controls::any_key_pressed() {
+                self.resize_handles[handle_idx].end_drag();
+                self.active_handle_index = None;
+                return false;
+            }
+
             let handle = &mut self.resize_handles[handle_idx];
             let delta = handle.update_drag(mouse_world, grid_size);
 
@@ -272,17 +287,36 @@ impl TileMapEditor {
         &mut self,
         camera: &Camera2D,
         tilemap: &mut TileMap,
-        exits: &Vec<Exit>,
         asset_manager: &mut AssetManager,
+        ecs: &Ecs,
+        room_id: RoomId,
         room_position: Vec2,
         room_size: Vec2,
         grid_size: f32,
     ) {
         clear_background(BLACK);
         set_camera(camera);
-        tilemap.draw(exits, asset_manager, room_position, grid_size);
+        tilemap.draw(asset_manager, room_position, grid_size);
+        self.draw_adjacent_exits(grid_size);
         self.draw_hover_highlight(camera, tilemap, room_position, grid_size);
+
+        if self.active_handle_index.is_some() {
+            draw_all_camera_viewports(camera, ecs, room_id);
+        }
+
         self.draw_ui(camera, asset_manager, tilemap, room_position, room_size, grid_size).await;
+    }
+
+    /// Draws exits from adjacent rooms that face toward this room (only in Exits mode).
+    fn draw_adjacent_exits(&self, grid_size: f32) {
+        if !matches!(self.mode, TilemapEditorMode::Exits) {
+            return;
+        }
+
+        for (world_grid_pos, direction) in &self.adjacent_exits {
+            let world_pixel_pos = *world_grid_pos * grid_size;
+            draw_adjacent_exit_arrow(world_pixel_pos, *direction, grid_size);
+        }
     }
 
     fn draw_hover_highlight(
@@ -317,7 +351,7 @@ impl TileMapEditor {
                 }
                 TilemapEditorMode::Exits => {
                     let exit_direction = self.exit_direction_from_position(tile_pos, map);
-                    map.draw_exit(vec2(x, y), exit_direction, grid_size);
+                    draw_exit_arrow(vec2(x, y), exit_direction, grid_size);
                 }
             }
         }
@@ -426,6 +460,7 @@ impl TileMapEditor {
         self.ui_was_clicked = false;
         self.active_handle_index = None;
         self.resize_handles.clear();
+        self.adjacent_exits.clear();
     }
 
     /// Queues a toast message explaining why the resize failed.

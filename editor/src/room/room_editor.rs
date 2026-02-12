@@ -2,34 +2,29 @@
 use crate::editor_camera_controller::EditorCameraController;
 use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::gui::inspector::inspector::Inspector;
-use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
 use crate::editor_assets::editor_assets::*;
-use crate::room::room_editor_rendering::*;
-use crate::gui::panels::panel_manager::*;
+use crate::room::drawing::*;
+use crate::room::selection::PreCopyDragState;
 use crate::commands::room::*;
-use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::ecs::transform::*;
+use engine_core::ecs::component::{CurrentRoom, Name};
 use crate::editor_global::*;
-use crate::world::coord;
 use crate::canvas::grid;
-use engine_core::ecs::transform::update_entity_position;
+use crate::world::coord;
 use engine_core::rendering::render_system::RenderSystem;
 use engine_core::assets::asset_manager::AssetManager;
-use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::animation::animation_system::*;
 use engine_core::controls::controls::Controls;
 use engine_core::rendering::render_room::*;
 use engine_core::camera::game_camera::*;
-use engine_core::controls::controls::*;
 use engine_core::world::world::World;
 use engine_core::ecs::entity::Entity;
-use macroquad::miniquad::CursorIcon;
-use engine_core::ecs::component::*;
 use engine_core::world::room::*;
 use engine_core::ui::widgets::*;
 use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
+use std::collections::HashSet;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use macroquad::prelude::*;
@@ -67,17 +62,32 @@ pub struct RoomEditor {
     pub mode_selector: ModeSelector<RoomEditorMode>,
     pub tilemap_editor: TileMapEditor,
     pub inspector: Inspector,
-    pub selected_entity: Option<Entity>,
-    active_rects: Vec<Rect>,
-    show_grid: bool,
-    drag_offset: Vec2,
-    dragging: bool,
-    drag_start_position: Option<Vec2>,
-    initialized: bool, 
+    pub selected_entities: HashSet<Entity>,
+    pub(crate) active_rects: Vec<Rect>,
+    pub(crate) show_grid: bool,
+    pub(crate) drag_offset: Vec2,
+    pub(crate) dragging: bool,
+    /// Stores for all dragged entities.
+    pub(crate) drag_start_positions: Vec<(Entity, Vec2)>,
+    /// The entity that was clicked to start the selection drag.
+    pub(crate) drag_anchor_entity: Option<Entity>,
+    initialized: bool,
     pub create_entity_requested: bool,
     pub request_play: bool,
     pub view_preview: bool,
-    preview_camera_id: Option<usize>,
+    pub(crate) preview_camera_id: Option<usize>,
+    /// Start position of the box selection in world coordinates.
+    pub(crate) box_select_start: Option<Vec2>,
+    /// Whether box selection is currently active.
+    pub(crate) box_select_active: bool,
+    /// Whether current drag is an alt+drag copy operation.
+    pub(crate) alt_copy_mode: bool,
+    /// Entities created during alt+drag copy for undo command.
+    pub(crate) alt_copied_entities: Vec<Entity>,
+    /// Original drag state before entering copy mode (for reverting on alt release).
+    pub(crate) pre_copy_drag_state: Option<PreCopyDragState>,
+    /// The very first start positions when drag began (for undo command).
+    pub(crate) drag_initial_start_positions: Vec<(Entity, Vec2)>,
 }
 
 impl RoomEditor {
@@ -92,34 +102,59 @@ impl RoomEditor {
             },
             tilemap_editor: TileMapEditor::new(),
             inspector: Inspector::new(),
-            selected_entity: None,
+            selected_entities: HashSet::new(),
             active_rects: Vec::new(),
             show_grid: true,
             drag_offset: Vec2::ZERO,
             dragging: false,
-            drag_start_position: None,
+            drag_start_positions: Vec::new(),
+            drag_anchor_entity: None,
             initialized: false,
             preview_camera_id: None,
             create_entity_requested: false,
             request_play: false,
             view_preview: false,
+            box_select_start: None,
+            box_select_active: false,
+            alt_copy_mode: false,
+            alt_copied_entities: Vec::new(),
+            pre_copy_drag_state: None,
+            drag_initial_start_positions: Vec::new(),
         }
     }
 
     pub async fn update(
-        &mut self, 
+        &mut self,
         camera: &mut Camera2D,
         room_id: RoomId,
         ecs: &mut Ecs,
         current_world: &mut World,
         asset_manager: &mut AssetManager,
     ) {
+        let grid_size = current_world.grid_size;
+
         let other_bounds: Vec<(Vec2, Vec2)> = current_world.rooms
             .iter()
             .filter(|r| r.id != room_id)
             .map(|r| (r.position, r.size))
             .collect();
-        
+
+        // Compute exits from adjacent rooms that face toward the current room
+        let adjacent_exits: Vec<(Vec2, ExitDirection)> = {
+            let current_room = current_world.rooms
+                .iter()
+                .find(|r| r.id == room_id);
+
+            match current_room {
+                Some(target) => current_world.rooms
+                    .iter()
+                    .filter(|r| r.id != room_id)
+                    .flat_map(|adj| adj.exits_facing_room(target, grid_size))
+                    .collect(),
+                None => vec![],
+            }
+        };
+
         let room = current_world.rooms
             .iter_mut()
             .find(|r| r.id == room_id)
@@ -129,8 +164,6 @@ impl RoomEditor {
             clear_all_input_focus();
         }
 
-        let grid_size = current_world.grid_size;
-
         if !self.initialized {
             EditorCameraController::reset_room_editor_camera(camera, room, grid_size);
             self.initialized = true;
@@ -138,17 +171,17 @@ impl RoomEditor {
 
         self.handle_mouse_cursor();
 
-        // Click‑selection
+        // Click-selection
         let mouse_screen: Vec2 = mouse_position().into();
 
         let mut ui_was_clicked = false;
 
         let delta_time = get_frame_time();
-        
+
         update_animation_sytem(
             ecs,
             asset_manager,
-            delta_time, 
+            delta_time,
             room.id
         ).await;
 
@@ -159,6 +192,7 @@ impl RoomEditor {
                     camera,
                     room,
                     &other_bounds,
+                    &adjacent_exits,
                     ecs,
                     grid_size,
                     room_id,
@@ -183,6 +217,21 @@ impl RoomEditor {
                     self.handle_keyboard_move(ecs, room.id);
                 }
 
+                // Handle batch delete when multiple entities selected
+                if self.selected_entities.len() > 1
+                    && Controls::delete()
+                    && !input_is_focused()
+                {
+                    let entities: Vec<Entity> = self.selected_entities.iter().copied().collect();
+                    push_command(Box::new(BatchDeleteEntitiesCmd::new(entities, room.id)));
+                }
+
+                // Copy multiple selected entities
+                if Controls::copy() && self.selected_entities.len() > 1 && !input_is_focused() {
+                    let entities: Vec<Entity> = self.selected_entities.iter().copied().collect();
+                    copy_entities(ecs, &entities);
+                }
+
                 // Create a new entity if create was pressed
                 if self.create_entity_requested && self.inspector.target.is_none() {
                     // Build the entity
@@ -193,20 +242,23 @@ impl RoomEditor {
                         .with(Name(format!("Entity")))
                         .finish();
 
-                    // Immediately select it so the inspector shows the newly‑created entity
-                    self.selected_entity = Some(entity);
+                    // Immediately select it so the inspector shows the newly-created entity
+                    self.selected_entities.clear();
+                    self.selected_entities.insert(entity);
                     self.create_entity_requested = false;
                 }
 
-                // If an entity is selected, forward it to the inspector
-                if let Some(entity) = self.selected_entity {
+                // If exactly one entity is selected, show the inspector
+                if self.selected_entities.len() == 1 {
+                    let entity = *self.selected_entities.iter().next().unwrap();
                     self.inspector.set_target(Some(entity));
                 } else {
-                    self.inspector.set_target(None); // Clears the panel
+                    self.inspector.set_target(None);
                 }
 
-                if self.inspector.target.is_none() {
-                    self.selected_entity = None;
+                // If target was cleared by inspector, sync selection
+                if self.inspector.target.is_none() && self.selected_entities.len() == 1 {
+                    self.selected_entities.clear();
                 }
             }
         }
@@ -231,7 +283,6 @@ impl RoomEditor {
         let asset_manager = &mut game_ctx.asset_manager;
 
         let tilemap = &mut room.variants[0].tilemap;
-        let exits = &room.exits;
 
         // Panel rect for inspector and tilemap editor
         let inspector_rect = Rect::new(
@@ -247,8 +298,9 @@ impl RoomEditor {
                 self.tilemap_editor.draw(
                     camera,
                     tilemap,
-                    exits,
                     asset_manager,
+                    ecs,
+                    room_id,
                     room.position,
                     room.size,
                     grid_size,
@@ -257,10 +309,11 @@ impl RoomEditor {
                 if self.show_grid {
                     set_camera(camera);
                     grid::draw_grid(camera, grid_size);
+                    draw_exit_placeholders(&room.exits, room.position, grid_size);
                 }
             }
             RoomEditorMode::Scene => {
-                let room_camera = get_next_room_camera(ecs, room_id, grid_size, self.preview_camera_id);
+                let room_camera = get_room_camera_by_id(ecs, room_id, grid_size, self.preview_camera_id);
 
                 let render_cam = if self.view_preview && room_camera.is_some() {
                     room_camera.as_ref().map(|c| &c.camera).unwrap_or(camera)
@@ -301,18 +354,31 @@ impl RoomEditor {
                         grid::draw_grid(camera, grid_size);
                     }
 
+                    draw_exit_placeholders(&room.exits, room.position, grid_size);
                     draw_camera_placeholders(&ecs, room_id, grid_size);
                     draw_light_placeholders(ecs, room_id, grid_size);
                     draw_glow_placeholders(ecs, asset_manager, room_id, grid_size);
 
-                    if let Some(selected_entity) = self.selected_entity {
+                    // Highlight all selected entities and draw their overlays
+                    for &selected_entity in &self.selected_entities {
                         if !is_pure_placeholder(ecs, selected_entity) {
                             highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW, grid_size);
                         }
-
-                        draw_collider(ecs, selected_entity);
                         self.draw_camera_viewport(camera, ecs, selected_entity, room_id);
                         draw_pivot_marker(ecs, selected_entity);
+                    }
+
+                    // Draw collider only for single selection
+                    if let Some(selected_entity) = self.single_selected_entity() {
+                        draw_collider(ecs, selected_entity);
+                    }
+
+                    // Draw box selection rectangle
+                    if self.box_select_active {
+                        if let Some(start) = self.box_select_start {
+                            let mouse_world = coord::mouse_world_pos(camera);
+                            draw_selection_box(start, mouse_world);
+                        }
                     }
                 }
             }
@@ -324,259 +390,27 @@ impl RoomEditor {
         }
     }
 
-    /// Handles mouse selection / movement.
-    fn handle_selection(
-        &mut self,
-        room_id: RoomId,
-        camera: &Camera2D,
-        ecs: &mut Ecs,
-        asset_manager: &mut AssetManager,
-        mouse_screen: Vec2,
-        ui_was_clicked: bool,
-        grid_size: f32,
-    ) -> bool {
-        if !ui_was_clicked
-            && is_mouse_button_pressed(MouseButton::Left)
-            && !self.dragging
-        {
-            self.selected_entity = None;
-            for (entity, pos) in ecs.get_store::<Transform>().data.iter() {
-                // Skip tiles, UI etc
-                if !can_select_entity_in_room(ecs, *entity, room_id) {
-                    continue;
-                }
-                let hitbox = entity_hitbox(
-                    *entity,
-                    pos.position,
-                    camera,
-                    ecs,
-                    asset_manager,
-                    grid_size,
-                );
-                if hitbox.contains(mouse_screen) {
-                    self.selected_entity = Some(*entity);
-                    let mouse_world = coord::mouse_world_pos(camera);
-                    self.drag_offset = pos.position - mouse_world;
-                    self.dragging = true;
-                    self.drag_start_position = Some(pos.position);
-                    break;
-                }
-            }
-        }
-
-        // Execute the drag while the button is held
-        if self.dragging {
-            if let Some(entity) = self.selected_entity {
-                let mouse_world = coord::mouse_world_pos(camera);
-                let mut new_pos = mouse_world + self.drag_offset;
-
-                // Snap to grid while S is held
-                if is_key_down(KeyCode::S) {
-                    // Get the entity's pivot
-                    let pivot = ecs
-                        .get_store::<Transform>()
-                        .get(entity)
-                        .map(|t| t.pivot)
-                        .unwrap_or(Pivot::BottomCenter);
-                    let pn = pivot.as_normalized();
-
-                    // Snap pivot to appropriate grid position
-                    let tile = (mouse_world / grid_size).floor();
-                    let snap_x = tile.x * grid_size + grid_size * pn.x;
-                    let snap_y = tile.y * grid_size + grid_size * pn.y;
-                    new_pos = vec2(snap_x, snap_y);
-                }
-                update_entity_position(ecs, entity, new_pos);
-            }
-
-            // Finish the drag when the button is released
-            if is_mouse_button_released(MouseButton::Left) {
-                if let (Some(entity), Some(start_pos)) =
-                    (self.selected_entity, self.drag_start_position.take())
-                {
-                    // Final position after the drag
-                    if let Some(final_pos) = ecs
-                        .get_store::<Transform>()
-                        .get(entity)
-                        .map(|p| p.position)
-                    {
-                        // Push a command only if the entity actually moved
-                        if (final_pos - start_pos).length_squared() > 0.0 {
-                            push_command(Box::new(MoveEntityCmd::new(
-                                entity, room_id, start_pos, final_pos,
-                            )));
-                        }
-                    }
-                }
-                self.dragging = false;
-            }
-            return true; // Drag handled this frame
-        }
-        false // No active drag
-    }
-
-    /// Moves the currently selected entity by one pixel.
-    fn handle_keyboard_move(
-        &mut self,
-        ecs: &mut Ecs,
-        room_id: RoomId,
-    ) {
-        // Only act when an entity is selected and no drag is in progress
-        if self.dragging 
-        || self.selected_entity.is_none()
-        || input_is_focused() {
-            return;
-        }
-
-        let dir = get_omni_input_pressed();
-        if dir.length_squared() == 0.0 {
-            return;
-        }
-
-        // Move exactly one pixel
-        let step = dir;
-        let entity = self.selected_entity.unwrap();
-
-        // Make sure the entity is moveable
-        if !can_select_entity_in_room(ecs, entity, room_id) {
-            return;
-        }
-
-        if let Some(position) = ecs.get_store_mut::<Transform>().get_mut(entity) {
-            let old = position.position;
-            position.position += step;
-
-            push_command(Box::new(MoveEntityCmd::new(
-                entity,
-                room_id,
-                old,
-                position.position,
-            )));
-        }
-    }
-
-    /// Sets the selected entity for the room editor.
-    pub fn set_selected_entity(&mut self, entity: Option<Entity>) {
-        self.selected_entity = entity;
-        self.inspector.set_target(entity);
-    }
-
-    fn handle_shortcuts(&mut self, camera: &mut Camera2D, room: &Room, grid_size: f32, ecs: &Ecs) {
-        if input_is_focused() {
-            return;
-        }
-
-        // Shortcuts for both tilemap and scene
-        if Controls::g() {
-            self.show_grid = !self.show_grid;
-        }
-
-        if Controls::r() {
-            EditorCameraController::reset_room_editor_camera(camera, room, grid_size);
-        }
-
-        for mode in RoomEditorMode::iter() {
-            if let Some(is_pressed) = mode.shortcut() {
-                if is_pressed() {
-                    self.mode = mode;
-                    self.mode_selector.current = mode;
-                    break;
-                }
-            }
-        }
-
-        match self.mode {
-            RoomEditorMode::Tilemap => {
-
-            }
-            RoomEditorMode::Scene => {
-                if Controls::v() {
-                    self.view_preview = !self.view_preview;
-                    if self.view_preview {
-                        let first_camera = get_next_room_camera(ecs, room.id, grid_size, None);
-                        self.preview_camera_id = first_camera.map(|c| c.id);
-                    } else {
-                        self.preview_camera_id = None;
-                    }
-                }
-
-                if self.view_preview && Controls::tab() {
-                    let next_camera = get_next_room_camera(ecs, room.id, grid_size, self.preview_camera_id);
-                    self.preview_camera_id = next_camera.map(|c| c.id);
-                }
-
-                if Controls::paste() {
-                    push_command(Box::new(PasteEntityCmd::new(room.id)));
-                }
-
-                if Controls::h() {
-                    with_panel_manager(|panel_manager| {
-                        panel_manager.toggle(HIERARCHY_PANEL);
-                    });
-                }
-            }
-        }
-    }
-
-    #[inline]
-    pub fn register_rect(&mut self, rect: Rect) -> Rect {
-        self.active_rects.push(rect);
-        rect
-    }
-
-    pub fn is_mouse_over_ui(&self) -> bool {
-        let mouse_screen: Vec2 = mouse_position().into();
-        self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || self.inspector.is_mouse_over()
-        || is_dropdown_open()
-        || is_modal_open()
-        || is_mouse_over_panel()
-    }
-
-    fn ui_was_clicked(&self) -> bool {
-        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over_ui()
-    }
-
-    fn handle_mouse_cursor(&self) {
-        if self.is_mouse_over_ui() {
-            set_mouse_cursor(CursorIcon::Default);
-        } else {
-            match self.mode {
-                RoomEditorMode::Scene => {
-                    set_mouse_cursor(CursorIcon::Default);
-                }
-                RoomEditorMode::Tilemap => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
-                }
-            }
-        }
-    }
-
     pub fn reset(&mut self) {
         self.tilemap_editor.reset();
         self.mode = RoomEditorMode::Scene;
-        self.selected_entity = None;
+        self.selected_entities.clear();
         self.initialized = false;
         self.request_play = false;
         self.view_preview = false;
         self.preview_camera_id = None;
+        self.box_select_start = None;
+        self.box_select_active = false;
+        self.drag_start_positions.clear();
+        self.drag_initial_start_positions.clear();
+        self.drag_anchor_entity = None;
+        self.alt_copy_mode = false;
+        self.alt_copied_entities.clear();
+        self.pre_copy_drag_state = None;
     }
 
     /// Takes any pending toast message from the room/tilemap editor.
     pub fn take_pending_toast(&mut self) -> Option<&'static str> {
         self.tilemap_editor.take_pending_toast()
-    }
-}
-
-pub fn can_select_entity_in_room(
-    ecs: &Ecs,
-    entity: Entity,
-    room_id: RoomId,
-) -> bool {
-    // Make sure the entity is in the requested room
-    match ecs.get_store::<CurrentRoom>().get(entity) {
-        Some(CurrentRoom(id)) => *id == room_id,
-        None => false,
     }
 }
 

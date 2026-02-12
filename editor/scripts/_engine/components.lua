@@ -3,21 +3,24 @@
 ---@alias vec2 { x: number, y: number }
 ---@alias vec3 { x: number, y: number, z: number }
 
----@class Animation
----@field clips table
----@field variant table
----@field current table
----@field states table
----@field sprite_cache table
----@field flip_x boolean
----@field speed_multiplier number
-
----@class Glow
----@field color vec3
----@field intensity number
----@field brightness number
----@field emission number
+---@class CurrentFrame
+---@field clip_id number
+---@field col number
+---@field row number
+---@field offset vec2
 ---@field sprite_id number
+---@field frame_size vec2
+---@field flip_x boolean
+
+---@class Sprite
+---@field sprite number
+
+---@alias FacingDirection table
+
+---@class Children
+---@field entities table
+
+---@alias Parent table
 
 ---@class Light
 ---@field pos vec2
@@ -28,18 +31,12 @@
 ---@field alpha number
 ---@field brightness number
 
----@class Sprite
----@field sprite number
-
----@class SpeechBubble
----@field text string
----@field timer number
----@field color table
----@field offset table
----@field font_size table
----@field max_width table
----@field show_background boolean
----@field background_color table
+---@class Glow
+---@field color vec3
+---@field intensity number
+---@field brightness number
+---@field emission number
+---@field sprite_id number
 
 ---@alias Grounded boolean
 
@@ -80,45 +77,51 @@
 
 ---@alias CurrentRoom number
 
+---@class SpeechBubble
+---@field text string
+---@field timer number
+---@field color table
+---@field offset table
+---@field font_size table
+---@field max_width table
+---@field show_background boolean
+---@field background_color table
+
+---@class Script
+---@field script_id number
+---@field data table
+
+---@class Animation
+---@field clips table
+---@field variant table
+---@field current table
+---@field states table
+---@field sprite_cache table
+---@field flip_x boolean
+---@field speed_multiplier number
+
+---@class Transform
+---@field visible boolean
+---@field position vec2
+---@field pivot table
+
 ---@class RoomCamera
 ---@field zoom vec2
 ---@field room_id number
 ---@field zoom_mode table
 ---@field camera_mode table
 
----@class Script
----@field script_id number
----@field data table
-
----@class Children
----@field entities table
-
----@alias Parent table
-
----@class Transform
----@field position vec2
----@field pivot table
-
----@alias FacingDirection table
-
 ---@class Interactable
 ---@field range number
 
----@class CurrentFrame
----@field clip_id number
----@field col number
----@field row number
----@field offset vec2
----@field sprite_id number
----@field frame_size vec2
----@field flip_x boolean
-
 ---@class ComponentId
----@field Animation string
----@field Glow string
----@field Light string
+---@field CurrentFrame string
 ---@field Sprite string
----@field SpeechBubble string
+---@field FacingDirection string
+---@field Children string
+---@field Parent string
+---@field Light string
+---@field Glow string
 ---@field Grounded string
 ---@field Player string
 ---@field Damage string
@@ -133,22 +136,22 @@
 ---@field Global string
 ---@field Walkable string
 ---@field CurrentRoom string
----@field RoomCamera string
+---@field SpeechBubble string
 ---@field Script string
----@field Children string
----@field Parent string
+---@field Animation string
 ---@field Transform string
----@field FacingDirection string
+---@field RoomCamera string
 ---@field Interactable string
----@field CurrentFrame string
 
 local C = {}
 
-C.Animation = "Animation"
-C.Glow = "Glow"
-C.Light = "Light"
+C.CurrentFrame = "CurrentFrame"
 C.Sprite = "Sprite"
-C.SpeechBubble = "SpeechBubble"
+C.FacingDirection = "FacingDirection"
+C.Children = "Children"
+C.Parent = "Parent"
+C.Light = "Light"
+C.Glow = "Glow"
 C.Grounded = "Grounded"
 C.Player = "Player"
 C.Damage = "Damage"
@@ -163,13 +166,11 @@ C.Name = "Name"
 C.Global = "Global"
 C.Walkable = "Walkable"
 C.CurrentRoom = "CurrentRoom"
-C.RoomCamera = "RoomCamera"
+C.SpeechBubble = "SpeechBubble"
 C.Script = "Script"
-C.Children = "Children"
-C.Parent = "Parent"
+C.Animation = "Animation"
 C.Transform = "Transform"
-C.FacingDirection = "FacingDirection"
+C.RoomCamera = "RoomCamera"
 C.Interactable = "Interactable"
-C.CurrentFrame = "CurrentFrame"
 
 return C

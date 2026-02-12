@@ -1,4 +1,4 @@
-// editor/src/room/room_editor_actions.rs
+// editor/src/room/drawing.rs
 use crate::editor_camera_controller::*;
 use crate::ecs::transform::{Pivot, Transform};
 use crate::gui::gui_constants::*;
@@ -91,7 +91,7 @@ impl RoomEditor {
     }
 
     /// Draw viewport rectangles for all cameras in the room when a camera is selected.
-    /// The selected camera is drawn in yellow, others in a dimmer cyan.
+    /// The selected camera is drawn in yellow, others in pink.
     pub fn draw_camera_viewport(
         &self,
         editor_cam: &Camera2D,
@@ -405,4 +405,140 @@ pub fn draw_pivot_marker(ecs: &Ecs, entity: Entity) {
 pub fn is_pure_placeholder(ecs: &Ecs, entity: Entity) -> bool {
     ecs.has::<RoomCamera>(entity)
         || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity))
+}
+
+/// Draw exit arrows for all exits in the room.
+pub fn draw_exit_placeholders(exits: &[Exit], room_position: Vec2, grid_size: f32) {
+    for exit in exits {
+        let position = exit.position * grid_size + room_position;
+        draw_exit_arrow(position, exit.direction, grid_size);
+    }
+}
+
+/// Draw all camera viewports in a room.
+pub fn draw_all_camera_viewports(
+    editor_cam: &Camera2D,
+    ecs: &Ecs,
+    room_id: RoomId,
+) {
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let pos_store = ecs.get_store::<Transform>();
+    let room_store = ecs.get_store::<CurrentRoom>();
+
+    let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
+    const BASE_THICKNESS: f32 = 1.;
+    const THICKNESS_SCALE: f32 = 0.01;
+    let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
+
+    let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
+    let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
+    let editor_w = (tr.x - bl.x).abs();
+    let editor_h = (tr.y - bl.y).abs();
+
+    for (entity, room_cam) in cam_store.data.iter() {
+        if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+            if *id != room_id {
+                continue;
+            }
+        } else {
+            continue;
+        }
+
+        let pos = match pos_store.get(*entity) {
+            Some(p) => p.position,
+            None => continue,
+        };
+
+        let factor_x = editor_cam.zoom.x / room_cam.zoom.x;
+        let factor_y = editor_cam.zoom.y / room_cam.zoom.y;
+
+        let viewport_w = editor_w * factor_x;
+        let viewport_h = editor_h * factor_y;
+
+        let half = vec2(viewport_w, viewport_h) * 0.5;
+        let top_left = pos - half;
+
+        draw_rectangle_lines(
+            top_left.x,
+            top_left.y,
+            viewport_w,
+            viewport_h,
+            thickness,
+            PINK,
+        );
+    }
+}
+
+/// Draw a semi-transparent arrow at the given position indicating exit direction.
+pub fn draw_exit_arrow(position: Vec2, direction: ExitDirection, grid_size: f32) {
+    draw_exit_arrow_colored(position, direction, grid_size, HIGHLIGHT_GREEN);
+}
+
+/// Draw an arrow for an adjacent room's exit (pink color to distinguish from current room).
+pub fn draw_adjacent_exit_arrow(position: Vec2, direction: ExitDirection, grid_size: f32) {
+    draw_exit_arrow_colored(position, direction, grid_size, YELLOW);
+}
+
+/// Draw a selection box rectangle in world space.
+pub fn draw_selection_box(start: Vec2, end: Vec2) {
+    let min_x = start.x.min(end.x);
+    let min_y = start.y.min(end.y);
+    let max_x = start.x.max(end.x);
+    let max_y = start.y.max(end.y);
+    let width = max_x - min_x;
+    let height = max_y - min_y;
+
+    // Semi-transparent fill
+    draw_rectangle(min_x, min_y, width, height, Color::new(1.0, 1.0, 0.0, 0.1));
+    // Yellow outline
+    draw_rectangle_lines(min_x, min_y, width, height, 1.0, YELLOW);
+}
+
+/// Returns a world-space Rect for an entity based on its sprite or placeholder size.
+pub fn entity_world_rect(
+    entity: Entity,
+    position: Vec2,
+    ecs: &Ecs,
+    asset_manager: &mut AssetManager,
+    grid_size: f32,
+) -> Rect {
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
+
+    let is_placeholder = ecs.has::<RoomCamera>(entity)
+        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
+
+    let corrected_pos = if is_placeholder {
+        position - vec2(grid_size * 0.5, grid_size * 0.5)
+    } else {
+        let pivot = ecs
+            .get_store::<Transform>()
+            .get(entity)
+            .map(|t| t.pivot)
+            .unwrap_or(Pivot::TopLeft);
+        pivot_adjusted_position(position, vec2(width, height), pivot)
+    };
+
+    Rect::new(corrected_pos.x, corrected_pos.y, width, height)
+}
+
+/// Draw an exit arrow with a specified color.
+fn draw_exit_arrow_colored(position: Vec2, direction: ExitDirection, grid_size: f32, color: Color) {
+    let x = position.x;
+    let y = position.y;
+
+    let arrow_center = vec2(x + grid_size / 2.0, y + grid_size / 2.0);
+
+    let offsets = match direction {
+        ExitDirection::Up => [vec2(0.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0)],
+        ExitDirection::Down => [vec2(0.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0)],
+        ExitDirection::Left => [vec2(-1.0, 0.0), vec2(1.0, -1.0), vec2(1.0, 1.0)],
+        ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
+    };
+
+    draw_triangle(
+        arrow_center + offsets[0] * grid_size / 3.0,
+        arrow_center + offsets[1] * grid_size / 3.0,
+        arrow_center + offsets[2] * grid_size / 3.0,
+        color,
+    );
 }
