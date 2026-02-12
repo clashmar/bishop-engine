@@ -12,19 +12,32 @@ impl EditorCameraController {
     /// Call this once per frame from any editor that owns a `Camera2D`.
     pub fn update(camera: &mut Camera2D) {
         // Pan
-        if is_mouse_button_down(MouseButton::Middle) || is_key_down(KeyCode::LeftShift) {
+        if is_mouse_button_down(MouseButton::Middle) || is_key_down(KeyCode::Space) {
             let delta = mouse_delta_position();
             camera.target -= delta * 2.0 / camera.zoom;
         }
 
-        // Zoom (mouse wheel) - discrete steps per notch
+        // Zoom (mouse wheel) - zoom towards mouse cursor
         let scroll = mouse_wheel().1;
         if scroll != 0.0 {
+            let mouse_screen = mouse_position();
+            let mouse_screen = vec2(mouse_screen.0, mouse_screen.1);
+
+            // Get world position under mouse before zoom
+            let world_before = camera.screen_to_world(mouse_screen);
+
+            // Apply zoom
             let mut scalar = Self::current_scalar(camera);
             let direction = scroll.signum();
             scalar *= 1.0 + direction * ZOOM_STEP_PERCENT;
             scalar = scalar.clamp(MIN_ZOOM, MAX_ZOOM);
             Self::apply_aspect(camera, scalar);
+
+            // Get world position under mouse after zoom
+            let world_after = camera.screen_to_world(mouse_screen);
+
+            // Adjust target so the original world position stays under the mouse
+            camera.target += world_before - world_after;
         } else {
             let scalar = Self::current_scalar(camera);
             Self::apply_aspect(camera, scalar);

@@ -33,13 +33,23 @@ impl Controls {
     }
 
     pub fn copy() -> bool {
-        is_key_down(KeyCode::LeftControl) &&
+        (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::LeftSuper)) &&
         is_key_pressed(KeyCode::C)
     }
 
     pub fn paste() -> bool {
-        is_key_down(KeyCode::LeftControl) &&
+        (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::LeftSuper)) &&
         is_key_pressed(KeyCode::V)
+    }
+
+    pub fn select_all() -> bool {
+        (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::LeftSuper)) &&
+        is_key_pressed(KeyCode::A)
+    }
+
+    pub fn duplicate() -> bool {
+        (is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::LeftSuper)) &&
+        is_key_pressed(KeyCode::D)
     }
 
     pub fn escape() -> bool {
@@ -100,6 +110,16 @@ impl Controls {
 
     pub fn tab() -> bool {
         is_key_pressed(KeyCode::Tab) && modifier_not_pressed()
+    }
+
+    /// Returns true if any key was pressed this frame.
+    pub fn any_key_pressed() -> bool {
+        get_last_key_pressed().is_some()
+    }
+
+    /// Returns true if alt key is currently held.
+    pub fn alt_held() -> bool {
+        is_key_down(KeyCode::LeftAlt) || is_key_down(KeyCode::RightAlt)
     }
 }
 

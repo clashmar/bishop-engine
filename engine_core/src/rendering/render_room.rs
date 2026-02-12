@@ -64,7 +64,7 @@ pub fn render_room(
 
         // Draw the tilemap as the first layer
         if first_pass {
-            tilemap.draw(&room.exits, asset_manager, room.position, grid_size);
+            tilemap.draw(asset_manager, room.position, grid_size);
             first_pass = false;
         }
 
@@ -124,11 +124,11 @@ fn draw_entity(
 
     let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
 
-    // Get pivot from transform (default to TopLeft if missing for backward compatibility)
+    // Get pivot from transform (default to BottomCenter)
     let pivot = transform_store
         .get(entity)
         .map(|t| t.pivot)
-        .unwrap_or(Pivot::TopLeft);
+        .unwrap_or(Pivot::BottomCenter);
 
     // Calculate pivot-adjusted draw position
     let draw_base = pivot_adjusted_position(pos, vec2(width, height), pivot);
@@ -271,6 +271,11 @@ fn collect_interpolated_layer_map<'a>(
     let glow_store = ecs.get_store::<Glow>();
 
     for (entity, transform) in &trans_store.data {
+        // Skip invisible entities
+        if !transform.visible {
+            continue;
+        }
+
         // Skip camera
         if cam_store.get(*entity).is_some() {
             continue;
@@ -330,14 +335,18 @@ fn collect_lights(
     for (entity, light) in &light_store.data {
         // Filter by current room
         if let Some(current_room) = room_store.get(*entity) {
-            if current_room.0 != room.id { 
-                continue; 
+            if current_room.0 != room.id {
+                continue;
             }
-        } else { 
-            continue; 
+        } else {
+            continue;
         }
 
         if let Some(pos) = trans_store.get(*entity) {
+            // Skip invisible entities
+            if !pos.visible {
+                continue;
+            }
             // Interpolate the draw position
             let draw_pos = interpolate_draw_position(
                 *entity, 

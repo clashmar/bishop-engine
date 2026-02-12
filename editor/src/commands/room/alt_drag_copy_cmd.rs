@@ -1,56 +1,104 @@
-// editor/src/commands/room/paste_entity_cmd.rs
+// editor/src/commands/room/alt_drag_copy_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
 use crate::editor::EditorMode;
-use crate::EDITOR_SERVICES;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::with_editor;
 use engine_core::ecs::component::comp_type_name;
+use engine_core::ecs::capture::capture_subtree;
 use engine_core::world::room::RoomId;
 use std::collections::{HashMap, HashSet};
 
-/// Undo-able command for pasting entities from the clipboard.
+/// Undo-able command for alt+drag copy operation.
+/// Unlike DuplicateEntitiesCmd, this command is created after entities already exist
+/// (they were created during the drag operation).
 #[derive(Debug)]
-pub struct PasteEntityCmd {
+pub struct AltDragCopyCmd {
     room_id: RoomId,
-    /// Maps old entity IDs to newly created ones.
-    id_map: Option<HashMap<Entity, Entity>>,
-    /// The component snapshot taken the first time the command ran.
+    /// The entities that were created during alt+drag.
+    created_entities: Vec<Entity>,
+    /// Snapshot captured from created entities for redo.
     snapshot: Option<Vec<(Entity, Vec<(String, String)>)>>,
-    /// Root entities (those without parents in the snapshot) for selection.
-    root_entities: Vec<Entity>,
+    /// Whether this is the first execution (entities already exist).
+    first_execute: bool,
+    /// Maps old entity IDs to newly created ones (for redo).
+    id_map: Option<HashMap<Entity, Entity>>,
 }
 
-impl PasteEntityCmd {
-    pub fn new(room_id: RoomId) -> Self {
+impl AltDragCopyCmd {
+    /// Create a new AltDragCopyCmd with the entities that were created during drag.
+    pub fn new(created_entities: Vec<Entity>, room_id: RoomId) -> Self {
         Self {
             room_id,
-            id_map: None,
+            created_entities,
             snapshot: None,
-            root_entities: Vec::new(),
+            first_execute: true,
+            id_map: None,
         }
     }
 }
 
-impl EditorCommand for PasteEntityCmd {
+impl EditorCommand for AltDragCopyCmd {
     fn execute(&mut self) {
-        if self.snapshot.is_none() {
-            self.snapshot = EDITOR_SERVICES.with(|s| s.entity_clipboard.borrow().clone());
+        if self.first_execute {
+            // First execute: entities already exist from drag operation.
+            // Capture their snapshot for potential redo.
+            let mut all_snapshots = Vec::new();
+            with_editor(|editor| {
+                let ecs = &mut editor.game.ecs;
+                for &entity in &self.created_entities {
+                    let snapshot = capture_subtree(ecs, entity);
+                    all_snapshots.extend(snapshot);
+                }
+            });
+            self.snapshot = Some(all_snapshots.clone());
+            self.first_execute = false;
+
+            // Call post_create for all components
+            with_editor(|editor| {
+                let ctx = &mut editor.game.ctx_mut();
+
+                for (entity_id, bag) in &all_snapshots {
+                    for (type_name, _) in bag {
+                        let component_reg = match inventory::iter::<ComponentRegistry>()
+                            .find(|r| r.type_name == type_name)
+                        {
+                            Some(reg) => reg,
+                            None => continue,
+                        };
+
+                        // Clone the existing component, call post_create, then reinsert
+                        let mut boxed = (component_reg.clone)(ctx.ecs, *entity_id);
+                        (component_reg.post_create)(&mut *boxed, entity_id, ctx);
+                        (component_reg.inserter)(ctx.ecs, *entity_id, boxed);
+                    }
+                }
+            });
+
+            // Select the created entities
+            with_editor(|editor| {
+                editor.room_editor.clear_selection();
+                for &entity in &self.created_entities {
+                    editor.room_editor.add_to_selection(entity);
+                }
+            });
+            return;
         }
+
+        // Redo: recreate entities from snapshot
         let snapshot = match &self.snapshot {
-            Some(s) => s,
-            None => return,
+            Some(s) if !s.is_empty() => s,
+            _ => return,
         };
 
-        // Find which entities are roots (have no parent in the snapshot)
+        // Find root entities (no parent in snapshot)
         let snapshot_ids: HashSet<Entity> = snapshot.iter().map(|(id, _)| *id).collect();
         let mut root_old_ids = Vec::new();
 
         for (old_id, bag) in snapshot.iter() {
             let has_parent_in_snapshot = bag.iter().any(|(type_name, ron)| {
                 if type_name == comp_type_name::<Parent>() {
-                    // Parse the parent ID from RON and check if it's in the snapshot
                     if let Ok(parent) = ron::from_str::<Parent>(ron) {
                         return snapshot_ids.contains(&parent.0);
                     }
@@ -63,7 +111,7 @@ impl EditorCommand for PasteEntityCmd {
             }
         }
 
-        // Create new entities for each in the snapshot
+        // Create new entities
         let mut map = HashMap::new();
         for (old_id, _) in snapshot.iter() {
             let new_id = with_editor(|editor| {
@@ -73,9 +121,7 @@ impl EditorCommand for PasteEntityCmd {
             map.insert(*old_id, new_id);
         }
         self.id_map = Some(map.clone());
-
-        // Track the new root entity IDs
-        self.root_entities = root_old_ids.iter().filter_map(|old| map.get(old).copied()).collect();
+        self.created_entities = root_old_ids.iter().filter_map(|old| map.get(old).copied()).collect();
 
         with_editor(|editor| {
             let ctx = &mut editor.game.ctx_mut();
@@ -117,27 +163,24 @@ impl EditorCommand for PasteEntityCmd {
                 }
             }
 
-            // Select all pasted root entities
+            // Select all recreated root entities
             editor.room_editor.clear_selection();
-            for &root in &self.root_entities {
+            for &root in &self.created_entities {
                 editor.room_editor.add_to_selection(root);
             }
         });
     }
 
     fn undo(&mut self) {
-        if self.id_map.is_some() {
-            with_editor(|editor| {
-                let ctx = &mut editor.game.ctx_mut();
+        with_editor(|editor| {
+            let ctx = &mut editor.game.ctx_mut();
 
-                // Remove all root entities (children are removed automatically)
-                for &root in &self.root_entities {
-                    Ecs::remove_entity(ctx, root);
-                }
+            for &entity in &self.created_entities {
+                Ecs::remove_entity(ctx, entity);
+            }
 
-                editor.room_editor.clear_selection();
-            });
-        }
+            editor.room_editor.clear_selection();
+        });
     }
 
     fn mode(&self) -> EditorMode {

@@ -183,14 +183,14 @@ pub struct PhysicsBody;
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Kinematic {}
 
-// Tile components
 #[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default)]
 pub struct Walkable(pub bool);
 
 #[ecs_component]
-#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+#[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]
 pub struct Solid(pub bool);
+inspector_module!(Solid);
 
 #[ecs_component]
 #[derive(Clone, Copy, Serialize, Deserialize, Default, Reflect)]

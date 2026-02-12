@@ -1,31 +1,34 @@
-// editor/src/commands/room/paste_entity_cmd.rs
+// editor/src/commands/room/duplicate_entities_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
 use crate::editor::EditorMode;
-use crate::EDITOR_SERVICES;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::with_editor;
-use engine_core::ecs::component::comp_type_name;
+use engine_core::ecs::component::{comp_type_name, Player};
+use engine_core::ecs::capture::capture_subtree;
 use engine_core::world::room::RoomId;
 use std::collections::{HashMap, HashSet};
 
-/// Undo-able command for pasting entities from the clipboard.
+/// Undo-able command for duplicating selected entities.
 #[derive(Debug)]
-pub struct PasteEntityCmd {
+pub struct DuplicateEntitiesCmd {
     room_id: RoomId,
+    /// The entities to duplicate.
+    source_entities: Vec<Entity>,
     /// Maps old entity IDs to newly created ones.
     id_map: Option<HashMap<Entity, Entity>>,
-    /// The component snapshot taken the first time the command ran.
+    /// The component snapshot captured on first execute.
     snapshot: Option<Vec<(Entity, Vec<(String, String)>)>>,
-    /// Root entities (those without parents in the snapshot) for selection.
+    /// Root entities created by duplication for selection/undo.
     root_entities: Vec<Entity>,
 }
 
-impl PasteEntityCmd {
-    pub fn new(room_id: RoomId) -> Self {
+impl DuplicateEntitiesCmd {
+    pub fn new(entities: Vec<Entity>, room_id: RoomId) -> Self {
         Self {
             room_id,
+            source_entities: entities,
             id_map: None,
             snapshot: None,
             root_entities: Vec::new(),
@@ -33,24 +36,36 @@ impl PasteEntityCmd {
     }
 }
 
-impl EditorCommand for PasteEntityCmd {
+impl EditorCommand for DuplicateEntitiesCmd {
     fn execute(&mut self) {
+        // Capture snapshot on first execution
         if self.snapshot.is_none() {
-            self.snapshot = EDITOR_SERVICES.with(|s| s.entity_clipboard.borrow().clone());
+            let mut all_snapshots = Vec::new();
+            with_editor(|editor| {
+                let ecs = &mut editor.game.ecs;
+                for &entity in &self.source_entities {
+                    if ecs.has::<Player>(entity) {
+                        continue;
+                    }
+                    let snapshot = capture_subtree(ecs, entity);
+                    all_snapshots.extend(snapshot);
+                }
+            });
+            self.snapshot = Some(all_snapshots);
         }
+
         let snapshot = match &self.snapshot {
-            Some(s) => s,
-            None => return,
+            Some(s) if !s.is_empty() => s,
+            _ => return,
         };
 
-        // Find which entities are roots (have no parent in the snapshot)
+        // Find root entities (no parent in snapshot)
         let snapshot_ids: HashSet<Entity> = snapshot.iter().map(|(id, _)| *id).collect();
         let mut root_old_ids = Vec::new();
 
         for (old_id, bag) in snapshot.iter() {
             let has_parent_in_snapshot = bag.iter().any(|(type_name, ron)| {
                 if type_name == comp_type_name::<Parent>() {
-                    // Parse the parent ID from RON and check if it's in the snapshot
                     if let Ok(parent) = ron::from_str::<Parent>(ron) {
                         return snapshot_ids.contains(&parent.0);
                     }
@@ -63,7 +78,7 @@ impl EditorCommand for PasteEntityCmd {
             }
         }
 
-        // Create new entities for each in the snapshot
+        // Create new entities
         let mut map = HashMap::new();
         for (old_id, _) in snapshot.iter() {
             let new_id = with_editor(|editor| {
@@ -73,8 +88,6 @@ impl EditorCommand for PasteEntityCmd {
             map.insert(*old_id, new_id);
         }
         self.id_map = Some(map.clone());
-
-        // Track the new root entity IDs
         self.root_entities = root_old_ids.iter().filter_map(|old| map.get(old).copied()).collect();
 
         with_editor(|editor| {
@@ -117,7 +130,7 @@ impl EditorCommand for PasteEntityCmd {
                 }
             }
 
-            // Select all pasted root entities
+            // Select all duplicated root entities
             editor.room_editor.clear_selection();
             for &root in &self.root_entities {
                 editor.room_editor.add_to_selection(root);
@@ -130,12 +143,15 @@ impl EditorCommand for PasteEntityCmd {
             with_editor(|editor| {
                 let ctx = &mut editor.game.ctx_mut();
 
-                // Remove all root entities (children are removed automatically)
                 for &root in &self.root_entities {
                     Ecs::remove_entity(ctx, root);
                 }
 
+                // Restore original selection
                 editor.room_editor.clear_selection();
+                for &entity in &self.source_entities {
+                    editor.room_editor.add_to_selection(entity);
+                }
             });
         }
     }

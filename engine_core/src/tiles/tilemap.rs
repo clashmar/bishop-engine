@@ -1,6 +1,5 @@
 // engine_core/src/tiles/tilemap.rs
 use crate::assets::asset_manager::AssetManager;
-use crate::world::room::{Exit, ExitDirection};
 use crate::tiles::tile::TileDefId;
 use crate::world::world::GridPos;
 use serde_with::{serde_as, FromInto};
@@ -29,10 +28,9 @@ impl TileMap {
         }
     }
 
-    /// Draw the tilemap with exits.
+    /// Draw the tilemap.
     pub fn draw(
         &self,
-        exits: &Vec<Exit>,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
         grid_size: f32,
@@ -65,41 +63,6 @@ impl TileMap {
                 );
             }
         }
-        self.draw_exits(exits, room_position, grid_size);
-    }
-
-    fn draw_exits(&self, exits: &Vec<Exit>, room_position: Vec2, grid_size: f32) {
-        for exit in exits {
-            let position = exit.position * grid_size + room_position;
-            self.draw_exit(position, exit.direction, grid_size);
-        }
-    }
-
-    /// Draw a yellow exit overlay/arrow at the given position.
-    pub fn draw_exit(&self, position: Vec2, direction: ExitDirection, grid_size: f32) {
-        // Position in world coordinates, including outer tiles
-        let x = position.x;
-        let y = position.y;
-
-        // Draw semi-transparent rectangle
-        draw_rectangle(x, y, grid_size, grid_size, LIGHTGRAY);
-
-        let arrow_center = vec2(x + grid_size / 2.0, y + grid_size / 2.0);
-        let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
-
-        let offsets = match direction {
-            ExitDirection::Up => [vec2(0.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0)],
-            ExitDirection::Down => [vec2(0.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0)],
-            ExitDirection::Left => [vec2(-1.0, 0.0), vec2(1.0, -1.0), vec2(1.0, 1.0)],
-            ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
-        };
-
-        draw_triangle(
-            arrow_center + offsets[0] * grid_size / 4.0,
-            arrow_center + offsets[1] * grid_size / 4.0,
-            arrow_center + offsets[2] * grid_size / 4.0,
-            arrow_color,
-        );
     }
 
     /// Insert a tile at a grid coordinate.
