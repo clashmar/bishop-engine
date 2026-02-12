@@ -8,7 +8,6 @@ use engine_core::world::room::Exit;
 use engine_core::ecs::ecs::Ecs;
 use std::collections::HashSet;
 use macroquad::prelude::*;
-use engine_core::*;
 
 const OVERLAP_EPS: f32 = 0.0001; 
 
@@ -127,8 +126,6 @@ pub fn sweep_move(
 
     // Create an invisible border around the edge of the room except where exits are placed
     add_border_obstacles(&mut obstacles, room_origin, tilemap, exits, grid_size);
-
-    onscreen_debug!("{:?}", obstacles);
 
     // Other solid entities
     // Iterate over every Collider component in the world, skip the moving one

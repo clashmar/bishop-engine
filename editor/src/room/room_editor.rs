@@ -270,6 +270,12 @@ impl RoomEditor {
 
                 self.inspector.set_rect(inspector_rect);
 
+                if self.view_preview {
+                    render_system.resize_for_camera(render_cam.zoom);
+                } else {
+                    render_system.resize_to_window();
+                }
+
                 // Draws everything in the room. Same implementation as the game.
                 render_room(
                     ecs,
@@ -282,7 +288,11 @@ impl RoomEditor {
                     grid_size,
                 );
 
-                render_system.present_game();
+                if self.view_preview {
+                    render_system.present_game();
+                } else {
+                    render_system.present();
+                }
 
                 if !self.view_preview {
                     set_camera(camera);

@@ -2,9 +2,9 @@
 use engine_core::{constants::*, world::room::Room};
 use macroquad::prelude::*;
 
-pub const ZOOM_SPEED_FACTOR: f32 = 0.05;
-pub const MIN_ZOOM: f32 = 0.0005;
-pub const MAX_ZOOM: f32 = 0.01;
+pub const ZOOM_STEP_PERCENT: f32 = 0.5;
+pub const MIN_ZOOM: f32 = 0.000001;
+pub const MAX_ZOOM: f32 = 0.1;
 
 pub struct EditorCameraController;
 
@@ -17,16 +17,17 @@ impl EditorCameraController {
             camera.target -= delta * 2.0 / camera.zoom;
         }
 
-        // Zoom (mouse wheel)
+        // Zoom (mouse wheel) - discrete steps per notch
         let scroll = mouse_wheel().1;
         if scroll != 0.0 {
             let mut scalar = Self::current_scalar(camera);
-            let zoom_speed = ZOOM_SPEED_FACTOR * scalar;
-            scalar = (scalar + scroll * zoom_speed).clamp(MIN_ZOOM, MAX_ZOOM);
+            let direction = scroll.signum();
+            scalar *= 1.0 + direction * ZOOM_STEP_PERCENT;
+            scalar = scalar.clamp(MIN_ZOOM, MAX_ZOOM);
             Self::apply_aspect(camera, scalar);
         } else {
             let scalar = Self::current_scalar(camera);
-            Self::apply_aspect(camera, scalar); 
+            Self::apply_aspect(camera, scalar);
         }
     }
 
@@ -48,16 +49,22 @@ impl EditorCameraController {
         }
     }
 
-    // Rurn a scalar zoom into a non‑uniform pair that keeps world
-    // units square for the current aspect ratio.
+    // Turn a scalar zoom into a non‑uniform pair that keeps world
+    // units square for the current aspect ratio, snapped to integer pixel ratios.
     pub fn apply_aspect(camera: &mut Camera2D, scalar_zoom: f32) {
-        let aspect = screen_width() / screen_height();
+        let win_w = screen_width();
+        let win_h = screen_height();
+
+        // Snap to integer pixel scale based on the smaller dimension
+        // scale = screen_size * zoom / 2.0, so zoom = 2.0 * scale / screen_size
+        let current_scale = (win_h * scalar_zoom / 2.0).round().max(1.0);
+        let snapped_scalar = 2.0 * current_scale / win_h;
+
+        let aspect = win_w / win_h;
         let (zoom_x, zoom_y) = if aspect > 1.0 {
-            // Window wider than tall 
-            (scalar_zoom / aspect, scalar_zoom)
+            (snapped_scalar / aspect, snapped_scalar)
         } else {
-            // Window taller than wide
-            (scalar_zoom, scalar_zoom * aspect)
+            (snapped_scalar, snapped_scalar * aspect)
         };
         camera.zoom = vec2(zoom_x, zoom_y);
     }
@@ -67,18 +74,12 @@ impl EditorCameraController {
         let max_dim_px = (room_size * grid_size).max_element() / 1.5;
         let scalar = editor_zoom_factor(grid_size) / max_dim_px;
 
-        let aspect = screen_width() / screen_height();
-        let (zoom_x, zoom_y) = if aspect > 1.0 {
-            (scalar / aspect, scalar)
-        } else {
-            (scalar, scalar * aspect)
-        };
-
-        Camera2D {
+        let mut camera = Camera2D {
             target: (room_position + (room_size * grid_size) / 2.0),
-            zoom: vec2(zoom_x, zoom_y),
             ..Default::default()
-        }
+        };
+        Self::apply_aspect(&mut camera, scalar);
+        camera
     }
 
     /// Reset a `Camera2D` so that the whole room fits the screen.

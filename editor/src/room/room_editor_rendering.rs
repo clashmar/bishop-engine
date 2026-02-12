@@ -10,7 +10,6 @@ use engine_core::animation::animation_clip::Animation;
 use engine_core::assets::asset_manager::AssetManager;
 use engine_core::camera::game_camera::RoomCamera;
 use engine_core::rendering::render_room::*;
-use engine_core::constants::DEFAULT_GRID_SIZE;
 use engine_core::lighting::light::Light;
 use engine_core::assets::sprite::Sprite;
 use engine_core::game::game::GameCtxMut;
@@ -24,7 +23,7 @@ use engine_core::ui::text::*;
 use macroquad::prelude::*;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
-fn thickness() -> f32 { (DEFAULT_GRID_SIZE * 0.175).max(1.0) }
+fn thickness(grid_size: f32) -> f32 { (grid_size * 0.175).max(1.0) }
 
 impl RoomEditor {
     /// Draw static UI for the scene editor
@@ -111,7 +110,8 @@ impl RoomEditor {
 
         let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
         const BASE_THICKNESS: f32 = 1.;
-        let thickness = BASE_THICKNESS * (MAX_ZOOM / editor_scalar).max(1.0);
+        const THICKNESS_SCALE: f32 = 0.01;
+        let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 
         let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
         let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
@@ -257,26 +257,26 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId, grid_size: f32) {
         let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
         let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
 
-        draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), green);
+        draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), green);
 
         let finder_w = grid_size * 0.3;
         let finder_h = grid_size * 0.6;
         let finder = Rect::new(
-            body.x + thickness(),                     
+            body.x + thickness(grid_size),                     
             body.y + (body.h - finder_h) / 2.0,
             finder_w,
             finder_h,
         );
         draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
-                            thickness() * 0.75, blue);
+                            thickness(grid_size) * 0.75, blue);
 
         let lens_radius = grid_size * 0.1;
         let lens_center = vec2(
-            body.x + body.w - lens_radius * 2.0 - thickness(),
+            body.x + body.w - lens_radius * 2.0 - thickness(grid_size),
             body.y + body.h / 2.0,
         );
         draw_circle_lines(lens_center.x, lens_center.y,
-                        lens_radius, thickness() * 0.75, red);
+                        lens_radius, thickness(grid_size) * 0.75, red);
     }
 }
 
@@ -313,7 +313,7 @@ pub fn draw_light_placeholders(
             let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
 
             // Outer square
-            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), cyan);
+            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), cyan);
 
             // Lens
             let lens_radius = grid_size * 0.2;
@@ -326,7 +326,7 @@ pub fn draw_light_placeholders(
                 lens_center.x,
                 lens_center.y,
                 lens_radius,
-                thickness() * 0.75,
+                thickness(grid_size) * 0.75,
                 yellow,
             );
         }
@@ -370,7 +370,7 @@ pub fn draw_glow_placeholders(
             let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
 
             // Outer square
-            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(), cyan);
+            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), cyan);
 
             // Lens
             let lens_radius = grid_size * 0.2;
@@ -383,7 +383,7 @@ pub fn draw_glow_placeholders(
                 lens_center.x,
                 lens_center.y,
                 lens_radius,
-                thickness() * 0.75,
+                thickness(grid_size) * 0.75,
                 yellow,
             );
         }

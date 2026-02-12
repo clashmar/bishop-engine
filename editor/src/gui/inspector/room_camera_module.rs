@@ -1,5 +1,6 @@
 // editor/src/gui/inspector/camera_module.rs
 use engine_core::ecs::module_factory::ModuleFactoryEntry;
+use engine_core::ecs::transform::{Pivot, Transform};
 use engine_core::{camera::game_camera::*, ui::text::*};
 use engine_core::ecs::inpsector_module::CollapsibleModule;
 use engine_core::ecs::inpsector_module::InspectorModule;
@@ -35,6 +36,9 @@ impl InspectorModule for RoomCameraModule {
         let grid_size = game_ctx.cur_world.grid_size;
         let ecs = &mut game_ctx.ecs;
 
+        // Track pivot change to apply after cam borrow ends
+        let mut new_pivot: Option<Pivot> = None;
+
         let cam = ecs
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
@@ -55,7 +59,7 @@ impl InspectorModule for RoomCameraModule {
         // Advance y for the next position
         y += mode_rect.h + mode_rect.h + WIDGET_SPACING;
 
-        match cam.zoom_mode   {
+        match cam.zoom_mode {
             ZoomMode::Step => {
                 // Fields to change the global virtual screen dimensions
                 let scale_rect = Rect::new(
@@ -65,7 +69,7 @@ impl InspectorModule for RoomCameraModule {
                     40.0,
                 );
 
-                const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 3.0];
+                const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 4.0];
 
                 let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
                 let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar, blocked);
@@ -74,6 +78,7 @@ impl InspectorModule for RoomCameraModule {
                     let width = world_virtual_width(grid_size) * new_scalar;
                     let height = world_virtual_height(grid_size) * new_scalar;
                     cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
+                    new_pivot = Some(pivot_for_zoom_scalar(new_scalar));
                 }
             }
             ZoomMode::Free => {
@@ -125,9 +130,6 @@ impl InspectorModule for RoomCameraModule {
             CameraMode::Follow(FollowRestriction::ClampX),
         ];
 
-        // Advance y for the next position
-        // y += cam_mode_rect.h + SPACING;
-
         // Render the dropdowns in reverse order
         if let Some(new_cam_mode) = Dropdown::new(
             self.cam_mode_id,
@@ -150,6 +152,13 @@ impl InspectorModule for RoomCameraModule {
         ).blocked(blocked).show() {
             if new_mode != current_mode {
                 cam.zoom_mode = new_mode;
+            }
+        }
+
+        // Apply deferred pivot change
+        if let Some(pivot) = new_pivot {
+            if let Some(transform) = ecs.get_mut::<Transform>(entity) {
+                transform.pivot = pivot;
             }
         }
     }
@@ -250,4 +259,15 @@ fn round_to_dp(v: f32, dp: u32) -> f32 {
         r = r.round();
     }
     r
+}
+
+/// Returns the optimal pivot for camera placement at a given zoom scalar.
+fn pivot_for_zoom_scalar(scalar: f32) -> Pivot {
+    if scalar <= 0.5 + f32::EPSILON {
+        Pivot::Center
+    } else if scalar <= 1.0 + f32::EPSILON {
+        Pivot::CenterLeft
+    } else {
+        Pivot::TopLeft
+    }
 }
