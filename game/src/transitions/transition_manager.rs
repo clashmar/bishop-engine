@@ -64,7 +64,7 @@ impl TransitionManager {
     ) {
         let grid_size = game_state.game.current_world().grid_size;
         let rooms = game_state.game.current_world().rooms.clone();
-        
+
         let entities: Vec<_> = game_state.game.ecs
             .get_store::<Transform>()
             .data
@@ -76,11 +76,11 @@ impl TransitionManager {
             let (pos, _coll) = {
                 let p = match game_state.game.ecs.get::<Transform>(entity) {
                     Some(v) => v.position,
-                    None => continue,           
+                    None => continue,
                 };
                 let c = match game_state.game.ecs.get::<Collider>(entity) {
                     Some(v) => v,
-                    None => continue,           
+                    None => continue,
                 };
                 (p, c)
             };
@@ -88,12 +88,12 @@ impl TransitionManager {
             // Find the room that now contains the entity
             let target_id = match room_of_entity(pos, &rooms, grid_size) {
                 Some(id) => id,
-                None => return,
-            }; 
+                None => continue,
+            };
 
             if let Some(comp) = game_state.game.ecs.get_mut::<CurrentRoom>(entity) {
                 if comp.0 == target_id {
-                    return;
+                    continue;
                 } else {
                     comp.0 = target_id
                 }
@@ -110,15 +110,15 @@ impl TransitionManager {
 
 /// Return the id of the room whose bounds contain the entity's AABB.
 pub fn room_of_entity(pos: Vec2, rooms: &[Room], grid_size: f32) -> Option<RoomId> {
-    // TODO: work out position based on collider?
     for room in rooms {
         let min = room.position;
         let max = room.position + room.size * grid_size;
 
-        if pos.x >= min.x
-            && pos.x <= max.x
-            && pos.y >= min.y
-            && pos.y <= max.y
+        // Never use <=/>= here or will overlap with adjacent rooms
+        if pos.x > min.x
+            && pos.x < max.x
+            && pos.y > min.y
+            && pos.y < max.y
         {
             return Some(room.id);
         }

@@ -348,14 +348,20 @@ where
             }
         }
 
-        scroll_offset_x = calculate_scroll_offset(
-            &text,
-            cursor_char,
-            scroll_offset_x,
-            self.rect.w,
-            WIDGET_PADDING,
-            DEFAULT_FONT_SIZE_16,
-        );
+        // Scroll to follow cursor when focused
+        if focused {
+            scroll_offset_x = calculate_scroll_offset(
+                &text,
+                cursor_char,
+                scroll_offset_x,
+                self.rect.w,
+                WIDGET_PADDING,
+                DEFAULT_FONT_SIZE_16,
+            );
+        } else {
+            // Left-align when unfocussed
+            scroll_offset_x = 0.0;
+        }
 
         let now = get_time();
         if focused && ((now * 2.0) as i32 % 2 == 0) {

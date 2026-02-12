@@ -1,7 +1,9 @@
 // editor/src/gui/panels/console_panel.rs
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::Editor;
+use engine_core::controls::controls::Controls;
 use engine_core::logging::logging::LOG_HISTORY;
+use engine_core::ui::widgets::clipboard::clipboard_set_text;
 use engine_core::ui::widgets::Button;
 use engine_core::ui::text::*;
 use macroquad::prelude::*;
@@ -13,11 +15,23 @@ const TOP_PADDING: f32 = 4.0;
 const BOTTOM_PADDING: f32 = 8.0;
 const CLEAR_BUTTON_HEIGHT: f32 = 20.0;
 const HEADER_ROW_HEIGHT: f32 = 28.0;
+const MAX_CONSOLE_ENTRIES: usize = 500;
+
+/// Selection position within the console text.
+#[derive(Clone, Copy, PartialEq)]
+struct SelectionPos {
+    line: usize,
+    char_idx: usize,
+}
 
 pub struct ConsolePanel {
     scroll_y: f32,
     auto_scroll: bool,
     last_entry_count: usize,
+    selection_anchor: Option<SelectionPos>,
+    selection_end: Option<SelectionPos>,
+    dragging: bool,
+    cached_wrapped: Vec<(log::Level, Vec<String>)>,
 }
 
 impl ConsolePanel {
@@ -26,6 +40,10 @@ impl ConsolePanel {
             scroll_y: 0.0,
             auto_scroll: true,
             last_entry_count: 0,
+            selection_anchor: None,
+            selection_end: None,
+            dragging: false,
+            cached_wrapped: Vec::new(),
         }
     }
 
@@ -139,6 +157,110 @@ impl ConsolePanel {
 
         tokens
     }
+
+    /// Returns ordered selection range (start, end) where start comes before end.
+    fn ordered_selection(&self) -> Option<(SelectionPos, SelectionPos)> {
+        match (self.selection_anchor, self.selection_end) {
+            (Some(anchor), Some(end)) if anchor != end => {
+                if anchor.line < end.line || (anchor.line == end.line && anchor.char_idx < end.char_idx) {
+                    Some((anchor, end))
+                } else {
+                    Some((end, anchor))
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Converts mouse position to line and character index.
+    fn pos_from_mouse(
+        mouse: Vec2,
+        content_rect: Rect,
+        scroll_y: f32,
+        all_lines: &[String],
+        font_size: f32,
+    ) -> Option<SelectionPos> {
+        let relative_y = mouse.y - content_rect.y - scroll_y;
+        let line = (relative_y / ROW_HEIGHT).floor() as usize;
+
+        if line >= all_lines.len() {
+            return Some(SelectionPos {
+                line: all_lines.len().saturating_sub(1),
+                char_idx: all_lines.last().map_or(0, |l| l.chars().count()),
+            });
+        }
+
+        let line_text = &all_lines[line];
+        let text_start_x = content_rect.x + 6.0;
+        let relative_x = mouse.x - text_start_x;
+
+        if relative_x <= 0.0 {
+            return Some(SelectionPos { line, char_idx: 0 });
+        }
+
+        let mut prev_width = 0.0;
+        for (byte_idx, ch) in line_text.char_indices() {
+            let char_idx = line_text[..byte_idx].chars().count();
+            let width = measure_text_ui(&line_text[..byte_idx + ch.len_utf8()], font_size, 1.0).width;
+
+            if relative_x < width {
+                let mid = (prev_width + width) / 2.0;
+                if relative_x < mid {
+                    return Some(SelectionPos { line, char_idx });
+                } else {
+                    return Some(SelectionPos { line, char_idx: char_idx + 1 });
+                }
+            }
+            prev_width = width;
+        }
+
+        Some(SelectionPos {
+            line,
+            char_idx: line_text.chars().count(),
+        })
+    }
+
+    /// Extracts selected text from all lines given a selection range.
+    fn extract_selected_text(
+        all_lines: &[String],
+        start: SelectionPos,
+        end: SelectionPos,
+    ) -> String {
+        if start.line == end.line {
+            let line = &all_lines[start.line];
+            let start_byte = line.char_indices().nth(start.char_idx).map(|(b, _)| b).unwrap_or(line.len());
+            let end_byte = line.char_indices().nth(end.char_idx).map(|(b, _)| b).unwrap_or(line.len());
+            return line[start_byte..end_byte].to_string();
+        }
+
+        let mut result = String::new();
+
+        // First line from start.char_idx to end
+        let first_line = &all_lines[start.line];
+        let start_byte = first_line.char_indices().nth(start.char_idx).map(|(b, _)| b).unwrap_or(first_line.len());
+        result.push_str(&first_line[start_byte..]);
+        result.push('\n');
+
+        // Middle lines in full
+        for line_idx in (start.line + 1)..end.line {
+            result.push_str(&all_lines[line_idx]);
+            result.push('\n');
+        }
+
+        // Last line from start to end.char_idx
+        let last_line = &all_lines[end.line];
+        let end_byte = last_line.char_indices().nth(end.char_idx).map(|(b, _)| b).unwrap_or(last_line.len());
+        result.push_str(&last_line[..end_byte]);
+
+        result
+    }
+
+    /// Clears current selection.
+    fn clear_selection(&mut self) {
+        self.selection_anchor = None;
+        self.selection_end = None;
+        self.dragging = false;
+    }
 }
 
 pub const CONSOLE_PANEL: &str = "Console";
@@ -171,6 +293,8 @@ impl PanelDefinition for ConsolePanel {
                 history.clear();
             }
             self.scroll_y = 0.0;
+            self.clear_selection();
+            self.cached_wrapped.clear();
         }
 
         // Content area below the header row
@@ -187,33 +311,53 @@ impl PanelDefinition for ConsolePanel {
             }
         }
 
-        // Get log entries
-        let entries: Vec<(log::Level, String)> = if let Ok(history) = LOG_HISTORY.lock() {
-            history
-                .entries()
-                .iter()
-                .map(|e| (e.level, e.message.clone()))
-                .collect()
-        } else {
-            Vec::new()
-        };
-
-        let entry_count = entries.len();
-
-        // Calculate usable width for text
         let usable_w = content_rect.w - SCROLLBAR_W - 12.0;
         let font_size = 14.0;
 
-        // Pre-calculate wrapped lines for all entries 
-        let wrapped_entries: Vec<(log::Level, Vec<String>)> = entries
-            .iter()
-            .map(|(level, message)| {
-                let prefix = Self::level_prefix(*level);
-                let full_message = format!("{}{}", prefix, message);
-                let lines = Self::wrap_text(&full_message, usable_w, font_size);
-                (*level, lines)
-            })
-            .collect();
+        // Get entry count to check if cache needs update
+        let entry_count = LOG_HISTORY.lock().map(|h| h.entries().len()).unwrap_or(0);
+        let cached_count = self.cached_wrapped.len();
+
+        // Update cache when entry count changes
+        if entry_count != cached_count {
+            if entry_count > cached_count {
+                // New entries arrived - only wrap the new ones
+                let new_entries: Vec<(log::Level, String)> = if let Ok(history) = LOG_HISTORY.lock() {
+                    history.entries().iter().skip(cached_count).map(|e| (e.level, e.message.clone())).collect()
+                } else {
+                    Vec::new()
+                };
+
+                for (level, message) in new_entries {
+                    let prefix = Self::level_prefix(level);
+                    let full_message = format!("{}{}", prefix, message);
+                    let lines = Self::wrap_text(&full_message, usable_w, font_size);
+                    self.cached_wrapped.push((level, lines));
+                }
+
+                // Drop old entries if over limit
+                if self.cached_wrapped.len() > MAX_CONSOLE_ENTRIES {
+                    let excess = self.cached_wrapped.len() - MAX_CONSOLE_ENTRIES;
+                    self.cached_wrapped.drain(0..excess);
+                }
+            } else {
+                // Entries were removed - rebuild cache
+                let entries: Vec<(log::Level, String)> = if let Ok(history) = LOG_HISTORY.lock() {
+                    history.entries().iter().map(|e| (e.level, e.message.clone())).collect()
+                } else {
+                    Vec::new()
+                };
+
+                self.cached_wrapped = entries.iter().map(|(level, message)| {
+                    let prefix = Self::level_prefix(*level);
+                    let full_message = format!("{}{}", prefix, message);
+                    let lines = Self::wrap_text(&full_message, usable_w, font_size);
+                    (*level, lines)
+                }).collect();
+            }
+        }
+
+        let wrapped_entries = &self.cached_wrapped;
 
         // Calculate total line count for content height
         let total_lines: usize = wrapped_entries.iter().map(|(_, lines)| lines.len()).sum();
@@ -234,41 +378,92 @@ impl PanelDefinition for ConsolePanel {
         // Clamp scroll
         self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
 
-        // Draw entries with cumulative Y tracking
-        let mut cumulative_y = 0.0;
+        // Create flat list of all lines with their colors for selection handling
+        let all_lines: Vec<(String, Color)> = wrapped_entries
+            .iter()
+            .flat_map(|(level, lines)| {
+                let color = Self::level_color(*level);
+                lines.iter().map(move |line| (line.clone(), color))
+            })
+            .collect();
 
-        for (level, lines) in &wrapped_entries {
-            let entry_height = lines.len() as f32 * ROW_HEIGHT;
-            let entry_top = content_rect.y + self.scroll_y + cumulative_y;
-            let entry_bottom = entry_top + entry_height;
+        let all_line_texts: Vec<String> = all_lines.iter().map(|(text, _)| text.clone()).collect();
 
-            // Skip entries entirely outside visible area
-            if entry_bottom < content_rect.y || entry_top > content_rect.y + content_rect.h {
-                cumulative_y += entry_height;
+        // Handle mouse selection
+        if !blocked && content_rect.contains(mouse) {
+            if is_mouse_button_pressed(MouseButton::Left) {
+                if let Some(pos) = Self::pos_from_mouse(mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
+                    self.selection_anchor = Some(pos);
+                    self.selection_end = Some(pos);
+                    self.dragging = true;
+                }
+            }
+        }
+
+        if self.dragging && is_mouse_button_down(MouseButton::Left) {
+            if let Some(pos) = Self::pos_from_mouse(mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
+                self.selection_end = Some(pos);
+            }
+        }
+
+        if is_mouse_button_released(MouseButton::Left) && self.dragging {
+            self.dragging = false;
+            if self.selection_anchor == self.selection_end {
+                self.clear_selection();
+            }
+        }
+
+        // Handle copy with Ctrl+C
+        if !blocked && Controls::copy() {
+            if let Some((start, end)) = self.ordered_selection() {
+                let selected_text = Self::extract_selected_text(&all_line_texts, start, end);
+                clipboard_set_text(&selected_text);
+            }
+        }
+
+        // Draw entries with cumulative Y tracking and selection highlights
+        let selection = self.ordered_selection();
+
+        for (global_line_idx, (line_text, color)) in all_lines.iter().enumerate() {
+            let line_y = content_rect.y + self.scroll_y + global_line_idx as f32 * ROW_HEIGHT;
+
+            // Skip lines outside visible area
+            if line_y + ROW_HEIGHT < content_rect.y || line_y > content_rect.y + content_rect.h {
                 continue;
             }
 
-            let color = Self::level_color(*level);
+            // Draw selection highlight for this line
+            if let Some((start, end)) = selection {
+                if global_line_idx >= start.line && global_line_idx <= end.line {
+                    let line_chars = line_text.chars().count();
+                    let sel_start_char = if global_line_idx == start.line { start.char_idx } else { 0 };
+                    let sel_end_char = if global_line_idx == end.line { end.char_idx } else { line_chars };
 
-            // Draw each line of the wrapped entry
-            for (line_idx, line) in lines.iter().enumerate() {
-                let line_y = entry_top + line_idx as f32 * ROW_HEIGHT;
+                    if sel_start_char < sel_end_char {
+                        let start_byte = line_text.char_indices().nth(sel_start_char).map(|(b, _)| b).unwrap_or(0);
+                        let end_byte = line_text.char_indices().nth(sel_end_char).map(|(b, _)| b).unwrap_or(line_text.len());
 
-                // Skip individual lines outside visible area
-                if line_y < content_rect.y || line_y + ROW_HEIGHT > content_rect.y + content_rect.h {
-                    continue;
+                        let sel_start_x = content_rect.x + 6.0 + measure_text_ui(&line_text[..start_byte], font_size, 1.0).width;
+                        let sel_end_x = content_rect.x + 6.0 + measure_text_ui(&line_text[..end_byte], font_size, 1.0).width;
+
+                        draw_rectangle(
+                            sel_start_x,
+                            line_y,
+                            sel_end_x - sel_start_x,
+                            ROW_HEIGHT,
+                            Color::new(0.3, 0.5, 0.8, 0.5),
+                        );
+                    }
                 }
-
-                draw_text_ui(
-                    line,
-                    content_rect.x + 6.,
-                    line_y + ROW_HEIGHT * 0.75,
-                    font_size,
-                    color,
-                );
             }
 
-            cumulative_y += entry_height;
+            draw_text_ui(
+                line_text,
+                content_rect.x + 6.,
+                line_y + ROW_HEIGHT * 0.75,
+                font_size,
+                *color,
+            );
         }
 
         // Scrollbar

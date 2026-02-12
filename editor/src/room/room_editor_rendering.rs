@@ -74,9 +74,8 @@ impl RoomEditor {
     }
 
     /// Draw the cursor coordinates in world space.
-    pub fn draw_coordinates(&self, camera: &Camera2D, room: &Room, grid_size: f32) {
-        let local_grid = coord::mouse_world_grid(camera, grid_size);
-        let world_grid = local_grid + room.position;
+    pub fn draw_coordinates(&self, camera: &Camera2D, _room: &Room, grid_size: f32) {
+        let world_grid = coord::mouse_world_grid(camera, grid_size);
         
         let txt = format!(
             "({:.0}, {:.0})",
@@ -92,49 +91,74 @@ impl RoomEditor {
         draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLUE);
     }
 
-    /// Draw a yellow rectangle that visualises the viewport of a selected RoomCamera.
+    /// Draw viewport rectangles for all cameras in the room when a camera is selected.
+    /// The selected camera is drawn in yellow, others in a dimmer cyan.
     pub fn draw_camera_viewport(
         &self,
         editor_cam: &Camera2D,
         ecs: &Ecs,
         selected: Entity,
+        room_id: RoomId,
     ) {
-        let pos = match ecs.get_store::<Transform>().get(selected) {
-            Some(p) => p.position,
-            None => return,
-        };
+        // Only draw viewports if the selected entity is a camera
+        if !ecs.has::<RoomCamera>(selected) {
+            return;
+        }
 
-        let room_cam = match ecs.get_store::<RoomCamera>().get(selected) {
-            Some(c) => c,
-            None => return,
-        };
+        let cam_store = ecs.get_store::<RoomCamera>();
+        let pos_store = ecs.get_store::<Transform>();
+        let room_store = ecs.get_store::<CurrentRoom>();
 
-        let factor_x = editor_cam.zoom.x / room_cam.zoom.x;
-        let factor_y = editor_cam.zoom.y / room_cam.zoom.y;
+        let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
+        const BASE_THICKNESS: f32 = 1.;
+        let thickness = BASE_THICKNESS * (MAX_ZOOM / editor_scalar).max(1.0);
 
         let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
         let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
         let editor_w = (tr.x - bl.x).abs();
         let editor_h = (tr.y - bl.y).abs();
 
-        let viewport_w = editor_w * factor_x;
-        let viewport_h = editor_h * factor_y;
+        // Collect all cameras in this room
+        for (entity, room_cam) in cam_store.data.iter() {
+            // Only draw cameras in this room
+            if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+                if *id != room_id {
+                    continue;
+                }
+            } else {
+                continue;
+            }
 
-        let half = vec2(viewport_w, viewport_h) * 0.5;
-        let top_left = pos - half;
+            let pos = match pos_store.get(*entity) {
+                Some(p) => p.position,
+                None => continue,
+            };
 
-        let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
-        const BASE_THICKNESS: f32 = 1.;
-        let thickness = BASE_THICKNESS * (MAX_ZOOM / editor_scalar).max(1.0);
+            let factor_x = editor_cam.zoom.x / room_cam.zoom.x;
+            let factor_y = editor_cam.zoom.y / room_cam.zoom.y;
 
-        draw_rectangle_lines(
-            top_left.x,
-            top_left.y,
-            viewport_w,
-            viewport_h,
-            thickness,
-            YELLOW,
-        );
+            let viewport_w = editor_w * factor_x;
+            let viewport_h = editor_h * factor_y;
+
+            let half = vec2(viewport_w, viewport_h) * 0.5;
+            let top_left = pos - half;
+
+            // Selected camera is yellow, others are dimmer cyan
+            let color = if *entity == selected {
+                YELLOW
+            } else {
+                PINK
+            };
+
+            draw_rectangle_lines(
+                top_left.x,
+                top_left.y,
+                viewport_w,
+                viewport_h,
+                thickness,
+                color,
+            );
+        }
     }
 }
 

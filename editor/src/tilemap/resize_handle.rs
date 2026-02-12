@@ -249,24 +249,42 @@ impl ResizeHandle {
             return;
         }
 
+        let delta = self.drag_state.preview_delta;
         let (preview_pos, preview_size) =
             self.compute_preview_bounds(room_position, room_size, grid_size);
 
+        // Calculate new dimensions in tiles
+        let (new_width, new_height) = match self.side {
+            HandleSide::Top | HandleSide::Bottom => {
+                (room_size.x as i32, room_size.y as i32 + delta)
+            }
+            HandleSide::Left | HandleSide::Right => {
+                (room_size.x as i32 + delta, room_size.y as i32)
+            }
+        };
+
         let color = if is_valid {
-            Color::new(0.0, 1.0, 0.0, 0.2) // Green semi-transparent
+            Color::new(0.0, 1.0, 0.0, 0.2)
         } else {
-            Color::new(1.0, 0.0, 0.0, 0.2) // Red semi-transparent
+            Color::new(1.0, 0.0, 0.0, 0.2)
         };
 
         draw_rectangle(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, color);
 
-        // Draw border
         let border_color = if is_valid {
             Color::new(0.0, 1.0, 0.0, 0.8)
         } else {
             Color::new(1.0, 0.0, 0.0, 0.8)
         };
         draw_rectangle_lines(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, 2.0, border_color);
+
+        // Draw dimension text centered above preview
+        let dim_text = format!("{} x {}", new_width, new_height);
+        let font_size = grid_size.max(16.0);
+        let text_x = preview_pos.x + preview_size.x / 2.0 - (dim_text.len() as f32 * font_size * 0.3);
+        let text_y = preview_pos.y - font_size * 0.5;
+        let text_color = if is_valid { GREEN } else { RED };
+        draw_text(&dim_text, text_x, text_y, font_size, text_color);
     }
 }
 
