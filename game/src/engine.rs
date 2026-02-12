@@ -9,7 +9,6 @@ use engine_core::camera::camera_manager::CameraManager;
 use engine_core::animation::animation_system::*;
 use engine_core::rendering::render_room::*;
 use engine_core::ecs::transform::Transform;
-use engine_core::onscreen_error;
 use engine_core::constants::*;
 use engine_core::dialogue::*;
 use macroquad::prelude::*;
@@ -132,7 +131,7 @@ impl Engine {
 
         let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
-        
+
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
@@ -145,6 +144,8 @@ impl Engine {
             zoom: self.camera_manager.active.camera.zoom,
             ..Default::default()
         };
+
+        self.render_system.resize_for_camera(render_cam.zoom);
 
         render_room(
             ecs,

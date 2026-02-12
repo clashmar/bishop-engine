@@ -16,7 +16,8 @@ pub fn update_physics(
     dt: f32,
     grid_size: f32,
 ) {
-    let tilemap = &room.variants[0].tilemap;
+    let tilemap = &room.variants[room.current_variant_index()].tilemap;
+    
     let entities: Vec<_> = ecs
         .get_store::<PhysicsBody>()
         .data

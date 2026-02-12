@@ -75,6 +75,7 @@ impl GameState {
         let player_pos = ecs.get_player_transform()
             .map(|t| t.position)
             .unwrap_or_default();
+        
         *camera_manager = CameraManager::new(ecs, room.id, player_pos, grid_size);
 
         ScriptSystem::init(lua);

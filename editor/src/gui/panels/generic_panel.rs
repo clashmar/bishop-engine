@@ -23,7 +23,8 @@ pub struct GenericPanel {
     pub title: &'static str,
     pub rect: Rect,
     pub visible: bool,
-    pub active: bool,
+    /// Whether this panel is registered for the current editor mode.
+    pub in_current_mode: bool,
     pub collapsed: bool,
     pub dragging: bool,
     drag_offset: Vec2,
@@ -39,7 +40,7 @@ impl GenericPanel {
             title,
             rect,
             visible: false,
-            active: false,
+            in_current_mode: false,
             collapsed: false,
             dragging: false,
             drag_offset: Vec2::ZERO,

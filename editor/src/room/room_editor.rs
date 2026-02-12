@@ -301,7 +301,7 @@ impl RoomEditor {
                         }
 
                         draw_collider(ecs, selected_entity);
-                        self.draw_camera_viewport(camera, ecs, selected_entity);
+                        self.draw_camera_viewport(camera, ecs, selected_entity, room_id);
                         draw_pivot_marker(ecs, selected_entity);
                     }
                 }

@@ -508,6 +508,16 @@ impl RenderSystem {
             .for_each(|slot| *slot = GlowBuffer::default());
     }
 
+    /// Resizes render targets if the camera zoom requires larger buffers.
+    pub fn resize_for_camera(&mut self, zoom: Vec2) {
+        let required_width = (2.0 / zoom.x) as u32;
+        let required_height = (2.0 / zoom.y) as u32;
+
+        if required_width > self.rt_width as u32 || required_height > self.rt_height as u32 {
+            self.resize(required_width, required_height);
+        }
+    }
+
     /// Re-creates every render target with the supplied size.
     pub fn resize(&mut self, width: u32, height: u32) {
         self.rt_width = width as f32;

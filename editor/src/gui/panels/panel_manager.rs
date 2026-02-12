@@ -92,12 +92,16 @@ impl PanelManager {
         // Draw panels in order. Block panels if the mouse is over a higher-z panel.
         for (id, panel) in self.panels.iter_mut() {
             if !self.panel_modes[id].iter().any(|m| m.matches(&editor_mode)) {
-                // Update if the panel is active
-                panel.active = false;
+                panel.in_current_mode = false;
                 continue;
             }
 
-            panel.active = true;
+            panel.in_current_mode = true;
+
+            // Skip hidden panels
+            if !panel.visible {
+                continue;
+            }
 
             // Block this panel if the mouse is over a different (higher-z) panel
             let blocked = topmost_panel_at_mouse.is_some() && topmost_panel_at_mouse != Some(*id);
@@ -136,9 +140,9 @@ pub fn is_mouse_over_panel() -> bool {
     with_panel_manager(|pm| {
         let mouse_screen: Vec2 = mouse_position().into();
         pm.panels.iter()
-            .any(|(_, p)| 
+            .any(|(_, p)|
             p.visible
-            && p.active
+            && p.in_current_mode
             && (p.rect.contains(mouse_screen) || p.dragging)
         )
     })

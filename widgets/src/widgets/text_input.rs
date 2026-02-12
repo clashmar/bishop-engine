@@ -18,7 +18,7 @@ impl<'a> TextInput<'a> {
         Self {
             id,
             rect,
-            current,
+            current,    
             blocked: false,
             start_focused: false,
             max_len: None,

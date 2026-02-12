@@ -36,11 +36,9 @@ pub fn overlaps_existing_rooms(
     let a_min = pos;
     let a_max = pos + size;
 
-    other_bounds.iter().any(|(b_pos, mut b_size)| {
-        b_size *= grid_size;
-
-        let b_min = *b_pos;
-        let b_max = *b_pos + b_size;
+    other_bounds.iter().any(|(b_pos, b_size)| {
+        let b_min = *b_pos / grid_size;
+        let b_max = b_min + *b_size;
 
         a_min.x < b_max.x && a_max.x > b_min.x && a_min.y < b_max.y && a_max.y > b_min.y
     })
