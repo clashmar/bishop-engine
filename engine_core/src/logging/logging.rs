@@ -14,13 +14,18 @@ pub struct LogEntry {
     pub message: String,
 }
 
+/// Stores log entries with a monotonically increasing counter for change detection.
 pub struct LogHistory {
     entries: Vec<LogEntry>,
+    total_pushed: usize,
 }
 
 impl LogHistory {
     pub fn new() -> Self {
-        Self { entries: Vec::new() }
+        Self {
+            entries: Vec::new(),
+            total_pushed: 0,
+        }
     }
 
     pub fn push(&mut self, level: log::Level, message: String) {
@@ -28,6 +33,7 @@ impl LogHistory {
             self.entries.remove(0);
         }
         self.entries.push(LogEntry { level, message });
+        self.total_pushed += 1;
     }
 
     pub fn entries(&self) -> &[LogEntry] {
@@ -38,6 +44,12 @@ impl LogHistory {
         self.entries.last()
     }
 
+    /// Returns the total number of entries ever pushed, even after cycling.
+    pub fn total_pushed(&self) -> usize {
+        self.total_pushed
+    }
+
+    /// Clears all entries but preserves total_pushed for change detection.
     pub fn clear(&mut self) {
         self.entries.clear();
     }

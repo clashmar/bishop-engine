@@ -24,7 +24,6 @@ pub struct ModeSelector <M: ModeInfo + Copy + PartialEq + 'static> {
 
 impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
     /// Draws icons and handles clicks. Returns the total Rect and whether the mode changed.
-    /// Call draw_tooltips() separately to draw tooltips on top of other elements.
     pub fn draw(&mut self) -> (Rect, bool) {
         let mut changed = false;
         const PADDING: f32 = 8.0;

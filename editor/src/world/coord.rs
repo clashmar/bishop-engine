@@ -27,6 +27,8 @@ pub fn world_to_screen(camera: &Camera2D, world_pos: Vec2) -> Vec2 {
 }
 
 /// Check if a room overlaps with existing rooms.
+/// pos and size should be in tile coordinates.
+/// other_bounds contains (position in pixels, size in tiles).
 pub fn overlaps_existing_rooms(
     pos: Vec2,
     size: Vec2,

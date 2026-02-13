@@ -15,7 +15,6 @@ const TOP_PADDING: f32 = 4.0;
 const BOTTOM_PADDING: f32 = 8.0;
 const CLEAR_BUTTON_HEIGHT: f32 = 20.0;
 const HEADER_ROW_HEIGHT: f32 = 28.0;
-const MAX_CONSOLE_ENTRIES: usize = 500;
 
 /// Selection position within the console text.
 #[derive(Clone, Copy, PartialEq)]
@@ -27,7 +26,7 @@ struct SelectionPos {
 pub struct ConsolePanel {
     scroll_y: f32,
     auto_scroll: bool,
-    last_entry_count: usize,
+    last_total_pushed: usize,
     selection_anchor: Option<SelectionPos>,
     selection_end: Option<SelectionPos>,
     dragging: bool,
@@ -39,7 +38,7 @@ impl ConsolePanel {
         Self {
             scroll_y: 0.0,
             auto_scroll: true,
-            last_entry_count: 0,
+            last_total_pushed: 0,
             selection_anchor: None,
             selection_end: None,
             dragging: false,
@@ -314,47 +313,33 @@ impl PanelDefinition for ConsolePanel {
         let usable_w = content_rect.w - SCROLLBAR_W - 12.0;
         let font_size = 14.0;
 
-        // Get entry count to check if cache needs update
-        let entry_count = LOG_HISTORY.lock().map(|h| h.entries().len()).unwrap_or(0);
-        let cached_count = self.cached_wrapped.len();
+        // Check if cache needs update using monotonic counter
+        let (_entry_count, total_pushed) = LOG_HISTORY
+            .lock()
+            .map(|h| (h.entries().len(), h.total_pushed()))
+            .unwrap_or((0, 0));
 
-        // Update cache when entry count changes
-        if entry_count != cached_count {
-            if entry_count > cached_count {
-                // New entries arrived - only wrap the new ones
-                let new_entries: Vec<(log::Level, String)> = if let Ok(history) = LOG_HISTORY.lock() {
-                    history.entries().iter().skip(cached_count).map(|e| (e.level, e.message.clone())).collect()
-                } else {
-                    Vec::new()
-                };
+        let needs_update = total_pushed != self.last_total_pushed;
 
-                for (level, message) in new_entries {
-                    let prefix = Self::level_prefix(level);
-                    let full_message = format!("{}{}", prefix, message);
-                    let lines = Self::wrap_text(&full_message, usable_w, font_size);
-                    self.cached_wrapped.push((level, lines));
-                }
+        if needs_update {
+            // Rebuild cache from current LOG_HISTORY entries
+            let entries: Vec<(log::Level, String)> = LOG_HISTORY
+                .lock()
+                .map(|history| {
+                    history.entries().iter()
+                        .map(|e| (e.level, e.message.clone()))
+                        .collect()
+                })
+                .unwrap_or_default();
 
-                // Drop old entries if over limit
-                if self.cached_wrapped.len() > MAX_CONSOLE_ENTRIES {
-                    let excess = self.cached_wrapped.len() - MAX_CONSOLE_ENTRIES;
-                    self.cached_wrapped.drain(0..excess);
-                }
-            } else {
-                // Entries were removed - rebuild cache
-                let entries: Vec<(log::Level, String)> = if let Ok(history) = LOG_HISTORY.lock() {
-                    history.entries().iter().map(|e| (e.level, e.message.clone())).collect()
-                } else {
-                    Vec::new()
-                };
+            self.cached_wrapped = entries.iter().map(|(level, message)| {
+                let prefix = Self::level_prefix(*level);
+                let full_message = format!("{}{}", prefix, message);
+                let lines = Self::wrap_text(&full_message, usable_w, font_size);
+                (*level, lines)
+            }).collect();
 
-                self.cached_wrapped = entries.iter().map(|(level, message)| {
-                    let prefix = Self::level_prefix(*level);
-                    let full_message = format!("{}{}", prefix, message);
-                    let lines = Self::wrap_text(&full_message, usable_w, font_size);
-                    (*level, lines)
-                }).collect();
-            }
+            self.last_total_pushed = total_pushed;
         }
 
         let wrapped_entries = &self.cached_wrapped;
@@ -365,10 +350,9 @@ impl PanelDefinition for ConsolePanel {
         let scroll_range = (content_height - content_h).max(0.0);
 
         // Auto-scroll when new entries arrive
-        if entry_count > self.last_entry_count && self.auto_scroll {
+        if needs_update && self.auto_scroll {
             self.scroll_y = -scroll_range;
         }
-        self.last_entry_count = entry_count;
 
         // Re-enable auto-scroll if scrolled to bottom
         if scroll_range > 0.0 && self.scroll_y <= -scroll_range + 1.0 {

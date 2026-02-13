@@ -279,8 +279,6 @@ impl RoomEditor {
         let room = &mut game_ctx.cur_world.current_room_mut().unwrap();
         let asset_manager = &mut game_ctx.asset_manager;
 
-        let tilemap = &mut room.variants[0].tilemap;
-
         // Panel rect for inspector and tilemap editor
         let inspector_rect = Rect::new(
             screen_width() * 0.75,
@@ -294,12 +292,9 @@ impl RoomEditor {
                 self.tilemap_editor.tilemap_panel.set_rect(inspector_rect);
                 self.tilemap_editor.draw(
                     camera,
-                    tilemap,
+                    room,
                     asset_manager,
                     ecs,
-                    room_id,
-                    room.position,
-                    room.size,
                     grid_size,
                 ).await;
 
@@ -307,7 +302,6 @@ impl RoomEditor {
                 if self.show_grid {
                     grid::draw_grid(camera, grid_size);
                 }
-                draw_exit_placeholders(&room.exits, room.position, grid_size);
             }
             RoomEditorMode::Scene => {
                 let room_camera = get_room_camera_by_id(ecs, room_id, grid_size, self.preview_camera_id);

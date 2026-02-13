@@ -49,8 +49,8 @@ impl Engine {
             }
 
             while accumulator >= FIXED_DT {
-                self.fixed_update(FIXED_DT);
                 accumulator -= FIXED_DT;
+                self.fixed_update(FIXED_DT);
             }
 
             // Per‑frame async work (input, animation)
@@ -62,7 +62,7 @@ impl Engine {
             }
 
             // Render with interpolation
-            let alpha = accumulator / FIXED_DT;
+            let alpha = (accumulator / FIXED_DT).clamp(0.0, 1.0);
             self.render(alpha);
 
             next_frame().await;
@@ -71,8 +71,6 @@ impl Engine {
 
     pub fn fixed_update(&mut self, dt: f32) {
         let mut game_state = self.game_state.borrow_mut();
-
-        // Store the current positions for the next frame
         game_state.store_previous_positions(&mut self.camera_manager);
 
         let game_ctx = game_state.game.ctx_mut();
@@ -85,6 +83,8 @@ impl Engine {
         let grid_size = game_ctx.cur_world.grid_size;
 
         update_physics(asset_manager, ecs, current_room, dt, grid_size);
+
+        self.camera_manager.update_active(ecs, current_room, game_ctx.cur_world.grid_size);
     }
 
     pub async fn update_async(&mut self, dt: f32) {
@@ -97,12 +97,6 @@ impl Engine {
             let game_ctx = game_state.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
-
-            let Some(current_room) = game_ctx.cur_world.current_room() else {
-                return;
-            };
-
-            self.camera_manager.update_active(ecs, current_room, game_ctx.cur_world.grid_size);
 
             if let Some(current_room) = game_ctx.cur_world.current_room() {
                 update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
@@ -139,8 +133,10 @@ impl Engine {
         let current_room_id = current_room.id;
         let grid_size = game_ctx.cur_world.grid_size;
 
+        let target = self.camera_manager.interpolated_target(alpha);
+
         let render_cam = Camera2D {
-            target: self.camera_manager.interpolated_target(alpha),
+            target: target,
             zoom: self.camera_manager.active.camera.zoom,
             ..Default::default()
         };
@@ -173,9 +169,11 @@ impl Engine {
         // Render speech bubbles in screen space
         let dialogue_config = game_state.game.dialogue_manager.config.clone();
         render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam, grid_size);
+    
 
         // Draw diagnostics overlay after game rendering (playtest only)
         if self.is_playtest {
+            draw_fps();
             self.diagnostics.draw();
         }
     }

@@ -1,16 +1,5 @@
 // engine_core/src/rendering/render_room.rs
-use crate::animation::animation_system::CurrentFrame;
-use crate::rendering::render_system::RenderSystem;
-use crate::assets::asset_manager::AssetManager;
-use crate::camera::game_camera::RoomCamera;
-use crate::ecs::transform::{Pivot, Transform};
-use crate::assets::sprite::Sprite;
-use crate::lighting::light::Light;
-use crate::lighting::glow::Glow;
-use crate::ecs::entity::Entity;
-use crate::ecs::ecs::Ecs;
-use crate::ecs::component::*;
-use crate::world::room::Room;
+use crate::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 use macroquad::prelude::*;
 
@@ -147,7 +136,7 @@ fn draw_entity(
             frame_h,
         );
 
-        // Floor coordinates for pixel-perfect alignment
+        // Floor to be sure
         let draw_x = (draw_base.x + cf.offset.x).floor();
         let draw_y = (draw_base.y + cf.offset.y).floor();
 
@@ -371,7 +360,9 @@ fn interpolate_draw_position(
 ) -> Vec2 {
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
-            lerp(*prev_pos, current_pos, alpha)
+            let interpolated = lerp(*prev_pos, current_pos, alpha).round();
+            onscreen_debug!("Entity: {}", interpolated);
+            interpolated
         }
         else {
             current_pos
@@ -382,8 +373,8 @@ fn interpolate_draw_position(
 }
 
 #[inline]
-pub fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
-    a + (b - a) * t
+pub fn lerp(prev_pos: Vec2, current_pos: Vec2, alpha: f32) -> Vec2 {
+    prev_pos * (1.0 - alpha) + current_pos * alpha
 }
 
 /// Calculates draw position adjusted for pivot.
