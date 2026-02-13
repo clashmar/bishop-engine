@@ -1,6 +1,6 @@
 // editor/src/room/room_editor.rs
+use crate::tilemap::tilemap_editor::{TileMapEditor, TilemapEditorMode};
 use crate::editor_camera_controller::EditorCameraController;
-use crate::tilemap::tilemap_editor::TileMapEditor;
 use crate::gui::inspector::inspector::Inspector;
 use crate::room::selection::PreCopyDragState;
 use crate::editor_assets::editor_assets::*;
@@ -75,6 +75,10 @@ pub struct RoomEditor {
     pub(crate) pre_copy_drag_state: Option<PreCopyDragState>,
     /// The very first start positions when drag began (for undo command).
     pub(crate) drag_initial_start_positions: Vec<(Entity, Vec2)>,
+    /// Current sub-mode for tilemap editing.
+    pub(crate) tilemap_sub_mode: TilemapEditorMode,
+    /// Rect of the sub-mode strip for UI tracking.
+    pub(crate) sub_mode_rect: Option<Rect>,
 }
 
 impl RoomEditor {
@@ -107,6 +111,8 @@ impl RoomEditor {
             alt_copied_entities: Vec::new(),
             pre_copy_drag_state: None,
             drag_initial_start_positions: Vec::new(),
+            tilemap_sub_mode: TilemapEditorMode::Tiles,
+            sub_mode_rect: None,
         }
     }
 
@@ -174,6 +180,10 @@ impl RoomEditor {
 
         match self.mode {
             RoomEditorMode::Tilemap => {
+                // Sync sub-mode and UI rect to tilemap editor
+                self.tilemap_editor.mode = self.tilemap_sub_mode;
+                self.tilemap_editor.sub_mode_rect = self.sub_mode_rect;
+
                 self.tilemap_editor.update(
                     asset_manager,
                     camera,
@@ -293,11 +303,11 @@ impl RoomEditor {
                     grid_size,
                 ).await;
 
+                set_camera(camera);
                 if self.show_grid {
-                    set_camera(camera);
                     grid::draw_grid(camera, grid_size);
-                    draw_exit_placeholders(&room.exits, room.position, grid_size);
                 }
+                draw_exit_placeholders(&room.exits, room.position, grid_size);
             }
             RoomEditorMode::Scene => {
                 let room_camera = get_room_camera_by_id(ecs, room_id, grid_size, self.preview_camera_id);
@@ -380,6 +390,7 @@ impl RoomEditor {
     pub fn reset(&mut self) {
         self.tilemap_editor.reset();
         self.mode = RoomEditorMode::Scene;
+        self.mode_selector.current = RoomEditorMode::Scene;
         self.selected_entities.clear();
         self.initialized = false;
         self.request_play = false;
@@ -393,6 +404,8 @@ impl RoomEditor {
         self.alt_copy_mode = false;
         self.alt_copied_entities.clear();
         self.pre_copy_drag_state = None;
+        self.tilemap_sub_mode = TilemapEditorMode::Tiles;
+        self.sub_mode_rect = None;
     }
 
     /// Takes any pending toast message from the room/tilemap editor.

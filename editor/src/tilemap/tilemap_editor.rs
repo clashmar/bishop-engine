@@ -1,28 +1,57 @@
 // editor/src/tilemap/tilemap_editor.rs
-use crate::room::drawing::{draw_exit_arrow, draw_adjacent_exit_arrow, draw_all_camera_viewports};
 use crate::tilemap::tilemap_panel::TilemapPanel;
-use crate::assets::asset_manager::AssetManager;
 use crate::gui::menu_bar::draw_top_panel_full;
+use crate::gui::gui_constants::MENU_PANEL_HEIGHT;
+use crate::editor_assets::editor_assets::*;
 use crate::gui::panels::panel_manager::*;
+use crate::gui::mode_selector::ModeInfo;
 use crate::editor_global::push_command;
 use crate::tilemap::resize_handle::*;
 use crate::tiles::tilemap::TileMap;
 use crate::commands::room::*;
+use crate::room::drawing::*;
 use crate::gui::modal::*;
 use crate::ecs::ecs::Ecs;
-use engine_core::world::world::GridPos;
-use engine_core::controls::controls::Controls;
-use engine_core::ui::widgets::*;
-use engine_core::world::room::*;
+use engine_core::prelude::*;
 use macroquad::prelude::*;
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum TilemapEditorMode {
     Tiles,
     Exits,
 }
 
+/// All tilemap editor sub-modes for the sub-mode selector.
+pub static TILEMAP_SUB_MODES: &[TilemapEditorMode] = &[
+    TilemapEditorMode::Tiles,
+    TilemapEditorMode::Exits,
+];
+
+impl ModeInfo for TilemapEditorMode {
+    fn label(&self) -> &'static str {
+        match self {
+            TilemapEditorMode::Tiles => "Tiles: T",
+            TilemapEditorMode::Exits => "Exits: E",
+        }
+    }
+
+    fn icon(&self) -> &'static Texture2D {
+        match self {
+            TilemapEditorMode::Tiles => &TILE_ICON,
+            TilemapEditorMode::Exits => &EXIT_ICON,
+        }
+    }
+
+    fn shortcut(self) -> Option<fn() -> bool> {
+        match self {
+            TilemapEditorMode::Tiles => Some(Controls::t),
+            TilemapEditorMode::Exits => Some(Controls::e),
+        }
+    }
+}
+
 pub struct TileMapEditor {
-    mode: TilemapEditorMode,
+    pub mode: TilemapEditorMode,
     resize_handles: Vec<ResizeHandle>,
     active_handle_index: Option<usize>,
     preview_valid: bool,
@@ -31,6 +60,8 @@ pub struct TileMapEditor {
     ui_was_clicked: bool,
     initialized: bool,
     adjacent_exits: Vec<(Vec2, ExitDirection)>,
+    /// Rect of the sub-mode strip for UI blocking.
+    pub sub_mode_rect: Option<Rect>,
 }
 
 impl TileMapEditor {
@@ -45,6 +76,7 @@ impl TileMapEditor {
             ui_was_clicked: false,
             initialized: false,
             adjacent_exits: Vec::new(),
+            sub_mode_rect: None,
         }
     }
 
@@ -114,17 +146,6 @@ impl TileMapEditor {
                 ),
             }
         }
-
-        if is_key_pressed(KeyCode::E) {
-            self.toggle_exits();
-        }
-    }
-
-    pub fn toggle_exits(&mut self) {
-        self.mode = match self.mode {
-            TilemapEditorMode::Exits => TilemapEditorMode::Tiles,
-            _ => TilemapEditorMode::Exits,
-        };
     }
 
     /// Handle resize handle drag operations.
@@ -265,6 +286,10 @@ impl TileMapEditor {
         room_position: Vec2,
         grid_size: f32,
     ) {
+        if self.is_mouse_over_ui(camera) {
+            return;
+        }
+
         if let Some(tile_pos) = self.get_hovered_edge(camera, map, room_position, grid_size) {
             let exit_direction = self.exit_direction_from_position(tile_pos, map);
             let exit_vec = vec2(tile_pos.x() as f32, tile_pos.y() as f32);
@@ -432,9 +457,19 @@ impl TileMapEditor {
     fn is_mouse_over_ui(&self, camera: &Camera2D) -> bool {
         let mouse_screen: Vec2 = mouse_position().into();
         let mouse_world = camera.screen_to_world(mouse_screen);
-        self.tilemap_panel.is_mouse_over(mouse_screen)
+
+        // Check menu bar area
+        let over_menu_bar = mouse_screen.y < MENU_PANEL_HEIGHT;
+
+        // Check sub-mode strip
+        let over_sub_mode = self.sub_mode_rect
+            .map_or(false, |r| r.contains(mouse_screen));
+
+        over_menu_bar
+            || over_sub_mode
+            || self.tilemap_panel.is_mouse_over(mouse_screen)
             || self.resize_handles.iter().any(|h| h.is_hovered(mouse_world))
-            || self.active_handle_index.is_some() // Checks active resizing
+            || self.active_handle_index.is_some()
             || is_dropdown_open()
             || is_modal_open()
             || is_mouse_over_panel()
@@ -461,6 +496,7 @@ impl TileMapEditor {
         self.active_handle_index = None;
         self.resize_handles.clear();
         self.adjacent_exits.clear();
+        self.sub_mode_rect = None;
     }
 
     /// Queues a toast message explaining why the resize failed.

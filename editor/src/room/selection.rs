@@ -1,15 +1,10 @@
 // editor/src/room/selection.rs
-use crate::gui::modal::is_modal_open;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use crate::ecs::transform::*;
+use crate::gui::modal::is_modal_open;
 use crate::room::room_editor::*;
-use engine_core::ecs::component::CurrentRoom;
-use engine_core::ecs::entity::Entity;
-use engine_core::world::room::*;
-use engine_core::ui::widgets::*;
-use engine_core::ecs::ecs::Ecs;
 use macroquad::miniquad::window::set_mouse_cursor;
 use macroquad::miniquad::CursorIcon;
+use engine_core::prelude::*;
 use macroquad::prelude::*;
 use std::collections::HashSet;
 
@@ -85,10 +80,11 @@ impl RoomEditor {
     pub fn is_mouse_over_ui(&self) -> bool {
         let mouse_screen: Vec2 = mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || self.inspector.is_mouse_over()
-        || is_dropdown_open()
-        || is_modal_open()
-        || is_mouse_over_panel()
+            || self.sub_mode_rect.map_or(false, |r| r.contains(mouse_screen))
+            || self.inspector.is_mouse_over()
+            || is_dropdown_open()
+            || is_modal_open()
+            || is_mouse_over_panel()
     }
 
     pub(crate) fn ui_was_clicked(&self) -> bool {

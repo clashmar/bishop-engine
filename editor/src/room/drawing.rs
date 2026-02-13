@@ -1,25 +1,12 @@
 // editor/src/room/drawing.rs
+use crate::tilemap::tilemap_editor::TILEMAP_SUB_MODES;
 use crate::editor_camera_controller::*;
-use crate::ecs::transform::{Pivot, Transform};
+use crate::gui::mode_selector::*;
 use crate::gui::gui_constants::*;
 use crate::room::room_editor::*;
 use crate::gui::menu_bar::*;
 use crate::world::coord;
-use engine_core::animation::animation_system::CurrentFrame;
-use engine_core::animation::animation_clip::Animation;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::camera::game_camera::RoomCamera;
-use engine_core::rendering::render_room::*;
-use engine_core::lighting::light::Light;
-use engine_core::assets::sprite::Sprite;
-use engine_core::game::game::GameCtxMut;
-use engine_core::lighting::glow::Glow;
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::component::*;
-use engine_core::ui::widgets::*;
-use engine_core::world::room::*;
-use engine_core::ecs::ecs::Ecs;
-use engine_core::ui::text::*;
+use engine_core::prelude::*;
 use macroquad::prelude::*;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
@@ -28,7 +15,7 @@ fn thickness(grid_size: f32) -> f32 { (grid_size * 0.175).max(1.0) }
 impl RoomEditor {
     /// Draw static UI for the scene editor
     pub fn draw_ui(
-        &mut self, 
+        &mut self,
         game_ctx: &mut GameCtxMut,
         camera: &Camera2D,
     ) {
@@ -37,17 +24,68 @@ impl RoomEditor {
 
         self.draw_coordinates(camera, game_ctx.cur_world.current_room().unwrap(), game_ctx.cur_world.grid_size);
 
+        // Clear sub-mode rect at start of frame
+        self.sub_mode_rect = None;
+
         match self.mode {
             RoomEditorMode::Tilemap => {
+                // Calculate sub-mode strip position
+                let tilemap_icon_index = self.mode_selector.options
+                    .iter()
+                    .position(|m| *m == RoomEditorMode::Tilemap)
+                    .unwrap_or(0);
+
+                const PADDING: f32 = 8.0;
+                let icon_size = MENU_PANEL_HEIGHT - 2.0 * PADDING;
+                let total_width = self.mode_selector.options.len() as f32 * (icon_size + PADDING) - PADDING;
+                let start_x = (screen_width() - total_width) / 2.0;
+                let tilemap_icon_x = start_x + tilemap_icon_index as f32 * (icon_size + PADDING);
+                let sub_strip_y = PADDING + icon_size + 4.0;
+
+                // Draw sub-mode strip background first so tooltips appear on top
+                let bg_rect = draw_sub_mode_strip_background(
+                    tilemap_icon_x,
+                    sub_strip_y,
+                    TILEMAP_SUB_MODES.len(),
+                );
+                self.sub_mode_rect = Some(bg_rect);
+
                 // Mode selector
-                if self.mode_selector.draw().1 {
+                let (_mode_rect, changed) = self.mode_selector.draw();
+                if changed {
                     self.mode = self.mode_selector.current;
+                }
+
+                // Draw sub-mode strip icons
+                let (sub_rect, sub_changed) = draw_sub_mode_strip(
+                    tilemap_icon_x,
+                    sub_strip_y,
+                    TILEMAP_SUB_MODES,
+                    &mut self.tilemap_sub_mode,
+                );
+                self.sub_mode_rect = Some(sub_rect);
+
+                // Draw tooltips last so they appear on top of everything
+                self.mode_selector.draw_tooltips();
+
+                if sub_changed {
+                    self.tilemap_editor.mode = self.tilemap_sub_mode;
+                }
+
+                // Handle sub-mode keyboard shortcuts
+                for sub_mode in TILEMAP_SUB_MODES.iter() {
+                    if let Some(shortcut_fn) = sub_mode.shortcut() {
+                        if shortcut_fn() && *sub_mode != self.tilemap_sub_mode {
+                            self.tilemap_sub_mode = *sub_mode;
+                            self.tilemap_editor.mode = self.tilemap_sub_mode;
+                        }
+                    }
                 }
             }
             RoomEditorMode::Scene => {
                 // Top menu background
                 self.register_rect(draw_top_panel_full());
-                
+
                 // Draw inspector
                 self.create_entity_requested = self.inspector.draw(
                     game_ctx
