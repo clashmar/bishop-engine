@@ -3,6 +3,64 @@
 ---@alias vec2 { x: number, y: number }
 ---@alias vec3 { x: number, y: number, z: number }
 
+---@class Children
+---@field entities table
+
+---@alias Parent table
+
+---@class Transform
+---@field visible boolean
+---@field position vec2
+---@field pivot table
+
+---@class Sprite
+---@field sprite number
+
+---@class RoomCamera
+---@field zoom vec2
+---@field room_id number
+---@field zoom_mode table
+---@field camera_mode table
+
+---@alias Name string
+
+---@class PhysicsBody
+--- Marker component
+
+---@class PlayerProxy
+--- Marker component
+
+---@class Kinematic
+--- Marker component
+
+---@class Global
+--- Marker component
+
+---@class Layer
+---@field z number
+
+---@alias CurrentRoom number
+
+---@class Player
+--- Marker component
+
+---@alias Solid boolean
+
+---@class Damage
+---@field amount number
+
+---@class Velocity
+---@field x number
+---@field y number
+
+---@alias Walkable boolean
+
+---@alias Grounded boolean
+
+---@class Collider
+---@field width number
+---@field height number
+
 ---@class CurrentFrame
 ---@field clip_id number
 ---@field col number
@@ -12,15 +70,7 @@
 ---@field frame_size vec2
 ---@field flip_x boolean
 
----@class Sprite
----@field sprite number
-
 ---@alias FacingDirection table
-
----@class Children
----@field entities table
-
----@alias Parent table
 
 ---@class Light
 ---@field pos vec2
@@ -30,52 +80,6 @@
 ---@field spread number
 ---@field alpha number
 ---@field brightness number
-
----@class Glow
----@field color vec3
----@field intensity number
----@field brightness number
----@field emission number
----@field sprite_id number
-
----@alias Grounded boolean
-
----@class Player
---- Marker component
-
----@class Damage
----@field amount number
-
----@alias Solid boolean
-
----@class Collider
----@field width number
----@field height number
-
----@class Kinematic
---- Marker component
-
----@class PhysicsBody
---- Marker component
-
----@class PlayerProxy
---- Marker component
-
----@class Layer
----@field z number
-
----@class Velocity
----@field x number
----@field y number
-
----@alias Name string
-
----@class Global
---- Marker component
-
----@alias Walkable boolean
-
----@alias CurrentRoom number
 
 ---@class SpeechBubble
 ---@field text string
@@ -87,10 +91,6 @@
 ---@field show_background boolean
 ---@field background_color table
 
----@class Script
----@field script_id number
----@field data table
-
 ---@class Animation
 ---@field clips table
 ---@field variant table
@@ -100,77 +100,77 @@
 ---@field flip_x boolean
 ---@field speed_multiplier number
 
----@class Transform
----@field visible boolean
----@field position vec2
----@field pivot table
-
----@class RoomCamera
----@field zoom vec2
----@field room_id number
----@field zoom_mode table
----@field camera_mode table
+---@class Glow
+---@field color vec3
+---@field intensity number
+---@field brightness number
+---@field emission number
+---@field sprite_id number
 
 ---@class Interactable
 ---@field range number
 
+---@class Script
+---@field script_id number
+---@field data table
+
 ---@class ComponentId
----@field CurrentFrame string
----@field Sprite string
----@field FacingDirection string
 ---@field Children string
 ---@field Parent string
----@field Light string
----@field Glow string
----@field Grounded string
----@field Player string
----@field Damage string
----@field Solid string
----@field Collider string
----@field Kinematic string
+---@field Transform string
+---@field Sprite string
+---@field RoomCamera string
+---@field Name string
 ---@field PhysicsBody string
 ---@field PlayerProxy string
----@field Layer string
----@field Velocity string
----@field Name string
+---@field Kinematic string
 ---@field Global string
----@field Walkable string
+---@field Layer string
 ---@field CurrentRoom string
+---@field Player string
+---@field Solid string
+---@field Damage string
+---@field Velocity string
+---@field Walkable string
+---@field Grounded string
+---@field Collider string
+---@field CurrentFrame string
+---@field FacingDirection string
+---@field Light string
 ---@field SpeechBubble string
----@field Script string
 ---@field Animation string
----@field Transform string
----@field RoomCamera string
+---@field Glow string
 ---@field Interactable string
+---@field Script string
 
 local C = {}
 
-C.CurrentFrame = "CurrentFrame"
-C.Sprite = "Sprite"
-C.FacingDirection = "FacingDirection"
 C.Children = "Children"
 C.Parent = "Parent"
-C.Light = "Light"
-C.Glow = "Glow"
-C.Grounded = "Grounded"
-C.Player = "Player"
-C.Damage = "Damage"
-C.Solid = "Solid"
-C.Collider = "Collider"
-C.Kinematic = "Kinematic"
+C.Transform = "Transform"
+C.Sprite = "Sprite"
+C.RoomCamera = "RoomCamera"
+C.Name = "Name"
 C.PhysicsBody = "PhysicsBody"
 C.PlayerProxy = "PlayerProxy"
-C.Layer = "Layer"
-C.Velocity = "Velocity"
-C.Name = "Name"
+C.Kinematic = "Kinematic"
 C.Global = "Global"
-C.Walkable = "Walkable"
+C.Layer = "Layer"
 C.CurrentRoom = "CurrentRoom"
+C.Player = "Player"
+C.Solid = "Solid"
+C.Damage = "Damage"
+C.Velocity = "Velocity"
+C.Walkable = "Walkable"
+C.Grounded = "Grounded"
+C.Collider = "Collider"
+C.CurrentFrame = "CurrentFrame"
+C.FacingDirection = "FacingDirection"
+C.Light = "Light"
 C.SpeechBubble = "SpeechBubble"
-C.Script = "Script"
 C.Animation = "Animation"
-C.Transform = "Transform"
-C.RoomCamera = "RoomCamera"
+C.Glow = "Glow"
 C.Interactable = "Interactable"
+C.Script = "Script"
 
 return C

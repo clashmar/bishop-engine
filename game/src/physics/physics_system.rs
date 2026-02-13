@@ -2,11 +2,9 @@
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY;
 use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::transform::*;
-use engine_core::ecs::component::*;
 use engine_core::world::room::*;
-use engine_core::ecs::ecs::Ecs;
 use macroquad::prelude::Vec2;
+use engine_core::ecs::*;
 
 /// Applies physics to all entities with a `PhysicsBody` component.
 pub fn update_physics(

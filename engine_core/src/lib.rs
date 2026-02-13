@@ -20,7 +20,27 @@ pub mod tiles;
 pub mod world;
 pub mod ui;
 
-/// Demo test.
-pub fn add(a: i32, b: i32) -> i32 {
-    a + b
+/// Prelude module for convenient imports.
+pub mod prelude {
+    pub use crate::animation::*;
+    pub use crate::assets::*;
+    pub use crate::camera::*;
+    pub use crate::constants::*;
+    pub use crate::controls::*;
+    pub use crate::diagnostics::*;
+    pub use crate::dialogue::*;
+    pub use crate::ecs::*;
+    pub use crate::engine_global::*;
+    pub use crate::game::*;
+    pub use crate::input::*;
+    pub use crate::lighting::*;
+    pub use crate::logging::*;
+    pub use crate::physics::*;
+    pub use crate::rendering::*;
+    pub use crate::scripting::*;
+    pub use crate::shaders::*;
+    pub use crate::storage::*;
+    pub use crate::tiles::*;
+    pub use crate::world::*;
+    pub use crate::ui::*;
 }
