@@ -2,7 +2,6 @@
 use crate::game_state::GameState;
 use engine_core::prelude::*;
 use macroquad::prelude::*;
-use engine_core::*;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -119,7 +118,6 @@ pub fn room_of_entity(pos: Vec2, rooms: &[Room], grid_size: f32) -> Option<RoomI
             && pos.y > min.y
             && pos.y <= max.y
         {
-            onscreen_debug!("{:?}", room.id);
             return Some(room.id);
         }
     }

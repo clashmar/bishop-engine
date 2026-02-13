@@ -360,7 +360,10 @@ fn overlap_valid(
     other_bounds: &[(Vec2, Vec2)],
     grid_size: f32,
 ) -> bool {
-    !overlaps_existing_rooms(preview_pos, preview_size, other_bounds, grid_size)
+    // Convert from pixels to tile coordinates for consistency with overlaps_existing_rooms
+    let tile_pos = preview_pos / grid_size;
+    let tile_size = preview_size / grid_size;
+    !overlaps_existing_rooms(tile_pos, tile_size, other_bounds, grid_size)
 }
 
 fn get_exit_side(exit: &Exit, width: usize, height: usize) -> Option<HandleSide> {

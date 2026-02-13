@@ -1,13 +1,5 @@
 // editor/src/gui/inspector/camera_module.rs
-use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use engine_core::ecs::transform::{Pivot, Transform};
-use engine_core::{camera::game_camera::*, ui::text::*};
-use engine_core::ecs::inpsector_module::CollapsibleModule;
-use engine_core::ecs::inpsector_module::InspectorModule;
-use engine_core::game::game::GameCtxMut;
-use engine_core::ecs::entity::Entity;
-use engine_core::ui::widgets::*;
-use engine_core::ecs::ecs::Ecs;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use macroquad::prelude::*;
 
@@ -69,7 +61,7 @@ impl InspectorModule for RoomCameraModule {
                     40.0,
                 );
 
-                const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 4.0];
+                const STEPS: &[f32; 5] = &[0.5_f32, 1.0, 2.0, 3.0, 4.0];
 
                 let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
                 let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar, blocked);
@@ -176,7 +168,7 @@ impl RoomCameraModule {
         let scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
 
         const MIN: f32 = 0.5;
-        const MAX: f32 = 3.0;
+        const MAX: f32 = 4.0;
         let scalar = scalar.clamp(MIN, MAX);
 
         // Label
@@ -263,11 +255,11 @@ fn round_to_dp(v: f32, dp: u32) -> f32 {
 
 /// Returns the optimal pivot for camera placement at a given zoom scalar.
 fn pivot_for_zoom_scalar(scalar: f32) -> Pivot {
-    if scalar <= 0.5 + f32::EPSILON {
+    if scalar.round() % 1.0 != 0.5 + f32::EPSILON {
         Pivot::Center
-    } else if scalar <= 1.0 + f32::EPSILON {
-        Pivot::CenterLeft
-    } else {
+    } else if scalar.round() % 2.0 == 0.0 {
         Pivot::TopLeft
+    } else {
+        Pivot::CenterLeft
     }
 }

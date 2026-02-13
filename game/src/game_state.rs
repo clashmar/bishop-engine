@@ -89,17 +89,17 @@ impl GameState {
     /// Updates the previous position for all entities in the active room.
     pub fn store_previous_positions(&mut self, camera_manager: &mut CameraManager) {
         let ecs = &self.game.ecs;
-        let pos_store = ecs.get_store::<Transform>();
+        let trans_store = ecs.get_store::<Transform>();
         let room_store = ecs.get_store::<CurrentRoom>();
 
         // Store the camera target
         camera_manager.previous_position = Some(camera_manager.active.camera.target);
 
-        self.prev_positions = pos_store.data
+        self.prev_positions = trans_store.data
             .iter()
-            .filter_map(|(entity, pos)| {
+            .filter_map(|(entity, transform)| {
                 room_store.get(*entity).filter(|cr| cr.0 == self.game.current_world().current_room_id.unwrap()) // TODO: handle unwrap
-                    .map(|_| (*entity, pos.position))
+                    .map(|_| (*entity, transform.position))
             })
             .collect();
     }

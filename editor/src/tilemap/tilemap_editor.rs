@@ -311,23 +311,28 @@ impl TileMapEditor {
     pub async fn draw(
         &mut self,
         camera: &Camera2D,
-        tilemap: &mut TileMap,
+        room: &mut Room,
         asset_manager: &mut AssetManager,
         ecs: &Ecs,
-        room_id: RoomId,
-        room_position: Vec2,
-        room_size: Vec2,
         grid_size: f32,
     ) {
+        let variant_index = room.current_variant_index();
+        let tilemap = &mut room.variants[variant_index].tilemap;
+        let room_position = room.position;
+        let room_id = room.id;
+        let room_size = room.size;
+
         clear_background(BLACK);
         set_camera(camera);
         tilemap.draw(asset_manager, room_position, grid_size);
+        draw_exit_placeholders(&room.exits, room_position, grid_size);
         self.draw_adjacent_exits(grid_size);
         self.draw_hover_highlight(camera, tilemap, room_position, grid_size);
 
         if self.active_handle_index.is_some() {
             draw_all_camera_viewports(camera, ecs, room_id);
         }
+
 
         self.draw_ui(camera, asset_manager, tilemap, room_position, room_size, grid_size).await;
     }
