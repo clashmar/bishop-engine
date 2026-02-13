@@ -98,8 +98,8 @@ pub struct StoredComponent {
     pub data: String,
 }
 
-/// Default implementation used when a component does not need any post‑create work.
-pub fn post_create(_any: &mut dyn Any, _entity: &Entity, _ctx: &mut GameCtxMut) {}
+/// Default implementation used when a component does not need any post-create work.
+pub fn noop_post_create(_any: &mut dyn Any, _entity: &Entity, _ctx: &mut GameCtxMut) {}
 
-/// Default implementation used when a component does not need any post‑remove work.
-pub fn post_remove(_any: &mut dyn Any, _entity: &Entity, _ctx: &mut GameCtxMut) {}
+/// Default implementation used when a component does not need any post-remove work.
+pub fn noop_post_remove(_any: &mut dyn Any, _entity: &Entity, _ctx: &mut GameCtxMut) {}

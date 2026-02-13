@@ -2,9 +2,7 @@
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::editor::EditorMode;
 use crate::with_editor;
-use engine_core::assets::sprite::SpriteId;
-use engine_core::world::world::WorldId;
-use engine_core::game::game::Game;
+use engine_core::prelude::*;
 
 /// Undo-able command for editing world properties.
 #[derive(Debug)]

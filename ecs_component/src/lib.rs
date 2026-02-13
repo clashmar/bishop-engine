@@ -126,7 +126,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     } else {
         quote! {
-            crate::ecs::component_registry::post_create
+            crate::ecs::component_registry::noop_post_create
         }
     };
 
@@ -146,7 +146,7 @@ pub fn ecs_component(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     } else {
         quote! {
-            crate::ecs::component_registry::post_remove
+            crate::ecs::component_registry::noop_post_remove
         }
     };
 
