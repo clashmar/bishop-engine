@@ -1,9 +1,8 @@
 // engine_core/src/world/transition_manager.rs
 use crate::game_state::GameState;
-use engine_core::ecs::transform::Transform;
-use engine_core::ecs::component::*;
-use engine_core::world::room::*;
+use engine_core::prelude::*;
 use macroquad::prelude::*;
+use engine_core::*;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -115,11 +114,12 @@ pub fn room_of_entity(pos: Vec2, rooms: &[Room], grid_size: f32) -> Option<RoomI
         let max = room.position + room.size * grid_size;
 
         // Never use <=/>= here or will overlap with adjacent rooms
-        if pos.x > min.x
+        if pos.x >= min.x
             && pos.x < max.x
             && pos.y > min.y
-            && pos.y < max.y
+            && pos.y <= max.y
         {
+            onscreen_debug!("{:?}", room.id);
             return Some(room.id);
         }
     }
