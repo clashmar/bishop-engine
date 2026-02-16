@@ -361,7 +361,6 @@ fn interpolate_draw_position(
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
             let interpolated = lerp(*prev_pos, current_pos, alpha).round();
-            onscreen_debug!("Entity: {}", interpolated);
             interpolated
         }
         else {

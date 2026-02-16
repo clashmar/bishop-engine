@@ -1,10 +1,8 @@
 // game/src/physics/physics_system.rs
 use crate::physics::collision::sweep_move;
-use crate::constants::GRAVITY;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::world::room::*;
+use crate::constants::GRAVITY; 
+use engine_core::prelude::*;
 use macroquad::prelude::Vec2;
-use engine_core::ecs::*;
 
 /// Applies physics to all entities with a `PhysicsBody` component.
 pub fn update_physics(
@@ -51,7 +49,7 @@ pub fn update_physics(
             grid_size,
         );
 
-        let new_pos = pos_cur + sweep.allowed_delta;
+        let new_pos = pos_cur + sweep.allowed_delta.round();
         let mut new_vel = vel_cur;
 
         if sweep.blocked_x {
@@ -68,7 +66,7 @@ pub fn update_physics(
             *vel_mut = new_vel;
         }
 
-        // Update Grounded component - grounded when blocked_y while moving down
+        // Grounded when blocked_y while moving down
         if let Some(grounded) = ecs.get_mut::<Grounded>(entity) {
             grounded.0 = sweep.blocked_y && vel_cur.y >= 0.0;
         }

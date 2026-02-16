@@ -1,11 +1,5 @@
 // game/src/physics/collision.rs
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::transform::{pivot_offset, Pivot, Transform};
-use engine_core::tiles::tile::TileComponent;
-use engine_core::tiles::tilemap::TileMap;
-use engine_core::ecs::component::*;
-use engine_core::world::room::Exit;
-use engine_core::ecs::ecs::Ecs;
+use engine_core::prelude::*;
 use std::collections::HashSet;
 use macroquad::prelude::*;
 
