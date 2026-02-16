@@ -255,7 +255,7 @@ fn round_to_dp(v: f32, dp: u32) -> f32 {
 
 /// Returns the optimal pivot for camera placement at a given zoom scalar.
 fn pivot_for_zoom_scalar(scalar: f32) -> Pivot {
-    if scalar.round() % 1.0 != 0.5 + f32::EPSILON {
+    if scalar < 1.0 {
         Pivot::Center
     } else if scalar.round() % 2.0 == 0.0 {
         Pivot::TopLeft

@@ -4,16 +4,9 @@ use crate::physics::physics_system::*;
 use crate::game_state::GameState;
 use crate::scripting::script_system::ScriptSystem;
 use crate::transitions::transition_manager::TransitionManager;
-use engine_core::rendering::render_system::RenderSystem;
-use engine_core::camera::camera_manager::CameraManager;
-use engine_core::animation::animation_system::*;
-use engine_core::rendering::render_room::*;
-use engine_core::ecs::transform::Transform;
-use engine_core::constants::*;
-use engine_core::dialogue::*;
+use engine_core::prelude::*;
 use macroquad::prelude::*;
 use std::cell::RefCell;
-use engine_core::*;
 use std::rc::Rc;
 use mlua::Lua;
 
@@ -40,14 +33,15 @@ impl Engine {
         loop {
             // Time elapsed since last frame
             let frame_dt = get_frame_time();
+            
             accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
-
+            
             // Update diagnostics timing
             if self.is_playtest {
                 self.diagnostics.update(frame_dt);
                 self.diagnostics.handle_input();
             }
-
+            
             while accumulator >= FIXED_DT {
                 accumulator -= FIXED_DT;
                 self.fixed_update(FIXED_DT);
@@ -63,6 +57,7 @@ impl Engine {
 
             // Render with interpolation
             let alpha = (accumulator / FIXED_DT).clamp(0.0, 1.0);
+            
             self.render(alpha);
 
             next_frame().await;
