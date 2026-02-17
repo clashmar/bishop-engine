@@ -3,10 +3,12 @@ use crate::constants::*;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EngineMode {
     Editor,
-    Game
+    Game,
+    /// Uses editor paths but runs release code.
+    Playtest,
 }
 
 static GAME_NAME: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));

@@ -29,16 +29,14 @@ impl Engine {
     pub async fn run(&mut self) {
         let mut accumulator: f32 = 0.0;
 
-        // Main loop
         loop {
-            // Time elapsed since last frame
-            let frame_dt = get_frame_time();
+            let dt = get_frame_time();
             
-            accumulator = (accumulator + frame_dt).min(MAX_ACCUM);
+            accumulator = (accumulator + dt).min(MAX_ACCUM);
             
             // Update diagnostics timing
             if self.is_playtest {
-                self.diagnostics.update(frame_dt);
+                self.diagnostics.update(dt);
                 self.diagnostics.handle_input();
             }
             
@@ -47,15 +45,13 @@ impl Engine {
                 self.fixed_update(FIXED_DT);
             }
 
-            // Per‑frame async work (input, animation)
-            self.update_async(frame_dt).await;
+            self.update_async(dt).await;
 
             // Update diagnostics metrics before render
             if self.is_playtest {
                 self.update_diagnostics_metrics();
             }
 
-            // Render with interpolation
             let alpha = (accumulator / FIXED_DT).clamp(0.0, 1.0);
             
             self.render(alpha);
@@ -75,6 +71,7 @@ impl Engine {
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
+
         let grid_size = game_ctx.cur_world.grid_size;
 
         update_physics(asset_manager, ecs, current_room, dt, grid_size);

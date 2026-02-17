@@ -313,7 +313,7 @@ impl PanelDefinition for ConsolePanel {
         let usable_w = content_rect.w - SCROLLBAR_W - 12.0;
         let font_size = 14.0;
 
-        // Check if cache needs update using monotonic counter
+        // Check if cache needs update using counter
         let (_entry_count, total_pushed) = LOG_HISTORY
             .lock()
             .map(|h| (h.entries().len(), h.total_pushed()))
