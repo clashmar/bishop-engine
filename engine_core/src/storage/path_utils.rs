@@ -19,20 +19,21 @@ pub fn game_folder(name: &str) -> PathBuf {
     absolute_save_root().join(sanitise_name(name))
 }
 
-/// Path to the resources folder for a game (Editor/Game).
+/// Path to the resources folder for a game (Editor/Game/Playtest).
 pub fn resources_folder(game_name: &str) -> PathBuf {
     match get_engine_mode() {
-        EngineMode::Editor => {
+        EngineMode::Editor | EngineMode::Playtest => {
+            // Both use the editor's save root
             game_folder(game_name).join(RESOURCES_FOLDER)
         }
         EngineMode::Game => {
             if cfg!(debug_assertions) {
                 game_folder(game_name).join(RESOURCES_FOLDER)
             } else {
-                // Panic is acceptable here as there is no possible fallback 
+                // Panic is acceptable here as there is no possible fallback
                 resources_dir_from_exe().unwrap()
             }
-            
+
         }
     }
 }
@@ -70,7 +71,7 @@ pub fn mac_os_folder() -> PathBuf {
 /// Returns the absolute path to the folder that stores all games for the editor,
 /// or the parent of the resources folder for games on all platforms.
 pub fn absolute_save_root() -> PathBuf {
-    // Game path
+    // Game release mode uses exe_dir
     if get_engine_mode() == EngineMode::Game && !cfg!(debug_assertions) {
         let path = exe_dir().unwrap_or_else(|| {
             // If this isn't found then the game can't work
@@ -80,8 +81,9 @@ pub fn absolute_save_root() -> PathBuf {
         return path;
     }
 
-    // Editor dev mode
-    if cfg!(debug_assertions) {
+    // This only works for debug editor playtest, the check is against the game build
+    // Editor/Playtest dev mode - Playtest is release build but needs editor paths
+    if cfg!(debug_assertions) || get_engine_mode() == EngineMode::Playtest {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let workspace_root = manifest_dir
             .parent()

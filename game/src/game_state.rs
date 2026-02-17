@@ -66,8 +66,11 @@ impl GameState {
         camera_manager: &mut CameraManager,
         grid_size: f32,
     ) -> Self {
-        // Allows the shared engine features to make decisions
-        set_engine_mode(EngineMode::Game);
+        // Playtest mode is set in playtest_main.rs before this is called,
+        // so we only set Game mode if not already in Playtest mode
+        if get_engine_mode() != EngineMode::Playtest {
+            set_engine_mode(EngineMode::Game);
+        }
 
         game.initialize(lua).await;
 

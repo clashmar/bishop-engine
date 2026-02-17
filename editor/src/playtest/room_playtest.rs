@@ -70,20 +70,21 @@ pub async fn resolve_playtest_binary() -> io::Result<PathBuf> {
         }
     }
 
-    // Dev mode
+    // Dev mode - build in release for consistent timing
     let mut exe_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     exe_path.pop();
     exe_path.push("target");
-    exe_path.push("debug");
+    exe_path.push("release");
     exe_path.push(exe_name);
 
-    // Run `cargo build -p game-playtest`
+    // Run `cargo build -p game-playtest --release`
     let mut cmd = Command::new("cargo");
     cmd.arg("build")
         .arg("-p")
         .arg("game")
         .arg("--bin")
-        .arg("game-playtest");
+        .arg("game-playtest")
+        .arg("--release");
 
     // Wait for the build to complete
     let status = cmd.status()?;

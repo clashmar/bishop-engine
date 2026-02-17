@@ -360,7 +360,9 @@ fn interpolate_draw_position(
 ) -> Vec2 {
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
+            onscreen_debug!("{prev_pos}");
             let interpolated = lerp(*prev_pos, current_pos, alpha).round();
+            onscreen_debug!("{interpolated}");
             interpolated
         }
         else {

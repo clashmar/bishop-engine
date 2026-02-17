@@ -4,9 +4,7 @@ use engine_core::camera::camera_manager::CameraManager;
 use game_lib::diagnostics::DiagnosticsOverlay;
 use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::game_state::GameState;
-use engine_core::world::room::Room;
-use engine_core::game::game::Game;
-use engine_core::constants::*;
+use engine_core::prelude::*;
 use game_lib::engine::Engine;
 use macroquad::prelude::*;
 use std::cell::RefCell;
@@ -25,19 +23,28 @@ struct PlaytestPayload {
 fn window_conf() -> Conf {
     let width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
     let height = FIXED_WINDOW_HEIGHT.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
-    
+
     Conf {
         window_title: "Playtest".to_owned(),
         window_width: width,
         window_height: height,
         fullscreen: false,
         window_resizable: true,
+        platform: macroquad::miniquad::conf::Platform {
+            swap_interval: Some(1), // Enable VSync for stable frame timing
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // Set engine mode to Playtest (uses editor paths, not exe_dir)
+    engine_core::engine_global::set_engine_mode(
+        engine_core::engine_global::EngineMode::Playtest
+    );
+
     // Load the temporary file written by the editor
     let args: Vec<String> = env::args().collect();
 

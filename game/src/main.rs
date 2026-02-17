@@ -1,10 +1,12 @@
 // game/src/main.rs
+use crate::miniquad::conf::Platform;
 use crate::rendering::render_system::RenderSystem;
 use engine_core::storage::path_utils::resources_dir_from_exe;
 use engine_core::assets::core_assets::load_rgba_resized;
 use engine_core::camera::camera_manager::CameraManager;
 use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::diagnostics::DiagnosticsOverlay;
+use game_lib::frame_limiter::FrameLimiter;
 use game_lib::game_state::GameState;
 use macroquad::miniquad::conf::Icon;
 use game_lib::engine::Engine;
@@ -42,6 +44,10 @@ fn window_conf() -> Conf {
         fullscreen: true,
         window_resizable: true,
         icon,
+        platform: Platform {
+            swap_interval: Some(0), // VSync
+            ..Default::default()
+        },
         ..Default::default()
     }
 }

@@ -60,7 +60,6 @@ impl PlaytestProcess {
     }
 
     /// Drains available output from the process and pushes to LOG_HISTORY.
-    /// Returns false when the process has exited, true if still running.
     pub fn poll(&mut self) -> bool {
         self.drain_channel(&self.stdout_rx, log::Level::Info);
         self.drain_channel(&self.stderr_rx, log::Level::Error);
