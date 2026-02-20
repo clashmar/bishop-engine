@@ -6,7 +6,6 @@ use engine_core::assets::core_assets::load_rgba_resized;
 use engine_core::camera::camera_manager::CameraManager;
 use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::diagnostics::DiagnosticsOverlay;
-use game_lib::frame_limiter::FrameLimiter;
 use game_lib::game_state::GameState;
 use macroquad::miniquad::conf::Icon;
 use game_lib::engine::Engine;
