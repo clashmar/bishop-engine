@@ -1,21 +1,19 @@
 // editor/src/world/world_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
+use crate::editor_assets::editor_assets::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::miniquad::CursorIcon;
 use crate::gui::menu_bar::*;
 use crate::world::coord::*;
 use crate::canvas::grid;
-use crate::*;
 use macroquad::miniquad::window::set_mouse_cursor;
-use engine_core::controls::controls::Controls;
-use engine_core::game::game::Game;
-use engine_core::world::world::*;
-use engine_core::world::room::*;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use once_cell::sync::Lazy;
+use bishop::prelude::*;
 
 pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.01;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
@@ -205,7 +203,7 @@ impl WorldEditor {
         game: &mut Game
     ) {
         set_camera(camera);
-        clear_background(LIGHTGRAY);
+        clear_background(Color::LIGHTGREY);
 
         let world = game.get_world_mut(world_id);
         let rooms = &world.rooms;
@@ -253,7 +251,7 @@ impl WorldEditor {
                 rect.w - inset,
                 rect.h - inset,
                 LINE_THICKNESS_MULTIPLIER / camera.zoom.x,
-                BLUE,
+                Color::BLUE,
             );
         }
     }
@@ -264,9 +262,9 @@ impl WorldEditor {
                 let exit_world_coord = (room.position / grid_size) + exit.position;
                 // Decide color based on whether it's linked
                 let color = if exit.target_room_id.is_some() {
-                    GREEN
+                    Color::GREEN
                 } else {
-                    RED
+                    Color::RED
                 };
                 self.draw_exit_marker(exit_world_coord, exit.direction, color, grid_size);
             }
@@ -343,7 +341,7 @@ impl WorldEditor {
             let rect = scaled_room_rect(room, grid_size);
 
             // Screen coordinates of room center
-            let screen_pos = camera.world_to_screen(rect.point() + rect.size() / 2.0);
+            let screen_pos = camera.world_to_screen(rect.top_left() + rect.size() / 2.0);
 
             let text_len = room.name.len() as f32;
 
@@ -376,11 +374,12 @@ impl WorldEditor {
                 screen_pos.y + offset.y,
                 TextParams {
                     font_size: font_size as u16,
-                    color: BLACK,
+                    color: Color::BLACK,
                     rotation,
                     ..Default::default()
                 });
             }
+            
         set_camera(camera); // back to world camera
     }
 

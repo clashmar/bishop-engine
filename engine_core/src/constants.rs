@@ -1,10 +1,10 @@
 // engine_core/src/constants.rs
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// 60Hz pysics.
 pub const FIXED_DT: f32 = 1.0 / 60.0;
 /// Protects against long freezes.
-pub const MAX_ACCUM: f32 = 0.08; 
+pub const MAX_ACCUM: f32 = 0.08;
 
 /// Default tile size that the world scales to.
 pub const DEFAULT_GRID_SIZE: f32 = 16.0;
@@ -13,8 +13,8 @@ pub const MINIMUM_TILE_SIZE: f32 = 5.0;
 /// Base tile size for editor scaling.
 pub const BASE_GRID_SIZE: f32 = 32.0;
 
-pub const DEFAULT_ROOM_SIZE: Vec2 = vec2(16.0, 10.0);
-pub const DEFAULT_ROOM_POSITION: Vec2 = vec2(0.0, 0.0);
+pub const DEFAULT_ROOM_SIZE: Vec2 = Vec2::new(16.0, 10.0);
+pub const DEFAULT_ROOM_POSITION: Vec2 = Vec2::new(0.0, 0.0);
 
 /// Name of the game .ron save file.
 pub const GAME_RON: &str = "game.ron";

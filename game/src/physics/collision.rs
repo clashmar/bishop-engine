@@ -1,7 +1,7 @@
 // game/src/physics/collision.rs
 use engine_core::prelude::*;
 use std::collections::HashSet;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 const OVERLAP_EPS: f32 = 0.0001; 
 

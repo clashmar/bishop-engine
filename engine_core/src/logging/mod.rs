@@ -5,3 +5,4 @@ pub use crate::onscreen_debug;
 pub use crate::onscreen_info;
 pub use crate::onscreen_warn;
 pub use crate::onscreen_error;
+pub use logging::LOG_HISTORY;

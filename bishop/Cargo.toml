@@ -9,3 +9,4 @@ macroquad = ["dep:macroquad"]
 
 [dependencies]
 macroquad = { version = "0.4.14", optional = true }
+glam = "0.32.0"

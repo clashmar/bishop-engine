@@ -3,11 +3,8 @@ use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::transform::Transform;
 use crate::editor::EditorMode;
 use crate::with_editor;
-use engine_core::ecs::entity::Entity;
-use engine_core::world::world::WorldId;
-use engine_core::world::room::RoomId;
-use engine_core::ui::toast::Toast;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Undo-able command for changing a world's grid size.
 #[derive(Debug)]
@@ -48,8 +45,8 @@ impl EditorCommand for ChangeGridSizeCmd {
                 .collect();
 
             // Capture entity positions before scaling
-            let pos_store = editor.game.ecs.get_store::<Transform>();
-            self.old_entity_positions = pos_store
+            let trans_store = editor.game.ecs.get_store::<Transform>();
+            self.old_entity_positions = trans_store
                 .data
                 .iter()
                 .map(|(&entity, t)| (entity, t.position))

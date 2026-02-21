@@ -1,8 +1,8 @@
 // editor/src/gui/mode_selector.rs
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::gui_constants::*;
+use engine_core::ui::text::*;
+use bishop::prelude::*;
 
 /// A trait that each editor’s mode enum must implement.
 pub trait ModeInfo {
@@ -44,7 +44,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                     rect.x - 2.0, rect.y - 2.0,
                     rect.w + 4.0, rect.h + 4.0,
                     2.0,
-                    YELLOW
+                    Color::YELLOW
                 );
             }
 
@@ -64,7 +64,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                 &mode.icon(),
                 rect.x,
                 rect.y,
-                WHITE,
+                Color::WHITE,
                 DrawTextureParams {
                     dest_size: Some(vec2(rect.w, rect.h)),
                     ..Default::default()
@@ -111,7 +111,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                     tip_rect.x + 4.0,
                     tip_rect.y + 15.0,
                     16.0,
-                    WHITE
+                    Color::WHITE
                 );
             }
         }
@@ -176,7 +176,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
                 rect.w + 4.0,
                 rect.h + 4.0,
                 2.0,
-                YELLOW,
+                Color::YELLOW,
             );
         }
 
@@ -196,7 +196,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
             mode.icon(),
             rect.x,
             rect.y,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams {
                 dest_size: Some(vec2(rect.w, rect.h)),
                 ..Default::default()
@@ -223,7 +223,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
                 Color::new(0.0, 0.0, 0.0, 0.8),
             );
 
-            draw_text_ui(tip, tip_rect.x + 4.0, tip_rect.y + 15.0, 16.0, WHITE);
+            draw_text_ui(tip, tip_rect.x + 4.0, tip_rect.y + 15.0, 16.0, Color::WHITE);
         }
     }
 

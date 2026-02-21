@@ -9,7 +9,7 @@ use serde_with::{FromInto, serde_as};
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use strum_macros::EnumIter;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::fmt;
 
 /// The animation component for an entity.
@@ -184,7 +184,7 @@ pub struct ClipDef {
 impl Default for ClipDef {
     fn default() -> ClipDef {
         ClipDef {
-            frame_size: vec2(DEFAULT_GRID_SIZE, DEFAULT_GRID_SIZE),
+            frame_size: Vec2::new(DEFAULT_GRID_SIZE, DEFAULT_GRID_SIZE),
             cols: 5,
             rows: 1,
             fps: 4.0,

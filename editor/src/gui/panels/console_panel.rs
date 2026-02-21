@@ -1,12 +1,8 @@
 // editor/src/gui/panels/console_panel.rs
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::Editor;
-use engine_core::controls::controls::Controls;
-use engine_core::logging::logging::LOG_HISTORY;
-use engine_core::ui::widgets::clipboard::clipboard_set_text;
-use engine_core::ui::widgets::Button;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 const ROW_HEIGHT: f32 = 18.0;
 const SCROLL_SPEED: f32 = 24.0;
@@ -48,11 +44,11 @@ impl ConsolePanel {
 
     fn level_color(level: log::Level) -> Color {
         match level {
-            log::Level::Error => RED,
-            log::Level::Warn => YELLOW,
-            log::Level::Info => WHITE,
-            log::Level::Debug => GRAY,
-            log::Level::Trace => DARKGRAY,
+            log::Level::Error => Color::RED,
+            log::Level::Warn => Color::YELLOW,
+            log::Level::Info => Color::WHITE,
+            log::Level::Debug => Color::GREY,
+            log::Level::Trace => Color::DARKGRAY,
         }
     }
 

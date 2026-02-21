@@ -163,6 +163,7 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 name = "bishop"
 version = "0.1.0"
 dependencies = [
+ "glam 0.32.0",
  "macroquad",
 ]
 
@@ -624,6 +625,7 @@ dependencies = [
 name = "editor"
 version = "0.1.0-alpha"
 dependencies = [
+ "bishop",
  "engine_core",
  "flexi_logger",
  "futures",
@@ -664,6 +666,7 @@ dependencies = [
 name = "engine_core"
 version = "0.1.0"
 dependencies = [
+ "bishop",
  "directories-next",
  "ecs_component",
  "flexi_logger",
@@ -940,6 +943,7 @@ dependencies = [
 name = "game"
 version = "0.1.0"
 dependencies = [
+ "bishop",
  "cargo-bundle",
  "engine_core",
  "inventory",
@@ -1071,6 +1075,12 @@ name = "glam"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e05e7e6723e3455f4818c7b26e855439f7546cf617ef669d1adedb8669e5cb9"
+
+[[package]]
+name = "glam"
+version = "0.32.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34627c5158214743a374170fed714833fdf4e4b0cbcc1ea98417866a4c5d4441"
 
 [[package]]
 name = "glib-sys"
@@ -1476,7 +1486,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2befbae373456143ef55aa93a73594d080adfb111dc32ec96a1123a3e4ff4ae"
 dependencies = [
  "fontdue",
- "glam",
+ "glam 0.27.0",
  "image 0.24.9",
  "macroquad_macro",
  "miniquad",
@@ -2999,7 +3009,7 @@ name = "widgets"
 version = "0.1.0"
 dependencies = [
  "arboard",
- "macroquad",
+ "bishop",
 ]
 
 [[package]]

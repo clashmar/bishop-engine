@@ -1,9 +1,6 @@
 // editor/src/tilemap/background_module.rs
-use engine_core::{
-    tiles::tilemap::TileMap, 
-    ui::{text::*, widgets::*}
-};
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 // TODO: Add more complex backgrounds
 /// Responsible for editing the background of a tilemap. 
@@ -26,7 +23,7 @@ impl BackgroundModule {
 
     pub fn draw(&mut self, rect: Rect, map: &mut TileMap, blocked: bool) {
         // Title
-        draw_text_ui("Background", rect.x, rect.y + 18.0, DEFAULT_FONT_SIZE_16, WHITE);
+        draw_text_ui("Background", rect.x, rect.y + 18.0, DEFAULT_FONT_SIZE_16, Color::WHITE);
 
         let mut r = map.background.r * 255.0;
         let mut g = map.background.g * 255.0;
@@ -67,14 +64,14 @@ impl BackgroundModule {
             g / 255.0,
             b / 255.0,
             a / 255.0,
-        );
+        ).into();
 
-        map.background = Color::new(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+        map.background = Color::new(r / 255.0, g / 255.0, b / 255.0, a / 255.0).into();
 
         // Preview square
         let preview_sz = field_h; // same height as the input fields
         let preview_rect = Rect::new(x, y, preview_sz, preview_sz);
-        draw_rectangle(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, map.background);
-        draw_rectangle_lines(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, 2.0, WHITE);
+        draw_rectangle(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, map.background.into());
+        draw_rectangle_lines(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, 2.0, Color::WHITE);
     }
 }

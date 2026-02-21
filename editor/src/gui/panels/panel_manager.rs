@@ -7,7 +7,7 @@ use crate::with_panel_manager;
 use crate::editor::EditorMode;
 use crate::Editor;
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 pub enum PanelMode {
     Room,
@@ -58,7 +58,7 @@ impl PanelManager {
     }
 
     pub fn update_and_draw(&mut self, editor_mode: EditorMode, editor: &mut Editor) {
-        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_screen = mouse_position().into();
         let mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
 
         // Find which panel was clicked (iterate back-to-front for z-order).
@@ -138,7 +138,7 @@ impl PanelManager {
 /// Returns whether a panel should block interaction.
 pub fn is_mouse_over_panel() -> bool {
     with_panel_manager(|pm| {
-        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_screen = mouse_position().into();
         pm.panels.iter()
             .any(|(_, p)|
             p.visible

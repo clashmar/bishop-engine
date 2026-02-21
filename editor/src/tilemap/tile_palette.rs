@@ -4,13 +4,11 @@ use crate::assets::sprite::SpriteId;
 use crate::tiles::tile::TileComponent;
 use crate::tiles::tile::TileDef;
 use crate::ui::text::draw_text_ui;
-use crate::ui::widgets::{gui_checkbox, Button};
-use engine_core::constants::DEFAULT_GRID_SIZE;
-use engine_core::tiles::tile::TileDefId;
-use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
 use std::collections::VecDeque;
+use engine_core::prelude::*;
+use serde_with::serde_as;
+use bishop::prelude::*;
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
@@ -106,14 +104,14 @@ impl TilePalette {
                 tex,
                 x,
                 y,
-                WHITE,
+                Color::WHITE,
                 DrawTextureParams {
                     dest_size: Some(vec2(self.tile_size, self.tile_size)),
                     ..Default::default()
                 },
             );
             if i == self.selected_index {
-                draw_rectangle_lines(x, y, self.tile_size, self.tile_size, 3.0, RED);
+                draw_rectangle_lines(x, y, self.tile_size, self.tile_size, 3.0, Color::RED);
             }
         }
 
@@ -174,7 +172,7 @@ impl TilePalette {
         // Background panel
         let panel = Rect::new(100., 80., 300., 260.);
         draw_rectangle(panel.x, panel.y, panel.w, panel.h, Color::new(0., 0., 0., 0.6));
-        draw_rectangle_lines(panel.x, panel.y, panel.w, panel.h, 2., WHITE);
+        draw_rectangle_lines(panel.x, panel.y, panel.w, panel.h, 2., Color::WHITE);
 
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);
@@ -198,7 +196,7 @@ impl TilePalette {
                 tex,
                 panel.x + panel.w - 50.,
                 panel.y + 60.,
-                WHITE,
+                Color::WHITE,
                 DrawTextureParams {
                     dest_size: Some(vec2(40., 40.)),
                     ..Default::default()
@@ -214,13 +212,13 @@ impl TilePalette {
         if gui_checkbox(cb_walk, &mut walk) {
             self.ui.walkable = walk;
         }
-        draw_text_ui("Walkable", cb_walk.x + 30., cb_walk.y + 15., 18., WHITE);
+        draw_text_ui("Walkable", cb_walk.x + 30., cb_walk.y + 15., 18., Color::WHITE);
 
         let cb_solid = Rect::new(panel.x + 10., panel.y + 140., 20., 20.);
         if gui_checkbox(cb_solid, &mut solid) {
             self.ui.solid = solid;
         }
-        draw_text_ui("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., WHITE);
+        draw_text_ui("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., Color::WHITE);
 
         let btn_label = match self.ui.mode {
             TilePaletteUiMode::Create => { "Create" },

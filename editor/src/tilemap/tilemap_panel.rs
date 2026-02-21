@@ -7,7 +7,7 @@ use crate::tilemap::tile_palette::*;
 use crate::tiles::tilemap::TileMap;
 use crate::gui::gui_constants::*;
 use engine_core::ui::widgets::Button;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 const INSET: f32 = 10.0;
 const BTN_HEIGHT: f32 = 30.0;
@@ -64,7 +64,7 @@ impl TilemapPanel {
 
         // Layout create button
         let create_label = "Create Tile";
-        let create_width = measure_text(create_label, None, 20, 1.0).width + PADDING;
+        let create_width = measure_text(create_label, 20.0).width + PADDING;
         let create_start = screen_width() - INSET - create_width;
         let create_rect = self.register_rect(Rect::new(create_start, INSET, create_width, BTN_HEIGHT));
 
@@ -93,7 +93,7 @@ impl TilemapPanel {
         self.draw_overflow_covers(inner);
 
         // Outline
-        draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
+        draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., Color::WHITE);
 
         // Layout the modules vertically
         let mut y = inner.y + 10.0;
@@ -126,7 +126,7 @@ impl TilemapPanel {
         // Edit button appears only when there is a selected palette tile
         if !self.palette.entries.is_empty() {
             let edit_label = "Edit";
-            let edit_width = measure_text(edit_label, None, 20, 1.0).width + PADDING;
+            let edit_width = measure_text(edit_label, 20.0).width + PADDING;
             let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
             let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
 

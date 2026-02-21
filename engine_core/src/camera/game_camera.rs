@@ -9,7 +9,7 @@ use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use strum_macros::EnumIter;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::fmt;
 
 #[derive(Debug, Default)]
@@ -59,7 +59,7 @@ pub struct RoomCamera {
 impl RoomCamera {
     /// Creates a new RoomCamera with the world grid size.
     pub fn new(room_id: RoomId, grid_size: f32) -> Self {
-        let zoom = vec2(
+        let zoom = Vec2::new(
             1.0 / world_virtual_width(grid_size) * 2.0,
             1.0 / world_virtual_height(grid_size) * 2.0,
         );
@@ -73,7 +73,7 @@ impl RoomCamera {
 
     /// Creates a new RoomCamera with zoom calculated for the given grid size.
     pub fn with_grid_size(room_id: RoomId, grid_size: f32) -> Self {
-        let zoom = vec2(
+        let zoom = Vec2::new(
             1.0 / world_virtual_width(grid_size) * 2.0,
             1.0 / world_virtual_height(grid_size) * 2.0,
         );
@@ -203,8 +203,8 @@ pub fn room_to_game_camera(
     let target = match room_camera.camera_mode {
         CameraMode::Fixed => origin,
         CameraMode::Follow(FollowRestriction::Free) => player_pos,
-        CameraMode::Follow(FollowRestriction::ClampX) => vec2(origin.x, player_pos.y),
-        CameraMode::Follow(FollowRestriction::ClampY) => vec2(player_pos.x, origin.y),
+        CameraMode::Follow(FollowRestriction::ClampX) => Vec2::new(origin.x, player_pos.y),
+        CameraMode::Follow(FollowRestriction::ClampY) => Vec2::new(player_pos.x, origin.y),
     };
 
     let camera = Camera2D {
@@ -301,9 +301,9 @@ pub fn zoom_from_scalar(scalar: f32, grid_size: f32) -> Vec2 {
     let aspect = world_virtual_width(grid_size) / world_virtual_height(grid_size);
 
     if aspect >= 1.0 {
-        vec2(scalar / aspect, scalar)
+        Vec2::new(scalar / aspect, scalar)
     } else {
-        vec2(scalar, scalar * aspect)
+        Vec2::new(scalar, scalar * aspect)
     }
 }
 

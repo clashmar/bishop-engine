@@ -14,8 +14,8 @@ use std::collections::HashSet;
 use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use macroquad::prelude::*;
 use once_cell::sync::Lazy;
+use bishop::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum RoomEditorMode {
@@ -353,7 +353,7 @@ impl RoomEditor {
                     // Highlight all selected entities and draw their overlays
                     for &selected_entity in &self.selected_entities {
                         if !is_pure_placeholder(ecs, selected_entity) {
-                            highlight_selected_entity(ecs, selected_entity, asset_manager, YELLOW, grid_size);
+                            highlight_selected_entity(ecs, selected_entity, asset_manager, Color::YELLOW, grid_size);
                         }
                         self.draw_camera_viewport(camera, ecs, selected_entity, room_id);
                         draw_pivot_marker(ecs, selected_entity);

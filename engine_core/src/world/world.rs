@@ -4,9 +4,9 @@ use crate::assets::sprite::SpriteId;
 use crate::tiles::tilemap::TileMap;
 use crate::world::room::*;
 use serde::{Deserialize, Serialize};
-use macroquad::prelude::*;
 use serde_with::FromInto;
 use serde_with::serde_as;
+use bishop::prelude::*;
 use uuid::Uuid;
 
 /// Identifier for a world.
@@ -97,7 +97,7 @@ impl World {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GridPos(pub IVec2);
 
 impl GridPos {

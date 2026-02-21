@@ -16,7 +16,7 @@ use engine_core::ecs::ecs::Ecs;
 use engine_core::game::game::*;
 use std::collections::HashMap;
 use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use engine_core::*;
 
 #[derive(Default)]   

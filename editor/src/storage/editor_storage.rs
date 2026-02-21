@@ -256,7 +256,7 @@ pub fn create_new_world(game: &mut Game) -> World {
         rooms: vec![first_room],
         current_room_id: None,
         starting_room_id: Some(room_id),
-        starting_position: Some(room_origin),
+        starting_position: Some(room_origin.into()),
         meta: WorldMeta::default(),
         grid_size: DEFAULT_GRID_SIZE,
     };

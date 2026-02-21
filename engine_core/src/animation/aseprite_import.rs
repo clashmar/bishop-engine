@@ -4,7 +4,7 @@ use crate::animation::animation_clip::*;
 use crate::storage::path_utils::assets_folder;
 use std::collections::HashMap;
 use std::process::Command;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::path::Path;
@@ -117,7 +117,7 @@ pub fn import_aseprite_metadata(json_path: &Path) -> JsonImportResult {
     };
 
     let offset = if first_frame.trimmed {
-        vec2(
+        Vec2::new(
             first_frame.sprite_source_size.x as f32,
             first_frame.sprite_source_size.y as f32,
         )
@@ -128,7 +128,7 @@ pub fn import_aseprite_metadata(json_path: &Path) -> JsonImportResult {
     let mirrored = rows == 1;
 
     let clip_def = ClipDef {
-        frame_size: vec2(frame_w, frame_h),
+        frame_size: Vec2::new(frame_w, frame_h),
         cols,
         rows,
         fps,

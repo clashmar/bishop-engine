@@ -1,26 +1,13 @@
 // editor/src/gui/inspector/inspector.rs
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::gui::inspector::player_module::PlayerModule;
-use crate::commands::room::*;
 use crate::editor_global::push_command;
 use crate::gui::menu_bar::menu_button;
+use crate::commands::room::*;
 use crate::gui::gui_constants::*;
-use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use engine_core::ecs::component::{Player, PlayerProxy};
-use engine_core::ecs::module_factory::MODULES;
-use engine_core::controls::controls::Controls;
-use engine_core::ecs::component_registry::*;
-use engine_core::ecs::inpsector_module::*;
-use engine_core::ecs::transform::Transform;
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::component::*;
-use engine_core::onscreen_error;
-use engine_core::ui::widgets::*;
-use engine_core::ecs::ecs::Ecs;
-use engine_core::game::game::*;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
-use engine_core::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 const SCROLL_SPEED: f32 = 5.0;
 
@@ -227,7 +214,7 @@ impl Inspector {
                         // Only draw when the module intersects the visible area
                         if y + h > inner.y && y < inner.y + inner.h {
                             let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
-                            module.draw(blocked, sub_rect, game_ctx, module_entity);
+                            module.draw(blocked, sub_rect.into(), game_ctx, module_entity);
                         }
 
                         y += h + WIDGET_SPACING;
@@ -257,7 +244,7 @@ impl Inspector {
                 self.draw_overflow_covers(inner);
 
                 // Outline 
-                draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., WHITE);
+                draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., Color::WHITE);
             }
             
             // Draw buttons at the top after the covers
@@ -343,7 +330,7 @@ impl Inspector {
             let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
             let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;
-            draw_text_ui(&txt_val, txt_x, txt_y, 20.0, WHITE);
+            draw_text_ui(&txt_val, txt_x, txt_y, 20.0, Color::WHITE);
 
             return menu_button(create_btn, create_label, false);
         }
@@ -445,7 +432,7 @@ impl Inspector {
             Color::new(0.0, 0.0, 0.0, 0.8),
         );
         
-        draw_rectangle_lines(menu_rect.x, menu_rect.y, menu_rect.w, menu_rect.h, 2.0, WHITE);
+        draw_rectangle_lines(menu_rect.x, menu_rect.y, menu_rect.w, menu_rect.h, 2.0, Color::WHITE);
 
         // Entries
         for (idx, reg) in shown.iter().enumerate() {

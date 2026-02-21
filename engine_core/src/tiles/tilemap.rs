@@ -5,7 +5,7 @@ use crate::world::world::GridPos;
 use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -24,7 +24,7 @@ impl TileMap {
             width,
             height,
             tiles: HashMap::new(),
-            background: LIGHTGRAY,
+            background: Color::LIGHTGREY,
         }
     }
 
@@ -35,7 +35,7 @@ impl TileMap {
         room_position: Vec2,
         grid_size: f32,
     ) {
-        clear_background(RED);
+        clear_background(Color::RED);
 
         // Background
         draw_rectangle(
@@ -43,11 +43,11 @@ impl TileMap {
             room_position.y,
             self.width as f32 * grid_size,
             self.height as f32 * grid_size,
-            self.background,
+            self.background.into(),
         );
 
         for ((x, y), tile_def_id) in &self.tiles {
-            let tile_pos = vec2(*x as f32 * grid_size, *y as f32 * grid_size) + room_position;
+            let tile_pos = Vec2::new(*x as f32 * grid_size, *y as f32 * grid_size) + room_position;
 
             if let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) {
                 let tex = asset_manager.get_texture_from_id(tile_def.sprite_id);
@@ -55,9 +55,9 @@ impl TileMap {
                     tex,
                     tile_pos.x,
                     tile_pos.y,
-                    WHITE,
+                    Color::WHITE,
                     DrawTextureParams {
-                        dest_size: Some(vec2(grid_size, grid_size)),
+                        dest_size: Some(Vec2::new(grid_size, grid_size).into()),
                         ..Default::default()
                     },
                 );

@@ -1,15 +1,16 @@
 // engine_core/src/lighting/render_system.rs
 use crate::shaders::shaders::*;
 use crate::prelude::*;
-use macroquad::{miniquad::{BlendFactor, BlendState, BlendValue, Equation}, prelude::*};
+use bishop::prelude::*;
+use macroquad::prelude::{Vec2 as MqVec2, Vec3 as MqVec3};
 
 /// Max lights per layer.
 pub const MAX_LIGHTS: usize = 10;
 
 #[derive(Clone, Copy, Default)]
 pub struct LightBuffer {
-    pos: Vec2,
-    color: Vec3,
+    pos: MqVec2,
+    color: MqVec3,
     intensity: f32,
     radius: f32,
     spread: f32,
@@ -20,11 +21,11 @@ pub struct LightBuffer {
 #[derive(Clone, Copy, Default)]
 pub struct GlowBuffer {
     brightness: f32,
-    color: Vec3,
+    color: MqVec3,
     intensity: f32,
-    pos: Vec2,
+    pos: MqVec2,
     emission: f32,
-    mask_size: Vec2,
+    mask_size: MqVec2,
 }
 
 pub struct RenderSystem {
@@ -255,16 +256,15 @@ impl RenderSystem {
             );
 
             let buffer = &mut self.glow_bufffers[i];
-            buffer.pos = screen_pos;
-            buffer.pos = screen_pos;
-            buffer.color = glow.color;
+            buffer.pos = (screen_pos.x, screen_pos.y).into();
+            buffer.color = (glow.color.x, glow.color.y, glow.color.z).into();
             buffer.intensity = glow.intensity;
             buffer.brightness = glow.brightness;
             buffer.emission = glow.emission;
 
             // Texture dimensions
             if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
-                buffer.mask_size = vec2(
+                buffer.mask_size = MqVec2::new(
                     world_distance_to_uniform_target(render_cam, w, target_w),
                     world_distance_to_uniform_target(render_cam, h, target_w),
                 );
@@ -329,17 +329,19 @@ impl RenderSystem {
                 let world_pos = *pos + l.pos;
                 let buffer = &mut self.light_bufffers[i];
 
-                buffer.pos = world_to_target(
-                    render_cam, 
-                    world_pos, 
-                    target_w, 
-                    target_h, 
+                let target_vec = world_to_target(
+                    render_cam,
+                    world_pos,
+                    target_w,
+                    target_h,
                     preview
                 );
 
+                buffer.pos = (target_vec.x, target_vec.y).into();
+
                 buffer.radius = world_distance_to_uniform_target(render_cam, l.radius, target_w);
                 buffer.spread = world_distance_to_uniform_target(render_cam, l.spread, target_w);
-                buffer.color = l.color;
+                buffer.color = (l.color.x, l.color.y, l.color.z).into();
                 buffer.intensity = l.intensity;
                 buffer.alpha = l.alpha;
                 buffer.brightness = l.brightness;
@@ -367,8 +369,8 @@ impl RenderSystem {
     /// Composites the per-layer room textures.
     pub fn run_scene_pass(&mut self) {
         let scene_comp_cam = Camera2D {
-            target: vec2(self.rt_width * 0.5, self.rt_height * 0.5),
-            zoom: vec2(2.0 / self.rt_width, 2.0 / self.rt_height),
+            target: Vec2::new(self.rt_width * 0.5, self.rt_height * 0.5),
+            zoom: Vec2::new(2.0 / self.rt_width, 2.0 / self.rt_height),
             render_target: Some(self.scene_comp_rt.clone()),
             ..Default::default()
         };
@@ -416,9 +418,9 @@ impl RenderSystem {
             tex,
             offset_x,
             offset_y,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(scaled_w, scaled_h)),
+                dest_size: Some(Vec2::new(scaled_w, scaled_h)),
                 ..Default::default()
             },
         );
@@ -431,7 +433,7 @@ impl RenderSystem {
             &self.final_comp_rt.texture,
             0.0,
             0.0,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams::default(),
         );
     }
@@ -444,7 +446,7 @@ impl RenderSystem {
             quad,
             0.0,
             0.0,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams::default(),
         );
         gl_use_default_material();
@@ -453,13 +455,13 @@ impl RenderSystem {
     /// Sets the mask render target background to white.
     pub fn init_mask_cam(&self) {
         let mask_cam = Camera2D {
-            target: vec2(self.rt_width * 0.5, self.rt_height * 0.5),
-            zoom: vec2(2.0 / self.rt_width, 2.0 / self.rt_height),
+            target: Vec2::new(self.rt_width * 0.5, self.rt_height * 0.5),
+            zoom: Vec2::new(2.0 / self.rt_width, 2.0 / self.rt_height),
             render_target: Some(self.mask_rt.clone()),
             ..Default::default()
         };
         set_camera(&mask_cam);
-        clear_background(WHITE);
+        clear_background(Color::WHITE);
         gl_use_default_material();
     }
 
@@ -474,7 +476,7 @@ impl RenderSystem {
         
         // Clear the texture every layer
         set_camera(&scene_cam); // Set before clearing!
-        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
+        clear_background(Color::TRANSPARENT);
         scene_cam
     }
 
@@ -487,7 +489,7 @@ impl RenderSystem {
             ..Default::default()
         };
         set_camera(&cam);
-        clear_background(Color::new(0.0, 0.0, 0.0, 0.0));
+        clear_background(Color::TRANSPARENT);
         cam
     }
 
@@ -573,5 +575,5 @@ fn world_to_target(
         y = target_h - y;
     }
 
-    vec2(x, y)
+    Vec2::new(x, y)
 }

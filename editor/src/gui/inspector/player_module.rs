@@ -5,7 +5,7 @@ use engine_core::game::game::GameCtxMut;
 use engine_core::ecs::entity::Entity;
 use engine_core::ui::{text::*, widgets::*};
 use engine_core::ecs::ecs::Ecs;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 #[derive(Default)]
 pub struct PlayerModule {}

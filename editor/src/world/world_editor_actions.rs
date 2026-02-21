@@ -3,12 +3,8 @@ use crate::ui::widgets::DEFAULT_FONT_SIZE_16;
 use crate::world::world_editor::WorldEditor;
 use crate::tiles::tilemap::TileMap;
 use crate::world::coord;
-use engine_core::ecs::component::CurrentRoom;
-use engine_core::world::room::*;
-use engine_core::game::game::*;
-use engine_core::ecs::ecs::Ecs;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 impl WorldEditor {
     /// Delete a room by its RoomId.
@@ -155,7 +151,7 @@ impl WorldEditor {
         let x = (screen_width() - txt_metrics.width) / 2.0;
         let y = screen_height() - margin;
 
-        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLACK);
+        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, Color::BLACK);
     }
 }
 

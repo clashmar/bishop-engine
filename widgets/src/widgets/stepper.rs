@@ -1,16 +1,16 @@
-use macroquad::prelude::*;
 use crate::*;
 
 /// Draws a stepper widget that allows selecting from a list of predefined values.
 ///
 /// Returns the selected value from the steps array.
 pub fn gui_stepper(
-    rect: Rect,
+    rect: impl Into<Rect>,
     label: &str,
     steps: &[f32],
     current: f32,
     blocked: bool,
 ) -> f32 {
+    let rect = rect.into();
     let mut idx = steps
         .iter()
         .enumerate()
@@ -39,7 +39,7 @@ pub fn gui_stepper(
         rect.h,
     );
 
-    draw_rectangle_lines(
+    backend::draw_rectangle_lines(
         val_rect.x,
         val_rect.y - 7.5,
         val_rect.w,

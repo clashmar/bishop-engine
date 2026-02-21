@@ -7,7 +7,7 @@ use crate::room::room_editor::*;
 use crate::gui::menu_bar::*;
 use crate::world::coord;
 use engine_core::prelude::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
 fn thickness(grid_size: f32) -> f32 { (grid_size * 0.175).max(1.0) }
@@ -125,7 +125,7 @@ impl RoomEditor {
         let x = (screen_width() - txt_metrics.width) / 2.0;
         let y = screen_height() - margin;
 
-        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, BLUE);
+        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, Color::BLUE);
     }
 
     /// Draw viewport rectangles for all cameras in the room when a camera is selected.
@@ -183,9 +183,9 @@ impl RoomEditor {
 
             // Selected camera is yellow, others are dimmer cyan
             let color = if *entity == selected {
-                YELLOW
+                Color::YELLOW
             } else {
-                PINK
+                Color::PINK
             };
 
             draw_rectangle_lines(
@@ -217,7 +217,7 @@ pub fn draw_collider(
 
             // Apply pivot offset to collider position
             let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
-            draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, PINK);
+            draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, Color::PINK);
      }
 }
 
@@ -436,7 +436,7 @@ pub fn draw_pivot_marker(ecs: &Ecs, entity: Entity) {
     };
 
     const PIVOT_RADIUS: f32 = 1.0;
-    draw_circle(transform.position.x, transform.position.y, PIVOT_RADIUS, WHITE);
+    draw_circle(transform.position.x, transform.position.y, PIVOT_RADIUS, Color::WHITE);
 }
 
 /// Returns true if the entity is a pure placeholder (Camera or Light without visible sprites).
@@ -502,7 +502,7 @@ pub fn draw_all_camera_viewports(
             viewport_w,
             viewport_h,
             thickness,
-            PINK,
+            Color::PINK,
         );
     }
 }
@@ -514,7 +514,7 @@ pub fn draw_exit_arrow(position: Vec2, direction: ExitDirection, grid_size: f32)
 
 /// Draw an arrow for an adjacent room's exit (pink color to distinguish from current room).
 pub fn draw_adjacent_exit_arrow(position: Vec2, direction: ExitDirection, grid_size: f32) {
-    draw_exit_arrow_colored(position, direction, grid_size, YELLOW);
+    draw_exit_arrow_colored(position, direction, grid_size, Color::YELLOW);
 }
 
 /// Draw a selection box rectangle in world space.
@@ -529,7 +529,7 @@ pub fn draw_selection_box(start: Vec2, end: Vec2) {
     // Semi-transparent fill
     draw_rectangle(min_x, min_y, width, height, Color::new(1.0, 1.0, 0.0, 0.1));
     // Yellow outline
-    draw_rectangle_lines(min_x, min_y, width, height, 1.0, YELLOW);
+    draw_rectangle_lines(min_x, min_y, width, height, 1.0, Color::YELLOW);
 }
 
 /// Returns a world-space Rect for an entity based on its sprite or placeholder size.

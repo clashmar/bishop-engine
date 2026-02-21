@@ -1,6 +1,5 @@
 use crate::clipboard::{clipboard_get_text, clipboard_set_text};
 use crate::*;
-use macroquad::prelude::*;
 
 /// A text input widget using the builder pattern.
 pub struct TextInput<'a> {
@@ -14,11 +13,11 @@ pub struct TextInput<'a> {
 
 impl<'a> TextInput<'a> {
     /// Creates a new text input widget with the given id, rect, and current value.
-    pub fn new(id: WidgetId, rect: Rect, current: &'a str) -> Self {
+    pub fn new(id: WidgetId, rect: impl Into<Rect>, current: &'a str) -> Self {
         Self {
             id,
-            rect,
-            current,    
+            rect: rect.into(),
+            current,
             blocked: false,
             start_focused: false,
             max_len: None,
@@ -76,8 +75,8 @@ impl<'a> TextInput<'a> {
             scroll_offset_x = 0.0;
         }
 
-        draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
-        draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., WHITE);
+        backend::draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
+        backend::draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., Color::WHITE);
 
         let text_area_x = self.rect.x + WIDGET_PADDING / 2.;
 
@@ -91,7 +90,7 @@ impl<'a> TextInput<'a> {
             let clipped_end = sel_end_x.min(self.rect.x + self.rect.w - WIDGET_PADDING / 2.);
 
             if clipped_end > clipped_start {
-                draw_rectangle(
+                backend::draw_rectangle(
                     clipped_start,
                     self.rect.y + self.rect.h * 0.2,
                     clipped_end - clipped_start,
@@ -104,10 +103,10 @@ impl<'a> TextInput<'a> {
         let display = if text.is_empty() { PLACEHOLDER_TEXT } else { &text };
         draw_text_clipped(display, self.rect.x, self.rect.y, self.rect.w, self.rect.h, scroll_offset_x, DEFAULT_FONT_SIZE_16, FIELD_TEXT_COLOR);
 
-        let mouse = mouse_position();
-        let mouse_over = self.rect.contains(vec2(mouse.0, mouse.1));
+        let mouse = backend::mouse_position();
+        let mouse_over = self.rect.contains(Vec2::new(mouse.0, mouse.1));
 
-        if is_mouse_button_pressed(MouseButton::Left) && !is_click_consumed() {
+        if backend::is_mouse_button_pressed(MouseButton::Left) && !is_click_consumed() {
             if !focused && mouse_over {
                 just_gained_focus = true;
             }
@@ -126,21 +125,21 @@ impl<'a> TextInput<'a> {
             }
         }
 
-        if dragging && is_mouse_button_down(MouseButton::Left) {
+        if dragging && backend::is_mouse_button_down(MouseButton::Left) {
             let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
             cursor_char = drag_pos;
         }
 
-        if is_mouse_button_released(MouseButton::Left) && dragging {
+        if backend::is_mouse_button_released(MouseButton::Left) && dragging {
             if selection_anchor == Some(cursor_char) {
                 selection_anchor = None;
             }
             dragging = false;
         }
-        
+
 
         if just_gained_focus {
-            while get_char_pressed().is_some() {}
+            while backend::get_char_pressed().is_some() {}
         }
 
         if is_dropdown_open() {
@@ -149,22 +148,22 @@ impl<'a> TextInput<'a> {
 
         if focused {
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
-            let now = get_time();
-            let shift_held = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
-            let ctrl_held = is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl);
+            let now = backend::get_time();
+            let shift_held = backend::is_key_down(KeyCode::LeftShift) || backend::is_key_down(KeyCode::RightShift);
+            let ctrl_held = backend::is_key_down(KeyCode::LeftControl) || backend::is_key_down(KeyCode::RightControl);
 
-            if ctrl_held && is_key_pressed(KeyCode::A) {
+            if ctrl_held && backend::is_key_pressed(KeyCode::A) {
                 selection_anchor = Some(0);
                 cursor_char = text.chars().count();
             }
 
-            if ctrl_held && is_key_pressed(KeyCode::C) 
+            if ctrl_held && backend::is_key_pressed(KeyCode::C)
                 && let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
                 clipboard_set_text(&selected);
             }
-            
 
-            if ctrl_held && is_key_pressed(KeyCode::V) && let Some(clipboard_text) = clipboard_get_text() {
+
+            if ctrl_held && backend::is_key_pressed(KeyCode::V) && let Some(clipboard_text) = clipboard_get_text() {
                 if selection_anchor.is_some() {
                     cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
                     selection_anchor = None;
@@ -209,8 +208,8 @@ impl<'a> TextInput<'a> {
 
             if handle_key_action(
                 RepeatableKey::Backspace,
-                is_key_pressed(KeyCode::Backspace),
-                is_key_down(KeyCode::Backspace),
+                backend::is_key_pressed(KeyCode::Backspace),
+                backend::is_key_down(KeyCode::Backspace),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -228,8 +227,8 @@ impl<'a> TextInput<'a> {
 
             if handle_key_action(
                 RepeatableKey::Delete,
-                is_key_pressed(KeyCode::Delete),
-                is_key_down(KeyCode::Delete),
+                backend::is_key_pressed(KeyCode::Delete),
+                backend::is_key_down(KeyCode::Delete),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -246,8 +245,8 @@ impl<'a> TextInput<'a> {
 
             if handle_key_action(
                 RepeatableKey::Left,
-                is_key_pressed(KeyCode::Left),
-                is_key_down(KeyCode::Left),
+                backend::is_key_pressed(KeyCode::Left),
+                backend::is_key_down(KeyCode::Left),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -268,8 +267,8 @@ impl<'a> TextInput<'a> {
 
             if handle_key_action(
                 RepeatableKey::Right,
-                is_key_pressed(KeyCode::Right),
-                is_key_down(KeyCode::Right),
+                backend::is_key_pressed(KeyCode::Right),
+                backend::is_key_down(KeyCode::Right),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -288,7 +287,7 @@ impl<'a> TextInput<'a> {
                 }
             }
 
-            if is_key_pressed(KeyCode::Home) {
+            if backend::is_key_pressed(KeyCode::Home) {
                 if shift_held {
                     if selection_anchor.is_none() {
                         selection_anchor = Some(cursor_char);
@@ -299,7 +298,7 @@ impl<'a> TextInput<'a> {
                 cursor_char = 0;
             }
 
-            if is_key_pressed(KeyCode::End) {
+            if backend::is_key_pressed(KeyCode::End) {
                 if shift_held {
                     if selection_anchor.is_none() {
                         selection_anchor = Some(cursor_char);
@@ -310,11 +309,11 @@ impl<'a> TextInput<'a> {
                 cursor_char = text.chars().count();
             }
 
-            if is_key_pressed(KeyCode::Tab) {
+            if backend::is_key_pressed(KeyCode::Tab) {
                 tab_request_pending(self.id, shift_held);
             }
 
-            while let Some(chr) = get_char_pressed() {
+            while let Some(chr) = backend::get_char_pressed() {
                 if chr.is_ascii_graphic() || chr == ' ' {
                     if selection_anchor.is_some() {
                         cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
@@ -330,7 +329,7 @@ impl<'a> TextInput<'a> {
                 }
             }
 
-            if is_key_pressed(KeyCode::Escape) || is_key_down(KeyCode::Enter) {
+            if backend::is_key_pressed(KeyCode::Escape) || backend::is_key_down(KeyCode::Enter) {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
                 focused = false;
                 selection_anchor = None;
@@ -346,13 +345,13 @@ impl<'a> TextInput<'a> {
             DEFAULT_FONT_SIZE_16,
         );
 
-        let now = get_time();
+        let now = backend::get_time();
         if focused && ((now * 2.0) as i32 % 2 == 0) {
             let byte_pos = byte_offset(&text, cursor_char);
             let prefix = &text[..byte_pos];
             let cursor_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
             if cursor_x >= self.rect.x && cursor_x <= self.rect.x + self.rect.w {
-                draw_line(
+                backend::draw_line(
                     cursor_x,
                     self.rect.y + self.rect.h * 0.3,
                     cursor_x,

@@ -1,7 +1,7 @@
 // engine_core/src/rendering/render_room.rs
 use crate::prelude::*;
 use std::collections::{BTreeMap, HashMap};
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Draws everything needed for the given room.
 pub fn render_room(
@@ -53,7 +53,7 @@ pub fn render_room(
 
         // Draw the tilemap as the first layer
         if first_pass {
-            tilemap.draw(asset_manager, room.position, grid_size);
+            tilemap.draw(asset_manager, room.position.into(), grid_size);
             first_pass = false;
         }
 
@@ -120,7 +120,7 @@ fn draw_entity(
         .unwrap_or(Pivot::BottomCenter);
 
     // Calculate pivot-adjusted draw position
-    let draw_base = pivot_adjusted_position(pos, vec2(width, height), pivot);
+    let draw_base = pivot_adjusted_position(pos, Vec2::new(width, height), pivot);
 
     // Animate/Draw sprite (use visual_entity for sprite lookup)
     if let Some(cf) = frame_store.get(visual_entity) && asset_manager.contains(cf.sprite_id) {
@@ -144,9 +144,9 @@ fn draw_entity(
             tex,
             draw_x,
             draw_y,
-            WHITE,
+            Color::WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(frame_w, frame_h)),
+                dest_size: Some(Vec2::new(frame_w, frame_h)),
                 source: Some(src),
                 flip_x: cf.flip_x,
                 ..Default::default()
@@ -161,9 +161,9 @@ fn draw_entity(
                 tex,
                 draw_base.x,
                 draw_base.y,
-                WHITE,
+                Color::WHITE,
                 DrawTextureParams {
-                    dest_size: Some(vec2(width, height)),
+                    dest_size: Some(Vec2::new(width, height)),
                     ..Default::default()
                 },
             );
@@ -201,7 +201,7 @@ pub fn highlight_selected_entity(
     };
 
     let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
-    let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
+    let draw_pos = pivot_adjusted_position(transform.position, Vec2::new(width, height), transform.pivot);
 
     draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);
 }
@@ -238,7 +238,7 @@ pub fn entity_dimensions(
 
 /// Draw a placeholder for an entity without a sprite.
 pub fn draw_entity_placeholder(pos: Vec2, grid_size: f32) {
-    draw_rectangle(pos.x, pos.y, grid_size, grid_size, GREEN);
+    draw_rectangle(pos.x, pos.y, grid_size, grid_size, Color::GREEN);
 }
 
 /// Sorts entites by their z-layer, filters out entities that should not be
@@ -293,8 +293,8 @@ fn collect_interpolated_layer_map<'a>(
         if let Some(glow) = glow_store.get(*entity) {
             let glow_size = asset_manager
                 .texture_size(glow.sprite_id)
-                .map(|(w, h)| vec2(w, h))
-                .unwrap_or(vec2(grid_size, grid_size));
+                .map(|(w, h)| Vec2::new(w, h))
+                .unwrap_or(Vec2::new(grid_size, grid_size));
 
             let glow_draw_pos = pivot_adjusted_position(draw_pos, glow_size, transform.pivot);
             entry.1.push((glow, glow_draw_pos));

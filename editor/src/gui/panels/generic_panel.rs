@@ -1,9 +1,8 @@
 // editor/src/gui/generic_panel.rs
 use crate::gui::gui_constants::*;
 use crate::Editor;
-use engine_core::ui::widgets::{Button, FIELD_BACKGROUND_COLOR};
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Must be globally unique.
 pub type PanelId = &'static str;
@@ -98,17 +97,17 @@ impl GenericPanel {
 
         // Collapse button
         let collapse_rect = Rect::new(panel_rect.left() + 5., panel_rect.y + 4., 20., 20.);
-        let collapse_clicked = Button::new(collapse_rect, if self.collapsed { "+" } else { "-" }).plain().text_color(BLACK).blocked(blocked).show();
+        let collapse_clicked = Button::new(collapse_rect, if self.collapsed { "+" } else { "-" }).plain().text_color(Color::BLACK).blocked(blocked).show();
         if !blocked && collapse_clicked {
             self.collapsed = !self.collapsed;
         }
 
         // Title
-        draw_text_ui(self.title, collapse_rect.x + 25., title_bar.y + 20., 16., BLACK);
+        draw_text_ui(self.title, collapse_rect.x + 25., title_bar.y + 20., 16., Color::BLACK);
 
         // Close button
         let close_rect = Rect::new(panel_rect.right() - 26., panel_rect.y + 4., 20., 20.);
-        let close_clicked = Button::new(close_rect, "x").plain().text_color(BLACK).blocked(blocked).show();
+        let close_clicked = Button::new(close_rect, "x").plain().text_color(Color::BLACK).blocked(blocked).show();
         if !blocked && close_clicked {
             self.visible = false;
         }
@@ -126,8 +125,8 @@ impl GenericPanel {
         );
 
         // Background
-        draw_rectangle(content_rect.x, content_rect.y, content_rect.w, content_rect.h, FIELD_BACKGROUND_COLOR);
-        draw_rectangle_lines(content_rect.x, content_rect.y, content_rect.w, content_rect.h, 2., WHITE);
+        draw_rectangle(content_rect.x, content_rect.y, content_rect.w, content_rect.h, FIELD_BACKGROUND_COLOR.into());
+        draw_rectangle_lines(content_rect.x, content_rect.y, content_rect.w, content_rect.h, 2., Color::WHITE);
 
         if !self.collapsed {
             self.definition.draw(content_rect, editor, blocked);

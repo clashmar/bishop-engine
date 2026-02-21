@@ -9,6 +9,7 @@ name = "Bishop"
 path = "src/main.rs"  
 
 [dependencies]
+bishop = { path = "../bishop" }
 engine_core = { path = "../engine_core" }
 game = { path = "../game" }
 reflect_derive = { path = "../reflect_derive" }

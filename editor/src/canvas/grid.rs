@@ -4,7 +4,7 @@ use crate::{
     editor_camera_controller::{self, EditorCameraController},
     world::world_editor::LINE_THICKNESS_MULTIPLIER,
 };
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 const GRID_LINE_COLOR: Color = Color::new(0.5, 0.5, 0.5, 0.2);
 

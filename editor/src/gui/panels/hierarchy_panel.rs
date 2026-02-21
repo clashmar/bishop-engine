@@ -3,18 +3,10 @@ use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::room::room_editor::RoomEditor;
 use crate::editor_global::push_command;
 use crate::editor::EditorMode;
-use crate::ecs::component::Name;
-use crate::ecs::transform::Transform;
-use crate::ecs::entity::*;
-use crate::ecs::ecs::Ecs;
 use crate::Editor;
-use engine_core::ui::text::draw_text_ui;
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::component::*;
-use engine_core::ui::widgets::Button;
-use engine_core::world::room::RoomId;
 use std::collections::HashSet;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 const ROW_HEIGHT: f32 = 22.0;
 const ROW_SPACING: f32 = 5.0;
@@ -158,7 +150,7 @@ impl PanelDefinition for HierarchyPanel {
             Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
             rect,
             || {
-                draw_text_ui("Global", rect.x + 6., y + 14., HEADER_FONT_SIZE, GRAY);
+                draw_text_ui("Global", rect.x + 6., y + 14., HEADER_FONT_SIZE, Color::GREY);
             },
         );
         y += HEADER_HEIGHT;
@@ -188,7 +180,7 @@ impl PanelDefinition for HierarchyPanel {
             Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
             rect,
             || {
-                draw_text_ui("Room", rect.x + 6., y + 14., HEADER_FONT_SIZE, GRAY);
+                draw_text_ui("Room", rect.x + 6., y + 14., HEADER_FONT_SIZE, Color::GREY);
             },
         );
         y += HEADER_HEIGHT;
@@ -273,7 +265,7 @@ impl PanelDefinition for HierarchyPanel {
                 mx - self.drag_offset.x + 4.0,
                 my - self.drag_offset.y + 16.0,
                 14.0,
-                WHITE,
+                Color::WHITE,
             );
             if is_mouse_button_released(MouseButton::Left) {
                 self.dragging = None;
@@ -347,8 +339,8 @@ fn draw_entity_tree(
             let symbol = if is_expanded { "-" } else { "+" };
             let clicked = Button::new(btn, symbol)
                 .plain()
-                .text_color(WHITE)
-                .hover_color(GRAY)
+                .text_color(Color::WHITE)
+                .hover_color(Color::GREY)
                 .blocked(blocked)
                 .show();
             if !blocked && clicked {
@@ -385,7 +377,7 @@ fn draw_entity_tree(
         // Start drag
         if !blocked && mouse_over && is_mouse_button_pressed(MouseButton::Left) && dragging.is_none() {
             *dragging = Some(entity);
-            *drag_offset = mouse - row_rect.point();
+            *drag_offset = mouse - row_rect.top_left();
         }
 
         // Drop target to parent
@@ -414,7 +406,7 @@ fn draw_entity_tree(
             row_rect.x + 18.0,
             row_rect.y + 16.0,
             14.0,
-            WHITE,
+            Color::WHITE,
         );
     }
 

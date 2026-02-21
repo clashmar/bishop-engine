@@ -1,7 +1,7 @@
 // engine_core/src/ui/toast.rs
 use crate::ui::widgets::*;
 use crate::ui::text::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::time::Instant;
 
 const PADDING: f32 = 20.0;
@@ -44,14 +44,14 @@ impl Toast {
 
         // Top left
         let bg_rect = Rect::new(
-            PADDING,                                          
-            screen_height() - PADDING - (txt.height + PADDING),
+            PADDING,
+            backend::screen_height() - PADDING - (txt.height + PADDING),
             txt.width + PADDING * 2.0,
             txt.height + PADDING,
         );
 
         // Background
-        draw_rectangle(
+        backend::draw_rectangle(
             bg_rect.x,
             bg_rect.y,
             bg_rect.w,
@@ -65,7 +65,7 @@ impl Toast {
             bg_rect.x + PADDING,
             bg_rect.y + txt.height + PADDING / 2.0,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
     }
 }

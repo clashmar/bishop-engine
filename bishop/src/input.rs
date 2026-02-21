@@ -174,4 +174,7 @@ pub trait Input {
 
     /// Returns characters typed this frame for text input.
     fn chars_pressed(&self) -> Vec<char>;
+
+    /// Returns the time in seconds since the application started.
+    fn get_time(&self) -> f64;
 }

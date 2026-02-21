@@ -1,8 +1,8 @@
 // editor/src/gui/inspector/modal.rs
 use crate::gui::prompts::confirm_prompt::*;
-use std::{cell::RefCell, thread::LocalKey};
 use engine_core::assets::asset_manager::AssetManager;
-use macroquad::prelude::*;
+use std::{cell::RefCell, thread::LocalKey};
+use bishop::prelude::*;
 
 #[derive(Default)]
 pub struct Modal {
@@ -117,7 +117,7 @@ impl Modal {
             self.rect.w, 
             self.rect.h,
             2.0, 
-            WHITE
+            Color::WHITE
         );
 
         // Run all widgets
