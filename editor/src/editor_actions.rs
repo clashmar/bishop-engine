@@ -14,17 +14,9 @@ use crate::editor::Editor;
 use crate::gui::panels::*;
 use crate::gui::modal::*;
 use crate::editor::*;
-use engine_core::engine_global::set_game_name;
-use engine_core::rendering::render_system::RenderSystem;
-use engine_core::controls::controls::Controls;
-use engine_core::storage::path_utils::*;
-use engine_core::ui::toast::Toast;
-use engine_core::game::game::Game;
-use engine_core::ui::widgets::*;
-use engine_core::world::room::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 use std::cell::RefCell;
-use engine_core::*;
 
 impl Default for Editor {
     fn default() -> Self {

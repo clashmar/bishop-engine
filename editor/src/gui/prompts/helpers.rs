@@ -1,6 +1,6 @@
 // editor/src/gui/prompts/helpers.rs
 use crate::gui::prompts::constants::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Supplies centered rects for confirm/cancel buttons.
 pub fn confirm_cancel_rects(rect: Rect, btn_y: f32) -> (Rect, Rect) {

@@ -1,5 +1,5 @@
 // editor/src/world/coord.rs
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Convert the current mouse position (screen pixels) to world
 /// coordinates using the supplied camera.

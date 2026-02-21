@@ -19,16 +19,16 @@ impl InputSnapshot {
 
         // Keyboard
         for &(name, code) in KEY_TABLE {
-            self.down.insert(name, is_key_down(code));
-            self.pressed.insert(name, is_key_pressed(code));
-            self.released.insert(name, is_key_released(code));
+            self.down.insert(name, is_key_down(code.into()));
+            self.pressed.insert(name, is_key_pressed(code.into()));
+            self.released.insert(name, is_key_released(code.into()));
         }
 
         // Mouse
         for &(name, button) in MOUSE_TABLE {
-            self.down.insert(name, is_mouse_button_down(button));
-            self.pressed.insert(name, is_mouse_button_pressed(button));
-            self.released.insert(name, is_mouse_button_released(button));
+            self.down.insert(name, is_mouse_button_down(button.into()));
+            self.pressed.insert(name, is_mouse_button_pressed(button.into()));
+            self.released.insert(name, is_mouse_button_released(button.into()));
         }
     }
 }

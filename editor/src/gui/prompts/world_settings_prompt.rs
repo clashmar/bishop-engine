@@ -1,11 +1,8 @@
 // editor/src/gui/prompts/world_settings_prompt.rs
 use crate::gui::prompts::constants::*;
 use crate::gui::prompts::helpers::*;
-use engine_core::controls::controls::Controls;
-use engine_core::world::world::WorldId;
-use engine_core::ui::widgets::*;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Result of a world settings prompt.
 pub struct WorldSettingsResult {
@@ -62,7 +59,7 @@ impl WorldSettingsPrompt {
             self.rect.x,
             y,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
 
         y += label_dims.height + GAP;

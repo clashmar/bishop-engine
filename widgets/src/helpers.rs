@@ -1,4 +1,3 @@
-use macroquad::prelude::*;
 use crate::*;
 
 pub fn byte_offset(s: &str, char_idx: usize) -> usize {
@@ -8,7 +7,8 @@ pub fn byte_offset(s: &str, char_idx: usize) -> usize {
         .unwrap_or_else(|| s.len())
 }
 
-pub fn draw_input_field_text(text: &str, rect: Rect) {
+pub fn draw_input_field_text(text: &str, rect: impl Into<Rect>) {
+    let rect = rect.into();
     draw_text_ui(
         text,
         rect.x + WIDGET_PADDING / 2.,
@@ -198,12 +198,10 @@ fn sort_targets_by_position(targets: &[TabTarget]) -> Vec<TabTarget> {
 
 /// Finds a widget's index by ID, falling back to position matching.
 fn find_widget_index(sorted: &[TabTarget], current_id: WidgetId, current_rect: Rect) -> Option<usize> {
-    // Try to find by ID first
     if let Some(idx) = sorted.iter().position(|t| t.id == current_id) {
         return Some(idx);
     }
 
-    // Fallback: find by approximate position
     sorted.iter().position(|t| {
         (t.rect.x - current_rect.x).abs() < 2.0
             && (t.rect.y - current_rect.y).abs() < 2.0

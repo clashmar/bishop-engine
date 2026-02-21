@@ -3,22 +3,12 @@ use crate::ecs::component_registry::ComponentRegistry;
 use crate::room::room_editor::*;
 use crate::room::selection::*;
 use crate::commands::room::*;
-use crate::ecs::transform::*;
 use crate::room::drawing::*;
 use crate::editor_global::*;
 use crate::world::coord;
-use engine_core::controls::controls::get_omni_input_pressed;
-use engine_core::ecs::transform::update_entity_position;
-use engine_core::animation::animation_clip::Animation;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ecs::capture::capture_subtree;
-use engine_core::ui::widgets::input_is_focused;
 use std::collections::{HashMap, HashSet};
-use engine_core::ecs::component::*;
-use engine_core::ecs::entity::*;
-use engine_core::ecs::ecs::Ecs;
-use engine_core::world::room::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 impl RoomEditor {
     /// Handles mouse selection / movement with multi-select support.
@@ -414,10 +404,10 @@ impl RoomEditor {
                 continue;
             }
 
-            if let Some(position) = ecs.get_store_mut::<Transform>().get_mut(entity) {
-                let old = position.position;
-                position.position += step;
-                moves.push((entity, old, position.position));
+            if let Some(transform) = ecs.get_store_mut::<Transform>().get_mut(entity) {
+                let old = transform.position;
+                transform.position += step;
+                moves.push((entity, old, transform.position));
             }
         }
 

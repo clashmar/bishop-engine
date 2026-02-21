@@ -10,7 +10,7 @@ use crate::ecs::ecs::Ecs;
 use crate::dialogue::*;
 use crate::ui::text::*;
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Collected data for rendering a speech bubble in screen space.
 pub struct SpeechBubbleRenderData {

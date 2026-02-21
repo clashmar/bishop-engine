@@ -1,6 +1,6 @@
 // engine_core/src/input/key_table.rs
 use crate::input::input_constants::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 pub fn lua_key_name(s: &str) -> String {
     let mut out = String::new();

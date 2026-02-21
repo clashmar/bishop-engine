@@ -2,9 +2,9 @@
 use crate::storage::editor_config::*;
 use crate::engine_global::*;
 use crate::constants::*;
-use crate::*; 
+use crate::*;
 use futures::executor::block_on;
-use macroquad::prelude::*;
+use macroquad::prelude::next_frame;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::path::Path;

@@ -2,7 +2,7 @@
 use crate::world::coord::overlaps_existing_rooms;
 use crate::tiles::tilemap::TileMap;
 use engine_core::world::room::Exit;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Which side of the tilemap the handle controls.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -239,7 +239,7 @@ impl ResizeHandle {
             draw_rect.w,
             draw_rect.h,
             line_width,
-            WHITE,
+            Color::WHITE,
         );
     }
 
@@ -283,7 +283,7 @@ impl ResizeHandle {
         let font_size = grid_size.max(16.0);
         let text_x = preview_pos.x + preview_size.x / 2.0 - (dim_text.len() as f32 * font_size * 0.3);
         let text_y = preview_pos.y - font_size * 0.5;
-        let text_color = if is_valid { GREEN } else { RED };
+        let text_color = if is_valid { Color::GREEN } else { Color::RED };
         draw_text(&dim_text, text_x, text_y, font_size, text_color);
     }
 }

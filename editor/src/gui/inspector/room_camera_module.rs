@@ -1,7 +1,7 @@
 // editor/src/gui/inspector/camera_module.rs
 use engine_core::prelude::*;
 use strum::IntoEnumIterator;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 

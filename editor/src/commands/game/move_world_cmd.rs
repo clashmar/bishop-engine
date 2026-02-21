@@ -4,7 +4,7 @@ use crate::editor::EditorMode;
 use crate::with_editor;
 use engine_core::world::world::WorldId;
 use engine_core::game::game::Game;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Undo-able command for moving a world's position.
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl MoveWorldCmd {
     /// Helper that sets the position of the world.
     fn set_position(game: &mut Game, world_id: WorldId, position: Vec2) {
         if let Some(world) = game.worlds.iter_mut().find(|w| w.id == world_id) {
-            world.meta.position = position
+            world.meta.position = position.into()
         }
     }
 }

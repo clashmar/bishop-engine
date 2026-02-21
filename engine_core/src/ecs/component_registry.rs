@@ -5,7 +5,6 @@ use crate::game::game::GameCtxMut;
 use serde::{Deserialize, Serialize};
 use std::any::{Any, TypeId};
 use once_cell::sync::Lazy;
-use macroquad::prelude::*;
 use mlua::Value;
 use mlua::Lua;
 

@@ -1,5 +1,5 @@
 // editor/src/gui/gui_constants.rs
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 // Dimensions
 pub const PADDING: f32 = 20.0;
@@ -19,4 +19,4 @@ pub const HIGHLIGHT_GREEN: Color = Color {
     a: 1.0,
 };
 
-pub const PANEL_COLOR: Color = GRAY;
+pub const PANEL_COLOR: Color = Color::GREY;

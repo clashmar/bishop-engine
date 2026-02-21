@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use std::collections::HashMap;
 use reflect_derive::Reflect;
-use macroquad::prelude::*;
 use std::ops::DerefMut;
 use std::ops::Deref;
 use std::any::Any;

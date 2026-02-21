@@ -1,13 +1,8 @@
 // editor/src/gui/prompts/world_edit_prompt.rs
 use crate::gui::prompts::constants::*;
 use crate::gui::prompts::helpers::*;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::controls::controls::Controls;
-use engine_core::assets::sprite::SpriteId;
-use engine_core::world::world::WorldId;
-use engine_core::ui::widgets::*;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Result an edit world prompt.
 pub struct WorldEditResult {
@@ -73,7 +68,7 @@ impl WorldEditPrompt {
             self.rect.x,
             y,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
 
         y += label_dims.height + GAP;
@@ -91,13 +86,13 @@ impl WorldEditPrompt {
             self.rect.x,
             y,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
 
         y += label_dims.height + GAP;
 
         let sprite_rect = Rect::new(self.rect.x, y, self.rect.w, 30.0);
-        if gui_sprite_picker(sprite_rect, &mut self.current_sprite, asset_manager, false) {
+        if gui_sprite_picker(sprite_rect.into(), &mut self.current_sprite, asset_manager, false) {
             // Widget updates the sprite
         }
 

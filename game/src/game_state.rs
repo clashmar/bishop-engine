@@ -9,7 +9,7 @@ use engine_core::engine_global::*;
 use engine_core::world::room::*;
 use engine_core::game::game::*;
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use bishop::prelude::Vec2;
 use mlua::Lua;
 
 /// Top level orchestrator of the game and systems.

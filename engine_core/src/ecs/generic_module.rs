@@ -10,7 +10,7 @@ use crate::ecs::ecs::Ecs;
 use crate::ui::text::*;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 const TOP_PADDING: f32 = 10.0;
 const SPACING: f32 = 5.0;

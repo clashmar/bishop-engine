@@ -1,21 +1,10 @@
 // editor/src/gui/inspector/animation_module.rs
 use crate::gui::gui_constants::*;
 use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
-use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use engine_core::ecs::inpsector_module::CollapsibleModule;
-use engine_core::ecs::inpsector_module::InspectorModule;
-use engine_core::animation::animation_system::*;
-use engine_core::animation::aseprite_import::*;
-use engine_core::storage::path_utils::assets_folder;
-use engine_core::animation::animation_clip::*;
-use engine_core::ecs::entity::Entity;
-use engine_core::ui::toast::Toast;
-use engine_core::ui::widgets::*;
-use engine_core::ecs::ecs::Ecs;
-use engine_core::game::game::*;
-use engine_core::ui::text::*;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
-use macroquad::prelude::*;
+use bishop::prelude::*;
+use macroquad::input::{is_key_pressed, KeyCode};
 
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;

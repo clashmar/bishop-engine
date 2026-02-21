@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use serde::de::Deserializer;
 use once_cell::sync::Lazy;
-use macroquad::prelude::*;
 use std::any::TypeId;
 use std::any::Any;
 

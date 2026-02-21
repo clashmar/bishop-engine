@@ -1,8 +1,8 @@
 // engine_core/src/ecs/reflect.rs
-use std::borrow::Cow;
-use macroquad::math::{Vec2, Vec3};
 use crate::assets::sprite::SpriteId;
 use crate::ecs::transform::Pivot;
+use bishop::types::{Vec2, Vec3};
+use std::borrow::Cow;
 
 /// One mutable field value.
 pub enum FieldValue<'a> {

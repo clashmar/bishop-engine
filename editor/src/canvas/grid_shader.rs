@@ -1,9 +1,9 @@
 // editor/src/canvas/grid_shader.rs
 use macroquad::{
     miniquad::{BlendFactor, BlendState, BlendValue, Equation},
-    prelude::*,
 };
 use once_cell::sync::OnceCell;
+use bishop::prelude::*;
 
 const GRID_VERTEX_SHADER: &str = r#"#version 100
 attribute vec3 position;
@@ -114,7 +114,7 @@ pub fn draw_shader_grid(params: &GridParams) -> bool {
         &resources.texture,
         params.camera_pos.x - half_w,
         params.camera_pos.y - half_h,
-        WHITE,
+        Color::WHITE,
         DrawTextureParams {
             dest_size: Some(vec2(half_w * 2.0, half_h * 2.0)),
             ..Default::default()

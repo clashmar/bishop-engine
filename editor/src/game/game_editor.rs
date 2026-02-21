@@ -1,30 +1,25 @@
 // editor/src/game/game_editor.rs
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use crate::commands::game::*;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::ModeInfo;
 use crate::gui::gui_constants::*;
 use crate::miniquad::CursorIcon;
+use crate::commands::game::*;
 use crate::gui::menu_bar::*;
 use crate::gui::prompts::*;
 use crate::gui::modal::*;
 use crate::push_command;
 use crate::world::coord;
-use engine_core::assets::asset_manager::AssetManager;
 use macroquad::miniquad::window::set_mouse_cursor;
-use engine_core::controls::controls::Controls;
-use engine_core::assets::sprite::SpriteId;
-use engine_core::game::game::Game;
-use engine_core::world::world::*;
 use engine_core::ui::widgets::*;
 use std::collections::HashMap;
-use engine_core::ui::text::*;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use once_cell::sync::Lazy;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::cell::RefCell;
 
 #[derive(Copy, Clone, PartialEq, EnumIter)]
@@ -184,7 +179,7 @@ impl GameEditor {
 
     ) {
         set_camera(camera);
-        clear_background(BLACK);
+        clear_background(Color::BLACK);
 
         if self.modal.is_open() {
             self.active_rects.push(self.modal.rect)
@@ -208,7 +203,7 @@ impl GameEditor {
             && !self.is_mouse_over_ui() && self.dragged_world.is_none() {
                 match self.mode {
                     GameEditorMode::Delete => {
-                        RED
+                        Color::RED
                     }
                     _ => {
                         HIGHLIGHT_GREEN
@@ -216,7 +211,7 @@ impl GameEditor {
                 }
                 
             } else {
-                WHITE
+                Color::WHITE
             }; 
 
             // Default is a circle
@@ -253,8 +248,9 @@ impl GameEditor {
                     self.dragged_world = Some(world.id);
 
                     let mouse_world = coord::mouse_world_pos(camera);
-                    self.drag_offset = world.meta.position - mouse_world;
-                    self.drag_start_position = Some(world.meta.position);
+                    let world_pos = world.meta.position.into();
+                    self.drag_offset = world_pos - mouse_world;
+                    self.drag_start_position = Some(world_pos);
                     break;
                 }
             }
@@ -267,7 +263,7 @@ impl GameEditor {
                     let mouse_world = coord::mouse_world_pos(camera);
 
                     if let Some(world) = game.worlds.iter_mut().find(|w| w.id == id) {
-                        world.meta.position = mouse_world + self.drag_offset;
+                        world.meta.position = (mouse_world + self.drag_offset).into();
                     }
                 }
 

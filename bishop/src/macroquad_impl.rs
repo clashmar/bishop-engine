@@ -1,3 +1,6 @@
+use crate::camera::Camera;
+use crate::frame::Frame;
+use crate::screen::Screen;
 use crate::*;
 use macroquad::prelude as mq;
 
@@ -65,6 +68,10 @@ impl Input for MacroquadContext {
     fn chars_pressed(&self) -> Vec<char> {
         self.char_buffer.clone()
     }
+
+    fn get_time(&self) -> f64 {
+        mq::get_time()
+    }
 }
 
 impl Draw for MacroquadContext {
@@ -89,7 +96,12 @@ impl Draw for MacroquadContext {
     }
 
     fn draw_triangle(&mut self, v1: Vec2, v2: Vec2, v3: Vec2, color: Color) {
-        mq::draw_triangle(v1.into(), v2.into(), v3.into(), color.into());
+        mq::draw_triangle(
+            (v1.x, v1.y).into(),
+            (v2.x, v2.y).into(),
+            (v3.x, v3.y).into(),
+            color.into(),
+        );
     }
 
     fn clear(&mut self, color: Color) {
@@ -139,12 +151,12 @@ impl DrawTexture for MacroquadContext {
             y,
             color.into(),
             mq::DrawTextureParams {
-                dest_size: params.dest_size.map(|v| v.into()),
+                dest_size: params.dest_size.map(|v| (v.x, v.y).into()),
                 source: params.source.map(|r| r.into()),
                 rotation: params.rotation,
                 flip_x: params.flip_x,
                 flip_y: params.flip_y,
-                pivot: params.pivot.map(|v| v.into()),
+                pivot: params.pivot.map(|v| (v.x, v.y).into()),
             },
         );
     }
@@ -303,18 +315,6 @@ impl From<mq::Color> for Color {
     }
 }
 
-impl From<Vec2> for mq::Vec2 {
-    fn from(v: Vec2) -> Self {
-        mq::Vec2::new(v.x, v.y)
-    }
-}
-
-impl From<mq::Vec2> for Vec2 {
-    fn from(v: mq::Vec2) -> Self {
-        Vec2::new(v.x, v.y)
-    }
-}
-
 impl From<Rect> for mq::Rect {
     fn from(r: Rect) -> Self {
         mq::Rect::new(r.x, r.y, r.w, r.h)
@@ -324,5 +324,76 @@ impl From<Rect> for mq::Rect {
 impl From<mq::Rect> for Rect {
     fn from(r: mq::Rect) -> Self {
         Rect::new(r.x, r.y, r.w, r.h)
+    }
+}
+
+impl From<&Camera2D> for mq::Camera2D {
+    fn from(cam: &Camera2D) -> Self {
+        mq::Camera2D {
+            target: (cam.target.x, cam.target.y).into(),
+            zoom: (cam.zoom.x, cam.zoom.y).into(),
+            rotation: cam.rotation,
+            offset: (cam.offset.x, cam.offset.y).into(),
+            render_target: cam.render_target.clone(),
+            viewport: None,
+        }
+    }
+}
+
+impl From<&mq::Camera2D> for Camera2D {
+    fn from(cam: &mq::Camera2D) -> Self {
+        Camera2D {
+            target: {
+                let v = cam.target;
+                Vec2::new(v.x, v.y)
+            },
+            zoom: {
+                let v = cam.zoom;
+                Vec2::new(v.x, v.y)
+            },
+            rotation: cam.rotation,
+            offset: {
+                let v = cam.offset;
+                Vec2::new(v.x, v.y)
+            },
+            render_target: cam.render_target.clone(),
+            viewport: cam.viewport,
+        }
+    }
+}
+
+impl Camera for MacroquadContext {
+    fn set_camera(&mut self, camera: &Camera2D) {
+        mq::set_camera(&mq::Camera2D::from(camera));
+    }
+
+    fn set_default_camera(&mut self) {
+        mq::set_default_camera();
+    }
+
+    fn screen_to_world(&self, camera: &Camera2D, screen_pos: Vec2) -> Vec2 {
+        let mq_cam = mq::Camera2D::from(camera);
+        let mq_world: mq::Vec2 = mq_cam.screen_to_world((screen_pos.x, screen_pos.y).into());
+        Vec2::new(mq_world.x, mq_world.y)
+    }
+}
+
+impl Screen for MacroquadContext {
+    fn screen_width(&self) -> f32 {
+        mq::screen_width()
+    }
+
+    fn screen_height(&self) -> f32 {
+        mq::screen_height()
+    }
+}
+
+impl Frame for MacroquadContext {
+    fn get_frame_time(&self) -> f32 {
+        mq::get_frame_time()
+    }
+
+    fn clear_background(&mut self, color: Color) {
+        mq::clear_background(color.into());
     }
 }

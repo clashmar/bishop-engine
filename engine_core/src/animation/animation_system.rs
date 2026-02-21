@@ -9,7 +9,7 @@ use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Current frame data for rendering animated entities.
 #[ecs_component]

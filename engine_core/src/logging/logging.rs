@@ -1,10 +1,10 @@
 // engine_core/src/logging/logging.rs
-use std::io::*;
+use crate::storage::editor_config::app_dir;
+use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use flexi_logger::*;
 use log::Record;
-use once_cell::sync::Lazy;
-use crate::storage::editor_config::app_dir;
+use std::io::*;
 
 const MAX_LOG_ENTRIES: usize = 500;
 

@@ -8,9 +8,9 @@ use crate::ecs::ecs::Ecs;
 use crate::constants::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use macroquad::prelude::*;
 use serde_with::FromInto;
 use serde_with::serde_as;
+use bishop::prelude::*;
 
 /// Identifier for a room, globally unique across all worlds.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]

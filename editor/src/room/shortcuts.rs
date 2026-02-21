@@ -1,19 +1,14 @@
 // editor/src/room/shortcuts.rs
-use crate::commands::room::*;
 use crate::editor_camera_controller::EditorCameraController;
-use crate::gui::mode_selector::ModeInfo;
 use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
 use crate::editor_global::with_panel_manager;
-use crate::room::room_editor::*;
-use engine_core::camera::game_camera::*;
-use engine_core::controls::controls::Controls;
-use engine_core::ecs::ecs::Ecs;
-use engine_core::ecs::entity::Entity;
+use crate::gui::mode_selector::ModeInfo;
 use crate::editor_global::push_command;
-use engine_core::ui::widgets::input_is_focused;
-use engine_core::world::room::*;
-use macroquad::prelude::*;
+use crate::room::room_editor::*;
+use crate::commands::room::*;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
+use bishop::prelude::*;
 
 impl RoomEditor {
     pub(crate) fn handle_shortcuts(

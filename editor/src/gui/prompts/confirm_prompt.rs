@@ -1,9 +1,7 @@
 // editor/src/gui/prompts/confirm_prompt.rs
 use crate::gui::prompts::helpers::*;
-use engine_core::controls::controls::Controls;
-use engine_core::ui::widgets::*;
-use engine_core::ui::text::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Result of a confirm prompt.
 pub enum ConfirmPromptResult {
@@ -50,7 +48,7 @@ impl ConfirmPrompt {
             message_x,
             self.rect.y,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
 
         // Buttons

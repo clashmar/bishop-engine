@@ -4,10 +4,10 @@ use crate::ecs::ecs::Ecs;
 use crate::inspector_module;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
-use macroquad::prelude::*;
+use reflect_derive::Reflect;
 use serde_with::serde_as;
 use serde_with::FromInto;
-use reflect_derive::Reflect;
+use bishop::prelude::*;
 
 /// Pivot point for sprite rendering. Defines which point on the sprite
 /// aligns with the entity's Transform position.
@@ -29,15 +29,15 @@ impl Pivot {
     /// Returns normalized offset (0.0-1.0) where (0,0)=top-left, (1,1)=bottom-right.
     pub fn as_normalized(&self) -> Vec2 {
         match self {
-            Pivot::TopLeft => vec2(0.0, 0.0),
-            Pivot::TopCenter => vec2(0.5, 0.0),
-            Pivot::TopRight => vec2(1.0, 0.0),
-            Pivot::CenterLeft => vec2(0.0, 0.5),
-            Pivot::Center => vec2(0.5, 0.5),
-            Pivot::CenterRight => vec2(1.0, 0.5),
-            Pivot::BottomLeft => vec2(0.0, 1.0),
-            Pivot::BottomCenter => vec2(0.5, 1.0),
-            Pivot::BottomRight => vec2(1.0, 1.0),
+            Pivot::TopLeft => Vec2::new(0.0, 0.0),
+            Pivot::TopCenter => Vec2::new(0.5, 0.0),
+            Pivot::TopRight => Vec2::new(1.0, 0.0),
+            Pivot::CenterLeft => Vec2::new(0.0, 0.5),
+            Pivot::Center => Vec2::new(0.5, 0.5),
+            Pivot::CenterRight => Vec2::new(1.0, 0.5),
+            Pivot::BottomLeft => Vec2::new(0.0, 1.0),
+            Pivot::BottomCenter => Vec2::new(0.5, 1.0),
+            Pivot::BottomRight => Vec2::new(1.0, 1.0),
         }
     }
 
@@ -83,7 +83,7 @@ impl std::fmt::Display for Pivot {
 #[inline]
 pub fn pivot_offset(entity_pos: Vec2, size: Vec2, pivot: Pivot) -> Vec2 {
     let offset = pivot.as_normalized();
-    vec2(
+    Vec2::new(
         entity_pos.x - size.x * offset.x,
         entity_pos.y - size.y * offset.y,
     )

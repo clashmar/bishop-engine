@@ -13,7 +13,7 @@ use crate::room::drawing::*;
 use crate::gui::modal::*;
 use crate::ecs::ecs::Ecs;
 use engine_core::prelude::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum TilemapEditorMode {
@@ -322,9 +322,9 @@ impl TileMapEditor {
         let room_id = room.id;
         let room_size = room.size;
 
-        clear_background(BLACK);
+        clear_background(Color::BLACK);
         set_camera(camera);
-        tilemap.draw(asset_manager, room_position, grid_size);
+        tilemap.draw(asset_manager, room_position.into(), grid_size);
         draw_exit_placeholders(&room.exits, room_position, grid_size);
         self.draw_adjacent_exits(grid_size);
         self.draw_hover_highlight(camera, tilemap, room_position, grid_size);
@@ -377,7 +377,7 @@ impl TileMapEditor {
 
             match self.mode {
                 TilemapEditorMode::Tiles => {
-                    draw_rectangle_lines(x, y, grid_size, grid_size, line_width, RED);
+                    draw_rectangle_lines(x, y, grid_size, grid_size, line_width, Color::RED);
                 }
                 TilemapEditorMode::Exits => {
                     let exit_direction = self.exit_direction_from_position(tile_pos, map);
@@ -427,7 +427,7 @@ impl TileMapEditor {
         let mouse_pos: Vec2 = mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
         let local_pos = world_pos - room_position;
-        let pos = GridPos::from_world(local_pos, grid_size);
+        let pos = GridPos::from_world(local_pos.into(), grid_size);
 
         if pos.is_in_bounds(map.width, map.height) {
             Some(pos)
@@ -446,7 +446,7 @@ impl TileMapEditor {
         let mouse_pos: Vec2 = mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
         let local_pos = world_pos - room_position;
-        let edge_pos = GridPos::from_world_edge(local_pos, map, grid_size);
+        let edge_pos = GridPos::from_world_edge(local_pos.into(), map, grid_size);
 
         let x_outside = edge_pos.x() < 0 || edge_pos.x() >= map.width as i32;
         let y_outside = edge_pos.y() < 0 || edge_pos.y() >= map.height as i32;

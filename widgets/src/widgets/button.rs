@@ -1,4 +1,3 @@
-use macroquad::prelude::*;
 use crate::*;
 
 /// The visual style of a button.
@@ -23,9 +22,9 @@ pub struct Button<'a> {
 
 impl<'a> Button<'a> {
     /// Creates a new button with the given rect and label.
-    pub fn new(rect: Rect, label: &'a str) -> Self {
+    pub fn new(rect: impl Into<Rect>, label: &'a str) -> Self {
         Self {
-            rect,
+            rect: rect.into(),
             label,
             style: ButtonStyle::Default,
             text_color: FIELD_TEXT_COLOR,
@@ -43,20 +42,20 @@ impl<'a> Button<'a> {
     }
 
     /// Sets the text color.
-    pub fn text_color(mut self, color: Color) -> Self {
-        self.text_color = color;
+    pub fn text_color(mut self, color: impl Into<Color>) -> Self {
+        self.text_color = color.into();
         self
     }
 
     /// Sets the hover background color.
-    pub fn hover_color(mut self, color: Color) -> Self {
-        self.hover_color = color;
+    pub fn hover_color(mut self, color: impl Into<Color>) -> Self {
+        self.hover_color = color.into();
         self
     }
 
     /// Sets an offset for the text position.
-    pub fn text_offset(mut self, offset: Vec2) -> Self {
-        self.text_offset = offset;
+    pub fn text_offset(mut self, offset: impl Into<Vec2>) -> Self {
+        self.text_offset = offset.into();
         self
     }
 
@@ -68,8 +67,8 @@ impl<'a> Button<'a> {
 
     /// Draws the button and returns true if clicked.
     pub fn show(self) -> bool {
-        let mouse = mouse_position();
-        let hovered = self.rect.contains(vec2(mouse.0, mouse.1));
+        let mouse = backend::mouse_position();
+        let hovered = self.rect.contains(Vec2::new(mouse.0, mouse.1));
 
         let txt_dims = measure_text_ui(self.label, FIELD_TEXT_SIZE_16, 1.0);
         let txt_y = self.rect.y + self.rect.h * 0.7;
@@ -77,17 +76,17 @@ impl<'a> Button<'a> {
 
         match self.style {
             ButtonStyle::Default => {
-                let background = if hovered && !is_dropdown_open() && !self.blocked && !is_mouse_button_down(MouseButton::Left) {
+                let background = if hovered && !is_dropdown_open() && !self.blocked && !backend::is_mouse_button_down(MouseButton::Left) {
                     self.hover_color
                 } else {
                     FIELD_BACKGROUND_COLOR
                 };
-                draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, background);
-                draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
+                backend::draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, background);
+                backend::draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
             }
             ButtonStyle::Plain => {
-                if hovered && !is_dropdown_open() && !self.blocked && !is_mouse_button_down(MouseButton::Left) {
-                    draw_rectangle(
+                if hovered && !is_dropdown_open() && !self.blocked && !backend::is_mouse_button_down(MouseButton::Left) {
+                    backend::draw_rectangle(
                         self.rect.x,
                         self.rect.y,
                         self.rect.w,
@@ -100,7 +99,7 @@ impl<'a> Button<'a> {
 
         draw_text_ui(self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, FIELD_TEXT_SIZE_16, self.text_color);
 
-        let clicked = is_mouse_button_pressed(MouseButton::Left)
+        let clicked = backend::is_mouse_button_pressed(MouseButton::Left)
             && hovered
             && !self.blocked
             && !is_dropdown_open()

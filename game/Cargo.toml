@@ -5,6 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+bishop = { path = "../bishop" }
 engine_core = { path = "../engine_core" }
 macroquad = "0.4.14" 
 mlua = { version = "0.11.5", features = ["lua54", "vendored", "serde" ] }

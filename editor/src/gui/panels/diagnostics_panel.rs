@@ -2,10 +2,8 @@
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::editor_global::with_command_manager;
 use crate::Editor;
-use engine_core::ecs::transform::Transform;
-use engine_core::ui::text::draw_text_ui;
-use engine_core::diagnostics::*;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 const ROW_HEIGHT: f32 = 16.0;
 const SECTION_SPACING: f32 = 8.0;
@@ -92,14 +90,14 @@ impl DiagnosticsPanel {
 
     fn draw_section_header(&self, label: &str, y: f32, rect: &Rect) -> f32 {
         if self.is_visible(y, rect) {
-            draw_text_ui(label, rect.x + LEFT_PADDING, y + HEADER_FONT_SIZE, HEADER_FONT_SIZE, YELLOW);
+            draw_text_ui(label, rect.x + LEFT_PADDING, y + HEADER_FONT_SIZE, HEADER_FONT_SIZE, Color::YELLOW);
         }
         y + ROW_HEIGHT + 4.0
     }
 
     fn draw_row(&self, label: &str, value: &str, y: f32, rect: &Rect, color: Color) -> f32 {
         if self.is_visible(y, rect) {
-            draw_text_ui(label, rect.x + LEFT_PADDING + 8.0, y + FONT_SIZE, FONT_SIZE, GRAY);
+            draw_text_ui(label, rect.x + LEFT_PADDING + 8.0, y + FONT_SIZE, FONT_SIZE, Color::GREY);
             let value_x = rect.x + rect.w * 0.55;
             draw_text_ui(value, value_x, y + FONT_SIZE, FONT_SIZE, color);
         }
@@ -108,11 +106,11 @@ impl DiagnosticsPanel {
 
     fn fps_color(fps: f32) -> Color {
         if fps >= 55.0 {
-            GREEN
+            Color::GREEN
         } else if fps >= 30.0 {
-            YELLOW
+            Color::YELLOW
         } else {
-            RED
+            Color::RED
         }
     }
 }
@@ -189,10 +187,10 @@ impl PanelDefinition for DiagnosticsPanel {
         // Warnings section
         y = self.draw_section_header("Warnings", y, &rect);
         if warnings.is_empty() {
-            y = self.draw_row("Status", "OK", y, &rect, GREEN);
+            y = self.draw_row("Status", "OK", y, &rect, Color::GREEN);
         } else {
             for warning in &warnings {
-                y = self.draw_row("!", &warning.description(), y, &rect, RED);
+                y = self.draw_row("!", &warning.description(), y, &rect, Color::RED);
             }
         }
         y += SECTION_SPACING;
@@ -201,38 +199,38 @@ impl PanelDefinition for DiagnosticsPanel {
         y = self.draw_section_header("Performance", y, &rect);
         let fps = snapshot.frame.fps;
         y = self.draw_row("FPS", &format!("{:.1}", fps), y, &rect, Self::fps_color(fps));
-        y = self.draw_row("Avg", &format!("{:.2} ms", snapshot.frame.avg_frame_time_ms), y, &rect, WHITE);
-        y = self.draw_row("Min", &format!("{:.2} ms", snapshot.frame.min_frame_time_ms), y, &rect, WHITE);
-        y = self.draw_row("Max", &format!("{:.2} ms", snapshot.frame.max_frame_time_ms), y, &rect, WHITE);
-        y = self.draw_row("Render", &format!("{:.2} ms", editor.render_system.render_time_ms), y, &rect, WHITE);
+        y = self.draw_row("Avg", &format!("{:.2} ms", snapshot.frame.avg_frame_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row("Min", &format!("{:.2} ms", snapshot.frame.min_frame_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row("Max", &format!("{:.2} ms", snapshot.frame.max_frame_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row("Render", &format!("{:.2} ms", editor.render_system.render_time_ms), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Assets section
         y = self.draw_section_header("Assets", y, &rect);
-        y = self.draw_row("Textures", &snapshot.assets.texture_count.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Tile Defs", &snapshot.assets.tile_def_count.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Sprite IDs", &snapshot.assets.sprite_id_count.to_string(), y, &rect, WHITE);
+        y = self.draw_row("Textures", &snapshot.assets.texture_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Tile Defs", &snapshot.assets.tile_def_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Sprite IDs", &snapshot.assets.sprite_id_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Scripts section
         y = self.draw_section_header("Scripts", y, &rect);
-        y = self.draw_row("Script IDs", &snapshot.assets.script_id_count.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Loaded", &snapshot.scripts.loaded_count.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Instances", &snapshot.scripts.instance_count.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Listeners", &snapshot.scripts.event_listener_count.to_string(), y, &rect, WHITE);
+        y = self.draw_row("Script IDs", &snapshot.assets.script_id_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Loaded", &snapshot.scripts.loaded_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Instances", &snapshot.scripts.instance_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Listeners", &snapshot.scripts.event_listener_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // ECS section
         y = self.draw_section_header("ECS", y, &rect);
-        y = self.draw_row("Entities", &snapshot.ecs.entity_count.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Component Stores", &snapshot.ecs.component_store_count.to_string(), y, &rect, WHITE);
+        y = self.draw_row("Entities", &snapshot.ecs.entity_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Component Stores", &snapshot.ecs.component_store_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Undo/Redo section
         y = self.draw_section_header("Undo/Redo", y, &rect);
-        y = self.draw_row("Undo Stack", &snapshot.commands.undo_stack_size.to_string(), y, &rect, WHITE);
-        y = self.draw_row("Redo Stack", &snapshot.commands.redo_stack_size.to_string(), y, &rect, WHITE);
-        let _ = self.draw_row("Pending", &snapshot.commands.pending_size.to_string(), y, &rect, WHITE);
+        y = self.draw_row("Undo Stack", &snapshot.commands.undo_stack_size.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row("Redo Stack", &snapshot.commands.redo_stack_size.to_string(), y, &rect, Color::WHITE);
+        let _ = self.draw_row("Pending", &snapshot.commands.pending_size.to_string(), y, &rect, Color::WHITE);
 
         // Scrollbar
         if scroll_range > 0.0 {

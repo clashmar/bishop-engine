@@ -1,6 +1,6 @@
 // editor/src/editor_camera_controller.rs
-use engine_core::{constants::*, world::room::Room};
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 pub const ZOOM_STEP_PERCENT: f32 = 0.5;
 pub const MIN_ZOOM: f32 = 0.000001;
@@ -14,7 +14,8 @@ impl EditorCameraController {
         // Pan
         if is_mouse_button_down(MouseButton::Middle) || is_key_down(KeyCode::Space) {
             let delta = mouse_delta_position();
-            camera.target -= delta * 2.0 / camera.zoom;
+            let delta_vec = vec2(delta.0, delta.1);
+            camera.target -= delta_vec * 2.0 / camera.zoom;
         }
 
         // Zoom (mouse wheel) - zoom towards mouse cursor

@@ -4,9 +4,9 @@ use crate::scripting::script::ScriptId;
 use crate::assets::sprite::SpriteId;
 use crate::ecs::entity::Entity;
 use crate::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::borrow::Cow;
-use widgets::*;
+use widgets::{Button, WIDGET_SPACING};
 
 pub fn gui_sprite_picker(
     rect: Rect,

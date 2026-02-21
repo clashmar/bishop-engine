@@ -1,5 +1,5 @@
 // engine_core/src/controls/controls.rs
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 pub struct Controls;
 

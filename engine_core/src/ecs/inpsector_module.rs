@@ -1,10 +1,10 @@
 // engine_core/src/ecs/module.rs
 use crate::game::game::GameCtxMut;
 use crate::ecs::entity::Entity;
-use crate::ui::widgets::{Button, DEFAULT_FONT_SIZE_16};
 use crate::ui::text::draw_text_ui;
+use crate::ui::widgets::*;
 use crate::ecs::ecs::Ecs;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Every inspector sub‑module implements this trait.
 pub trait InspectorModule {
@@ -101,13 +101,13 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
             rect.x + 28.0,
             rect.y + 18.0,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
 
         // Toggle button (‑ when open, ＋ when closed)
         let btn = Rect::new(rect.x + 4.0, rect.y + 4.0, 16.0, 16.0);
         let symbol = if self.expanded { "-" } else { "+" };
-        if Button::new(btn, symbol).text_offset(vec2(-0.3, 1.5)).blocked(blocked).show() {
+        if Button::new(btn, symbol).text_offset(Vec2::new(-0.3, 1.5)).blocked(blocked).show() {
             self.expanded = !self.expanded;
         }
 

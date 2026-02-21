@@ -5,7 +5,9 @@ use crate::game_state::GameState;
 use crate::scripting::script_system::ScriptSystem;
 use crate::transitions::transition_manager::TransitionManager;
 use engine_core::prelude::*;
-use macroquad::prelude::*;
+use bishop::backend;
+use macroquad::prelude::{next_frame, draw_fps, clear_background, BLACK};
+use bishop::prelude::Camera2D;
 use std::cell::RefCell;
 use std::rc::Rc;
 use mlua::Lua;
@@ -30,7 +32,7 @@ impl Engine {
         let mut accumulator: f32 = 0.0;
 
         loop {
-            let dt = get_frame_time();
+            let dt = backend::get_frame_time();
             
             accumulator = (accumulator + dt).min(MAX_ACCUM);
             
@@ -128,12 +130,12 @@ impl Engine {
         let target = self.camera_manager.interpolated_target(alpha);
 
         let render_cam = Camera2D {
-            target: target,
+            target,
             zoom: self.camera_manager.active.camera.zoom,
             ..Default::default()
         };
 
-        self.render_system.resize_for_camera(render_cam.zoom);
+        self.render_system.resize_for_camera(render_cam.zoom.clone());
 
         render_room(
             ecs,

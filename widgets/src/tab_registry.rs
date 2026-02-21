@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use macroquad::prelude::*;
 use std::cell::RefCell;
 use crate::*;
 
@@ -20,7 +19,7 @@ thread_local! {
 #[derive(Clone, Copy, Debug)]
 struct PendingTab {
     from_id: WidgetId,
-    shift: bool,         
+    shift: bool,
 }
 
 pub fn tab_registry_add(id: WidgetId, rect: Rect, is_text_input: bool) {

@@ -1,7 +1,7 @@
 // engine_core/src/camera/camera_manager.rs
 use crate::camera::game_camera::*;
 use crate::prelude::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 #[derive(Default)]
 pub struct CameraManager {

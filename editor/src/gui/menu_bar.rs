@@ -1,11 +1,11 @@
 // editor/src/gui/menu_bar.rs
-use crate::{editor::EditorMode, gui::modal::is_modal_open};
+use crate::gui::modal::is_modal_open;
 use crate::gui::gui_constants::*;
-use engine_core::ui::widgets::*;
+use crate::editor::EditorMode;
+use engine_core::prelude::*;
 use std::fmt::{self, Display};
-use engine_core::ui::text::*;
 use strum_macros::EnumIter;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::cell::RefCell;
 
 /// Holds the state of the top‑level menu bar.
@@ -395,7 +395,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     );
 
     if list_is_open {
-        state.rect = list_rect;             
+        state.rect = list_rect.into();
     }
 
     // Draw the list and handle selection
@@ -447,7 +447,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
                 DEFAULT_FONT_SIZE_16,
-                BLACK
+                Color::BLACK
             );
 
             // Optional shortcut display
@@ -459,7 +459,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
                     sc_x,
                     entry_rect.y + entry_rect.h * 0.7,
                     DEFAULT_FONT_SIZE_16,
-                    WHITE,
+                    Color::WHITE,
                 );
             }
 
@@ -470,7 +470,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
                 list_rect.w, 
                 list_rect.h, 
                 2., 
-                BLACK
+                Color::BLACK
             );
         }
     }
@@ -479,7 +479,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     let mouse_pos = mouse_position().into();
     if is_mouse_button_pressed(MouseButton::Left)
         && !rect.contains(mouse_pos)
-        && !(state.open && state.rect.contains(mouse_pos))
+        && !(state.open && state.rect.contains(mouse_pos.into()))
     {
         state.open = false;
         CURRENT_OPEN.with(|c| *c.borrow_mut() = None);
@@ -519,7 +519,7 @@ pub fn menu_button(
         txt_x, 
         txt_y,
         HEADER_FONT_SIZE_20,
-        BLACK
+        Color::BLACK
     );
 
     is_mouse_button_pressed(MouseButton::Left) 

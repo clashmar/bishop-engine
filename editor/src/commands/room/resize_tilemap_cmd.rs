@@ -4,10 +4,9 @@ use crate::tilemap::resize_handle::HandleSide;
 use crate::tiles::tilemap::shift_tiles;
 use crate::editor::EditorMode;
 use crate::with_editor;
-use engine_core::world::room::{Exit, RoomId};
-use engine_core::tiles::tile::TileDefId;
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Undoable command for resizing a tilemap via drag handles.
 #[derive(Debug)]
