@@ -13,38 +13,23 @@
 ---@field show_background boolean
 ---@field background_color table
 
+---@class Interactable
+---@field range number
+
+---@class Animation
+---@field clips table
+---@field variant table
+---@field current table
+---@field states table
+---@field sprite_cache table
+---@field flip_x boolean
+---@field speed_multiplier number
+
 ---@class RoomCamera
 ---@field zoom vec2
 ---@field room_id number
 ---@field zoom_mode table
 ---@field camera_mode table
-
----@class Interactable
----@field range number
-
----@class Glow
----@field color vec3
----@field intensity number
----@field brightness number
----@field emission number
----@field sprite_id number
-
----@class Light
----@field pos vec2
----@field color vec3
----@field intensity number
----@field radius number
----@field spread number
----@field alpha number
----@field brightness number
-
----@class Sprite
----@field sprite number
-
----@class Children
----@field entities table
-
----@alias Parent table
 
 ---@alias Name string
 
@@ -85,25 +70,38 @@
 ---@field width number
 ---@field height number
 
+---@class Children
+---@field entities table
+
+---@alias Parent table
+
 ---@class Transform
 ---@field visible boolean
 ---@field position vec2
 ---@field pivot table
 
----@class Animation
----@field clips table
----@field variant table
----@field current table
----@field states table
----@field sprite_cache table
----@field flip_x boolean
----@field speed_multiplier number
+---@class Sprite
+---@field sprite number
 
----@alias FacingDirection table
+---@class Light
+---@field pos vec2
+---@field color vec3
+---@field intensity number
+---@field radius number
+---@field spread number
+---@field alpha number
+---@field brightness number
 
 ---@class Script
 ---@field script_id number
 ---@field data table
+
+---@class Glow
+---@field color vec3
+---@field intensity number
+---@field brightness number
+---@field emission number
+---@field sprite_id number
 
 ---@class CurrentFrame
 ---@field clip_id number
@@ -114,15 +112,13 @@
 ---@field frame_size vec2
 ---@field flip_x boolean
 
+---@alias FacingDirection table
+
 ---@class ComponentId
 ---@field SpeechBubble string
----@field RoomCamera string
 ---@field Interactable string
----@field Glow string
----@field Light string
----@field Sprite string
----@field Children string
----@field Parent string
+---@field Animation string
+---@field RoomCamera string
 ---@field Name string
 ---@field PhysicsBody string
 ---@field PlayerProxy string
@@ -137,22 +133,22 @@
 ---@field Walkable string
 ---@field Grounded string
 ---@field Collider string
+---@field Children string
+---@field Parent string
 ---@field Transform string
----@field Animation string
----@field FacingDirection string
+---@field Sprite string
+---@field Light string
 ---@field Script string
+---@field Glow string
 ---@field CurrentFrame string
+---@field FacingDirection string
 
 local C = {}
 
 C.SpeechBubble = "SpeechBubble"
-C.RoomCamera = "RoomCamera"
 C.Interactable = "Interactable"
-C.Glow = "Glow"
-C.Light = "Light"
-C.Sprite = "Sprite"
-C.Children = "Children"
-C.Parent = "Parent"
+C.Animation = "Animation"
+C.RoomCamera = "RoomCamera"
 C.Name = "Name"
 C.PhysicsBody = "PhysicsBody"
 C.PlayerProxy = "PlayerProxy"
@@ -167,10 +163,14 @@ C.Velocity = "Velocity"
 C.Walkable = "Walkable"
 C.Grounded = "Grounded"
 C.Collider = "Collider"
+C.Children = "Children"
+C.Parent = "Parent"
 C.Transform = "Transform"
-C.Animation = "Animation"
-C.FacingDirection = "FacingDirection"
+C.Sprite = "Sprite"
+C.Light = "Light"
 C.Script = "Script"
+C.Glow = "Glow"
 C.CurrentFrame = "CurrentFrame"
+C.FacingDirection = "FacingDirection"
 
 return C

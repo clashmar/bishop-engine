@@ -37,6 +37,9 @@ pub mod window;
 #[cfg(feature = "macroquad")]
 pub mod macroquad;
 
+#[cfg(feature = "wgpu")]
+pub mod wgpu;
+
 pub use camera::*;
 pub use draw::*;
 pub use input::*;
@@ -47,6 +50,9 @@ pub use window::*;
 
 #[cfg(feature = "macroquad")]
 pub use macroquad::MacroquadContext;
+
+#[cfg(feature = "wgpu")]
+pub use wgpu::WgpuContext;
 
 /// Combined context trait for widgets that need input, drawing, text, camera, window, and time.
 pub trait BishopContext: Input + Draw + Text + Camera + Window + Time {}
@@ -75,4 +81,7 @@ pub mod prelude {
 
     #[cfg(feature = "macroquad")]
     pub use crate::macroquad::MacroquadContext;
+
+    #[cfg(feature = "wgpu")]
+    pub use crate::wgpu::WgpuContext;
 }
