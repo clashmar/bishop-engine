@@ -6,7 +6,7 @@ mod macroquad_font {
     use std::sync::LazyLock;
 
     static GNF_FONT: LazyLock<mq::Font> = LazyLock::new(|| {
-        let mut font = mq::load_ttf_font_from_bytes(include_bytes!("fonts/gnf.regular.ttf"))
+        let mut font = mq::load_ttf_font_from_bytes(include_bytes!("../fonts/gnf.regular.ttf"))
             .expect("Failed to load GNF font");
         font.set_filter(mq::FilterMode::Nearest);
         let extra_chars: Vec<char> = vec!['⌘', '⌥', '⇧', '↓', '→'];

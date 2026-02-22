@@ -1,9 +1,9 @@
-//! Frame trait for timing and per-frame operations.
+//! Time and frame timing operations.
 
-use crate::Color;
+use crate::types::Color;
 
 /// Trait for frame timing and operations.
-pub trait Frame {
+pub trait Time {
     /// Returns the time elapsed since the last frame in seconds.
     fn get_frame_time(&self) -> f32;
 

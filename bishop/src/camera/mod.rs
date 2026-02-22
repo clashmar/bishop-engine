@@ -1,6 +1,10 @@
-//! Camera trait for controlling the rendering viewport.
+//! Camera module for controlling the rendering viewport.
 
-use crate::{Camera2D, Vec2};
+mod camera2d;
+
+pub use camera2d::*;
+
+use glam::Vec2;
 
 /// Trait for camera operations.
 pub trait Camera {

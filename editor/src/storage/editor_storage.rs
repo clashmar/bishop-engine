@@ -18,7 +18,7 @@ use engine_core::world::world::*;
 use engine_core::game::game::*;
 use engine_core::constants::*;
 use engine_core::ecs::ecs::*;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::collections::HashSet;
 use std::time::SystemTime;
 use std::io::ErrorKind;

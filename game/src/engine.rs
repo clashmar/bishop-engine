@@ -5,9 +5,7 @@ use crate::game_state::GameState;
 use crate::scripting::script_system::ScriptSystem;
 use crate::transitions::transition_manager::TransitionManager;
 use engine_core::prelude::*;
-use bishop::backend;
-use macroquad::prelude::{next_frame, draw_fps, clear_background, BLACK};
-use bishop::prelude::Camera2D;
+use bishop::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use mlua::Lua;
@@ -32,7 +30,7 @@ impl Engine {
         let mut accumulator: f32 = 0.0;
 
         loop {
-            let dt = backend::get_frame_time();
+            let dt = get_frame_time();
             
             accumulator = (accumulator + dt).min(MAX_ACCUM);
             
@@ -110,7 +108,7 @@ impl Engine {
     }
 
     pub fn render(&mut self, alpha: f32) {
-        clear_background(BLACK);
+        clear_background(Color::BLACK);
 
         let mut game_state = self.game_state.borrow_mut();
         let prev_positions = game_state.prev_positions.clone();

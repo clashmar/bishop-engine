@@ -1,7 +1,7 @@
 // game/src/input/input_snapshot.rs
 use engine_core::input::input_table::*;
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 #[derive(Clone, Default)]
 pub struct InputSnapshot {

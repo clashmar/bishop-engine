@@ -10,7 +10,7 @@ use std::{env, fs, io};
 use std::hash::BuildHasher;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Windows .exe for the game binary.
 pub static GAME_EXE: &[u8] = include_bytes!(
