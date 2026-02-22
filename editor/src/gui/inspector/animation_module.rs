@@ -4,7 +4,6 @@ use std::{borrow::Cow, collections::{HashMap, HashSet}, path::Path};
 use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use bishop::prelude::*;
-use macroquad::input::{is_key_pressed, KeyCode};
 
 // Width of a three‑digit numeric field
 const NUM_FIELD_W: f32 = 40.0;

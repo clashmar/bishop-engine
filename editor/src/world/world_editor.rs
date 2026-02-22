@@ -4,11 +4,9 @@ use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
-use crate::miniquad::CursorIcon;
 use crate::gui::menu_bar::*;
 use crate::world::coord::*;
 use crate::canvas::grid;
-use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
@@ -477,17 +475,17 @@ impl WorldEditor {
 
     fn handle_mouse_cursor(&self) {
         if self.is_mouse_over_ui() {
-            set_mouse_cursor(CursorIcon::Default);
+            set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
                 WorldEditorMode::SelectRoom => {
-                    set_mouse_cursor(CursorIcon::Pointer);
+                    set_cursor_icon(CursorIcon::Pointer);
                 }
                 WorldEditorMode::NewRoom => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    set_cursor_icon(CursorIcon::Crosshair);
                 }
                 WorldEditorMode::DeleteRoom => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
         }

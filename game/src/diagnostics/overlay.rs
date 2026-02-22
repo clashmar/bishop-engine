@@ -3,7 +3,7 @@
 
 use engine_core::diagnostics::DiagnosticsCollector;
 use engine_core::ui::text::draw_text_ui;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Detail level for the diagnostics overlay.
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
@@ -151,7 +151,7 @@ impl DiagnosticsOverlay {
         // Calculate background size
         let max_width = lines
             .iter()
-            .map(|s| measure_text(s, None, FONT_SIZE as u16, 1.0).width)
+            .map(|s| measure_text(s, FONT_SIZE).width)
             .fold(0.0_f32, f32::max);
 
         let bg_width = max_width + PADDING * 2.0;
@@ -170,7 +170,7 @@ impl DiagnosticsOverlay {
         let fps_color = Self::fps_color(self.cached_fps);
 
         for (i, line) in lines.iter().enumerate() {
-            let color = if i == 0 { fps_color } else { WHITE };
+            let color = if i == 0 { fps_color } else { Color::WHITE };
             let y = PADDING * 2.0 + LINE_HEIGHT * i as f32;
             draw_text_ui(line, PADDING * 2.0, y + FONT_SIZE, FONT_SIZE, color);
         }
@@ -178,11 +178,11 @@ impl DiagnosticsOverlay {
 
     fn fps_color(fps: f32) -> Color {
         if fps >= 55.0 {
-            GREEN
+            Color::GREEN
         } else if fps >= 30.0 {
-            YELLOW
+            Color::YELLOW
         } else {
-            RED
+            Color::RED
         }
     }
 }

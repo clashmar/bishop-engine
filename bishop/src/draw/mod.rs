@@ -1,4 +1,10 @@
-use crate::types::*;
+//! Drawing primitives and textures.
+
+mod params;
+
+pub use params::*;
+
+use crate::types::{Color, Vec2};
 
 /// Core drawing operations for 2D primitives.
 pub trait Draw {
@@ -22,23 +28,6 @@ pub trait Draw {
 
     /// Clears the screen with the specified color.
     fn clear(&mut self, color: Color);
-}
-
-/// Parameters for textured drawing operations.
-#[derive(Clone, Debug, Default)]
-pub struct DrawTextureParams {
-    /// Destination size. If None, uses texture size.
-    pub dest_size: Option<Vec2>,
-    /// Source rectangle within the texture. If None, uses entire texture.
-    pub source: Option<Rect>,
-    /// Rotation in radians.
-    pub rotation: f32,
-    /// Flip horizontally.
-    pub flip_x: bool,
-    /// Flip vertically.
-    pub flip_y: bool,
-    /// Rotation pivot point. If None, uses center.
-    pub pivot: Option<Vec2>,
 }
 
 /// Extended drawing operations for textures.

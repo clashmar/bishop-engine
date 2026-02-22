@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use futures::executor::block_on;
 use std::collections::HashSet;
 use std::collections::HashMap;
-use macroquad::prelude::*;
+use bishop::prelude::*;
+use log::info;
 use std::sync::LazyLock;
 use std::path::PathBuf;
 use std::path::Path;
@@ -34,7 +35,7 @@ pub struct AssetManager {
 }
 
 /// Empty guard texture.
-static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty());
+static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(empty_texture);
 
 impl AssetManager {
     /// Initializes a new asset manager.

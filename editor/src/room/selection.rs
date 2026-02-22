@@ -2,8 +2,6 @@
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::gui::modal::is_modal_open;
 use crate::room::room_editor::*;
-use macroquad::miniquad::window::set_mouse_cursor;
-use macroquad::miniquad::CursorIcon;
 use std::collections::HashSet;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -93,14 +91,14 @@ impl RoomEditor {
 
     pub(crate) fn handle_mouse_cursor(&self) {
         if self.is_mouse_over_ui() {
-            set_mouse_cursor(CursorIcon::Default);
+            set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
                 RoomEditorMode::Scene => {
-                    set_mouse_cursor(CursorIcon::Default);
+                    set_cursor_icon(CursorIcon::Default);
                 }
                 RoomEditorMode::Tilemap => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
         }

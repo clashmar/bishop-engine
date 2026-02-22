@@ -6,7 +6,7 @@ use engine_core::game::game::*;
 use winres_edit::resource_type;
 use engine_core::constants::*;
 use winres_edit::Resources;
-use macroquad::prelude::*;
+use bishop::prelude::*;
 use std::path::PathBuf;
 use std::io::ErrorKind;
 use winres_edit::Id;

@@ -5,14 +5,12 @@ use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::ModeInfo;
 use crate::gui::gui_constants::*;
-use crate::miniquad::CursorIcon;
 use crate::commands::game::*;
 use crate::gui::menu_bar::*;
 use crate::gui::prompts::*;
 use crate::gui::modal::*;
 use crate::push_command;
 use crate::world::coord;
-use macroquad::miniquad::window::set_mouse_cursor;
 use engine_core::ui::widgets::*;
 use std::collections::HashMap;
 use engine_core::prelude::*;
@@ -417,20 +415,20 @@ impl GameEditor {
 
     fn handle_mouse_cursor(&self) {
         if self.is_mouse_over_ui() {
-            set_mouse_cursor(CursorIcon::Default);
+            set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
                 GameEditorMode::Select => {
-                    set_mouse_cursor(CursorIcon::Pointer);
+                    set_cursor_icon(CursorIcon::Pointer);
                 }
                 GameEditorMode::Edit => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    set_cursor_icon(CursorIcon::Crosshair);
                 }
                 GameEditorMode::Move => {
-                    set_mouse_cursor(CursorIcon::Move);
+                    set_cursor_icon(CursorIcon::Move);
                 }
                 GameEditorMode::Delete => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
         }
