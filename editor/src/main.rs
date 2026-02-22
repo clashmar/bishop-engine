@@ -13,6 +13,7 @@ use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
+use bishop::prelude::PlatformContext;
 
 mod editor_global;
 mod editor;
@@ -74,13 +75,16 @@ async fn main() -> std::io::Result<()> {
     // This allows global access to services
     set_editor(editor);
 
+    let mut ctx = PlatformContext::new();
     let mut current_window_size = (0, 0);
 
     loop {
+        ctx.update();
+
         // Update the render targets with the current window size
         let cur_screen = (screen_width() as u32, screen_height() as u32);
         if cur_screen != current_window_size {
-            with_editor(|editor| 
+            with_editor(|editor|
                 editor.render_system.resize(cur_screen.0, cur_screen.1)
             );
             current_window_size = cur_screen;
@@ -88,14 +92,14 @@ async fn main() -> std::io::Result<()> {
 
         widgets_frame_start();
 
-        with_editor_async(|editor| Box::pin(editor.update())).await;
-    
-        with_editor_async(|editor| Box::pin(editor.draw())).await;
+        with_editor_async(&mut ctx, |editor, ctx| Box::pin(editor.update(ctx))).await;
+
+        with_editor_async(&mut ctx, |editor, ctx| Box::pin(editor.draw(ctx))).await;
 
         widgets_frame_end();
-        
+
         apply_pending_commands();
-        
+
         next_frame().await
     }
 }

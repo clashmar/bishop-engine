@@ -59,6 +59,13 @@ pub trait BishopContext: Input + Draw + Text + Camera + Window + Time {}
 
 impl<T: Input + Draw + Text + Camera + Window + Time> BishopContext for T {}
 
+/// Feature-gated context type which resolves to the appropriate backend.
+#[cfg(feature = "macroquad")]
+pub type PlatformContext = macroquad::MacroquadContext;
+
+#[cfg(feature = "wgpu")]
+pub type PlatformContext = wgpu::WgpuContext;
+
 /// Prelude module for convenient glob imports.
 ///
 /// # Example
@@ -84,4 +91,7 @@ pub mod prelude {
 
     #[cfg(feature = "wgpu")]
     pub use crate::wgpu::WgpuContext;
+
+    #[cfg(any(feature = "macroquad", feature = "wgpu"))]
+    pub use crate::PlatformContext;
 }

@@ -74,7 +74,7 @@ impl Editor {
         Ok(editor)
     }
 
-    pub async fn update(&mut self) {
+    pub async fn update<C: BishopContext>(&mut self, ctx: &mut C) {
         if let Some(ref mut process) = self.playtest_process {
             if !process.poll() {
                 self.playtest_process = None;
@@ -84,11 +84,12 @@ impl Editor {
         if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui() {
             EditorCameraController::update(&mut self.camera);
         }
-        
+
         match self.mode {
             EditorMode::Game => {
                 // Returns the id of the world that was clicked on or None
                 if let Some(world_id) = self.game_editor.update(
+                    ctx,
                     &self.camera,
                     &mut self.game
                 ).await {
@@ -218,10 +219,11 @@ impl Editor {
         self.handle_shortcuts().await;
     }
 
-    pub async fn draw(&mut self) {
+    pub async fn draw<C: BishopContext>(&mut self, ctx: &mut C) {
         match self.mode {
             EditorMode::Game => {
                 self.game_editor.draw(
+                    ctx,
                     &mut self.camera,
                     &mut self.game
                 );

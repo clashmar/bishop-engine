@@ -72,9 +72,9 @@ where
 }
 
 /// Gets async mutable access to the `Editor`.
-pub async fn with_editor_async<R, F>(f: F) -> R
+pub async fn with_editor_async<C, R, F>(ctx: &mut C, f: F) -> R
 where
-    for<'a> F: FnOnce(&'a mut Editor) -> Pin<Box<dyn Future<Output = R> + 'a>>,
+    for<'a> F: FnOnce(&'a mut Editor, &'a mut C) -> Pin<Box<dyn Future<Output = R> + 'a>>,
 {
     let services = EDITOR_SERVICES.with(|s| s.clone());
 
@@ -83,7 +83,7 @@ where
         .as_mut()
         .expect("Editor not initialised");
 
-    let fut = f(editor);
+    let fut = f(editor, ctx);
     fut.await
 }
 

@@ -88,8 +88,9 @@ impl GameEditor {
         }
     }
 
-    pub async fn update(
-        &mut self, 
+    pub async fn update<C: BishopContext>(
+        &mut self,
+        ctx: &mut C,
         camera: &Camera2D,
         game: &mut Game
     ) -> Option<WorldId> {
@@ -98,7 +99,7 @@ impl GameEditor {
         match self.mode {
             GameEditorMode::Select => {
                 // Select world
-                if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(camera, world, texture) {
@@ -111,7 +112,7 @@ impl GameEditor {
                 // Edit modal, handles its own UI and closing
                 if self.modal.is_open() {
                     // Do nothing
-                } else if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+                } else if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
                     for world in &mut game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(camera, world, texture) {
@@ -153,7 +154,7 @@ impl GameEditor {
             },
             GameEditorMode::Delete => {
                 // Delete world
-                if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(camera, world, texture) {
@@ -170,21 +171,21 @@ impl GameEditor {
         None
     }
 
-    pub fn draw(
-        &mut self, 
-        camera: &mut Camera2D, 
+    pub fn draw<C: BishopContext>(
+        &mut self,
+        ctx: &mut C,
+        camera: &mut Camera2D,
         game: &mut Game,
-
     ) {
-        set_camera(camera);
-        clear_background(Color::BLACK);
+        ctx.set_camera(camera);
+        ctx.clear_background(Color::BLACK);
 
         if self.modal.is_open() {
             self.active_rects.push(self.modal.rect)
         }
 
         self.draw_worlds(camera, game);
-        self.draw_ui(camera, game);
+        self.draw_ui(ctx, camera, game);
     }
 
     fn draw_worlds(
@@ -290,8 +291,8 @@ impl GameEditor {
         }
     }
 
-    fn draw_ui(&mut self, camera: &mut Camera2D, game: &mut Game) {
-        set_default_camera();
+    fn draw_ui<C: BishopContext>(&mut self, ctx: &mut C, camera: &mut Camera2D, game: &mut Game) {
+        ctx.set_default_camera();
 
         self.active_rects.clear();
         self.register_rect(draw_top_panel_full());
