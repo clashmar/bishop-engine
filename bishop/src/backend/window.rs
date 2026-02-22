@@ -35,3 +35,29 @@ mod macroquad_window {
 
 #[cfg(feature = "macroquad")]
 pub use macroquad_window::*;
+
+#[cfg(all(feature = "wgpu", not(feature = "macroquad")))]
+mod wgpu_window {
+    use crate::types::Color;
+
+    /// Returns the current screen/window width in pixels.
+    /// Note: This is a placeholder that returns 0.0. Use WgpuContext::screen_width() instead.
+    pub fn screen_width() -> f32 {
+        0.0
+    }
+
+    /// Returns the current screen/window height in pixels.
+    /// Note: This is a placeholder that returns 0.0. Use WgpuContext::screen_height() instead.
+    pub fn screen_height() -> f32 {
+        0.0
+    }
+
+    /// Clears the screen with the given color.
+    /// Note: This is a placeholder. Use WgpuContext::clear() instead.
+    pub fn clear_background(_color: Color) {
+        // Stub for wgpu backend
+    }
+}
+
+#[cfg(all(feature = "wgpu", not(feature = "macroquad")))]
+pub use wgpu_window::*;

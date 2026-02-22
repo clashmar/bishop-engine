@@ -5,7 +5,10 @@ use crate::types::Color;
 /// Arguments for "draw_text_ex" function such as font, font_size etc
 #[derive(Debug, Clone)]
 pub struct TextParams<'a> {
+    #[cfg(feature = "macroquad")]
     pub font: Option<&'a macroquad::text::Font>,
+    #[cfg(not(feature = "macroquad"))]
+    pub font: Option<&'a ()>,
     /// Base size for character height. The size in pixel used during font rasterizing.
     pub font_size: u16,
     /// The glyphs sizes actually drawn on the screen will be font_size * font_scale
