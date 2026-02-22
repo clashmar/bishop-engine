@@ -26,11 +26,12 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub async fn run(&mut self) {
+    /// Runs the main game loop.
+    pub async fn run<C: BishopContext>(&mut self, ctx: &mut C) {
         let mut accumulator: f32 = 0.0;
 
         loop {
-            let dt = get_frame_time();
+            let dt = ctx.get_frame_time();
             
             accumulator = (accumulator + dt).min(MAX_ACCUM);
             

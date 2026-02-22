@@ -9,6 +9,7 @@ use game_lib::diagnostics::DiagnosticsOverlay;
 use game_lib::game_state::GameState;
 use macroquad::miniquad::conf::Icon;
 use game_lib::engine::Engine;
+use bishop::prelude::PlatformContext;
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use engine_core::*;
@@ -85,5 +86,6 @@ async fn main() {
         is_playtest: false,
     };
 
-    engine.run().await;
+    let mut ctx = PlatformContext::new();
+    engine.run(&mut ctx).await;
 }

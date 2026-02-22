@@ -6,6 +6,7 @@ use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::game_state::GameState;
 use engine_core::prelude::*;
 use game_lib::engine::Engine;
+use bishop::prelude::PlatformContext;
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use ron::de::from_str;
@@ -62,7 +63,6 @@ async fn main() {
         game,
     } = from_str(&payload_str).expect("Failed to deserialize playtest payload.");
 
-    // TODO: Tidy up
     let lua = Lua::new();
     let mut camera_manager = CameraManager::default();
     let grid_size = game.current_world().grid_size;
@@ -84,5 +84,6 @@ async fn main() {
         is_playtest: true,
     };
 
-    engine.run().await;
+    let mut ctx = PlatformContext::new();
+    engine.run(&mut ctx).await;
 }
