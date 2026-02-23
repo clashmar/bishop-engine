@@ -1,12 +1,10 @@
 // game/src/playtest_main.rs
-use engine_core::rendering::render_system::RenderSystem;
 use engine_core::camera::camera_manager::CameraManager;
-use game_lib::diagnostics::DiagnosticsOverlay;
 use game_lib::scripting::lua_game_ctx::LuaGameCtx;
 use game_lib::game_state::GameState;
 use engine_core::prelude::*;
 use game_lib::engine::Engine;
-use bishop::prelude::PlatformContext;
+use bishop::prelude::{PlatformContext, run};
 use macroquad::prelude::*;
 use std::cell::RefCell;
 use ron::de::from_str;
@@ -75,15 +73,14 @@ async fn main() {
     let ctx = LuaGameCtx { game_state: game_state.clone() };
     let _ = ctx.set_lua_game_ctx(&lua);
 
-    let mut engine = Engine {
-        game_state: game_state.clone(),
+    let mut engine = Engine::new(
+        game_state.clone(),
         lua,
         camera_manager,
-        render_system: RenderSystem::with_grid_size(grid_size),
-        diagnostics: DiagnosticsOverlay::new(),
-        is_playtest: true,
-    };
+        grid_size,
+        true,
+    );
 
     let mut ctx = PlatformContext::new();
-    engine.run(&mut ctx).await;
+    run(&mut engine, &mut ctx).await;
 }

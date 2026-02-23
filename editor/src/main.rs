@@ -13,7 +13,8 @@ use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
 use macroquad::miniquad::conf::Icon;
 use macroquad::prelude::*;
-use bishop::prelude::PlatformContext;
+use bishop::prelude::{PlatformContext, run};
+use bishop::{BishopApp, BishopContext};
 
 mod editor_global;
 mod editor;
@@ -29,6 +30,38 @@ mod commands;
 mod game;
 mod editor_assets;
 mod editor_actions;
+
+/// Wrapper struct for running the editor via BishopApp.
+struct EditorApp {
+    current_window_size: (u32, u32),
+}
+
+impl EditorApp {
+    fn new() -> Self {
+        Self {
+            current_window_size: (0, 0),
+        }
+    }
+}
+
+impl BishopApp for EditorApp {
+    async fn frame(&mut self, ctx: &mut impl BishopContext) {
+        let cur_screen = (screen_width() as u32, screen_height() as u32);
+        if cur_screen != self.current_window_size {
+            with_editor(|editor| editor.render_system.resize(cur_screen.0, cur_screen.1));
+            self.current_window_size = cur_screen;
+        }
+
+        widgets_frame_start();
+
+        with_editor_async(ctx, |editor, ctx| Box::pin(editor.update(ctx))).await;
+        with_editor_async(ctx, |editor, ctx| Box::pin(editor.draw(ctx))).await;
+
+        widgets_frame_end();
+
+        apply_pending_commands();
+    }
+}
 
 fn window_conf() -> Conf {
     let window_width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
@@ -75,31 +108,9 @@ async fn main() -> std::io::Result<()> {
     // This allows global access to services
     set_editor(editor);
 
+    let mut app = EditorApp::new();
     let mut ctx = PlatformContext::new();
-    let mut current_window_size = (0, 0);
+    run(&mut app, &mut ctx).await;
 
-    loop {
-        ctx.update();
-
-        // Update the render targets with the current window size
-        let cur_screen = (screen_width() as u32, screen_height() as u32);
-        if cur_screen != current_window_size {
-            with_editor(|editor|
-                editor.render_system.resize(cur_screen.0, cur_screen.1)
-            );
-            current_window_size = cur_screen;
-        }
-
-        widgets_frame_start();
-
-        with_editor_async(&mut ctx, |editor, ctx| Box::pin(editor.update(ctx))).await;
-
-        with_editor_async(&mut ctx, |editor, ctx| Box::pin(editor.draw(ctx))).await;
-
-        widgets_frame_end();
-
-        apply_pending_commands();
-
-        next_frame().await
-    }
+    Ok(())
 }

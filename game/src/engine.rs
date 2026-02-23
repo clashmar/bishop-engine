@@ -6,6 +6,7 @@ use crate::scripting::script_system::ScriptSystem;
 use crate::transitions::transition_manager::TransitionManager;
 use engine_core::prelude::*;
 use bishop::prelude::*;
+use bishop::BishopApp;
 use std::cell::RefCell;
 use std::rc::Rc;
 use mlua::Lua;
@@ -23,41 +24,54 @@ pub struct Engine {
     pub diagnostics: DiagnosticsOverlay,
     /// Whether the engine is running in playtest mode.
     pub is_playtest: bool,
+    /// Accumulator for fixed timestep updates.
+    pub accumulator: f32,
+}
+
+impl BishopApp for Engine {
+    async fn frame(&mut self, ctx: &mut impl BishopContext) {
+        let dt = ctx.get_frame_time();
+
+        self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
+
+        if self.is_playtest {
+            self.diagnostics.update(dt);
+            self.diagnostics.handle_input();
+        }
+
+        while self.accumulator >= FIXED_DT {
+            self.accumulator -= FIXED_DT;
+            self.fixed_update(FIXED_DT);
+        }
+
+        self.update_async(dt).await;
+
+        if self.is_playtest {
+            self.update_diagnostics_metrics();
+        }
+
+        let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
+        self.render(alpha);
+    }
 }
 
 impl Engine {
-    /// Runs the main game loop.
-    pub async fn run<C: BishopContext>(&mut self, ctx: &mut C) {
-        let mut accumulator: f32 = 0.0;
-
-        loop {
-            let dt = ctx.get_frame_time();
-            
-            accumulator = (accumulator + dt).min(MAX_ACCUM);
-            
-            // Update diagnostics timing
-            if self.is_playtest {
-                self.diagnostics.update(dt);
-                self.diagnostics.handle_input();
-            }
-            
-            while accumulator >= FIXED_DT {
-                accumulator -= FIXED_DT;
-                self.fixed_update(FIXED_DT);
-            }
-
-            self.update_async(dt).await;
-
-            // Update diagnostics metrics before render
-            if self.is_playtest {
-                self.update_diagnostics_metrics();
-            }
-
-            let alpha = (accumulator / FIXED_DT).clamp(0.0, 1.0);
-            
-            self.render(alpha);
-
-            next_frame().await;
+    /// Creates a new Engine with the given configuration.
+    pub fn new(
+        game_state: Rc<RefCell<GameState>>,
+        lua: Lua,
+        camera_manager: CameraManager,
+        grid_size: f32,
+        is_playtest: bool,
+    ) -> Self {
+        Self {
+            game_state,
+            lua,
+            camera_manager,
+            render_system: RenderSystem::with_grid_size(grid_size),
+            diagnostics: DiagnosticsOverlay::new(),
+            is_playtest,
+            accumulator: 0.0,
         }
     }
 

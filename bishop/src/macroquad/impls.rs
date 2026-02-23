@@ -82,7 +82,7 @@ impl Draw for MacroquadContext {
         );
     }
 
-    fn clear(&mut self, color: Color) {
+    fn clear_background(&mut self, color: Color) {
         mq::clear_background(color.into());
     }
 }
@@ -171,7 +171,10 @@ impl Time for MacroquadContext {
         mq::get_frame_time()
     }
 
-    fn clear_background(&mut self, color: Color) {
-        mq::clear_background(color.into());
+    fn update(&mut self) {
+        self.char_buffer.clear();
+        while let Some(c) = mq::get_char_pressed() {
+            self.char_buffer.push(c);
+        }
     }
 }

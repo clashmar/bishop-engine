@@ -3,6 +3,13 @@
 //! This crate provides trait abstractions for input, drawing, and text rendering
 //! that can be implemented by different backends (macroquad, winit+wgpu, etc.).
 //!
+//! # Backend Support
+//!
+//! The `BishopContext` trait can be implemented for any backend:
+//! - Graphics backends (macroquad, wgpu) implement full rendering
+//! - Console backends can implement with text-based or stub graphics
+//! - Headless backends can implement with no-op rendering for testing
+//!
 //! # Features
 //!
 //! - `macroquad` (default): Enables the macroquad backend implementation.
@@ -59,7 +66,34 @@ pub trait BishopContext: Input + Draw + Text + Camera + Window + Time {}
 
 impl<T: Input + Draw + Text + Camera + Window + Time> BishopContext for T {}
 
-/// Feature-gated context type which resolves to the appropriate backend.
+/// Trait for applications that can be run by bishop.
+pub trait BishopApp {
+    /// Called once per frame. The app handles its own update/render logic.
+    fn frame(&mut self, ctx: &mut impl BishopContext) -> impl std::future::Future<Output = ()>;
+}
+
+/// Runs the main loop for a BishopApp.
+#[cfg(feature = "macroquad")]
+pub async fn run<A, C>(app: &mut A, ctx: &mut C)
+where
+    A: BishopApp,
+    C: BishopContext,
+{
+    loop {
+        ctx.update();
+        app.frame(ctx).await;
+        ::macroquad::prelude::next_frame().await;
+    }
+}
+
+/// The context type for the active graphics backend.
+///
+/// This is a type alias that resolves to:
+/// - `MacroquadContext` when the `macroquad` feature is enabled (default)
+/// - `WgpuContext` when the `wgpu` feature is enabled
+///
+/// Use this at application entry points (main.rs) to create the context.
+/// For function parameters, prefer `impl BishopContext` for flexibility.
 #[cfg(feature = "macroquad")]
 pub type PlatformContext = macroquad::MacroquadContext;
 
@@ -83,8 +117,12 @@ pub mod prelude {
     pub use crate::time::*;
     pub use crate::types::*;
     pub use crate::window::*;
+    pub use crate::BishopApp;
     pub use crate::BishopContext;
     pub use glam::{Vec2, vec4};
+
+    #[cfg(feature = "macroquad")]
+    pub use crate::run;
 
     #[cfg(feature = "macroquad")]
     pub use crate::macroquad::MacroquadContext;
