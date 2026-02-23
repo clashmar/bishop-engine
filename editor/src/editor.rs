@@ -74,7 +74,7 @@ impl Editor {
         Ok(editor)
     }
 
-    pub async fn update<C: BishopContext>(&mut self, ctx: &mut C) {
+    pub async fn update(&mut self, ctx: &mut impl BishopContext) {
         if let Some(ref mut process) = self.playtest_process {
             if !process.poll() {
                 self.playtest_process = None;

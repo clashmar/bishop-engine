@@ -76,7 +76,7 @@ impl Draw for WgpuContext {
         // Stub: Phase C will implement
     }
 
-    fn clear(&mut self, color: Color) {
+    fn clear_background(&mut self, color: Color) {
         self.clear_color = Some(color);
     }
 }
@@ -144,7 +144,8 @@ impl Time for WgpuContext {
         self.time.frame_time()
     }
 
-    fn clear_background(&mut self, color: Color) {
-        self.clear_color = Some(color);
+    fn update(&mut self) {
+        self.input.end_frame();
+        self.time.tick();
     }
 }

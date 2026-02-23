@@ -27,7 +27,7 @@ pub trait Draw {
     fn draw_triangle(&mut self, v1: Vec2, v2: Vec2, v3: Vec2, color: Color);
 
     /// Clears the screen with the specified color.
-    fn clear(&mut self, color: Color);
+    fn clear_background(&mut self, color: Color);
 }
 
 /// Extended drawing operations for textures.
