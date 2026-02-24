@@ -130,6 +130,16 @@ impl InputState {
     pub fn chars_pressed(&self) -> Vec<char> {
         self.char_buffer.clone()
     }
+
+    /// Clears per-frame state at end of frame (same as begin_frame for symmetry).
+    pub fn end_frame(&mut self) {
+        self.keys_pressed.clear();
+        self.keys_released.clear();
+        self.mouse_pressed.clear();
+        self.mouse_released.clear();
+        self.mouse_wheel = (0.0, 0.0);
+        self.char_buffer.clear();
+    }
 }
 
 impl Default for InputState {

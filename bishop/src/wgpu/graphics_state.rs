@@ -6,8 +6,10 @@ use winit::window::Window;
 
 /// Holds all wgpu graphics state.
 pub struct GraphicsState {
-    pub instance: Instance,
-    pub adapter: Adapter,
+    #[allow(dead_code)]
+    instance: Instance,
+    #[allow(dead_code)]
+    adapter: Adapter,
     pub device: Device,
     pub queue: Queue,
     pub surface: Surface<'static>,

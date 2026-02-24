@@ -94,11 +94,12 @@ where
 ///
 /// Use this at application entry points (main.rs) to create the context.
 /// For function parameters, prefer `impl BishopContext` for flexibility.
-#[cfg(feature = "macroquad")]
-pub type PlatformContext = macroquad::MacroquadContext;
-
+/// When wgpu is enabled, it takes priority over macroquad.
 #[cfg(feature = "wgpu")]
 pub type PlatformContext = wgpu::WgpuContext;
+
+#[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
+pub type PlatformContext = macroquad::MacroquadContext;
 
 /// Prelude module for convenient glob imports.
 ///

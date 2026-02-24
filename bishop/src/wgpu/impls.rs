@@ -1,6 +1,9 @@
 //! Trait implementations for WgpuContext.
 
+use std::cell::RefCell;
+
 use super::context::WgpuContext;
+use super::render::{FontAtlas, WgpuTexture};
 use crate::camera::{Camera, Camera2D};
 use crate::draw::{Draw, DrawTexture, DrawTextureParams};
 use crate::input::{Input, KeyCode, MouseButton};
@@ -8,6 +11,11 @@ use crate::text::{Text, TextDimensions};
 use crate::time::Time;
 use crate::types::{Color, Vec2};
 use crate::window::Window;
+
+thread_local! {
+    static MEASURE_ATLAS: RefCell<Option<FontAtlas>> = const { RefCell::new(None) };
+}
+
 
 impl Input for WgpuContext {
     fn is_key_down(&self, key: KeyCode) -> bool {
@@ -52,28 +60,39 @@ impl Input for WgpuContext {
 }
 
 impl Draw for WgpuContext {
-    fn draw_rectangle(&mut self, _x: f32, _y: f32, _w: f32, _h: f32, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_rectangle(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color) {
+        self.primitive_renderer.draw_rectangle(x, y, w, h, color);
     }
 
-    fn draw_rectangle_lines(&mut self, _x: f32, _y: f32, _w: f32, _h: f32, _thickness: f32, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_rectangle_lines(
+        &mut self,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        thickness: f32,
+        color: Color,
+    ) {
+        self.primitive_renderer
+            .draw_rectangle_lines(x, y, w, h, thickness, color);
     }
 
-    fn draw_line(&mut self, _x1: f32, _y1: f32, _x2: f32, _y2: f32, _thickness: f32, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_line(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, thickness: f32, color: Color) {
+        self.primitive_renderer
+            .draw_line(x1, y1, x2, y2, thickness, color);
     }
 
-    fn draw_circle(&mut self, _x: f32, _y: f32, _radius: f32, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_circle(&mut self, x: f32, y: f32, radius: f32, color: Color) {
+        self.primitive_renderer.draw_circle(x, y, radius, color);
     }
 
-    fn draw_circle_lines(&mut self, _x: f32, _y: f32, _radius: f32, _thickness: f32, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_circle_lines(&mut self, x: f32, y: f32, radius: f32, thickness: f32, color: Color) {
+        self.primitive_renderer
+            .draw_circle_lines(x, y, radius, thickness, color);
     }
 
-    fn draw_triangle(&mut self, _v1: Vec2, _v2: Vec2, _v3: Vec2, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_triangle(&mut self, v1: Vec2, v2: Vec2, v3: Vec2, color: Color) {
+        self.primitive_renderer.draw_triangle(v1, v2, v3, color);
     }
 
     fn clear_background(&mut self, color: Color) {
@@ -82,46 +101,57 @@ impl Draw for WgpuContext {
 }
 
 impl Text for WgpuContext {
-    fn draw_text(&mut self, _text: &str, _x: f32, _y: f32, _font_size: f32, _color: Color) -> TextDimensions {
-        // Stub: Phase C will implement
-        TextDimensions::default()
+    fn draw_text(
+        &mut self,
+        text: &str,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: Color,
+    ) -> TextDimensions {
+        self.text_renderer.draw_text(text, x, y, font_size, color)
     }
 
-    fn measure_text(&self, _text: &str, _font_size: f32) -> TextDimensions {
-        // Stub: Phase C will implement
-        TextDimensions::default()
+    fn measure_text(&self, text: &str, font_size: f32) -> TextDimensions {
+        MEASURE_ATLAS.with(|cell| {
+            let mut atlas_opt = cell.borrow_mut();
+            if atlas_opt.is_none() {
+                *atlas_opt = Some(
+                    FontAtlas::with_default_font().expect("Failed to create font atlas"),
+                );
+            }
+            atlas_opt.as_mut().unwrap().measure_text(text, font_size)
+        })
     }
 }
-
-/// Placeholder texture type for wgpu backend.
-pub struct WgpuTexture;
 
 impl DrawTexture for WgpuContext {
     type Texture = WgpuTexture;
 
-    fn draw_texture(&mut self, _texture: &Self::Texture, _x: f32, _y: f32, _color: Color) {
-        // Stub: Phase C will implement
+    fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color) {
+        self.texture_renderer.draw_texture(texture, x, y, color);
     }
 
     fn draw_texture_ex(
         &mut self,
-        _texture: &Self::Texture,
-        _x: f32,
-        _y: f32,
-        _color: Color,
-        _params: DrawTextureParams,
+        texture: &Self::Texture,
+        x: f32,
+        y: f32,
+        color: Color,
+        params: DrawTextureParams,
     ) {
-        // Stub: Phase C will implement
+        self.texture_renderer
+            .draw_texture_ex(texture, x, y, color, params);
     }
 }
 
 impl Camera for WgpuContext {
-    fn set_camera(&mut self, _camera: &Camera2D) {
-        // Stub: Phase C will implement
+    fn set_camera(&mut self, camera: &Camera2D) {
+        self.current_camera = Some(camera.clone());
     }
 
     fn set_default_camera(&mut self) {
-        // Stub: Phase C will implement
+        self.current_camera = None;
     }
 
     fn screen_to_world(&self, camera: &Camera2D, screen_pos: Vec2) -> Vec2 {
