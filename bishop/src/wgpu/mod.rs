@@ -8,8 +8,9 @@ mod conversions;
 mod graphics_state;
 mod impls;
 mod input_state;
+mod render;
 mod time_state;
 
 pub use context::WgpuContext;
 pub use graphics_state::GraphicsStateError;
-pub use impls::WgpuTexture;
+pub use render::WgpuTexture;

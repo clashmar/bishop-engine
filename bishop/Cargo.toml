@@ -3,14 +3,21 @@ name = "bishop"
 version = "0.1.0"
 edition = "2021"
 
+[[example]]
+name = "wgpu_test"
+required-features = ["wgpu"]
+
 [features]
 default = ["macroquad"]
 macroquad = ["dep:macroquad"]
-wgpu = ["dep:wgpu", "dep:winit", "dep:pollster"]
+wgpu = ["dep:wgpu", "dep:winit", "dep:pollster", "dep:bytemuck", "dep:image", "dep:fontdue"]
 
 [dependencies]
 macroquad = { version = "0.4.14", optional = true }
 wgpu = { version = "24.0", optional = true }
 winit = { version = "0.30", optional = true }
 pollster = { version = "0.4", optional = true }
+bytemuck = { version = "1.16", features = ["derive"], optional = true }
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
+fontdue = { version = "0.9", optional = true }
 glam = "0.32.0"

@@ -137,3 +137,64 @@ pub fn convert_mouse_button(button: WinitMouseButton) -> Option<MouseButton> {
         _ => None,
     }
 }
+
+/// Converts a winit KeyCode to an ASCII character (lowercase).
+/// Returns None for non-printable keys.
+pub fn keycode_to_char(key: WinitKeyCode, shift: bool) -> Option<char> {
+    let c = match key {
+        WinitKeyCode::KeyA => 'a',
+        WinitKeyCode::KeyB => 'b',
+        WinitKeyCode::KeyC => 'c',
+        WinitKeyCode::KeyD => 'd',
+        WinitKeyCode::KeyE => 'e',
+        WinitKeyCode::KeyF => 'f',
+        WinitKeyCode::KeyG => 'g',
+        WinitKeyCode::KeyH => 'h',
+        WinitKeyCode::KeyI => 'i',
+        WinitKeyCode::KeyJ => 'j',
+        WinitKeyCode::KeyK => 'k',
+        WinitKeyCode::KeyL => 'l',
+        WinitKeyCode::KeyM => 'm',
+        WinitKeyCode::KeyN => 'n',
+        WinitKeyCode::KeyO => 'o',
+        WinitKeyCode::KeyP => 'p',
+        WinitKeyCode::KeyQ => 'q',
+        WinitKeyCode::KeyR => 'r',
+        WinitKeyCode::KeyS => 's',
+        WinitKeyCode::KeyT => 't',
+        WinitKeyCode::KeyU => 'u',
+        WinitKeyCode::KeyV => 'v',
+        WinitKeyCode::KeyW => 'w',
+        WinitKeyCode::KeyX => 'x',
+        WinitKeyCode::KeyY => 'y',
+        WinitKeyCode::KeyZ => 'z',
+        WinitKeyCode::Digit0 => if shift { ')' } else { '0' },
+        WinitKeyCode::Digit1 => if shift { '!' } else { '1' },
+        WinitKeyCode::Digit2 => if shift { '@' } else { '2' },
+        WinitKeyCode::Digit3 => if shift { '#' } else { '3' },
+        WinitKeyCode::Digit4 => if shift { '$' } else { '4' },
+        WinitKeyCode::Digit5 => if shift { '%' } else { '5' },
+        WinitKeyCode::Digit6 => if shift { '^' } else { '6' },
+        WinitKeyCode::Digit7 => if shift { '&' } else { '7' },
+        WinitKeyCode::Digit8 => if shift { '*' } else { '8' },
+        WinitKeyCode::Digit9 => if shift { '(' } else { '9' },
+        WinitKeyCode::Space => ' ',
+        WinitKeyCode::Comma => if shift { '<' } else { ',' },
+        WinitKeyCode::Period => if shift { '>' } else { '.' },
+        WinitKeyCode::Slash => if shift { '?' } else { '/' },
+        WinitKeyCode::Semicolon => if shift { ':' } else { ';' },
+        WinitKeyCode::Quote => if shift { '"' } else { '\'' },
+        WinitKeyCode::BracketLeft => if shift { '{' } else { '[' },
+        WinitKeyCode::BracketRight => if shift { '}' } else { ']' },
+        WinitKeyCode::Backslash => if shift { '|' } else { '\\' },
+        WinitKeyCode::Minus => if shift { '_' } else { '-' },
+        WinitKeyCode::Equal => if shift { '+' } else { '=' },
+        WinitKeyCode::Backquote => if shift { '~' } else { '`' },
+        _ => return None,
+    };
+    if shift && c.is_ascii_lowercase() {
+        Some(c.to_ascii_uppercase())
+    } else {
+        Some(c)
+    }
+}
