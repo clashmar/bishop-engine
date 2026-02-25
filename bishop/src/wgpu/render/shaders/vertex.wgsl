@@ -1,0 +1,34 @@
+// Shared vertex shader for lighting passes.
+// Transforms vertices using Model and Projection matrices.
+
+struct CameraUniforms {
+    projection: mat4x4<f32>,
+}
+
+struct ModelUniforms {
+    model: mat4x4<f32>,
+}
+
+@group(0) @binding(0)
+var<uniform> camera: CameraUniforms;
+
+@group(0) @binding(1)
+var<uniform> model: ModelUniforms;
+
+struct VertexInput {
+    @location(0) position: vec3<f32>,
+    @location(1) tex_coord: vec2<f32>,
+}
+
+struct VertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+}
+
+@vertex
+fn vs_main(in: VertexInput) -> VertexOutput {
+    var out: VertexOutput;
+    out.clip_position = camera.projection * model.model * vec4<f32>(in.position, 1.0);
+    out.uv = in.tex_coord;
+    return out;
+}

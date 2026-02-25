@@ -11,11 +11,19 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::window::{Window, WindowId};
 
+struct ShaderVerification {
+    name: &'static str,
+    passed: bool,
+    error: Option<String>,
+}
+
 struct App {
     ctx: Option<WgpuContext>,
     window: Option<Arc<Window>>,
     frame_count: u32,
     typed_text: String,
+    shader_results: Vec<ShaderVerification>,
+    shaders_verified: bool,
 }
 
 impl ApplicationHandler for App {
@@ -41,6 +49,10 @@ impl ApplicationHandler for App {
                 }
             }
             self.window = Some(window);
+
+            if !self.shaders_verified {
+                self.verify_shaders();
+            }
         }
     }
 
@@ -63,6 +75,45 @@ impl ApplicationHandler for App {
 }
 
 impl App {
+    fn verify_shaders(&mut self) {
+        let Some(ctx) = &self.ctx else { return };
+        let device = ctx.device();
+
+        let shaders: &[(&str, &str)] = &[
+            ("vertex", include_str!("../src/wgpu/render/shaders/vertex.wgsl")),
+            ("ambient", include_str!("../src/wgpu/render/shaders/ambient.wgsl")),
+            ("scene_composite", include_str!("../src/wgpu/render/shaders/scene_composite.wgsl")),
+            ("final_composite", include_str!("../src/wgpu/render/shaders/final_composite.wgsl")),
+            ("undarkened", include_str!("../src/wgpu/render/shaders/undarkened.wgsl")),
+            ("grid", include_str!("../src/wgpu/render/shaders/grid.wgsl")),
+            ("spotlight", include_str!("../src/wgpu/render/shaders/spotlight.wgsl")),
+            ("glow", include_str!("../src/wgpu/render/shaders/glow.wgsl")),
+        ];
+
+        for (name, source) in shaders {
+            device.push_error_scope(wgpu::ErrorFilter::Validation);
+
+            let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(name),
+                source: wgpu::ShaderSource::Wgsl((*source).into()),
+            });
+
+            let error = pollster::block_on(device.pop_error_scope());
+            let (passed, err_msg) = match error {
+                Some(e) => (false, Some(format!("{e}"))),
+                None => (true, None),
+            };
+
+            self.shader_results.push(ShaderVerification {
+                name,
+                passed,
+                error: err_msg,
+            });
+        }
+
+        self.shaders_verified = true;
+    }
+
     fn render_frame(&mut self) {
         let Some(ctx) = &mut self.ctx else { return };
 
@@ -169,6 +220,29 @@ impl App {
             Color::GREY,
         );
 
+        // Shader verification results
+        y += 40.0;
+        ctx.draw_text("WGSL Shader Compilation:", 50.0, y, 18.0, Color::WHITE);
+        y += 25.0;
+
+        for result in &self.shader_results {
+            let (status_text, color) = if result.passed {
+                ("OK".to_string(), Color::GREEN)
+            } else {
+                let err = result.error.as_deref().unwrap_or("Unknown error");
+                let truncated: String = err.chars().take(40).collect();
+                (truncated, Color::RED)
+            };
+            ctx.draw_text(
+                &format!("  {} - {}", result.name, status_text),
+                50.0,
+                y,
+                14.0,
+                color,
+            );
+            y += 18.0;
+        }
+
         if let Err(e) = ctx.render_frame() {
             eprintln!("Render error: {e}");
         }
@@ -191,6 +265,8 @@ fn main() {
         window: None,
         frame_count: 0,
         typed_text: String::new(),
+        shader_results: Vec::new(),
+        shaders_verified: false,
     };
     if let Err(e) = event_loop.run_app(&mut app) {
         eprintln!("Event loop error: {e}");
