@@ -31,7 +31,6 @@
 //! }
 //! ```
 
-pub mod backend;
 pub mod camera;
 pub mod draw;
 pub mod input;
@@ -43,6 +42,9 @@ pub mod window;
 
 #[cfg(feature = "macroquad")]
 pub mod macroquad;
+
+#[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
+pub mod macroquad_backend;
 
 #[cfg(feature = "wgpu")]
 pub mod wgpu;
@@ -109,7 +111,6 @@ pub type PlatformContext = macroquad::MacroquadContext;
 /// use bishop::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::backend::*;
     pub use crate::camera::*;
     pub use crate::draw::*;
     pub use crate::input::*;
@@ -128,8 +129,12 @@ pub mod prelude {
     #[cfg(feature = "macroquad")]
     pub use crate::macroquad::MacroquadContext;
 
+    // Export backend-specific free functions
+    #[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
+    pub use crate::macroquad_backend::*;
+
     #[cfg(feature = "wgpu")]
-    pub use crate::wgpu::WgpuContext;
+    pub use crate::wgpu::{empty_texture, load_texture, WgpuContext};
 
     #[cfg(any(feature = "macroquad", feature = "wgpu"))]
     pub use crate::PlatformContext;

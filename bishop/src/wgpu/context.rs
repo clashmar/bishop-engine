@@ -9,6 +9,7 @@ use super::conversions::{convert_keycode, convert_mouse_button, keycode_to_char}
 use super::graphics_state::{GraphicsState, GraphicsStateError};
 use super::input_state::InputState;
 use super::render::{CameraUniforms, PrimitiveRenderer, TextRenderer, TextureRenderer};
+use super::texture_loader::init_texture_loader;
 use super::time_state::TimeState;
 use crate::camera::Camera2D;
 use crate::types::Color;
@@ -36,6 +37,13 @@ impl WgpuContext {
         let texture_renderer = TextureRenderer::new(&graphics.device, graphics.config.format);
         let text_renderer =
             TextRenderer::new(&graphics.device, &graphics.queue, graphics.config.format);
+
+        // Initialize the global texture loader for free function texture loading
+        init_texture_loader(
+            graphics.device.clone(),
+            graphics.queue.clone(),
+            texture_renderer.texture_bind_group_layout_arc(),
+        );
 
         Ok(Self {
             graphics,
@@ -153,9 +161,24 @@ impl WgpuContext {
         &self.graphics.device
     }
 
+    /// Returns the Arc-wrapped wgpu device for shared ownership.
+    pub fn device_arc(&self) -> Arc<wgpu::Device> {
+        self.graphics.device.clone()
+    }
+
     /// Returns a reference to the wgpu queue.
     pub fn queue(&self) -> &wgpu::Queue {
         &self.graphics.queue
+    }
+
+    /// Returns the Arc-wrapped wgpu queue for shared ownership.
+    pub fn queue_arc(&self) -> Arc<wgpu::Queue> {
+        self.graphics.queue.clone()
+    }
+
+    /// Returns the Arc-wrapped texture bind group layout for shared ownership.
+    pub fn texture_bind_group_layout_arc(&self) -> Arc<wgpu::BindGroupLayout> {
+        self.texture_renderer.texture_bind_group_layout_arc()
     }
 
     /// Renders the current frame and presents it.

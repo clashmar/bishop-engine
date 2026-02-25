@@ -158,14 +158,14 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             let total_height = self.rect.h * self.options.len() as f32;
             let max_offset = (total_height - list_rect.h).max(0.0);
 
-            let mouse_pos = backend::mouse_position();
+            let mouse_pos = macroquad_backend::mouse_position();
             let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
 
             if list_rect.contains(mouse_vec) {
-                if backend::is_mouse_button_pressed(MouseButton::Left) {
+                if macroquad_backend::is_mouse_button_pressed(MouseButton::Left) {
                     consume_click();
                 }
-                let (_, wheel_y) = backend::mouse_wheel();
+                let (_, wheel_y) = macroquad_backend::mouse_wheel();
                 if wheel_y != 0.0 {
                     let delta = wheel_y * SCROLL_SPEED;
                     state.scroll_offset = (state.scroll_offset - delta).clamp(0.0, max_offset);
@@ -185,7 +185,7 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
                 let entry_rect = Rect::new(list_rect.x, draw_y, list_rect.w, self.rect.h);
 
                 let hovered = entry_rect.contains(mouse_vec);
-                if hovered && backend::is_mouse_button_pressed(MouseButton::Left) {
+                if hovered && macroquad_backend::is_mouse_button_pressed(MouseButton::Left) {
                     consume_click();
                     state.open = false;
                     dropdown_state::set(self.id, state);
@@ -213,9 +213,9 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             });
         }
 
-        let mouse_pos = backend::mouse_position();
+        let mouse_pos = macroquad_backend::mouse_position();
         let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
-        if backend::is_mouse_button_pressed(MouseButton::Left)
+        if macroquad_backend::is_mouse_button_pressed(MouseButton::Left)
             && !self.rect.contains(mouse_vec)
             && !(state.open && state.rect.contains(mouse_vec))
         {
@@ -236,7 +236,7 @@ fn render_dropdown_list<T>(
     options: &[T],
     labels: &[String],
 ) {
-    backend::draw_rectangle(
+    macroquad_backend::draw_rectangle(
         list_rect.x,
         list_rect.y,
         list_rect.w,
@@ -244,7 +244,7 @@ fn render_dropdown_list<T>(
         FIELD_BACKGROUND_COLOR,
     );
 
-    let mouse_pos = backend::mouse_position();
+    let mouse_pos = macroquad_backend::mouse_position();
     let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
 
     for (i, label) in labels.iter().enumerate() {
@@ -261,7 +261,7 @@ fn render_dropdown_list<T>(
 
         let hovered = entry_rect.contains(mouse_vec);
         if hovered {
-            backend::draw_rectangle(
+            macroquad_backend::draw_rectangle(
                 entry_rect.x,
                 entry_rect.y,
                 entry_rect.w,
@@ -285,14 +285,14 @@ fn render_dropdown_list<T>(
         let thumb_y =
             list_rect.y + (scroll_offset / (total_height - list_rect.h)) * (list_rect.h - thumb_h);
 
-        backend::draw_rectangle(
+        macroquad_backend::draw_rectangle(
             list_rect.x + list_rect.w - 6.,
             list_rect.y,
             6.,
             list_rect.h,
             Color::new(0.2, 0.2, 0.2, 0.5),
         );
-        backend::draw_rectangle(
+        macroquad_backend::draw_rectangle(
             list_rect.x + list_rect.w - 6.,
             thumb_y,
             6.,
@@ -301,7 +301,7 @@ fn render_dropdown_list<T>(
         );
     }
 
-    backend::draw_rectangle_lines(list_rect.x, list_rect.y, list_rect.w, list_rect.h, 2., OUTLINE_COLOR);
+    macroquad_backend::draw_rectangle_lines(list_rect.x, list_rect.y, list_rect.w, list_rect.h, 2., OUTLINE_COLOR);
 }
 
 /// Internal module for managing dropdown state.
@@ -361,7 +361,7 @@ pub fn update_global_dropdown_flag() {
 /// Returns true if the mouse is over any open dropdown list.
 pub fn is_mouse_over_dropdown_list() -> bool {
     dropdown_state::STATE.with(|s| {
-        let mouse_pos = backend::mouse_position();
+        let mouse_pos = macroquad_backend::mouse_position();
         let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
         s.borrow().values().any(|st| st.open && st.rect.contains(mouse_vec))
     })

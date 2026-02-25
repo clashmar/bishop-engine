@@ -45,13 +45,13 @@ impl Toast {
         // Top left
         let bg_rect = Rect::new(
             PADDING,
-            backend::screen_height() - PADDING - (txt.height + PADDING),
+            macroquad_backend::screen_height() - PADDING - (txt.height + PADDING),
             txt.width + PADDING * 2.0,
             txt.height + PADDING,
         );
 
         // Background
-        backend::draw_rectangle(
+        macroquad_backend::draw_rectangle(
             bg_rect.x,
             bg_rect.y,
             bg_rect.w,

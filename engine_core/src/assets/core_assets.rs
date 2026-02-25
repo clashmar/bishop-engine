@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 /// Pre-caches the GNF font for use throughout the application.
 pub fn precache_font() {
-    bishop::backend::init_with_gnf();
+    bishop::macroquad_backend::init_with_gnf();
 }
 
 /// Helper that decodes a PNG, resizes it and returns the raw RGBA bytes.

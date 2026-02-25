@@ -4,7 +4,7 @@ use crate::engine_global::*;
 use crate::constants::*;
 use crate::*;
 use futures::executor::block_on;
-use bishop::backend::next_frame;
+use bishop::macroquad_backend::next_frame;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::path::Path;

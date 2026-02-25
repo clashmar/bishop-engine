@@ -39,7 +39,7 @@ pub fn gui_stepper(
         rect.h,
     );
 
-    backend::draw_rectangle_lines(
+    macroquad_backend::draw_rectangle_lines(
         val_rect.x,
         val_rect.y - 7.5,
         val_rect.w,
