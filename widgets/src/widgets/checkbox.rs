@@ -5,11 +5,11 @@ use crate::*;
 /// Returns true if the value was changed this frame.
 pub fn gui_checkbox(rect: impl Into<Rect>, value: &mut bool) -> bool {
     let rect = rect.into();
-    backend::draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
-    backend::draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
+    macroquad_backend::draw_rectangle(rect.x, rect.y, rect.w, rect.h, FIELD_BACKGROUND_COLOR);
+    macroquad_backend::draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2., OUTLINE_COLOR);
 
     if *value {
-        backend::draw_line(
+        macroquad_backend::draw_line(
             rect.x + 3.,
             rect.y + rect.h * 0.5,
             rect.x + rect.w * 0.4,
@@ -17,7 +17,7 @@ pub fn gui_checkbox(rect: impl Into<Rect>, value: &mut bool) -> bool {
             2.,
             Color::GREEN,
         );
-        backend::draw_line(
+        macroquad_backend::draw_line(
             rect.x + rect.w * 0.4,
             rect.y + rect.h - 4.,
             rect.x + rect.w - 3.,
@@ -31,8 +31,8 @@ pub fn gui_checkbox(rect: impl Into<Rect>, value: &mut bool) -> bool {
         return *value
     }
 
-    let mouse = backend::mouse_position();
-    if backend::is_mouse_button_pressed(MouseButton::Left) && rect.contains(Vec2::new(mouse.0, mouse.1)) {
+    let mouse = macroquad_backend::mouse_position();
+    if macroquad_backend::is_mouse_button_pressed(MouseButton::Left) && rect.contains(Vec2::new(mouse.0, mouse.1)) {
         *value = !*value;
         true
     } else {

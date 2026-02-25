@@ -145,7 +145,7 @@ pub struct TextureRenderer {
     vertex_buffer: wgpu::Buffer,
     uniform_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    texture_bind_group_layout: wgpu::BindGroupLayout,
+    texture_bind_group_layout: std::sync::Arc<wgpu::BindGroupLayout>,
     vertices: Vec<TexturedVertex>,
     current_texture_bind_group: Option<usize>,
     batches: Vec<TextureBatch>,
@@ -198,7 +198,7 @@ impl TextureRenderer {
             }],
         });
 
-        let texture_bind_group_layout =
+        let texture_bind_group_layout = std::sync::Arc::new(
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("texture_bind_group_layout"),
                 entries: &[
@@ -219,7 +219,8 @@ impl TextureRenderer {
                         count: None,
                     },
                 ],
-            });
+            }),
+        );
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("texture_pipeline_layout"),
@@ -280,9 +281,14 @@ impl TextureRenderer {
         }
     }
 
-    /// Returns the texture bind group layout for creating textures.
+    /// Returns a reference to the texture bind group layout for creating textures.
     pub fn texture_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
         &self.texture_bind_group_layout
+    }
+
+    /// Returns an Arc clone of the texture bind group layout for shared ownership.
+    pub fn texture_bind_group_layout_arc(&self) -> std::sync::Arc<wgpu::BindGroupLayout> {
+        self.texture_bind_group_layout.clone()
     }
 
     /// Clears all queued draws for a new frame.

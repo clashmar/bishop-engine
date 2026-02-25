@@ -109,7 +109,7 @@ pub fn reset_click_consumed() {
 }
 
 pub fn widgets_frame_start() {
-    backend::update();
+    macroquad_backend::update();
     tab_registry_clear();
     reset_click_consumed();
 }

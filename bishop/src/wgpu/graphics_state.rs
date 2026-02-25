@@ -10,8 +10,8 @@ pub struct GraphicsState {
     instance: Instance,
     #[allow(dead_code)]
     adapter: Adapter,
-    pub device: Device,
-    pub queue: Queue,
+    pub device: Arc<Device>,
+    pub queue: Arc<Queue>,
     pub surface: Surface<'static>,
     pub config: SurfaceConfiguration,
     pub size: (u32, u32),
@@ -54,6 +54,9 @@ impl GraphicsState {
             )
             .await
             .map_err(GraphicsStateError::DeviceRequest)?;
+
+        let device = Arc::new(device);
+        let queue = Arc::new(queue);
 
         let surface_caps = surface.get_capabilities(&adapter);
         let surface_format = surface_caps

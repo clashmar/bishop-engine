@@ -289,7 +289,10 @@ impl AssetManager {
         load_texture(full_path.to_string_lossy().as_ref())
             .await
             .map(|texture| {
-                // Disable smoothing (needed for pixel art)
+                // Pixel art engine: always use Nearest filtering for crisp pixels.
+                // FilterMode and set_filter() are legacy from macroquad and will be
+                // removed when wgpu migration is complete. The wgpu backend hardcodes
+                // Nearest filtering in the sampler and ignores this call.
                 texture.set_filter(FilterMode::Nearest);
                 texture
             })

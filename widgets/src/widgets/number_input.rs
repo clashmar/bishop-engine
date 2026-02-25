@@ -80,8 +80,8 @@ where
             scroll_offset_x = 0.0;
         }
 
-        backend::draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
-        backend::draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., Color::WHITE);
+        macroquad_backend::draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, FIELD_BACKGROUND_COLOR);
+        macroquad_backend::draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., Color::WHITE);
 
         let text_area_x = self.rect.x + WIDGET_PADDING / 2.;
 
@@ -95,7 +95,7 @@ where
             let clipped_end = sel_end_x.min(self.rect.x + self.rect.w - WIDGET_PADDING / 2.);
 
             if clipped_end > clipped_start {
-                backend::draw_rectangle(
+                macroquad_backend::draw_rectangle(
                     clipped_start,
                     self.rect.y + self.rect.h * 0.2,
                     clipped_end - clipped_start,
@@ -113,10 +113,10 @@ where
             return self.current;
         }
 
-        let mouse = backend::mouse_position();
+        let mouse = macroquad_backend::mouse_position();
         let mouse_over = self.rect.contains(Vec2::new(mouse.0, mouse.1));
 
-        if backend::is_mouse_button_pressed(MouseButton::Left) && !is_click_consumed() {
+        if macroquad_backend::is_mouse_button_pressed(MouseButton::Left) && !is_click_consumed() {
             focused = mouse_over && !self.blocked;
 
             if !focused {
@@ -129,12 +129,12 @@ where
             }
         }
 
-        if dragging && backend::is_mouse_button_down(MouseButton::Left) {
+        if dragging && macroquad_backend::is_mouse_button_down(MouseButton::Left) {
             let drag_pos = char_index_from_x(&text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
             cursor_char = drag_pos;
         }
 
-        if backend::is_mouse_button_released(MouseButton::Left)
+        if macroquad_backend::is_mouse_button_released(MouseButton::Left)
             && dragging {
             if selection_anchor == Some(cursor_char) {
                 selection_anchor = None;
@@ -145,22 +145,22 @@ where
 
         if focused {
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
-            let now = backend::get_time();
-            let shift_held = backend::is_key_down(KeyCode::LeftShift) || backend::is_key_down(KeyCode::RightShift);
-            let ctrl_held = backend::is_key_down(KeyCode::LeftControl) || backend::is_key_down(KeyCode::RightControl);
+            let now = macroquad_backend::get_time();
+            let shift_held = macroquad_backend::is_key_down(KeyCode::LeftShift) || macroquad_backend::is_key_down(KeyCode::RightShift);
+            let ctrl_held = macroquad_backend::is_key_down(KeyCode::LeftControl) || macroquad_backend::is_key_down(KeyCode::RightControl);
 
-            if ctrl_held && backend::is_key_pressed(KeyCode::A) {
+            if ctrl_held && macroquad_backend::is_key_pressed(KeyCode::A) {
                 selection_anchor = Some(0);
                 cursor_char = text.chars().count();
             }
 
-            if ctrl_held && backend::is_key_pressed(KeyCode::C)
+            if ctrl_held && macroquad_backend::is_key_pressed(KeyCode::C)
                 && let Some(selected) = get_selected_text(&text, cursor_char, selection_anchor) {
                 clipboard_set_text(&selected);
             }
 
 
-            if ctrl_held && backend::is_key_pressed(KeyCode::V)
+            if ctrl_held && macroquad_backend::is_key_pressed(KeyCode::V)
                 && let Some(clipboard_text) = clipboard_get_text() {
                 let insert_pos = if selection_anchor.is_some() {
                     cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
@@ -209,8 +209,8 @@ where
 
             if handle_key_action(
                 RepeatableKey::Backspace,
-                backend::is_key_pressed(KeyCode::Backspace),
-                backend::is_key_down(KeyCode::Backspace),
+                macroquad_backend::is_key_pressed(KeyCode::Backspace),
+                macroquad_backend::is_key_down(KeyCode::Backspace),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -226,8 +226,8 @@ where
 
             if handle_key_action(
                 RepeatableKey::Delete,
-                backend::is_key_pressed(KeyCode::Delete),
-                backend::is_key_down(KeyCode::Delete),
+                macroquad_backend::is_key_pressed(KeyCode::Delete),
+                macroquad_backend::is_key_down(KeyCode::Delete),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -242,8 +242,8 @@ where
 
             if handle_key_action(
                 RepeatableKey::Left,
-                backend::is_key_pressed(KeyCode::Left),
-                backend::is_key_down(KeyCode::Left),
+                macroquad_backend::is_key_pressed(KeyCode::Left),
+                macroquad_backend::is_key_down(KeyCode::Left),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -264,8 +264,8 @@ where
 
             if handle_key_action(
                 RepeatableKey::Right,
-                backend::is_key_pressed(KeyCode::Right),
-                backend::is_key_down(KeyCode::Right),
+                macroquad_backend::is_key_pressed(KeyCode::Right),
+                macroquad_backend::is_key_down(KeyCode::Right),
                 &mut repeat_key,
                 &mut repeat_started,
                 &mut last_key_time,
@@ -284,7 +284,7 @@ where
                 }
             }
 
-            if backend::is_key_pressed(KeyCode::Home) {
+            if macroquad_backend::is_key_pressed(KeyCode::Home) {
                 if shift_held {
                     if selection_anchor.is_none() {
                         selection_anchor = Some(cursor_char);
@@ -295,7 +295,7 @@ where
                 cursor_char = 0;
             }
 
-            if backend::is_key_pressed(KeyCode::End) {
+            if macroquad_backend::is_key_pressed(KeyCode::End) {
                 if shift_held {
                     if selection_anchor.is_none() {
                         selection_anchor = Some(cursor_char);
@@ -306,11 +306,11 @@ where
                 cursor_char = text.len();
             }
 
-            if backend::is_key_pressed(KeyCode::Tab) {
+            if macroquad_backend::is_key_pressed(KeyCode::Tab) {
                 tab_request_pending(self.id, shift_held);
             }
 
-            while let Some(chr) = backend::get_char_pressed() {
+            while let Some(chr) = macroquad_backend::get_char_pressed() {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
 
                 if chr.is_control() {
@@ -340,7 +340,7 @@ where
                 }
             }
 
-            if backend::is_key_pressed(KeyCode::Escape) || backend::is_key_pressed(KeyCode::Enter) {
+            if macroquad_backend::is_key_pressed(KeyCode::Escape) || macroquad_backend::is_key_pressed(KeyCode::Enter) {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
                 focused = false;
                 selection_anchor = None;
@@ -360,13 +360,13 @@ where
             scroll_offset_x = 0.0;
         }
 
-        let now = backend::get_time();
+        let now = macroquad_backend::get_time();
         if focused && ((now * 2.0) as i32 % 2 == 0) {
             let byte_pos = byte_offset(&text, cursor_char);
             let prefix = &text[..byte_pos];
             let caret_x = self.rect.x + WIDGET_PADDING / 2. + measure_text_ui(prefix, DEFAULT_FONT_SIZE_16, 1.0).width - scroll_offset_x;
             if caret_x >= self.rect.x && caret_x <= self.rect.x + self.rect.w {
-                backend::draw_line(
+                macroquad_backend::draw_line(
                     caret_x,
                     self.rect.y + self.rect.h * 0.3,
                     caret_x,

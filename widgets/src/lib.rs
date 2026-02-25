@@ -16,17 +16,17 @@ pub use tab_registry::*;
 pub use focus::*;
 pub use clipboard::*;
 
-pub use bishop::backend;
+pub use bishop::macroquad_backend;
 pub use bishop::TextDimensions;
 
 pub use bishop::{Color, KeyCode, MouseButton, Rect, Vec2};
 
 pub(crate) fn draw_text_ui(text: &str, x: f32, y: f32, font_size: f32, color: Color) -> TextDimensions {
-    backend::draw_text(text, x, y, font_size, color)
+    macroquad_backend::draw_text(text, x, y, font_size, color)
 }
 
 pub(crate) fn measure_text_ui(text: &str, font_size: f32, _font_scale: f32) -> TextDimensions {
-    backend::measure_text(text, font_size)
+    macroquad_backend::measure_text(text, font_size)
 }
 
 /// Draws text within a clipped rectangle with horizontal scroll offset.

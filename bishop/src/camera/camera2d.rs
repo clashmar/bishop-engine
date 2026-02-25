@@ -53,19 +53,30 @@ impl Camera2D {
 
     /// Returns the world space position for a 2d camera screen space position.
     pub fn screen_to_world(&self, point: Vec2) -> Vec2 {
+        #[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
+        let (screen_w, screen_h) = (
+            crate::macroquad_backend::screen_width(),
+            crate::macroquad_backend::screen_height(),
+        );
+
+        // For wgpu, screen dimensions should be passed via context.
+        // This fallback uses 0,0 but screen_to_world is typically called through the context.
+        #[cfg(feature = "wgpu")]
+        let (screen_w, screen_h) = (0.0, 0.0);
+
         let dims = self
             .viewport()
             .map(|(vx, vy, vw, vh)| Rect {
                 x: vx as f32,
-                y: crate::backend::screen_height() - (vy + vh) as f32,
+                y: screen_h - (vy + vh) as f32,
                 w: vw as f32,
                 h: vh as f32,
             })
             .unwrap_or(Rect {
                 x: 0.0,
                 y: 0.0,
-                w: crate::backend::screen_width(),
-                h: crate::backend::screen_height(),
+                w: screen_w,
+                h: screen_h,
             });
 
         let point = vec2(
