@@ -164,6 +164,24 @@ impl Window for MacroquadContext {
     fn screen_height(&self) -> f32 {
         mq::screen_height()
     }
+
+    fn set_cursor_icon(&mut self, icon: crate::window::CursorIcon) {
+        mq::miniquad::window::set_mouse_cursor(icon.into());
+    }
+
+    fn toggle_fullscreen(&mut self) -> bool {
+        self.fullscreen = !self.fullscreen;
+        mq::miniquad::window::set_fullscreen(self.fullscreen);
+        self.fullscreen
+    }
+
+    fn is_fullscreen(&self) -> bool {
+        self.fullscreen
+    }
+
+    fn scale_factor(&self) -> f32 {
+        mq::miniquad::window::dpi_scale()
+    }
 }
 
 impl Time for MacroquadContext {

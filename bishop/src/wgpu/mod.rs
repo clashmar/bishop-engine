@@ -3,8 +3,10 @@
 //! This module provides a wgpu-based implementation of the bishop traits,
 //! using winit for window management and input handling.
 
+pub(crate) mod app_runner;
 mod context;
 mod conversions;
+mod conversions_window;
 mod graphics_state;
 mod impls;
 mod input_state;

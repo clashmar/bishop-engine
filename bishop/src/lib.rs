@@ -74,7 +74,7 @@ pub trait BishopApp {
     fn frame(&mut self, ctx: &mut impl BishopContext) -> impl std::future::Future<Output = ()>;
 }
 
-/// Runs the main loop for a BishopApp.
+/// Runs the main loop for a BishopApp using macroquad.
 #[cfg(feature = "macroquad")]
 pub async fn run<A, C>(app: &mut A, ctx: &mut C)
 where
@@ -86,6 +86,49 @@ where
         app.frame(ctx).await;
         ::macroquad::prelude::next_frame().await;
     }
+}
+
+/// Error type for the wgpu run function.
+#[cfg(feature = "wgpu")]
+#[derive(Debug)]
+pub enum RunError {
+    /// Event loop creation or execution failed.
+    EventLoop(String),
+    /// Graphics/wgpu initialization failed.
+    Graphics(String),
+    /// Window creation failed.
+    Window(String),
+}
+
+#[cfg(feature = "wgpu")]
+impl std::fmt::Display for RunError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RunError::EventLoop(msg) => write!(f, "Event loop error: {msg}"),
+            RunError::Graphics(msg) => write!(f, "Graphics error: {msg}"),
+            RunError::Window(msg) => write!(f, "Window error: {msg}"),
+        }
+    }
+}
+
+#[cfg(feature = "wgpu")]
+impl std::error::Error for RunError {}
+
+/// Runs a BishopApp with the wgpu backend.
+#[cfg(feature = "wgpu")]
+pub fn run_wgpu<A: BishopApp + 'static>(
+    config: window::WindowConfig,
+    app: A,
+) -> Result<(), RunError> {
+    use winit::event_loop::EventLoop;
+    use wgpu::app_runner::WgpuAppRunner;
+
+    let event_loop = EventLoop::new().map_err(|e| RunError::EventLoop(e.to_string()))?;
+    let mut runner = WgpuAppRunner::new(config, app);
+    event_loop
+        .run_app(&mut runner)
+        .map_err(|e| RunError::EventLoop(e.to_string()))?;
+    Ok(())
 }
 
 /// The context type for the active graphics backend.
@@ -135,6 +178,9 @@ pub mod prelude {
 
     #[cfg(feature = "wgpu")]
     pub use crate::wgpu::{empty_texture, load_texture, WgpuContext};
+
+    #[cfg(feature = "wgpu")]
+    pub use crate::{run_wgpu, RunError};
 
     #[cfg(any(feature = "macroquad", feature = "wgpu"))]
     pub use crate::PlatformContext;

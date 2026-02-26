@@ -3,9 +3,10 @@
 use std::sync::Arc;
 use winit::event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent};
 use winit::keyboard::PhysicalKey;
-use winit::window::Window;
+use winit::window::{Fullscreen, Window};
 
 use super::conversions::{convert_keycode, convert_mouse_button, keycode_to_char};
+use super::conversions_window::convert_cursor_icon;
 use super::graphics_state::{GraphicsState, GraphicsStateError};
 use super::input_state::InputState;
 use super::render::{
@@ -17,6 +18,7 @@ use super::texture_loader::init_texture_loader;
 use super::time_state::TimeState;
 use crate::camera::Camera2D;
 use crate::types::Color;
+use crate::window::CursorIcon;
 
 /// Wgpu backend implementation for bishop.
 pub struct WgpuContext {
@@ -31,6 +33,8 @@ pub struct WgpuContext {
     pub(crate) current_camera: Option<Camera2D>,
     render_target_bind_group_layout: std::sync::Arc<wgpu::BindGroupLayout>,
     fullscreen_quad_renderer: FullscreenQuadRenderer,
+    fullscreen: bool,
+    scale_factor: f32,
 }
 
 impl WgpuContext {
@@ -55,6 +59,8 @@ impl WgpuContext {
             &graphics.device,
         ));
         let fullscreen_quad_renderer = FullscreenQuadRenderer::new(&graphics.device);
+        let scale_factor = window.scale_factor() as f32;
+        let fullscreen = window.fullscreen().is_some();
 
         Ok(Self {
             graphics,
@@ -68,6 +74,8 @@ impl WgpuContext {
             current_camera: None,
             render_target_bind_group_layout,
             fullscreen_quad_renderer,
+            fullscreen,
+            scale_factor,
         })
     }
 
@@ -92,6 +100,9 @@ impl WgpuContext {
         match event {
             WindowEvent::Resized(size) => {
                 self.graphics.resize(size.width, size.height);
+            }
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                self.scale_factor = *scale_factor as f32;
             }
             WindowEvent::KeyboardInput {
                 event:
@@ -136,7 +147,10 @@ impl WgpuContext {
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
-                self.input.on_mouse_move(position.x as f32, position.y as f32);
+                // Convert physical to logical coordinates
+                let x = position.x as f32 / self.scale_factor;
+                let y = position.y as f32 / self.scale_factor;
+                self.input.on_mouse_move(x, y);
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let (dx, dy) = match delta {
@@ -154,14 +168,41 @@ impl WgpuContext {
         &self.window
     }
 
-    /// Returns the current screen width.
+    /// Returns the current screen width in logical pixels.
     pub fn screen_width(&self) -> f32 {
-        self.graphics.size.0 as f32
+        self.graphics.size.0 as f32 / self.scale_factor
     }
 
-    /// Returns the current screen height.
+    /// Returns the current screen height in logical pixels.
     pub fn screen_height(&self) -> f32 {
-        self.graphics.size.1 as f32
+        self.graphics.size.1 as f32 / self.scale_factor
+    }
+
+    /// Sets the mouse cursor icon.
+    pub fn set_cursor_icon(&mut self, icon: CursorIcon) {
+        self.window.set_cursor(convert_cursor_icon(icon));
+    }
+
+    /// Toggles fullscreen mode and returns the new state.
+    pub fn toggle_fullscreen(&mut self) -> bool {
+        self.fullscreen = !self.fullscreen;
+        let fullscreen_mode = if self.fullscreen {
+            Some(Fullscreen::Borderless(None))
+        } else {
+            None
+        };
+        self.window.set_fullscreen(fullscreen_mode);
+        self.fullscreen
+    }
+
+    /// Returns whether the window is currently in fullscreen mode.
+    pub fn is_fullscreen(&self) -> bool {
+        self.fullscreen
+    }
+
+    /// Returns the display scale factor (DPI scaling).
+    pub fn scale_factor(&self) -> f32 {
+        self.scale_factor
     }
 
     /// Returns the texture bind group layout for creating textures.
