@@ -14,5 +14,10 @@ mod time_state;
 
 pub use context::WgpuContext;
 pub use graphics_state::GraphicsStateError;
-pub use render::WgpuTexture;
+pub use render::{
+    AmbientMaterial, AmbientUniforms, BishopRenderTarget, FinalCompositeMaterial,
+    FullscreenQuadRenderer, GlowData, GlowMaterial, GlowUniforms, ModelUniforms,
+    SceneCompositeMaterial, SpotLightData, SpotMaterial, SpotUniforms, UndarkenedMaterial,
+    WgpuTexture, create_texture_bind_group_layout,
+};
 pub use texture_loader::{empty_texture, init_texture_loader, load_texture};

@@ -8,3 +8,14 @@ pub use macroquad::prelude::{
 
 #[cfg(feature = "macroquad")]
 pub use macroquad::miniquad::{BlendFactor, BlendState, BlendValue, Equation};
+
+#[cfg(feature = "wgpu")]
+pub use crate::wgpu::{
+    AmbientMaterial, FinalCompositeMaterial, FullscreenQuadRenderer, GlowMaterial,
+    SceneCompositeMaterial, SpotMaterial, UndarkenedMaterial,
+};
+
+#[cfg(feature = "wgpu")]
+pub use crate::wgpu::{
+    AmbientUniforms, GlowData, GlowUniforms, ModelUniforms, SpotLightData, SpotUniforms,
+};
