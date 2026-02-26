@@ -8,7 +8,11 @@ use winit::window::Window;
 use super::conversions::{convert_keycode, convert_mouse_button, keycode_to_char};
 use super::graphics_state::{GraphicsState, GraphicsStateError};
 use super::input_state::InputState;
-use super::render::{CameraUniforms, PrimitiveRenderer, TextRenderer, TextureRenderer};
+use super::render::{
+    create_texture_bind_group_layout, BishopRenderTarget, CameraUniforms, FullscreenQuadRenderer,
+    PrimitiveRenderer, TextRenderer, TextureRenderer,
+};
+use crate::types::FilterMode;
 use super::texture_loader::init_texture_loader;
 use super::time_state::TimeState;
 use crate::camera::Camera2D;
@@ -25,6 +29,8 @@ pub struct WgpuContext {
     pub(crate) texture_renderer: TextureRenderer,
     pub(crate) text_renderer: TextRenderer,
     pub(crate) current_camera: Option<Camera2D>,
+    render_target_bind_group_layout: std::sync::Arc<wgpu::BindGroupLayout>,
+    fullscreen_quad_renderer: FullscreenQuadRenderer,
 }
 
 impl WgpuContext {
@@ -45,6 +51,11 @@ impl WgpuContext {
             texture_renderer.texture_bind_group_layout_arc(),
         );
 
+        let render_target_bind_group_layout = std::sync::Arc::new(create_texture_bind_group_layout(
+            &graphics.device,
+        ));
+        let fullscreen_quad_renderer = FullscreenQuadRenderer::new(&graphics.device);
+
         Ok(Self {
             graphics,
             input: InputState::new(),
@@ -55,6 +66,8 @@ impl WgpuContext {
             texture_renderer,
             text_renderer,
             current_camera: None,
+            render_target_bind_group_layout,
+            fullscreen_quad_renderer,
         })
     }
 
@@ -179,6 +192,38 @@ impl WgpuContext {
     /// Returns the Arc-wrapped texture bind group layout for shared ownership.
     pub fn texture_bind_group_layout_arc(&self) -> Arc<wgpu::BindGroupLayout> {
         self.texture_renderer.texture_bind_group_layout_arc()
+    }
+
+    /// Returns the surface format for pipeline creation.
+    pub fn surface_format(&self) -> wgpu::TextureFormat {
+        self.graphics.config.format
+    }
+
+    /// Creates a render target with the specified dimensions.
+    pub fn create_render_target(&self, width: u32, height: u32, filter: FilterMode) -> BishopRenderTarget {
+        BishopRenderTarget::new(
+            &self.graphics.device,
+            self.render_target_bind_group_layout.clone(),
+            width,
+            height,
+            self.graphics.config.format,
+            filter,
+        )
+    }
+
+    /// Returns the render target bind group layout for creating render targets externally.
+    pub fn render_target_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.render_target_bind_group_layout
+    }
+
+    /// Returns the Arc-wrapped render target bind group layout for shared ownership.
+    pub fn render_target_bind_group_layout_arc(&self) -> Arc<wgpu::BindGroupLayout> {
+        self.render_target_bind_group_layout.clone()
+    }
+
+    /// Returns a reference to the fullscreen quad renderer.
+    pub fn fullscreen_quad_renderer(&self) -> &FullscreenQuadRenderer {
+        &self.fullscreen_quad_renderer
     }
 
     /// Renders the current frame and presents it.
