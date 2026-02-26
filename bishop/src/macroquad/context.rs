@@ -3,6 +3,7 @@
 /// Macroquad backend implementation wrapping global functions.
 pub struct MacroquadContext {
     pub(crate) char_buffer: Vec<char>,
+    pub(crate) fullscreen: bool,
 }
 
 impl MacroquadContext {
@@ -10,6 +11,7 @@ impl MacroquadContext {
     pub fn new() -> Self {
         Self {
             char_buffer: Vec::new(),
+            fullscreen: false,
         }
     }
 }

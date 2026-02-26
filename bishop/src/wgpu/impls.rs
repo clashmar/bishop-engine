@@ -161,11 +161,27 @@ impl Camera for WgpuContext {
 
 impl Window for WgpuContext {
     fn screen_width(&self) -> f32 {
-        self.graphics.size.0 as f32
+        self.screen_width()
     }
 
     fn screen_height(&self) -> f32 {
-        self.graphics.size.1 as f32
+        self.screen_height()
+    }
+
+    fn set_cursor_icon(&mut self, icon: crate::window::CursorIcon) {
+        self.set_cursor_icon(icon);
+    }
+
+    fn toggle_fullscreen(&mut self) -> bool {
+        self.toggle_fullscreen()
+    }
+
+    fn is_fullscreen(&self) -> bool {
+        self.is_fullscreen()
+    }
+
+    fn scale_factor(&self) -> f32 {
+        self.scale_factor()
     }
 }
 

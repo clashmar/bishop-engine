@@ -9,7 +9,7 @@ use winit::application::ApplicationHandler;
 use winit::dpi::LogicalSize;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop};
-use winit::window::{Window, WindowId};
+use winit::window::{Window as WinitWindow, WindowId};
 
 struct ShaderVerification {
     name: &'static str,
@@ -19,17 +19,18 @@ struct ShaderVerification {
 
 struct App {
     ctx: Option<WgpuContext>,
-    window: Option<Arc<Window>>,
+    window: Option<Arc<WinitWindow>>,
     frame_count: u32,
     typed_text: String,
     shader_results: Vec<ShaderVerification>,
     shaders_verified: bool,
+    cursor_index: usize,
 }
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_none() {
-            let attrs = Window::default_attributes()
+            let attrs = WinitWindow::default_attributes()
                 .with_title("Bishop WGPU Test")
                 .with_inner_size(LogicalSize::new(800, 600));
             let window = match event_loop.create_window(attrs) {
@@ -128,6 +129,27 @@ impl App {
             self.typed_text.clear();
         }
 
+        // Cursor cycling with C key
+        let cursors = [
+            CursorIcon::Default,
+            CursorIcon::Pointer,
+            CursorIcon::Crosshair,
+            CursorIcon::Move,
+            CursorIcon::Text,
+            CursorIcon::NotAllowed,
+            CursorIcon::EWResize,
+            CursorIcon::NSResize,
+        ];
+        if ctx.is_key_pressed(KeyCode::C) {
+            self.cursor_index = (self.cursor_index + 1) % cursors.len();
+            ctx.set_cursor_icon(cursors[self.cursor_index]);
+        }
+
+        // Fullscreen toggle with F11
+        if ctx.is_key_pressed(KeyCode::F11) {
+            ctx.toggle_fullscreen();
+        }
+
         ctx.begin_frame();
 
         ctx.clear_background(Color::new(0.12, 0.12, 0.16, 1.0));
@@ -219,6 +241,31 @@ impl App {
             12.0,
             Color::GREY,
         );
+        y += 30.0;
+
+        // Window info display
+        let cursor_names = [
+            "Default", "Pointer", "Crosshair", "Move", "Text", "NotAllowed", "EWResize", "NSResize",
+        ];
+        ctx.draw_text(
+            &format!(
+                "Cursor: {} (C to cycle) | Fullscreen: {} (F11)",
+                cursor_names[self.cursor_index],
+                ctx.is_fullscreen()
+            ),
+            50.0,
+            y,
+            16.0,
+            Color::ORANGE,
+        );
+        y += 20.0;
+        ctx.draw_text(
+            &format!("Scale factor: {:.2}", ctx.scale_factor()),
+            50.0,
+            y,
+            16.0,
+            Color::ORANGE,
+        );
 
         // Shader verification results
         y += 40.0;
@@ -267,6 +314,7 @@ fn main() {
         typed_text: String::new(),
         shader_results: Vec::new(),
         shaders_verified: false,
+        cursor_index: 0,
     };
     if let Err(e) = event_loop.run_app(&mut app) {
         eprintln!("Event loop error: {e}");
