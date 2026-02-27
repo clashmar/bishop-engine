@@ -30,7 +30,7 @@ impl Toast {
     }
 
     /// Call each frame. Draws the toast if it is still alive.
-    pub fn update(&mut self) {
+    pub fn update<C: BishopContext>(&mut self, ctx: &mut C) {
         if !self.active {
             return;
         }
@@ -39,19 +39,19 @@ impl Toast {
             self.active = false;
             return;
         }
-        
-        let txt = measure_text_ui(&self.msg, DEFAULT_FONT_SIZE_16, 1.0);
 
-        // Top left
+        let txt = measure_text_ui(ctx, &self.msg, DEFAULT_FONT_SIZE_16);
+
+        // Bottom left
         let bg_rect = Rect::new(
             PADDING,
-            macroquad_backend::screen_height() - PADDING - (txt.height + PADDING),
+            ctx.screen_height() - PADDING - (txt.height + PADDING),
             txt.width + PADDING * 2.0,
             txt.height + PADDING,
         );
 
         // Background
-        macroquad_backend::draw_rectangle(
+        ctx.draw_rectangle(
             bg_rect.x,
             bg_rect.y,
             bg_rect.w,
@@ -61,6 +61,7 @@ impl Toast {
 
         // Text
         draw_text_ui(
+            ctx,
             &self.msg,
             bg_rect.x + PADDING,
             bg_rect.y + txt.height + PADDING / 2.0,

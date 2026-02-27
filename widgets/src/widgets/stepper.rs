@@ -3,7 +3,8 @@ use crate::*;
 /// Draws a stepper widget that allows selecting from a list of predefined values.
 ///
 /// Returns the selected value from the steps array.
-pub fn gui_stepper(
+pub fn gui_stepper<C: BishopContext>(
+    ctx: &mut C,
     rect: impl Into<Rect>,
     label: &str,
     steps: &[f32],
@@ -25,12 +26,12 @@ pub fn gui_stepper(
     const Y_OFFSET: f32 = 15.0;
 
     let label = format!("{}:", label);
-    let label_width = measure_text_ui(&label, FIELD_TEXT_SIZE_16, 1.0).width;
+    let label_width = measure_text_ui(ctx, &label, FIELD_TEXT_SIZE_16).width;
 
     let btn_w = FIELD_TEXT_SIZE_16 * 1.2;
-    let val_w = measure_text_ui("3.0", FIELD_TEXT_SIZE_16, 1.0).width + WIDGET_SPACING + 5.0;
+    let val_w = measure_text_ui(ctx, "3.0", FIELD_TEXT_SIZE_16).width + WIDGET_SPACING + 5.0;
 
-    draw_text_ui(&label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
+    draw_text_ui(ctx, &label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
     let val_rect = Rect::new(
         rect.x + label_width + WIDGET_SPACING,
@@ -39,7 +40,7 @@ pub fn gui_stepper(
         rect.h,
     );
 
-    macroquad_backend::draw_rectangle_lines(
+    ctx.draw_rectangle_lines(
         val_rect.x,
         val_rect.y - 7.5,
         val_rect.w,
@@ -50,6 +51,7 @@ pub fn gui_stepper(
 
     let txt = format!("{:.1}", steps[idx]);
     draw_text_ui(
+        ctx,
         &txt,
         val_rect.x + 7.5,
         val_rect.y + 17.5,
@@ -64,7 +66,7 @@ pub fn gui_stepper(
         btn_w,
     );
 
-    if Button::new(decrease_rect, "-").blocked(blocked).show() && idx > 0 {
+    if Button::new(decrease_rect, "-").blocked(blocked).show(ctx) && idx > 0 {
         idx -= 1;
     }
 
@@ -74,7 +76,7 @@ pub fn gui_stepper(
         btn_w,
         btn_w,
     );
-    if Button::new(increase_rect, "+").blocked(blocked).show() && idx + 1 < steps.len() {
+    if Button::new(increase_rect, "+").blocked(blocked).show(ctx) && idx + 1 < steps.len() {
         idx += 1;
     }
 

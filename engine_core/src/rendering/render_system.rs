@@ -2,15 +2,14 @@
 use crate::shaders::shaders::*;
 use crate::prelude::*;
 use bishop::prelude::*;
-use macroquad::prelude::{Vec2 as MqVec2, Vec3 as MqVec3};
 
 /// Max lights per layer.
 pub const MAX_LIGHTS: usize = 10;
 
 #[derive(Clone, Copy, Default)]
 pub struct LightBuffer {
-    pos: MqVec2,
-    color: MqVec3,
+    pos: Vec2,
+    color: Vec3,
     intensity: f32,
     radius: f32,
     spread: f32,
@@ -21,11 +20,11 @@ pub struct LightBuffer {
 #[derive(Clone, Copy, Default)]
 pub struct GlowBuffer {
     brightness: f32,
-    color: MqVec3,
+    color: Vec3,
     intensity: f32,
-    pos: MqVec2,
+    pos: Vec2,
     emission: f32,
-    mask_size: MqVec2,
+    mask_size: Vec2,
 }
 
 pub struct RenderSystem {
@@ -264,7 +263,7 @@ impl RenderSystem {
 
             // Texture dimensions
             if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
-                buffer.mask_size = MqVec2::new(
+                buffer.mask_size = Vec2::new(
                     world_distance_to_uniform_target(render_cam, w, target_w),
                     world_distance_to_uniform_target(render_cam, h, target_w),
                 );

@@ -66,27 +66,27 @@ impl<'a> Button<'a> {
     }
 
     /// Draws the button and returns true if clicked.
-    pub fn show(self) -> bool {
-        let mouse = macroquad_backend::mouse_position();
+    pub fn show<C: BishopContext>(self, ctx: &mut C) -> bool {
+        let mouse = ctx.mouse_position();
         let hovered = self.rect.contains(Vec2::new(mouse.0, mouse.1));
 
-        let txt_dims = measure_text_ui(self.label, FIELD_TEXT_SIZE_16, 1.0);
+        let txt_dims = measure_text_ui(ctx, self.label, FIELD_TEXT_SIZE_16);
         let txt_y = self.rect.y + self.rect.h * 0.7;
         let txt_x = self.rect.x + (self.rect.w - txt_dims.width) / 2.;
 
         match self.style {
             ButtonStyle::Default => {
-                let background = if hovered && !is_dropdown_open() && !self.blocked && !macroquad_backend::is_mouse_button_down(MouseButton::Left) {
+                let background = if hovered && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left) {
                     self.hover_color
                 } else {
                     FIELD_BACKGROUND_COLOR
                 };
-                macroquad_backend::draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, background);
-                macroquad_backend::draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
+                ctx.draw_rectangle(self.rect.x, self.rect.y, self.rect.w, self.rect.h, background);
+                ctx.draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
             }
             ButtonStyle::Plain => {
-                if hovered && !is_dropdown_open() && !self.blocked && !macroquad_backend::is_mouse_button_down(MouseButton::Left) {
-                    macroquad_backend::draw_rectangle(
+                if hovered && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left) {
+                    ctx.draw_rectangle(
                         self.rect.x,
                         self.rect.y,
                         self.rect.w,
@@ -97,9 +97,9 @@ impl<'a> Button<'a> {
             }
         }
 
-        draw_text_ui(self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, FIELD_TEXT_SIZE_16, self.text_color);
+        draw_text_ui(ctx, self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, FIELD_TEXT_SIZE_16, self.text_color);
 
-        let clicked = macroquad_backend::is_mouse_button_pressed(MouseButton::Left)
+        let clicked = ctx.is_mouse_button_pressed(MouseButton::Left)
             && hovered
             && !self.blocked
             && !is_dropdown_open()

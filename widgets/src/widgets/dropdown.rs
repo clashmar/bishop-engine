@@ -2,18 +2,34 @@ use std::cell::RefCell;
 use std::fmt::Display;
 use crate::*;
 
+/// Data for deferred dropdown rendering.
+struct DeferredDropdownRender {
+    list_rect: Rect,
+    row_height: f32,
+    scroll_offset: f32,
+    labels: Vec<String>,
+    option_count: usize,
+}
+
 thread_local! {
-    static DEFERRED_DROPDOWN_RENDERS: RefCell<Vec<Box<dyn FnOnce()>>> =
+    static DEFERRED_DROPDOWN_RENDERS: RefCell<Vec<DeferredDropdownRender>> =
         RefCell::new(Vec::new());
 }
 
 /// Flushes all deferred dropdown list renders.
 ///
 /// Call this after drawing all modules to ensure dropdown lists render on top.
-pub fn flush_dropdown_lists() {
+pub fn flush_dropdown_lists<C: BishopContext>(ctx: &mut C) {
     DEFERRED_DROPDOWN_RENDERS.with(|renders| {
-        for render_fn in renders.borrow_mut().drain(..) {
-            render_fn();
+        for render in renders.borrow_mut().drain(..) {
+            render_dropdown_list(
+                ctx,
+                render.list_rect,
+                render.row_height,
+                render.scroll_offset,
+                &render.labels,
+                render.option_count,
+            );
         }
     });
 }
@@ -87,7 +103,7 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
     }
 
     /// Draws the dropdown and returns the selected option if one was clicked.
-    pub fn show(self) -> Option<T> {
+    pub fn show<C: BishopContext>(self, ctx: &mut C) -> Option<T> {
         const MAX_VISIBLE_ROWS: usize = 8;
         const SCROLL_SPEED: f32 = 5.0;
         const W_PADDING: f32 = 8.0;
@@ -102,14 +118,14 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
 
         let button_clicked = match self.style {
             DropDownStyle::Default => {
-                Button::new(self.rect, self.label).blocked(self.blocked).show() && !self.blocked
+                Button::new(self.rect, self.label).blocked(self.blocked).show(ctx) && !self.blocked
             }
             DropDownStyle::Plain => {
                 Button::new(self.rect, self.label)
                     .plain()
                     .text_color(self.text_color)
                     .blocked(self.blocked)
-                    .show() && !self.blocked
+                    .show(ctx) && !self.blocked
             }
         };
 
@@ -132,7 +148,7 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         let mut max_opt_width = 0.0_f32;
         for opt in self.options.iter() {
             let txt = (self.to_string)(opt);
-            let width = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0).width;
+            let width = measure_text_ui(ctx, &txt, DEFAULT_FONT_SIZE_16).width;
             if width > max_opt_width {
                 max_opt_width = width;
             }
@@ -158,14 +174,14 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             let total_height = self.rect.h * self.options.len() as f32;
             let max_offset = (total_height - list_rect.h).max(0.0);
 
-            let mouse_pos = macroquad_backend::mouse_position();
+            let mouse_pos = ctx.mouse_position();
             let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
 
             if list_rect.contains(mouse_vec) {
-                if macroquad_backend::is_mouse_button_pressed(MouseButton::Left) {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) {
                     consume_click();
                 }
-                let (_, wheel_y) = macroquad_backend::mouse_wheel();
+                let (_, wheel_y) = ctx.mouse_wheel();
                 if wheel_y != 0.0 {
                     let delta = wheel_y * SCROLL_SPEED;
                     state.scroll_offset = (state.scroll_offset - delta).clamp(0.0, max_offset);
@@ -185,7 +201,7 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
                 let entry_rect = Rect::new(list_rect.x, draw_y, list_rect.w, self.rect.h);
 
                 let hovered = entry_rect.contains(mouse_vec);
-                if hovered && macroquad_backend::is_mouse_button_pressed(MouseButton::Left) {
+                if hovered && ctx.is_mouse_button_pressed(MouseButton::Left) {
                     consume_click();
                     state.open = false;
                     dropdown_state::set(self.id, state);
@@ -195,27 +211,25 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
                 }
             }
 
-            let options_clone: Vec<T> = self.options.to_vec();
             let scroll_offset = state.scroll_offset;
             let row_height = self.rect.h;
-            let to_string_clone: Vec<String> = self.options.iter().map(|o| (self.to_string)(o)).collect();
+            let labels: Vec<String> = self.options.iter().map(|o| (self.to_string)(o)).collect();
+            let option_count = self.options.len();
 
             DEFERRED_DROPDOWN_RENDERS.with(|renders| {
-                renders.borrow_mut().push(Box::new(move || {
-                    render_dropdown_list(
-                        list_rect,
-                        row_height,
-                        scroll_offset,
-                        &options_clone,
-                        &to_string_clone,
-                    );
-                }));
+                renders.borrow_mut().push(DeferredDropdownRender {
+                    list_rect,
+                    row_height,
+                    scroll_offset,
+                    labels,
+                    option_count,
+                });
             });
         }
 
-        let mouse_pos = macroquad_backend::mouse_position();
+        let mouse_pos = ctx.mouse_position();
         let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
-        if macroquad_backend::is_mouse_button_pressed(MouseButton::Left)
+        if ctx.is_mouse_button_pressed(MouseButton::Left)
             && !self.rect.contains(mouse_vec)
             && !(state.open && state.rect.contains(mouse_vec))
         {
@@ -229,14 +243,15 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
 }
 
 /// Renders the dropdown list (called from deferred queue).
-fn render_dropdown_list<T>(
+fn render_dropdown_list<C: BishopContext>(
+    ctx: &mut C,
     list_rect: Rect,
     row_height: f32,
     scroll_offset: f32,
-    options: &[T],
     labels: &[String],
+    option_count: usize,
 ) {
-    macroquad_backend::draw_rectangle(
+    ctx.draw_rectangle(
         list_rect.x,
         list_rect.y,
         list_rect.w,
@@ -244,7 +259,7 @@ fn render_dropdown_list<T>(
         FIELD_BACKGROUND_COLOR,
     );
 
-    let mouse_pos = macroquad_backend::mouse_position();
+    let mouse_pos = ctx.mouse_position();
     let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
 
     for (i, label) in labels.iter().enumerate() {
@@ -261,7 +276,7 @@ fn render_dropdown_list<T>(
 
         let hovered = entry_rect.contains(mouse_vec);
         if hovered {
-            macroquad_backend::draw_rectangle(
+            ctx.draw_rectangle(
                 entry_rect.x,
                 entry_rect.y,
                 entry_rect.w,
@@ -271,6 +286,7 @@ fn render_dropdown_list<T>(
         }
 
         draw_text_ui(
+            ctx,
             label,
             entry_rect.x + 5.,
             entry_rect.y + entry_rect.h * 0.7,
@@ -279,20 +295,20 @@ fn render_dropdown_list<T>(
         );
     }
 
-    let total_height = row_height * options.len() as f32;
+    let total_height = row_height * option_count as f32;
     if total_height > list_rect.h {
         let thumb_h = (list_rect.h / total_height) * list_rect.h;
         let thumb_y =
             list_rect.y + (scroll_offset / (total_height - list_rect.h)) * (list_rect.h - thumb_h);
 
-        macroquad_backend::draw_rectangle(
+        ctx.draw_rectangle(
             list_rect.x + list_rect.w - 6.,
             list_rect.y,
             6.,
             list_rect.h,
             Color::new(0.2, 0.2, 0.2, 0.5),
         );
-        macroquad_backend::draw_rectangle(
+        ctx.draw_rectangle(
             list_rect.x + list_rect.w - 6.,
             thumb_y,
             6.,
@@ -301,7 +317,7 @@ fn render_dropdown_list<T>(
         );
     }
 
-    macroquad_backend::draw_rectangle_lines(list_rect.x, list_rect.y, list_rect.w, list_rect.h, 2., OUTLINE_COLOR);
+    ctx.draw_rectangle_lines(list_rect.x, list_rect.y, list_rect.w, list_rect.h, 2., OUTLINE_COLOR);
 }
 
 /// Internal module for managing dropdown state.
@@ -359,9 +375,9 @@ pub fn update_global_dropdown_flag() {
 }
 
 /// Returns true if the mouse is over any open dropdown list.
-pub fn is_mouse_over_dropdown_list() -> bool {
+pub fn is_mouse_over_dropdown_list<C: BishopContext>(ctx: &C) -> bool {
     dropdown_state::STATE.with(|s| {
-        let mouse_pos = macroquad_backend::mouse_position();
+        let mouse_pos = ctx.mouse_position();
         let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
         s.borrow().values().any(|st| st.open && st.rect.contains(mouse_vec))
     })

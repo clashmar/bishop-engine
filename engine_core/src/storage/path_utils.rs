@@ -4,7 +4,6 @@ use crate::engine_global::*;
 use crate::constants::*;
 use crate::*;
 use futures::executor::block_on;
-use bishop::macroquad_backend::next_frame;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::path::Path;
@@ -288,14 +287,12 @@ fn update_config_root(root_path: &PathBuf) -> Option<()> {
 }
 
 /// Checks for a valid save root, or prompts the user to choose one.
+/// Note: Caller should yield a frame before calling this to let the event loop start.
 pub async fn ensure_save_root() -> bool {
     // Fast path
     if get_save_root().is_some() {
         return true;
     }
-
-    // Give Macroquad a chance to start its event loop
-    next_frame().await;
 
     // Show the async picker.
     if let Some(_path) = pick_save_root_async().await {

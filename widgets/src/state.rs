@@ -108,13 +108,15 @@ pub fn reset_click_consumed() {
     CLICK_CONSUMED.with(|f| *f.borrow_mut() = false);
 }
 
-pub fn widgets_frame_start() {
-    macroquad_backend::update();
+/// Called at the start of each frame to update widget state.
+pub fn widgets_frame_start<C: BishopContext>(ctx: &mut C) {
+    ctx.update();
     tab_registry_clear();
     reset_click_consumed();
 }
 
-pub fn widgets_frame_end() {
+/// Called at the end of each frame to finalize widget state.
+pub fn widgets_frame_end<C: BishopContext>(ctx: &mut C) {
     resolve_pending_tab();
-    flush_dropdown_lists();
+    flush_dropdown_lists(ctx);
 }

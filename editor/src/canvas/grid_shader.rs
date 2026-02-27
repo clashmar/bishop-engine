@@ -1,7 +1,4 @@
 // editor/src/canvas/grid_shader.rs
-use macroquad::{
-    miniquad::{BlendFactor, BlendState, BlendValue, Equation},
-};
 use once_cell::sync::OnceCell;
 use bishop::prelude::*;
 
@@ -66,7 +63,7 @@ fn get_grid_resources() -> Option<&'static GridResources> {
         let texture = Texture2D::from_rgba8(1, 1, &[255, 255, 255, 255]);
         texture.set_filter(FilterMode::Nearest);
 
-        Ok::<_, macroquad::Error>(GridResources { material, texture })
+        Ok::<_, ShaderError>(GridResources { material, texture })
     }).ok()
 }
 

@@ -9,6 +9,9 @@ pub use macroquad::prelude::{
 #[cfg(feature = "macroquad")]
 pub use macroquad::miniquad::{BlendFactor, BlendState, BlendValue, Equation};
 
+#[cfg(feature = "macroquad")]
+pub use macroquad::Error as ShaderError;
+
 #[cfg(feature = "wgpu")]
 pub use crate::wgpu::{
     AmbientMaterial, FinalCompositeMaterial, FullscreenQuadRenderer, GlowMaterial,
