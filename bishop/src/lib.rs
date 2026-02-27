@@ -164,7 +164,7 @@ pub mod prelude {
     pub use crate::window::*;
     pub use crate::BishopApp;
     pub use crate::BishopContext;
-    pub use glam::{Vec2, vec4};
+    pub use glam::{Vec2, Vec3, vec4};
 
     #[cfg(feature = "macroquad")]
     pub use crate::run;

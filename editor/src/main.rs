@@ -46,18 +46,18 @@ impl EditorApp {
 
 impl BishopApp for EditorApp {
     async fn frame(&mut self, ctx: &mut impl BishopContext) {
-        let cur_screen = (screen_width() as u32, screen_height() as u32);
+        let cur_screen = (ctx.screen_width() as u32, ctx.screen_height() as u32);
         if cur_screen != self.current_window_size {
             with_editor(|editor| editor.render_system.resize(cur_screen.0, cur_screen.1));
             self.current_window_size = cur_screen;
         }
 
-        widgets_frame_start();
+        widgets_frame_start(ctx);
 
         with_editor_async(ctx, |editor, ctx| Box::pin(editor.update(ctx))).await;
         with_editor_async(ctx, |editor, ctx| Box::pin(editor.draw(ctx))).await;
 
-        widgets_frame_end();
+        widgets_frame_end(ctx);
 
         apply_pending_commands();
     }

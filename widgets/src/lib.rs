@@ -16,21 +16,24 @@ pub use tab_registry::*;
 pub use focus::*;
 pub use clipboard::*;
 
-pub use bishop::macroquad_backend;
+pub use bishop::BishopContext;
 pub use bishop::TextDimensions;
 
 pub use bishop::{Color, KeyCode, MouseButton, Rect, Vec2};
 
-pub(crate) fn draw_text_ui(text: &str, x: f32, y: f32, font_size: f32, color: Color) -> TextDimensions {
-    macroquad_backend::draw_text(text, x, y, font_size, color)
+/// Draws text at the given position using the provided context.
+pub(crate) fn draw_text_ui<C: BishopContext>(ctx: &mut C, text: &str, x: f32, y: f32, font_size: f32, color: Color) -> TextDimensions {
+    ctx.draw_text(text, x, y, font_size, color)
 }
 
-pub(crate) fn measure_text_ui(text: &str, font_size: f32, _font_scale: f32) -> TextDimensions {
-    macroquad_backend::measure_text(text, font_size)
+/// Measures text dimensions using the provided context.
+pub(crate) fn measure_text_ui<C: BishopContext>(ctx: &C, text: &str, font_size: f32) -> TextDimensions {
+    ctx.measure_text(text, font_size)
 }
 
 /// Draws text within a clipped rectangle with horizontal scroll offset.
-pub(crate) fn draw_text_clipped(
+pub(crate) fn draw_text_clipped<C: BishopContext>(
+    ctx: &mut C,
     text: &str,
     rect_x: f32,
     rect_y: f32,
@@ -52,8 +55,8 @@ pub(crate) fn draw_text_clipped(
     let mut found_start = false;
 
     for (byte_idx, ch) in text.char_indices() {
-        let char_start_x = text_x + measure_text_ui(&text[..byte_idx], font_size, 1.0).width;
-        let char_end_x = text_x + measure_text_ui(&text[..byte_idx + ch.len_utf8()], font_size, 1.0).width;
+        let char_start_x = text_x + measure_text_ui(ctx, &text[..byte_idx], font_size).width;
+        let char_end_x = text_x + measure_text_ui(ctx, &text[..byte_idx + ch.len_utf8()], font_size).width;
 
         if !found_start && char_start_x >= clip_left {
             visible_start_byte = byte_idx;
@@ -69,6 +72,6 @@ pub(crate) fn draw_text_clipped(
 
     if visible_start_byte < visible_end_byte {
         let visible_text = &text[visible_start_byte..visible_end_byte];
-        draw_text_ui(visible_text, render_x, text_y, font_size, color);
+        draw_text_ui(ctx, visible_text, render_x, text_y, font_size, color);
     }
 }

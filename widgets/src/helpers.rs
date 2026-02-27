@@ -7,9 +7,11 @@ pub fn byte_offset(s: &str, char_idx: usize) -> usize {
         .unwrap_or_else(|| s.len())
 }
 
-pub fn draw_input_field_text(text: &str, rect: impl Into<Rect>) {
+/// Draws text in an input field at the standard position.
+pub fn draw_input_field_text<C: BishopContext>(ctx: &mut C, text: &str, rect: impl Into<Rect>) {
     let rect = rect.into();
     draw_text_ui(
+        ctx,
         text,
         rect.x + WIDGET_PADDING / 2.,
         rect.y + rect.h * 0.7,
@@ -18,15 +20,17 @@ pub fn draw_input_field_text(text: &str, rect: impl Into<Rect>) {
     );
 }
 
-pub fn center_text_field(x: f32, text: &str) -> (f32, f32) {
+/// Centers text horizontally and returns the x position and width.
+pub fn center_text_field<C: BishopContext>(ctx: &C, x: f32, text: &str) -> (f32, f32) {
     let text_to_measure = if text.is_empty() { PLACEHOLDER_TEXT } else { text };
-    let text_size = measure_text_ui(text_to_measure, DEFAULT_FONT_SIZE_16, 1.0);
+    let text_size = measure_text_ui(ctx, text_to_measure, DEFAULT_FONT_SIZE_16);
     let new_x = x - (text_size.width / 2.);
     (new_x - WIDGET_PADDING / 2., text_size.width + WIDGET_PADDING)
 }
 
-pub fn rect_width_for_text(text: &str, font_size: f32) -> f32 {
-    measure_text_ui(text, font_size, 1.0).width + WIDGET_PADDING * 2.0
+/// Returns the rectangle width needed to fit the given text.
+pub fn rect_width_for_text<C: BishopContext>(ctx: &C, text: &str, font_size: f32) -> f32 {
+    measure_text_ui(ctx, text, font_size).width + WIDGET_PADDING * 2.0
 }
 
 /// Returns the selection range as (start, end) where start <= end.
@@ -81,7 +85,7 @@ pub fn filter_numeric_paste(input: &str, is_float: bool, allow_negative: bool, h
 }
 
 /// Calculates the character index from a mouse x-coordinate within the text field.
-pub fn char_index_from_x(text: &str, mouse_x: f32, field_x: f32, font_size: f32, scroll_offset: f32) -> usize {
+pub fn char_index_from_x<C: BishopContext>(ctx: &C, text: &str, mouse_x: f32, field_x: f32, font_size: f32, scroll_offset: f32) -> usize {
     let text_start_x = field_x + WIDGET_PADDING / 2.;
     let relative_x = mouse_x - text_start_x + scroll_offset;
 
@@ -93,7 +97,7 @@ pub fn char_index_from_x(text: &str, mouse_x: f32, field_x: f32, font_size: f32,
     for (i, _) in text.char_indices() {
         let char_idx = text[..i].chars().count();
         let prefix = &text[..i];
-        let width = measure_text_ui(prefix, font_size, 1.0).width;
+        let width = measure_text_ui(ctx, prefix, font_size).width;
 
         if relative_x < width {
             let mid = (prev_width + width) / 2.0;
@@ -110,7 +114,8 @@ pub fn char_index_from_x(text: &str, mouse_x: f32, field_x: f32, font_size: f32,
 }
 
 /// Calculates scroll offset to ensure cursor stays visible within field bounds.
-pub fn calculate_scroll_offset(
+pub fn calculate_scroll_offset<C: BishopContext>(
+    ctx: &C,
     text: &str,
     cursor_char: usize,
     current_offset: f32,
@@ -119,8 +124,8 @@ pub fn calculate_scroll_offset(
     font_size: f32,
 ) -> f32 {
     let cursor_byte = byte_offset(text, cursor_char);
-    let cursor_x = measure_text_ui(&text[..cursor_byte], font_size, 1.0).width;
-    let total_text_width = measure_text_ui(text, font_size, 1.0).width;
+    let cursor_x = measure_text_ui(ctx, &text[..cursor_byte], font_size).width;
+    let total_text_width = measure_text_ui(ctx, text, font_size).width;
     let usable_width = field_width - padding;
 
     let mut offset = current_offset;

@@ -1,5 +1,6 @@
 pub use widgets::{
-    macroquad_backend, clipboard,
+    clipboard,
+    BishopContext,
     Button, ButtonStyle,
     Dropdown, DropDownStyle, dropdown_state, flush_dropdown_lists, is_mouse_over_dropdown_list, update_global_dropdown_flag,
     gui_checkbox,

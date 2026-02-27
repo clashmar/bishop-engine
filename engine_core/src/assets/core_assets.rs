@@ -2,9 +2,10 @@ use image::imageops::FilterType;
 use image::ImageReader;
 use std::io::Cursor;
 
-/// Pre-caches the GNF font for use throughout the application.
+/// Pre-caches the font for use throughout the application.
+/// This is now a no-op - font initialization is handled by the context.
 pub fn precache_font() {
-    bishop::macroquad_backend::init_with_gnf();
+    // Font initialization is handled by the platform context
 }
 
 /// Helper that decodes a PNG, resizes it and returns the raw RGBA bytes.
