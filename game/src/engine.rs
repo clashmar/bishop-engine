@@ -14,6 +14,8 @@ use mlua::Lua;
 pub struct Engine {
     /// Handle for the game.
     pub game_state: Rc<RefCell<GameState>>,
+    /// Platform context for input/rendering.
+    pub ctx: PlatformContext,
     /// Single Lua VM.
     pub lua: Lua,
     /// Camera manager for the game.
@@ -29,19 +31,19 @@ pub struct Engine {
 }
 
 impl BishopApp for Engine {
-    async fn frame(&mut self, ctx: &mut impl BishopContext) {
-        let dt = ctx.get_frame_time();
+    async fn frame(&mut self, ctx: PlatformContext) {
+        let dt = ctx.borrow().get_frame_time();
 
         self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
 
         if self.is_playtest {
             self.diagnostics.update(dt);
-            self.diagnostics.handle_input();
+            self.diagnostics.handle_input(&mut *ctx.borrow_mut());
         }
 
         while self.accumulator >= FIXED_DT {
             self.accumulator -= FIXED_DT;
-            self.fixed_update(FIXED_DT);
+            self.fixed_update(&mut *ctx.borrow_mut(), FIXED_DT);
         }
 
         self.update_async(dt).await;
@@ -51,7 +53,7 @@ impl BishopApp for Engine {
         }
 
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
-        self.render(alpha);
+        self.render(&mut *ctx.borrow_mut(), alpha);
     }
 }
 
@@ -59,6 +61,7 @@ impl Engine {
     /// Creates a new Engine with the given configuration.
     pub fn new(
         game_state: Rc<RefCell<GameState>>,
+        ctx: PlatformContext,
         lua: Lua,
         camera_manager: CameraManager,
         grid_size: f32,
@@ -66,6 +69,7 @@ impl Engine {
     ) -> Self {
         Self {
             game_state,
+            ctx,
             lua,
             camera_manager,
             render_system: RenderSystem::with_grid_size(grid_size),
@@ -75,7 +79,11 @@ impl Engine {
         }
     }
 
-    pub fn fixed_update(&mut self, dt: f32) {
+    pub fn fixed_update<C: BishopContext>(
+        &mut self, 
+        ctx: &mut C,
+        dt: f32
+    ) {
         let mut game_state = self.game_state.borrow_mut();
         game_state.store_previous_positions(&mut self.camera_manager);
 
@@ -89,9 +97,20 @@ impl Engine {
 
         let grid_size = game_ctx.cur_world.grid_size;
 
-        update_physics(asset_manager, ecs, current_room, dt, grid_size);
+        update_physics(
+            asset_manager, 
+            ecs, 
+            current_room, 
+            dt, 
+            grid_size
+        );
 
-        self.camera_manager.update_active(ecs, current_room, game_ctx.cur_world.grid_size);
+        self.camera_manager.update_active(
+            ctx, 
+            ecs, 
+            current_room, 
+            game_ctx.cur_world.grid_size
+        );
     }
 
     pub async fn update_async(&mut self, dt: f32) {
@@ -122,8 +141,12 @@ impl Engine {
         }
     }
 
-    pub fn render(&mut self, alpha: f32) {
-        clear_background(Color::BLACK);
+    pub fn render<C: BishopContext>(
+        &mut self,
+        ctx: &mut C, 
+        alpha: f32
+    ) {
+        ctx.clear_background(Color::BLACK);
 
         let mut game_state = self.game_state.borrow_mut();
         let prev_positions = game_state.prev_positions.clone();
@@ -151,6 +174,7 @@ impl Engine {
         self.render_system.resize_for_camera(render_cam.zoom.clone());
 
         render_room(
+            ctx,
             ecs,
             current_room,
             asset_manager,
@@ -161,7 +185,7 @@ impl Engine {
             grid_size,
         );
 
-        self.render_system.present_game();
+        self.render_system.present_game(ctx);
 
         // Collect speech bubble data
         let speech_bubbles = collect_speech_bubbles(
@@ -175,13 +199,14 @@ impl Engine {
 
         // Render speech bubbles in screen space
         let dialogue_config = game_state.game.dialogue_manager.config.clone();
-        render_speech_bubbles(&speech_bubbles, &dialogue_config, &render_cam, grid_size);
+        render_speech_bubbles(ctx, &speech_bubbles, &dialogue_config, &render_cam, grid_size);
     
 
         // Draw diagnostics overlay after game rendering (playtest only)
         if self.is_playtest {
-            draw_fps();
-            self.diagnostics.draw();
+            // TODO: IMPLEMENT
+            // ctx.draw_fps();
+            self.diagnostics.draw(ctx);
         }
     }
 

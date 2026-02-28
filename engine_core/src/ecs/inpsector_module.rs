@@ -1,7 +1,6 @@
 // engine_core/src/ecs/module.rs
 use crate::game::game::GameCtxMut;
 use crate::ecs::entity::Entity;
-use crate::ui::text::draw_text_ui;
 use crate::ui::widgets::*;
 use crate::ecs::ecs::Ecs;
 use bishop::prelude::*;
@@ -15,6 +14,7 @@ pub trait InspectorModule {
     /// Draw the UI for the module inside the supplied rectangle.
     fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
@@ -89,14 +89,16 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
 
     fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
         // Background for the header
-        draw_rectangle(rect.x, rect.y, rect.w, Self::HEADER_HEIGHT, Color::new(0., 0., 0., 0.4));
-        draw_text_ui(
+        ctx.draw_rectangle(rect.x, rect.y, rect.w, Self::HEADER_HEIGHT, Color::new(0., 0., 0., 0.4));
+        
+        ctx.draw_text(
             self.title(),
             rect.x + 28.0,
             rect.y + 18.0,
@@ -107,7 +109,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
         // Toggle button (‑ when open, ＋ when closed)
         let btn = Rect::new(rect.x + 4.0, rect.y + 4.0, 16.0, 16.0);
         let symbol = if self.expanded { "-" } else { "+" };
-        if Button::new(btn, symbol).text_offset(Vec2::new(-0.3, 1.5)).blocked(blocked).show() {
+        if Button::new(btn, symbol).text_offset(Vec2::new(-0.3, 1.5)).blocked(blocked).show(ctx) {
             self.expanded = !self.expanded;
         }
 
@@ -122,7 +124,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_W,
                 BTN_H,
             );
-            if Button::new(btn_rect, "x").blocked(blocked).show() {
+            if Button::new(btn_rect, "x").blocked(blocked).show(ctx) {
                 self.inner.remove(game_ctx, entity);
                 return; // Don't draw the rest of the module
             }
@@ -137,7 +139,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 rect.w - 8.0,
                 rect.h - Self::HEADER_HEIGHT - 8.0,
             );
-            self.inner.draw(blocked, body_rect, game_ctx, entity);
+            self.inner.draw(ctx, blocked, body_rect, game_ctx, entity);
         }
     }
 

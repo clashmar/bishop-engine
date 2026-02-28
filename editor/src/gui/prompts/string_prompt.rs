@@ -48,10 +48,10 @@ impl StringPrompt {
     }
 
     /// Draws the widget and, return the result if confirmed/cancelled or None.
-    pub fn draw(&mut self) -> Option<StringPromptResult> {
+    pub fn draw(&mut self, ctx: &mut WgpuContext) -> Option<StringPromptResult> {
         let message_pos = vec2(self.rect.x, self.rect.y + 10.0);
 
-        draw_text_ui(
+        ctx.draw_text(
             &self.message,
             message_pos.x,
             message_pos.y,
@@ -67,22 +67,22 @@ impl StringPrompt {
             30.0,
         );
 
-        let (new_text, _) = TextInput::new(self.input_id, field_rect, &self.current).focused(true).show();
+        let (new_text, _) = TextInput::new(self.input_id, field_rect, &self.current).focused(true).show(ctx);
         self.current = new_text;
 
         // Buttons
         let btn_y = self.rect.y + 70.0;
         let (confirm_rect, cancel_rect) = confirm_cancel_rects(self.rect, btn_y);
-        let confirm_clicked = Button::new(confirm_rect, "Confirm").show();
-        let cancel_clicked = Button::new(cancel_rect, "Cancel").show();
+        let confirm_clicked = Button::new(confirm_rect, "Confirm").show(ctx);
+        let cancel_clicked = Button::new(cancel_rect, "Cancel").show(ctx);
 
         // Handle result
-        if (confirm_clicked || Controls::enter())
+        if (confirm_clicked || Controls::enter(ctx))
         && !self.current.trim().is_empty()  {
             return Some(StringPromptResult::Confirmed(self.current.clone()));
         }
 
-        if cancel_clicked || Controls::escape() {
+        if cancel_clicked || Controls::escape(ctx) {
             return Some(StringPromptResult::Cancelled);
         }
 

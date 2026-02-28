@@ -8,7 +8,8 @@ use bishop::prelude::*;
 use std::borrow::Cow;
 use widgets::{Button, WIDGET_SPACING};
 
-pub fn gui_sprite_picker(
+pub fn gui_sprite_picker<C: BishopContext>(
+    ctx: &mut C,
     rect: Rect,
     id: &mut SpriteId,
     asset_manager: &mut AssetManager,
@@ -40,7 +41,7 @@ pub fn gui_sprite_picker(
 
     let mut changed = false;
 
-    if Button::new(picker_rect, &btn_label).blocked(blocked).show() {
+    if Button::new(picker_rect, &btn_label).blocked(blocked).show(ctx) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -61,7 +62,7 @@ pub fn gui_sprite_picker(
         }
     }
 
-    if Button::new(remove_rect, "x").blocked(blocked).show() && id.0 != 0 {
+    if Button::new(remove_rect, "x").blocked(blocked).show(ctx) && id.0 != 0 {
         asset_manager.decrement_ref(*id);
         *id = SpriteId(0);
         changed = true;
@@ -70,7 +71,8 @@ pub fn gui_sprite_picker(
     changed
 }
 
-pub fn gui_script_picker(
+pub fn gui_script_picker<C: BishopContext>(
+    ctx: &mut C,
     rect: Rect,
     entity: Entity,
     script_id: &mut ScriptId,
@@ -103,7 +105,7 @@ pub fn gui_script_picker(
 
     let mut changed = false;
 
-    if Button::new(picker_rect, &btn_label).blocked(blocked).show() {
+    if Button::new(picker_rect, &btn_label).blocked(blocked).show(ctx) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             if let Some(path) = rfd::FileDialog::new()
@@ -124,7 +126,7 @@ pub fn gui_script_picker(
         }
     }
 
-    if Button::new(remove_rect, "x").blocked(blocked).show() && script_id.0 != 0 {
+    if Button::new(remove_rect, "x").blocked(blocked).show(ctx) && script_id.0 != 0 {
         script_manager.unload(entity, *script_id);
         *script_id = ScriptId(0);
         changed = true;

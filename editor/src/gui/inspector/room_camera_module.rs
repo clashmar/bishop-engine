@@ -20,6 +20,7 @@ impl InspectorModule for RoomCameraModule {
 
     fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
@@ -39,8 +40,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
-        let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
-        draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(ctx, mode_label, FIELD_TEXT_SIZE_16).width;
+        ctx.draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         let mode_rect = Rect::new(rect.x + label_width + WIDGET_SPACING, y, rect.w - label_width - WIDGET_SPACING, 30.0);
         let current_mode = cam.zoom_mode;
@@ -64,7 +65,7 @@ impl InspectorModule for RoomCameraModule {
                 const STEPS: &[f32; 5] = &[0.5_f32, 1.0, 2.0, 3.0, 4.0];
 
                 let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
-                let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar, blocked);
+                let new_scalar = gui_stepper(ctx, scale_rect, "Scale", STEPS, current_scalar, blocked);
 
                 if !blocked && (new_scalar - current_scalar).abs() > f32::EPSILON {
                     let width = world_virtual_width(grid_size) * new_scalar;
@@ -83,6 +84,7 @@ impl InspectorModule for RoomCameraModule {
                 );
 
                 self.draw_freeform_mode(
+                    ctx,
                     zoom_rect,
                     cam,
                     blocked,
@@ -96,8 +98,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Camera mode
         let cam_mode_label = "Camera Mode: ";
-        let cam_label_width = measure_text_ui(cam_mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
-        draw_text_ui(
+        let cam_label_width = measure_text_ui(ctx, cam_mode_label, FIELD_TEXT_SIZE_16).width;
+        ctx.draw_text(
             cam_mode_label,
             rect.x,
             y + 20.0,
@@ -129,7 +131,7 @@ impl InspectorModule for RoomCameraModule {
             &current_cam_label,
             &cam_mode_options,
             |mode| mode.ui_label(),
-        ).blocked(blocked).show() {
+        ).blocked(blocked).show(ctx) {
             if new_cam_mode != current_cam_mode {
                 cam.camera_mode = new_cam_mode;
             }
@@ -141,7 +143,7 @@ impl InspectorModule for RoomCameraModule {
             &current_label,
             &zoom_options,
             |mode| mode.ui_label(),
-        ).blocked(blocked).show() {
+        ).blocked(blocked).show(ctx) {
             if new_mode != current_mode {
                 cam.zoom_mode = new_mode;
             }
@@ -160,6 +162,7 @@ impl RoomCameraModule {
     /// Draw a single numeric field that edits the scalar zoom.
     fn draw_freeform_mode(
         &self,
+        ctx: &mut WgpuContext,
         rect: Rect,
         cam: &mut RoomCamera,
         blocked: bool,
@@ -173,9 +176,9 @@ impl RoomCameraModule {
 
         // Label
         let label = "Scale: ";
-        let label_width = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0).width + 1.0;
-        let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE_16, 1.0).width;
-        draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
+        let label_width = measure_text_ui(ctx, label, FIELD_TEXT_SIZE_16).width + 1.0;
+        let num_width = measure_text_ui(ctx, "0.00", FIELD_TEXT_SIZE_16).width;
+        ctx.draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         // Numeric field
         let num_rect = Rect::new(
@@ -196,10 +199,11 @@ impl RoomCameraModule {
         // Numeric field
         let typed = NumberInput::new(self.zoom_id, num_rect, round_to_dp(scalar, 2))
             .blocked(blocked)
-            .show();
+            .show(ctx);
 
         // Slider
         let (slider_val, slider_changed) = gui_slider(
+            ctx,
             self.slider_id,
             slider_rect,
             MIN, // min

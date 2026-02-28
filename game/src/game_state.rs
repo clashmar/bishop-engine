@@ -1,15 +1,8 @@
 // game/src/game_state.rs
 use crate::scripting::script_system::ScriptSystem;
-use engine_core::camera::camera_manager::CameraManager;
-use engine_core::storage::core_storage::load_game_ron;
-use engine_core::ecs::transform::Transform;
-use engine_core::ecs::entity::Entity;
-use engine_core::ecs::component::*;
-use engine_core::engine_global::*;
-use engine_core::world::room::*;
-use engine_core::game::game::*;
 use std::collections::HashMap;
-use bishop::prelude::Vec2;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 use mlua::Lua;
 
 /// Top level orchestrator of the game and systems.
@@ -22,7 +15,11 @@ pub struct GameState {
 
 impl GameState {
     // TODO: Make game creation DRYer
-    pub async fn new(lua: &Lua, camera_manager: &mut CameraManager) -> Self {
+    pub async fn new<C: BishopContext>(
+        ctx: &mut C, 
+        lua: &Lua, 
+        camera_manager: &mut CameraManager
+    ) -> Self {
         // Allows the shared engine features to make decisions
         set_engine_mode(EngineMode::Game);
 
@@ -49,7 +46,14 @@ impl GameState {
             .map(|t| t.position)
             .unwrap_or_default();
         let grid_size = game.current_world().grid_size;
-        *camera_manager = CameraManager::new(ecs, current_room.id, player_pos, grid_size);
+
+        *camera_manager = CameraManager::new(
+            ctx, 
+            ecs, 
+            current_room.id, 
+            player_pos, 
+            grid_size
+        );
 
         ScriptSystem::init(lua);
 
@@ -59,7 +63,8 @@ impl GameState {
         }
     }
 
-    pub async fn for_room(
+    pub async fn for_room<C: BishopContext>(
+        ctx: &mut C,
         room: Room,
         mut game: Game,
         lua: &Lua,
@@ -79,7 +84,13 @@ impl GameState {
             .map(|t| t.position)
             .unwrap_or_default();
         
-        *camera_manager = CameraManager::new(ecs, room.id, player_pos, grid_size);
+        *camera_manager = CameraManager::new(
+            ctx, 
+            ecs, 
+            room.id, 
+            player_pos, 
+            grid_size
+        );
 
         ScriptSystem::init(lua);
 

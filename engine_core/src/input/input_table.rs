@@ -28,14 +28,14 @@ pub fn lua_key_name(s: &str) -> String {
     }
 }
 
-/// All key codes exposed by macroquad.
+/// All mouse codes
 pub static MOUSE_TABLE: &[(&str, MouseButton)] = &[
     (MOUSE_LEFT, MouseButton::Left),
     (MOUSE_MIDDLE, MouseButton::Middle),
     (MOUSE_RIGHT, MouseButton::Right),
 ];
 
-/// All key codes exposed by macroquad.
+/// All key codes.
 pub static KEY_TABLE: &[(&str, KeyCode)] = &[
     // printable characters
     (SPACE,        KeyCode::Space),

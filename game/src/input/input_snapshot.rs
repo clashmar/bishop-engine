@@ -9,9 +9,12 @@ pub struct InputSnapshot {
     pub pressed: HashMap<&'static str, bool>,
     pub released: HashMap<&'static str, bool>,
 }
+
 impl InputSnapshot {
-    /// Fill `snapshot.keys` with the raw key names that are currently down.
-    pub fn capture_input_state(&mut self) {
+    /// Fill snapshot with the current input state from the platform context.
+    pub fn capture_input_state(&mut self, ctx: &PlatformContext) {
+        let ctx = ctx.borrow();
+
         // Clear previous frame data
         self.down.clear();
         self.pressed.clear();
@@ -19,16 +22,16 @@ impl InputSnapshot {
 
         // Keyboard
         for &(name, code) in KEY_TABLE {
-            self.down.insert(name, is_key_down(code.into()));
-            self.pressed.insert(name, is_key_pressed(code.into()));
-            self.released.insert(name, is_key_released(code.into()));
+            self.down.insert(name, ctx.is_key_down(code.into()));
+            self.pressed.insert(name, ctx.is_key_pressed(code.into()));
+            self.released.insert(name, ctx.is_key_released(code.into()));
         }
 
         // Mouse
         for &(name, button) in MOUSE_TABLE {
-            self.down.insert(name, is_mouse_button_down(button.into()));
-            self.pressed.insert(name, is_mouse_button_pressed(button.into()));
-            self.released.insert(name, is_mouse_button_released(button.into()));
+            self.down.insert(name, ctx.is_mouse_button_down(button.into()));
+            self.pressed.insert(name, ctx.is_mouse_button_pressed(button.into()));
+            self.released.insert(name, ctx.is_mouse_button_released(button.into()));
         }
     }
 }

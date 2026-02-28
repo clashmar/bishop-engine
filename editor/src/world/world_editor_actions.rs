@@ -137,21 +137,26 @@ impl WorldEditor {
     }
 
     /// Draws the coordinates of the grid square the mouse is over.
-    pub fn draw_coordinates(&self, camera: &Camera2D, grid_size: f32) {
-        let world_grid = coord::mouse_world_grid(camera, grid_size);
+    pub fn draw_coordinates(
+        &self, 
+        ctx: &mut WgpuContext,
+        camera: &Camera2D, 
+        grid_size: f32
+    ) {
+        let world_grid = coord::mouse_world_grid(ctx, camera, grid_size);
 
         let txt = format!(
             "({:.0}, {:.0})",
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0);
+        let txt_metrics = measure_text_ui(ctx, &txt, DEFAULT_FONT_SIZE_16);
         let margin = 10.0;
 
-        let x = (screen_width() - txt_metrics.width) / 2.0;
-        let y = screen_height() - margin;
+        let x = (ctx.screen_width() - txt_metrics.width) / 2.0;
+        let y = ctx.screen_height() - margin;
 
-        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, Color::BLACK);
+        ctx.draw_text(&txt, x, y, DEFAULT_FONT_SIZE_16, Color::BLACK);
     }
 }
 

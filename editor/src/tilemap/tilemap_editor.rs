@@ -42,7 +42,7 @@ impl ModeInfo for TilemapEditorMode {
         }
     }
 
-    fn shortcut(self) -> Option<fn() -> bool> {
+    fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
         match self {
             TilemapEditorMode::Tiles => Some(Controls::t),
             TilemapEditorMode::Exits => Some(Controls::e),
@@ -82,6 +82,7 @@ impl TileMapEditor {
 
     pub async fn update(
         &mut self,
+        ctx: &WgpuContext,
         asset_manager: &mut AssetManager,
         camera: &mut Camera2D,
         room: &mut Room,
@@ -111,12 +112,12 @@ impl TileMapEditor {
             );
         }
 
-        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
         let mouse_world = camera.screen_to_world(mouse_screen);
 
         // Handle resize drag before tile placement
         let drag_active = self.handle_resize_drag(
-            camera,
+            ctx,
             mouse_world,
             room,
             other_bounds,
@@ -125,19 +126,21 @@ impl TileMapEditor {
         );
 
         // Consume UI clicks
-        self.consume_ui_click(mouse_screen);
+        self.consume_ui_click(ctx, mouse_screen);
 
         if !self.ui_was_clicked && !drag_active {
             let room_position = room.position;
             let idx = room.current_variant_index();
             match self.mode {
                 TilemapEditorMode::Tiles => self.handle_tile_placement(
+                    ctx,
                     camera,
                     &mut room.variants[idx].tilemap,
                     room_position,
                     grid_size,
                 ),
                 TilemapEditorMode::Exits => self.handle_exit_placement(
+                    ctx,
                     camera,
                     &room.variants[idx].tilemap,
                     &mut room.exits,
@@ -152,7 +155,7 @@ impl TileMapEditor {
     /// Returns true if a drag is active (to block tile placement).
     fn handle_resize_drag(
         &mut self,
-        _camera: &Camera2D,
+        ctx: &WgpuContext,
         mouse_world: Vec2,
         room: &Room,
         other_bounds: &[(Vec2, Vec2)],
@@ -163,7 +166,7 @@ impl TileMapEditor {
         let map = &room.variants[idx].tilemap;
 
         // Check for drag start
-        if is_mouse_button_pressed(MouseButton::Left) && self.active_handle_index.is_none() {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && self.active_handle_index.is_none() {
             for (i, handle) in self.resize_handles.iter_mut().enumerate() {
                 if handle.is_hovered(mouse_world) {
                     handle.begin_drag(mouse_world);
@@ -177,7 +180,7 @@ impl TileMapEditor {
         // Update active drag
         if let Some(handle_idx) = self.active_handle_index {
             // Cancel drag on any key press
-            if Controls::any_key_pressed() {
+            if Controls::any_key_pressed(ctx) {
                 self.resize_handles[handle_idx].end_drag();
                 self.active_handle_index = None;
                 return false;
@@ -203,7 +206,7 @@ impl TileMapEditor {
             self.preview_valid = matches!(resize_result, ResizeResult::Success);
 
             // Check for drag end
-            if is_mouse_button_released(MouseButton::Left) {
+            if ctx.is_mouse_button_released(MouseButton::Left) {
                 let should_apply = self.preview_valid && delta != 0;
 
                 if should_apply {
@@ -225,9 +228,9 @@ impl TileMapEditor {
         false
     }
 
-    fn consume_ui_click(&mut self, mouse_pos: Vec2) {
-        if is_mouse_button_pressed(MouseButton::Left)
-            || is_mouse_button_pressed(MouseButton::Right)
+    fn consume_ui_click(&mut self, ctx: &WgpuContext,  mouse_pos: Vec2) {
+        if ctx.is_mouse_button_pressed(MouseButton::Left)
+            || ctx.is_mouse_button_pressed(MouseButton::Right)
         {
             if self.tilemap_panel.handle_click(mouse_pos, self.tilemap_panel.rect) {
                 self.ui_was_clicked = true;
@@ -236,7 +239,7 @@ impl TileMapEditor {
         }
 
         // Unblock UI
-        if is_mouse_button_released(MouseButton::Left) || !is_mouse_button_down(MouseButton::Left) {
+        if ctx.is_mouse_button_released(MouseButton::Left) || !ctx.is_mouse_button_down(MouseButton::Left) {
             if self.active_handle_index.is_none() {
                 self.ui_was_clicked = false;
             }
@@ -245,13 +248,14 @@ impl TileMapEditor {
 
     fn handle_tile_placement(
         &mut self,
+        ctx: &WgpuContext,
         camera: &Camera2D,
         map: &mut TileMap,
         room_position: Vec2,
         grid_size: f32,
     ) {
-        let mouse_over_ui = self.is_mouse_over_ui(camera);
-        let hover = self.get_hovered_tile(camera, map, room_position, grid_size);
+        let mouse_over_ui = self.is_mouse_over_ui(ctx, camera);
+        let hover = self.get_hovered_tile(ctx, camera, map, room_position, grid_size);
         if mouse_over_ui || hover.is_none() {
             return;
         }
@@ -262,7 +266,7 @@ impl TileMapEditor {
         };
 
         // Remove
-        if is_mouse_button_down(MouseButton::Left) && is_key_down(KeyCode::LeftAlt) {
+        if ctx.is_mouse_button_down(MouseButton::Left) && ctx.is_key_down(KeyCode::LeftAlt) {
             map.tiles.remove(&(x, y));
             return;
         }
@@ -273,28 +277,29 @@ impl TileMapEditor {
         };
 
         // Place
-        if is_mouse_button_down(MouseButton::Left) {
+        if ctx.is_mouse_button_down(MouseButton::Left) {
             map.tiles.insert((x, y), def_id);
         }
     }
 
     fn handle_exit_placement(
         &mut self,
+        ctx: &WgpuContext,
         camera: &Camera2D,
         map: &TileMap,
         exits: &mut Vec<Exit>,
         room_position: Vec2,
         grid_size: f32,
     ) {
-        if self.is_mouse_over_ui(camera) {
+        if self.is_mouse_over_ui(ctx, camera) {
             return;
         }
 
-        if let Some(tile_pos) = self.get_hovered_edge(camera, map, room_position, grid_size) {
+        if let Some(tile_pos) = self.get_hovered_edge(ctx, camera, map, room_position, grid_size) {
             let exit_direction = self.exit_direction_from_position(tile_pos, map);
             let exit_vec = vec2(tile_pos.x() as f32, tile_pos.y() as f32);
 
-            if is_mouse_button_pressed(MouseButton::Left) {
+            if ctx.is_mouse_button_pressed(MouseButton::Left) {
                 exits.push(Exit {
                     position: exit_vec,
                     direction: exit_direction,
@@ -302,7 +307,7 @@ impl TileMapEditor {
                 });
             }
 
-            if is_mouse_button_pressed(MouseButton::Right) {
+            if ctx.is_mouse_button_pressed(MouseButton::Right) {
                 exits.retain(|exit| exit.position != exit_vec);
             }
         }
@@ -310,6 +315,7 @@ impl TileMapEditor {
 
     pub async fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         room: &mut Room,
         asset_manager: &mut AssetManager,
@@ -322,47 +328,48 @@ impl TileMapEditor {
         let room_id = room.id;
         let room_size = room.size;
 
-        clear_background(Color::BLACK);
-        set_camera(camera);
-        tilemap.draw(asset_manager, room_position.into(), grid_size);
-        draw_exit_placeholders(&room.exits, room_position, grid_size);
-        self.draw_adjacent_exits(grid_size);
-        self.draw_hover_highlight(camera, tilemap, room_position, grid_size);
+        ctx.clear_background(Color::BLACK);
+        ctx.set_camera(camera);
+        tilemap.draw(ctx, asset_manager, room_position.into(), grid_size);
+        draw_exit_placeholders(ctx, &room.exits, room_position, grid_size);
+        self.draw_adjacent_exits(ctx, grid_size);
+        self.draw_hover_highlight(ctx, camera, tilemap, room_position, grid_size);
 
         if self.active_handle_index.is_some() {
-            draw_all_camera_viewports(camera, ecs, room_id);
+            draw_all_camera_viewports(ctx, camera, ecs, room_id);
         }
 
 
-        self.draw_ui(camera, asset_manager, tilemap, room_position, room_size, grid_size).await;
+        self.draw_ui(ctx, camera, asset_manager, tilemap, room_position, room_size, grid_size).await;
     }
 
     /// Draws exits from adjacent rooms that face toward this room (only in Exits mode).
-    fn draw_adjacent_exits(&self, grid_size: f32) {
+    fn draw_adjacent_exits(&self, ctx: &mut WgpuContext, grid_size: f32) {
         if !matches!(self.mode, TilemapEditorMode::Exits) {
             return;
         }
 
         for (world_grid_pos, direction) in &self.adjacent_exits {
             let world_pixel_pos = *world_grid_pos * grid_size;
-            draw_adjacent_exit_arrow(world_pixel_pos, *direction, grid_size);
+            draw_adjacent_exit_arrow(ctx, world_pixel_pos, *direction, grid_size);
         }
     }
 
     fn draw_hover_highlight(
         &self,
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         map: &TileMap,
         room_position: Vec2,
         grid_size: f32,
     ) {
-        if self.is_mouse_over_ui(camera) {
+        if self.is_mouse_over_ui(ctx, camera) {
             return;
         }
         
         let tile_pos = match self.mode {
-            TilemapEditorMode::Tiles => self.get_hovered_tile(camera, map, room_position, grid_size),
-            TilemapEditorMode::Exits => self.get_hovered_edge(camera, map, room_position, grid_size),
+            TilemapEditorMode::Tiles => self.get_hovered_tile(ctx, camera, map, room_position, grid_size),
+            TilemapEditorMode::Exits => self.get_hovered_edge(ctx, camera, map, room_position, grid_size),
         };
 
         if let Some(tile_pos) = tile_pos {
@@ -377,11 +384,11 @@ impl TileMapEditor {
 
             match self.mode {
                 TilemapEditorMode::Tiles => {
-                    draw_rectangle_lines(x, y, grid_size, grid_size, line_width, Color::RED);
+                    ctx.draw_rectangle_lines(x, y, grid_size, grid_size, line_width, Color::RED);
                 }
                 TilemapEditorMode::Exits => {
                     let exit_direction = self.exit_direction_from_position(tile_pos, map);
-                    draw_exit_arrow(vec2(x, y), exit_direction, grid_size);
+                    draw_exit_arrow(ctx, vec2(x, y), exit_direction, grid_size);
                 }
             }
         }
@@ -389,6 +396,7 @@ impl TileMapEditor {
 
     async fn draw_ui(
         &mut self,
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         asset_manager: &mut AssetManager,
         tilemap: &mut TileMap,
@@ -399,32 +407,33 @@ impl TileMapEditor {
         // Draw resize handles and preview
         for (i, handle) in self.resize_handles.iter().enumerate() {
             let is_active = self.active_handle_index == Some(i);
-            handle.draw(camera, is_active, self.preview_valid, grid_size);
+            handle.draw(ctx, camera, is_active, self.preview_valid, grid_size);
 
             // Draw preview if this handle is being dragged
             if is_active {
-                handle.draw_preview(room_position, room_size, grid_size, self.preview_valid);
+                handle.draw_preview(ctx, room_position, room_size, grid_size, self.preview_valid);
             }
         }
 
         // Static UI cam
-        set_default_camera();
+        ctx.set_default_camera();
 
         // Top menu background
-        draw_top_panel_full();
+        draw_top_panel_full(ctx);
 
         // Draw inspector panel
-        self.tilemap_panel.draw(asset_manager, tilemap).await;
+        self.tilemap_panel.draw(ctx, asset_manager, tilemap).await;
     }
 
     fn get_hovered_tile(
         &self,
+        ctx: &WgpuContext,
         camera: &Camera2D,
         map: &TileMap,
         room_position: Vec2,
         grid_size: f32,
     ) -> Option<GridPos> {
-        let mouse_pos: Vec2 = mouse_position().into();
+        let mouse_pos: Vec2 = ctx.mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
         let local_pos = world_pos - room_position;
         let pos = GridPos::from_world(local_pos.into(), grid_size);
@@ -438,12 +447,13 @@ impl TileMapEditor {
 
     fn get_hovered_edge(
         &self,
+        ctx: &WgpuContext,
         camera: &Camera2D,
         map: &TileMap,
         room_position: Vec2,
         grid_size: f32,
     ) -> Option<GridPos> {
-        let mouse_pos: Vec2 = mouse_position().into();
+        let mouse_pos: Vec2 = ctx.mouse_position().into();
         let world_pos = camera.screen_to_world(mouse_pos);
         let local_pos = world_pos - room_position;
         let edge_pos = GridPos::from_world_edge(local_pos.into(), map, grid_size);
@@ -459,8 +469,8 @@ impl TileMapEditor {
         }
     }
 
-    fn is_mouse_over_ui(&self, camera: &Camera2D) -> bool {
-        let mouse_screen: Vec2 = mouse_position().into();
+    fn is_mouse_over_ui(&self, ctx: &WgpuContext, camera: &Camera2D) -> bool {
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
         let mouse_world = camera.screen_to_world(mouse_screen);
 
         // Check menu bar area
@@ -477,7 +487,7 @@ impl TileMapEditor {
             || self.active_handle_index.is_some()
             || is_dropdown_open()
             || is_modal_open()
-            || is_mouse_over_panel()
+            || is_mouse_over_panel(ctx)
     }
 
     fn exit_direction_from_position(&self, tile_pos: GridPos, map: &TileMap) -> ExitDirection {

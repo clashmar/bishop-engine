@@ -6,17 +6,20 @@ build = "build.rs"
 
 [[bin]]
 name = "Bishop"
-path = "src/main.rs"  
+path = "src/main.rs"
+
+[features]
+default = ["wgpu"]
+wgpu = ["bishop/wgpu", "engine_core/wgpu", "game/wgpu"]
 
 [dependencies]
-bishop = { path = "../bishop" }
-engine_core = { path = "../engine_core" }
-game = { path = "../game" }
+bishop = { path = "../bishop", default-features = false, features = ["wgpu"] }
+engine_core = { path = "../engine_core", default-features = false, features = ["wgpu"] }
+game = { path = "../game", default-features = false, features = ["wgpu"] }
 reflect_derive = { path = "../reflect_derive" }
 mlua = { version = "0.11.5", features = ["lua54", "vendored", "serde" ] }
 log = "0.4"
 flexi_logger = "0.27"
-macroquad = "0.4.14"
 rfd = "0.13"
 serde = { version = "1.0", features = ["derive"] }
 ron = "0.9"

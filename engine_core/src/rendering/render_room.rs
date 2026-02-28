@@ -1,10 +1,14 @@
 // engine_core/src/rendering/render_room.rs
+// NOTE: Multi-pass rendering temporarily disabled while rewiring codebase.
+
 use crate::prelude::*;
 use std::collections::{BTreeMap, HashMap};
 use bishop::prelude::*;
 
 /// Draws everything needed for the given room.
-pub fn render_room(
+/// Currently uses simplified single-pass rendering.
+pub fn render_room<C: BishopContext>(
+    ctx: &mut C,
     ecs: &Ecs,
     room: &Room,
     asset_manager: &mut AssetManager,
@@ -22,7 +26,7 @@ pub fn render_room(
     let transform_store = ecs.get_store::<Transform>();
 
     // Organize entities by layer
-    let mut layer_map = collect_interpolated_layer_map(
+    let layer_map = collect_interpolated_layer_map(
         ecs,
         room,
         asset_manager,
@@ -31,35 +35,19 @@ pub fn render_room(
         grid_size,
     );
 
-    if layer_map.is_empty() {
-        layer_map.insert(0, (Vec::new(), Vec::new()));
-    }
+    // Set up camera and clear background
+    ctx.set_camera(render_cam);
+    ctx.clear_background(Color::BLACK);
 
-    // Clear composite textures before each run
-    render_system.clear_cam(&render_system.scene_comp_rt.clone());
-    render_system.clear_cam(&render_system.final_comp_rt.clone());
-
-    // Draw each blocking texture in black onto a white background
-    // To be implemented but it needs to happen BEFORE the loop
-    render_system.init_mask_cam();
-
-    // Flag for the tilemap
-    let mut first_pass = true;
+    // Draw tilemap first
     let tilemap = &room.current_variant().tilemap;
+    tilemap.draw(ctx, asset_manager, room.position.into(), grid_size);
 
-    for (_z, (entities, glows)) in layer_map {
-        // Scene cam needs to draw to the current render cam
-        render_system.clear_scene_cam(render_cam);
-
-        // Draw the tilemap as the first layer
-        if first_pass {
-            tilemap.draw(asset_manager, room.position.into(), grid_size);
-            first_pass = false;
-        }
-
-        // Draw all entities
+    // Draw all entities sorted by layer
+    for (_z, (entities, _glows)) in layer_map {
         for (entity, pos) in entities {
             draw_entity(
+                ctx,
                 ecs,
                 asset_manager,
                 frame_store,
@@ -71,30 +59,23 @@ pub fn render_room(
             );
         }
 
-        // Render the darkened scene
-        render_system.run_ambient_pass(room.darkness);
-
-        // Render glow per layer
-        render_system.run_glow_pass(render_cam, glows, asset_manager);
-
-        // Render the undarkened room for lighting pass
-        render_system.run_undarkened_pass();
-
-        // Combine scene renders
-        render_system.run_scene_pass();
+        // TODO: Re-enable multi-pass rendering
+        // render_system.run_ambient_pass(ctx, room.darkness);
+        // render_system.run_glow_pass(ctx, render_cam, glows, asset_manager);
+        // render_system.run_undarkened_pass(ctx);
+        // render_system.run_scene_pass(ctx);
     }
 
-    // Lighting pass
-    let lights = collect_lights(ecs, room, alpha, prev_positions);
-    render_system.run_spotlight_pass(render_cam, lights, room.darkness);
-
-    // Composite the final render
-    render_system.run_final_pass();
+    // TODO: Re-enable multi-pass rendering
+    // let lights = collect_lights(ecs, room, alpha, prev_positions);
+    // render_system.run_spotlight_pass(ctx, render_cam, lights, room.darkness);
+    // render_system.run_final_pass(ctx);
 
     render_system.render_time_ms = render_start.elapsed().as_secs_f32() * 1000.0;
 }
 
-fn draw_entity(
+fn draw_entity<C: BishopContext>(
+    ctx: &mut C,
     ecs: &Ecs,
     asset_manager: &mut AssetManager,
     frame_store: &ComponentStore<CurrentFrame>,
@@ -140,7 +121,7 @@ fn draw_entity(
         let draw_x = (draw_base.x + cf.offset.x).floor();
         let draw_y = (draw_base.y + cf.offset.y).floor();
 
-        draw_texture_ex(
+        ctx.draw_texture_ex(
             tex,
             draw_x,
             draw_y,
@@ -157,7 +138,7 @@ fn draw_entity(
         // No animation
         if asset_manager.contains(sprite.sprite) {
             let tex = asset_manager.get_texture_from_id(sprite.sprite);
-            draw_texture_ex(
+            ctx.draw_texture_ex(
                 tex,
                 draw_base.x,
                 draw_base.y,
@@ -177,11 +158,12 @@ fn draw_entity(
     }
 
     // Fallback placeholder (no sprite or missing texture)
-    draw_entity_placeholder(draw_base, grid_size);
+    draw_entity_placeholder(ctx, draw_base, grid_size);
 }
 
 /// Highlight a selected entity with a colored outline.
-pub fn highlight_selected_entity(
+pub fn highlight_selected_entity<C: BishopContext>(
+    ctx: &mut C,
     ecs: &Ecs,
     entity: Entity,
     asset_manager: &mut AssetManager,
@@ -203,7 +185,7 @@ pub fn highlight_selected_entity(
     let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
     let draw_pos = pivot_adjusted_position(transform.position, Vec2::new(width, height), transform.pivot);
 
-    draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);
+    ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);
 }
 
 /// Get the dimensions of an entity for rendering.
@@ -237,8 +219,12 @@ pub fn entity_dimensions(
 }
 
 /// Draw a placeholder for an entity without a sprite.
-pub fn draw_entity_placeholder(pos: Vec2, grid_size: f32) {
-    draw_rectangle(pos.x, pos.y, grid_size, grid_size, Color::GREEN);
+pub fn draw_entity_placeholder<C: BishopContext>(
+    ctx: &mut C,
+    pos: Vec2,
+    grid_size: f32
+) {
+    ctx.draw_rectangle(pos.x, pos.y, grid_size, grid_size, Color::GREEN);
 }
 
 /// Sorts entites by their z-layer, filters out entities that should not be
@@ -309,52 +295,18 @@ fn collect_interpolated_layer_map<'a>(
     map
 }
 
-fn collect_lights(
-    ecs: &Ecs,
-    room: &Room, 
-    alpha: f32,
-    prev_positions: Option<&HashMap<Entity, Vec2>>,
-) -> Vec<(Vec2, Light)> {
-    let mut lights: Vec<(Vec2, Light)> = Vec::new();
-
-    let light_store = ecs.get_store::<Light>();
-    let trans_store = ecs.get_store::<Transform>();
-    let room_store = ecs.get_store::<CurrentRoom>();
-
-    for (entity, light) in &light_store.data {
-        // Filter by current room
-        if let Some(current_room) = room_store.get(*entity) {
-            if current_room.0 != room.id {
-                continue;
-            }
-        } else {
-            continue;
-        }
-
-        if let Some(pos) = trans_store.get(*entity) {
-            // Skip invisible entities
-            if !pos.visible {
-                continue;
-            }
-            // Interpolate the draw position
-            let draw_pos = interpolate_draw_position(
-                *entity, 
-                pos.position, 
-                alpha, 
-                prev_positions
-            );
-
-            lights.push((draw_pos, *light));
-        }
-    }
-
-    lights
-}
+// TODO: Re-enable for multi-pass rendering
+// fn collect_lights(
+//     ecs: &Ecs,
+//     room: &Room,
+//     alpha: f32,
+//     prev_positions: Option<&HashMap<Entity, Vec2>>,
+// ) -> Vec<(Vec2, Light)> { ... }
 
 /// Returns the interpolated draw position or the current position.
 fn interpolate_draw_position(
     entity: Entity,
-    current_pos: Vec2, 
+    current_pos: Vec2,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> Vec2 {

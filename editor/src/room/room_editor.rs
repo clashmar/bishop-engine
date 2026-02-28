@@ -36,7 +36,7 @@ impl ModeInfo for RoomEditorMode {
             RoomEditorMode::Tilemap => &GRID_ICON,
         }
     }
-    fn shortcut(self) -> Option<fn() -> bool> {
+    fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
         match self {
             RoomEditorMode::Scene => Some(Controls::s),
             RoomEditorMode::Tilemap => Some(Controls::t),
@@ -118,6 +118,7 @@ impl RoomEditor {
 
     pub async fn update(
         &mut self,
+        ctx: &mut WgpuContext,
         camera: &mut Camera2D,
         room_id: RoomId,
         ecs: &mut Ecs,
@@ -153,23 +154,23 @@ impl RoomEditor {
             .find(|r| r.id == room_id)
             .expect("Could not find room in world.");
 
-        if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
             clear_all_input_focus();
         }
 
         if !self.initialized {
-            EditorCameraController::reset_room_editor_camera(camera, room, grid_size);
+            EditorCameraController::reset_room_editor_camera(ctx, camera, room, grid_size);
             self.initialized = true;
         }
 
-        self.handle_mouse_cursor();
+        self.handle_mouse_cursor(ctx);
 
         // Click-selection
-        let mouse_screen: Vec2 = mouse_position().into();
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
 
         let mut ui_was_clicked = false;
 
-        let delta_time = get_frame_time();
+        let delta_time = ctx.get_frame_time();
 
         update_animation_sytem(
             ecs,
@@ -185,6 +186,7 @@ impl RoomEditor {
                 self.tilemap_editor.sub_mode_rect = self.sub_mode_rect;
 
                 self.tilemap_editor.update(
+                    ctx,
                     asset_manager,
                     camera,
                     room,
@@ -196,11 +198,12 @@ impl RoomEditor {
                 ).await;
             }
             RoomEditorMode::Scene => {
-                if self.ui_was_clicked() {
+                if self.ui_was_clicked(ctx) {
                     ui_was_clicked = true;
                 }
 
                 let drag_handled = self.handle_selection(
+                    ctx,
                     room.id,
                     camera,
                     ecs,
@@ -211,12 +214,12 @@ impl RoomEditor {
                 );
 
                 if !drag_handled {
-                    self.handle_keyboard_move(ecs, room.id);
+                    self.handle_keyboard_move(ctx, ecs, room.id);
                 }
 
                 // Handle batch delete when multiple entities selected
                 if self.selected_entities.len() > 1
-                    && Controls::delete()
+                    && Controls::delete(ctx)
                     && !input_is_focused()
                 {
                     let entities: Vec<Entity> = self.selected_entities.iter().copied().collect();
@@ -224,7 +227,7 @@ impl RoomEditor {
                 }
 
                 // Copy multiple selected entities
-                if Controls::copy() && self.selected_entities.len() > 1 && !input_is_focused() {
+                if Controls::copy(ctx) && self.selected_entities.len() > 1 && !input_is_focused() {
                     let entities: Vec<Entity> = self.selected_entities.iter().copied().collect();
                     copy_entities(ecs, &entities);
                 }
@@ -260,11 +263,12 @@ impl RoomEditor {
             }
         }
 
-        self.handle_shortcuts(camera, room, grid_size, ecs);
+        self.handle_shortcuts(ctx, camera, room, grid_size, ecs);
     }
 
     pub async fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         room_id: RoomId,
         game: &mut Game,
@@ -281,16 +285,17 @@ impl RoomEditor {
 
         // Panel rect for inspector and tilemap editor
         let inspector_rect = Rect::new(
-            screen_width() * 0.75,
+            ctx.screen_width() * 0.75,
             0.0,
-            screen_width() * 0.25,
-            screen_height()
+            ctx.screen_width() * 0.25,
+            ctx.screen_height()
         );
 
         match self.mode {
             RoomEditorMode::Tilemap => {
                 self.tilemap_editor.tilemap_panel.set_rect(inspector_rect);
                 self.tilemap_editor.draw(
+                    ctx,
                     camera,
                     room,
                     asset_manager,
@@ -298,13 +303,19 @@ impl RoomEditor {
                     grid_size,
                 ).await;
 
-                set_camera(camera);
+                ctx.set_camera(camera);
                 if self.show_grid {
-                    grid::draw_grid(camera, grid_size);
+                    grid::draw_grid(ctx, camera, grid_size);
                 }
             }
             RoomEditorMode::Scene => {
-                let room_camera = get_room_camera_by_id(ecs, room_id, grid_size, self.preview_camera_id);
+                let room_camera = get_room_camera_by_id(
+                    ctx, 
+                    ecs, 
+                    room_id, 
+                    grid_size, 
+                    self.preview_camera_id
+                );
 
                 let render_cam = if self.view_preview && room_camera.is_some() {
                     room_camera.as_ref().map(|c| &c.camera).unwrap_or(camera)
@@ -317,11 +328,12 @@ impl RoomEditor {
                 if self.view_preview {
                     render_system.resize_for_camera(render_cam.zoom);
                 } else {
-                    render_system.resize_to_window();
+                    render_system.resize_to_window(ctx);
                 }
 
                 // Draws everything in the room. Same implementation as the game.
                 render_room(
+                    ctx,
                     ecs,
                     room,
                     asset_manager,
@@ -333,42 +345,43 @@ impl RoomEditor {
                 );
 
                 if self.view_preview {
-                    render_system.present_game();
+                    render_system.present_game(ctx);
                 } else {
-                    render_system.present();
+                    // TODO: RE-IMPLEMENT
+                    // render_system.present(ctx);
                 }
 
                 if !self.view_preview {
-                    set_camera(camera);
+                    ctx.set_camera(camera);
 
                     if self.show_grid {
-                        grid::draw_grid(camera, grid_size);
+                        grid::draw_grid(ctx, camera, grid_size);
                     }
 
-                    draw_exit_placeholders(&room.exits, room.position, grid_size);
-                    draw_camera_placeholders(&ecs, room_id, grid_size);
-                    draw_light_placeholders(ecs, room_id, grid_size);
-                    draw_glow_placeholders(ecs, asset_manager, room_id, grid_size);
+                    draw_exit_placeholders(ctx, &room.exits, room.position, grid_size);
+                    draw_camera_placeholders(ctx, &ecs, room_id, grid_size);
+                    draw_light_placeholders(ctx, ecs, room_id, grid_size);
+                    draw_glow_placeholders(ctx, ecs, asset_manager, room_id, grid_size);
 
                     // Highlight all selected entities and draw their overlays
                     for &selected_entity in &self.selected_entities {
                         if !is_pure_placeholder(ecs, selected_entity) {
-                            highlight_selected_entity(ecs, selected_entity, asset_manager, Color::YELLOW, grid_size);
+                            highlight_selected_entity(ctx, ecs, selected_entity, asset_manager, Color::YELLOW, grid_size);
                         }
-                        self.draw_camera_viewport(camera, ecs, selected_entity, room_id);
-                        draw_pivot_marker(ecs, selected_entity);
+                        self.draw_camera_viewport(ctx, camera, ecs, selected_entity, room_id);
+                        draw_pivot_marker(ctx, ecs, selected_entity);
                     }
 
                     // Draw collider only for single selection
                     if let Some(selected_entity) = self.single_selected_entity() {
-                        draw_collider(ecs, selected_entity);
+                        draw_collider(ctx, ecs, selected_entity);
                     }
 
                     // Draw box selection rectangle
                     if self.box_select_active {
                         if let Some(start) = self.box_select_start {
-                            let mouse_world = coord::mouse_world_pos(camera);
-                            draw_selection_box(start, mouse_world);
+                            let mouse_world = coord::mouse_world_pos(ctx, camera);
+                            draw_selection_box(ctx, start, mouse_world);
                         }
                     }
                 }
@@ -377,7 +390,7 @@ impl RoomEditor {
 
         // Scene UI
         if !self.view_preview {
-            self.draw_ui(&mut game_ctx, camera);
+            self.draw_ui(ctx, &mut game_ctx, camera);
         }
     }
 

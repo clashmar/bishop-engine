@@ -11,10 +11,8 @@ use engine_core::ui::widgets::*;
 use engine_core::*;
 use engine_core::storage::path_utils::*;
 use engine_core::{constants::*, storage::path_utils::absolute_save_root};
-use macroquad::miniquad::conf::Icon;
-use macroquad::prelude::*;
-use bishop::prelude::{PlatformContext, run};
-use bishop::{BishopApp, BishopContext};
+use bishop::prelude::*;
+use bishop::BishopApp;
 
 mod editor_global;
 mod editor;
@@ -45,72 +43,71 @@ impl EditorApp {
 }
 
 impl BishopApp for EditorApp {
-    async fn frame(&mut self, ctx: &mut impl BishopContext) {
-        let cur_screen = (ctx.screen_width() as u32, ctx.screen_height() as u32);
+    async fn init(&mut self, ctx: PlatformContext) {
+        onscreen_info!("Starting editor.");
+
+        // Initialize logging
+        init_file_logger();
+
+        // Pre-cache font to avoid text rendering bugs
+        engine_core::assets::core_assets::precache_font();
+
+        if !ensure_save_root().await {
+            // User cancelled
+            onscreen_warn!("No save root selected. Exiting.");
+            std::process::exit(0);
+        }
+
+        let games_path = absolute_save_root();
+        if let Err(e) = std::fs::create_dir_all(&games_path) {
+            onscreen_warn!("Failed to create save root: {}", e);
+            std::process::exit(1);
+        }
+
+        match Editor::new(&mut *ctx.borrow_mut()).await {
+            Ok(editor) => {
+                // This allows global access to services
+                set_editor(editor);
+            }
+            Err(e) => {
+                onscreen_warn!("Failed to initialize editor: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    async fn frame(&mut self, ctx: PlatformContext) {
+        let mut ctx_ref = ctx.borrow_mut();
+        let cur_screen = (ctx_ref.screen_width() as u32, ctx_ref.screen_height() as u32);
         if cur_screen != self.current_window_size {
             with_editor(|editor| editor.render_system.resize(cur_screen.0, cur_screen.1));
             self.current_window_size = cur_screen;
         }
 
-        widgets_frame_start(ctx);
+        widgets_frame_start(&mut *ctx_ref);
 
-        with_editor_async(ctx, |editor, ctx| Box::pin(editor.update(ctx))).await;
-        with_editor_async(ctx, |editor, ctx| Box::pin(editor.draw(ctx))).await;
+        with_editor_async(&mut *ctx_ref, |editor, ctx| Box::pin(editor.update(ctx))).await;
+        with_editor_async(&mut *ctx_ref, |editor, ctx| Box::pin(editor.draw(ctx))).await;
 
-        widgets_frame_end(ctx);
+        widgets_frame_end(&mut *ctx_ref);
 
         apply_pending_commands();
     }
 }
 
-fn window_conf() -> Conf {
-    let window_width  = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
+fn main() -> Result<(), RunError> {
+    let window_width = FIXED_WINDOW_WIDTH.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
     let window_height = FIXED_WINDOW_HEIGHT.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
 
-    let icon: Icon = Icon {
-        small: *ICON_SMALL,
-        medium: *ICON_MEDIUM,
-        big: *ICON_BIG,
-    };
+    let config = WindowConfig::new("Bishop Engine")
+        .with_size(window_width as u32, window_height as u32)
+        .with_resizable(true)
+        .with_icon(WindowIcon::Rgba {
+            small: Some(IconData::new(ICON_SMALL.to_vec(), 16, 16)),
+            medium: Some(IconData::new(ICON_MEDIUM.to_vec(), 32, 32)),
+            large: Some(IconData::new(ICON_BIG.to_vec(), 64, 64)),
+        });
 
-    Conf {
-        window_title: "Bishop Engine".to_owned(),
-        window_height,
-        window_width,
-        fullscreen: false,
-        window_resizable: true,
-        icon: Some(icon),
-        ..Default::default()
-    }
-}
-
-#[macroquad::main(window_conf)]
-async fn main() -> std::io::Result<()> {
-    onscreen_info!("Starting editor.");
-
-    // Initialize logging
-    init_file_logger();
-
-    // Pre-cache font to avoid macroquad text bug
-    engine_core::assets::core_assets::precache_font();
-
-    if !ensure_save_root().await {
-        // User cancelled
-        onscreen_warn!("No save root selected. Exiting.");
-        std::process::exit(0);
-    }
-
-    let games_path = absolute_save_root();
-    std::fs::create_dir_all(&games_path)?;
-    
-    let editor = Editor::new().await?;
-
-    // This allows global access to services
-    set_editor(editor);
-
-    let mut app = EditorApp::new();
-    let mut ctx = PlatformContext::new();
-    run(&mut app, &mut ctx).await;
-
-    Ok(())
+    let app = EditorApp::new();
+    run_backend(config, app)
 }

@@ -14,6 +14,7 @@ impl RoomEditor {
     /// Handles mouse selection / movement with multi-select support.
     pub(crate) fn handle_selection(
         &mut self,
+        ctx: &WgpuContext,
         room_id: RoomId,
         camera: &Camera2D,
         ecs: &mut Ecs,
@@ -22,12 +23,12 @@ impl RoomEditor {
         ui_was_clicked: bool,
         grid_size: f32,
     ) -> bool {
-        let shift_held = is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift);
-        let mouse_world = coord::mouse_world_pos(camera);
+        let shift_held = ctx.is_key_down(KeyCode::LeftShift) || ctx.is_key_down(KeyCode::RightShift);
+        let mouse_world = coord::mouse_world_pos(ctx, camera);
 
         // Handle mouse button press
         if !ui_was_clicked
-            && is_mouse_button_pressed(MouseButton::Left)
+            && ctx.is_mouse_button_pressed(MouseButton::Left)
             && !self.dragging
             && !self.box_select_active
         {
@@ -88,7 +89,7 @@ impl RoomEditor {
                     self.drag_initial_start_positions = self.drag_start_positions.clone();
 
                     // If alt is already held, immediately enter copy mode
-                    let alt_held = is_key_down(KeyCode::LeftAlt) || is_key_down(KeyCode::RightAlt);
+                    let alt_held = ctx.is_key_down(KeyCode::LeftAlt) || ctx.is_key_down(KeyCode::RightAlt);
                     if alt_held {
                         // Store original drag state for reverting on alt release
                         self.pre_copy_drag_state = Some(PreCopyDragState {
@@ -152,7 +153,7 @@ impl RoomEditor {
 
         // Handle box selection
         if self.box_select_active {
-            if is_mouse_button_released(MouseButton::Left) {
+            if ctx.is_mouse_button_released(MouseButton::Left) {
                 // Finish box selection
                 if let Some(start) = self.box_select_start.take() {
                     let box_rect = rect_from_two_points(start, mouse_world);
@@ -182,7 +183,7 @@ impl RoomEditor {
         // Execute the drag while the button is held
         if self.dragging {
             // Check if alt was just pressed mid-drag to switch to copy mode
-            let alt_just_pressed = is_key_pressed(KeyCode::LeftAlt) || is_key_pressed(KeyCode::RightAlt);
+            let alt_just_pressed = ctx.is_key_pressed(KeyCode::LeftAlt) || ctx.is_key_pressed(KeyCode::RightAlt);
             if !self.alt_copy_mode && alt_just_pressed {
                 // Get current positions of originals
                 let current_positions: Vec<(Entity, Vec2)> = self.drag_start_positions
@@ -245,7 +246,7 @@ impl RoomEditor {
             }
 
             // Check if alt was just released mid-drag to revert copy mode
-            let alt_just_released = is_key_released(KeyCode::LeftAlt) || is_key_released(KeyCode::RightAlt);
+            let alt_just_released = ctx.is_key_released(KeyCode::LeftAlt) || ctx.is_key_released(KeyCode::RightAlt);
             if self.alt_copy_mode && alt_just_released {
                 if let Some(original_state) = self.pre_copy_drag_state.take() {
                     // Get current positions of copies before deleting them
@@ -313,7 +314,7 @@ impl RoomEditor {
                 let target_pos = mouse_world + self.drag_offset;
 
                 // Optionally snap to grid (based on anchor entity)
-                let final_target = if is_key_down(KeyCode::S) {
+                let final_target = if ctx.is_key_down(KeyCode::S) {
                     let pivot = ecs
                         .get_store::<Transform>()
                         .get(anchor_entity)
@@ -337,7 +338,7 @@ impl RoomEditor {
             }
 
             // Finish the drag when the button is released
-            if is_mouse_button_released(MouseButton::Left) {
+            if ctx.is_mouse_button_released(MouseButton::Left) {
                 if self.alt_copy_mode {
                     // Alt+drag copy: push command for the duplicated entities
                     if !self.alt_copied_entities.is_empty() {
@@ -381,6 +382,7 @@ impl RoomEditor {
     /// Moves all selected entities by one pixel using arrow keys.
     pub(crate) fn handle_keyboard_move(
         &mut self,
+        ctx: &WgpuContext,
         ecs: &mut Ecs,
         room_id: RoomId,
     ) {
@@ -391,7 +393,7 @@ impl RoomEditor {
             return;
         }
 
-        let dir = get_omni_input_pressed();
+        let dir = get_omni_input_pressed(ctx);
         if dir.length_squared() == 0.0 {
             return;
         }

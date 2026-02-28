@@ -39,12 +39,12 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub async fn new() -> io::Result<Self> {
+    pub async fn new(ctx: &mut WgpuContext) -> io::Result<Self> {
         let mut editor = Editor::default();
 
         let game = if let Some(name) = most_recent_game_name() {
             load_game_by_name(&name).await?
-        } else if let Some(name) = editor.prompt_new_game().await {
+        } else if let Some(name) = editor.prompt_new_game(ctx).await {
             create_new_game(name).await
         } else {
             // User pressed Cancel
@@ -54,7 +54,7 @@ impl Editor {
 
         // Register all panels
         with_panel_manager(|panel_manager| {
-            panel_manager.register_all_panels();
+            panel_manager.register_all_panels(ctx);
         });
 
         let palette = match load_palette(&game.name.clone()) {
@@ -66,7 +66,7 @@ impl Editor {
             }
         };
 
-        editor.game = editor.init_game_for_editor(game).await;
+        editor.game = editor.init_game_for_editor(ctx, game).await;
 
         // Give the palette to the tilemap editor
         editor.room_editor.tilemap_editor.tilemap_panel.palette = palette;
@@ -74,15 +74,15 @@ impl Editor {
         Ok(editor)
     }
 
-    pub async fn update(&mut self, ctx: &mut impl BishopContext) {
+    pub async fn update(&mut self, ctx: &mut WgpuContext) {
         if let Some(ref mut process) = self.playtest_process {
             if !process.poll() {
                 self.playtest_process = None;
             }
         }
 
-        if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui() {
-            EditorCameraController::update(&mut self.camera);
+        if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui(ctx) {
+            EditorCameraController::update(ctx, &mut self.camera);
         }
 
         match self.mode {
@@ -94,6 +94,7 @@ impl Editor {
                     &mut self.game
                 ).await {
                     self.world_editor.init_camera(
+                        ctx,
                         &mut self.camera, 
                         self.game.get_world_mut(world_id),
                     );
@@ -105,6 +106,7 @@ impl Editor {
             EditorMode::World(world_id) => {
                 // Returns the id of the room that was clicked on or None
                 if let Some(room_id) = self.world_editor.update(
+                    ctx,
                     &mut self.camera,
                     &mut self.game,
                 ).await {
@@ -116,8 +118,9 @@ impl Editor {
                 }
 
                 // Handle escape
-                if Controls::escape() && !input_is_focused() {
+                if Controls::escape(ctx) && !input_is_focused() {
                     self.game_editor.init_camera(
+                        ctx,
                         &mut self.camera,
                         &mut self.game
                     );
@@ -139,6 +142,7 @@ impl Editor {
                         .expect("Current world id not present in game.");
 
                     self.room_editor.update(
+                        ctx,
                         &mut self.camera,
                         room_id,
                         &mut self.game.ecs,
@@ -155,7 +159,7 @@ impl Editor {
                         &mut self.game.asset_manager,
                     );
 
-                    if Controls::escape() && !input_is_focused() {
+                    if Controls::escape(ctx) && !input_is_focused() {
                         let palette = &mut self.room_editor.tilemap_editor.tilemap_panel.palette;
 
                         if let Err(e) = editor_storage::save_palette(palette, &self.game.name) {
@@ -165,7 +169,12 @@ impl Editor {
                         // Find the room we just left for center_on_room
                         if let Some(room) = current_world.rooms.iter()
                             .find(|m| m.id == room_id) {
-                            self.world_editor.center_on_room(&mut self.camera, room, current_world.grid_size);
+                            self.world_editor.center_on_room(
+                                ctx,
+                                &mut self.camera, 
+                                room, 
+                                current_world.grid_size
+                            );
                         }
 
                         // Clean up
@@ -216,10 +225,10 @@ impl Editor {
             }
         }
 
-        self.handle_shortcuts().await;
+        self.handle_shortcuts(ctx).await;
     }
 
-    pub async fn draw<C: BishopContext>(&mut self, ctx: &mut C) {
+    pub async fn draw(&mut self, ctx: &mut WgpuContext) {
         match self.mode {
             EditorMode::Game => {
                 self.game_editor.draw(
@@ -235,6 +244,7 @@ impl Editor {
                 }
 
                 self.world_editor.draw(
+                    ctx,
                     world_id,
                     &self.camera, 
                     &mut self.game,
@@ -248,6 +258,7 @@ impl Editor {
 
                 self.room_editor
                     .draw(
+                        ctx,
                         &self.camera,
                         room_id,
                         &mut self.game,
@@ -258,27 +269,27 @@ impl Editor {
         }
 
         // Draw global UI here
-        self.draw_ui().await;
+        self.draw_ui(ctx).await;
     }
 
-    async fn draw_ui(&mut self) {
+    async fn draw_ui(&mut self, ctx: &mut WgpuContext) {
         if !self.room_editor.view_preview {
-            set_default_camera();
+            ctx.set_default_camera();
     
             // Draw all panels
             with_panel_manager(|panel_manager| {
-                panel_manager.update_and_draw(self.mode, self);
+                panel_manager.update_and_draw(ctx, self.mode, self);
             });
     
             // Global menu options
-            self.draw_menu_bar().await;
+            self.draw_menu_bar(ctx).await;
     
             // Draws and handles result of modal
-            if let Some(_) = self.handle_modal().await {
+            if let Some(_) = self.handle_modal(ctx).await {
                 self.modal.close();
             }
     
-            self.draw_toast();
+            self.draw_toast(ctx);
         }
     }
 }

@@ -40,13 +40,13 @@ impl Default for Editor {
 
 impl Editor {
     /// Returns `Some(name)` when the user confirms, `None` on cancel.
-    pub async fn prompt_new_game(&mut self) -> Option<String> {
-        self.open_new_game_modal();
+    pub async fn prompt_new_game(&mut self, ctx: &mut WgpuContext) -> Option<String> {
+        self.open_new_game_modal(ctx);
 
         // Wait until the user has responded
         loop {
             // Draws and handles result
-            if let Some(modal_result) = self.handle_modal().await {
+            if let Some(modal_result) = self.handle_modal(ctx).await {
                 if let ModalResult::String(name) = modal_result {
                     // Only close modal if a name is returned
                     self.modal.close();
@@ -60,13 +60,13 @@ impl Editor {
             }
 
             // Toasts can be created by the prompt
-            self.draw_toast();
+            self.draw_toast(ctx);
 
-            next_frame().await;
+            ctx.next_frame().await;
         }
     }
 
-    pub async fn draw_menu_bar(&mut self) {
+    pub async fn draw_menu_bar(&mut self, ctx: &mut WgpuContext) {
         let menu_title = match self.mode {
             EditorMode::Game => self.game.name.clone(),
             EditorMode::World(_) => self.game.current_world().name.clone(),
@@ -78,15 +78,15 @@ impl Editor {
                 .unwrap_or_else(|| "Room".to_string()),
         };
 
-        if let Some(action) = self.menu_bar.draw(&menu_title, self.mode) {
+        if let Some(action) = self.menu_bar.draw(ctx, &menu_title, self.mode) {
             match action {
                 MenuAction::Rename => {
-                    self.open_rename_modal();
+                    self.open_rename_modal(ctx);
                 }
                 MenuAction::NewGame => {
                     // Save current
                     self.save();
-                    self.open_new_game_modal();
+                    self.open_new_game_modal(ctx);
                 }
                 MenuAction::Open => {
                     // Open a folder picker rooted at the absolute save folder
@@ -103,7 +103,7 @@ impl Editor {
                                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                                         match load_game_by_name(name).await {
                                             Ok(game) => {
-                                                self.reset(game).await;
+                                                self.reset(ctx, game).await;
                                                 self.toast = Some(Toast::new(
                                                     &format!("Loaded '{}'", name),
                                                     2.5,
@@ -134,7 +134,7 @@ impl Editor {
                     }
                 }
                 MenuAction::Save => self.save(),
-                MenuAction::SaveAs => self.open_save_as_modal(),
+                MenuAction::SaveAs => self.open_save_as_modal(ctx),
                 MenuAction::Undo => crate::editor_global::request_undo(),
                 MenuAction::Redo => crate::editor_global::request_redo(),
                 MenuAction::Export => match export_game(&self.game).await {
@@ -173,34 +173,34 @@ impl Editor {
                     });
                 }
                 MenuAction::WorldSettings => {
-                    self.open_world_settings_modal();
+                    self.open_world_settings_modal(ctx);
                 }
             }
         }
     }
 
-    pub async fn handle_shortcuts(&mut self) {
-        if Controls::save() {
+    pub async fn handle_shortcuts(&mut self, ctx: &mut WgpuContext) {
+        if Controls::save(ctx) {
             self.save();
         }
 
-        if Controls::save_as() {
-            self.open_save_as_modal();
+        if Controls::save_as(ctx) {
+            self.open_save_as_modal(ctx);
         }
 
-        if Controls::undo() {
+        if Controls::undo(ctx) {
             crate::editor_global::request_undo();
         }
 
-        if Controls::redo() {
+        if Controls::redo(ctx) {
             crate::editor_global::request_redo();
         }
 
-        if Controls::c() && !input_is_focused() {
+        if Controls::c(ctx) && !input_is_focused() {
             with_panel_manager(|pm| pm.toggle(CONSOLE_PANEL));
         }
 
-        if Controls::f3() && !input_is_focused() {
+        if Controls::f3(ctx) && !input_is_focused() {
             with_panel_manager(|pm| pm.toggle(DIAGNOSTICS_PANEL));
         }
     }
@@ -222,12 +222,12 @@ impl Editor {
             .expect("Could not find room from id.")
     }
 
-    fn open_new_game_modal(&mut self) {
+    fn open_new_game_modal(&mut self, ctx: &mut WgpuContext) {
         let prompt_message = "Enter game name:";
-        let mut prompt = self.set_prompt_modal(prompt_message);
+        let mut prompt = self.set_prompt_modal(ctx, prompt_message);
 
-        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
-            if let Some(result) = prompt.draw() {
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |ctx, _asset_manager| {
+            if let Some(result) = prompt.draw(ctx) {
                 // Write the result to the static thread local
                 NEW_GAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
             }
@@ -236,17 +236,17 @@ impl Editor {
         self.modal.open(widgets);
     }
 
-    fn open_rename_modal(&mut self) {
+    fn open_rename_modal(&mut self, ctx: &mut WgpuContext) {
         let prompt_message = match self.mode {
             EditorMode::Game => "Rename game: ",
             EditorMode::World(_) => "Rename world: ",
             EditorMode::Room(_) => "Rename room: ",
         };
 
-        let mut prompt = self.set_prompt_modal(prompt_message);
+        let mut prompt = self.set_prompt_modal(ctx, prompt_message);
 
-        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
-            if let Some(result) = prompt.draw() {
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |ctx, _| {
+            if let Some(result) = prompt.draw(ctx) {
                 // Write the result to the static thread local
                 RENAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
             }
@@ -255,12 +255,12 @@ impl Editor {
         self.modal.open(widgets);
     }
 
-    fn open_save_as_modal(&mut self) {
+    fn open_save_as_modal(&mut self, ctx: &mut WgpuContext) {
         let prompt_message = "Save as:";
-        let mut prompt = self.set_prompt_modal(prompt_message);
+        let mut prompt = self.set_prompt_modal(ctx, prompt_message);
 
-        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
-            if let Some(result) = prompt.draw() {
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |ctx, _| {
+            if let Some(result) = prompt.draw(ctx) {
                 // Write the result to the static thread local
                 SAVE_AS_PROMPT_RESULT.with(|c| *c.borrow_mut() = Some(result));
             }
@@ -269,13 +269,13 @@ impl Editor {
         self.modal.open(widgets);
     }
 
-    fn set_prompt_modal(&mut self, prompt_message: &str) -> StringPrompt {
-        self.modal = Modal::new(400.0, 180.0);
+    fn set_prompt_modal(&mut self, ctx: &mut WgpuContext, prompt_message: &str) -> StringPrompt {
+        self.modal = Modal::new(ctx, 400.0, 180.0);
         StringPrompt::new(self.modal.rect, prompt_message)
     }
 
-    fn open_world_settings_modal(&mut self) {
-        self.modal = Modal::new(300.0, 150.0);
+    fn open_world_settings_modal(&mut self, ctx: &mut WgpuContext) {
+        self.modal = Modal::new(ctx, 300.0, 150.0);
         let world = self.game.current_world();
         let world_id = world.id;
         let grid_size = world.grid_size;
@@ -287,8 +287,8 @@ impl Editor {
             grid_size,
         );
 
-        let widgets: Vec<BoxedWidget> = vec![Box::new(move |_| {
-            if let Some(result) = prompt.draw() {
+        let widgets: Vec<BoxedWidget> = vec![Box::new(move |ctx, _| {
+            if let Some(result) = prompt.draw(ctx) {
                 WORLD_SETTINGS_RESULT.with(|c| *c.borrow_mut() = Some(result));
             }
         })];
@@ -296,10 +296,10 @@ impl Editor {
         self.modal.open(widgets);
     }
 
-    pub async fn handle_modal(&mut self) -> Option<ModalResult> {
+    pub async fn handle_modal(&mut self, ctx: &mut WgpuContext) -> Option<ModalResult> {
         if self.modal.is_open() {
             // Outside‑click handling
-            if self.modal.draw(&mut self.game.asset_manager) {
+            if self.modal.draw(ctx, &mut self.game.asset_manager) {
                 // Clear any pending results
                 NEW_GAME_PROMPT_RESULT.with(|c| *c.borrow_mut() = None);
                 return Some(ModalResult::ClickedOutside);
@@ -321,7 +321,7 @@ impl Editor {
                             }
                             // Create the new game
                             let new_game = create_new_game(name.clone()).await;
-                            self.reset(new_game).await;
+                            self.reset(ctx, new_game).await;
                             self.modal.close();
                             return Some(ModalResult::String(name));
                         }
@@ -409,23 +409,23 @@ impl Editor {
     }
 
     // Updates and draws the toast to the screen.
-    pub fn draw_toast(&mut self) {
+    pub fn draw_toast(&mut self, ctx: &mut WgpuContext) {
         if let Some(toast) = &mut self.toast {
-            toast.update();
+            toast.update(ctx);
             if !toast.active {
                 self.toast = None;
             }
         }
     }
 
-    pub async fn reset(&mut self, game: Game) {
+    pub async fn reset(&mut self, ctx: &WgpuContext, game: Game) {
         // Update global game name for file system
         set_game_name(game.name.clone());
 
         // Resets the global services (command queue, clipboard etc)
         reset_services();
 
-        let game = self.init_game_for_editor(game).await;
+        let game = self.init_game_for_editor(ctx, game).await;
 
         *self = Self {
             game: game,
@@ -434,12 +434,12 @@ impl Editor {
         };
 
         // Render system always needs a resize after switch
-        let cur_screen = (screen_width() as u32, screen_height() as u32);
+        let cur_screen = (ctx.screen_width() as u32, ctx.screen_height() as u32);
         self.render_system.resize(cur_screen.0, cur_screen.1)
     }
 
     // Returns an initialized game for the editor.
-    pub async fn init_game_for_editor(&mut self, game: Game) -> Game {
+    pub async fn init_game_for_editor(&mut self, ctx: &WgpuContext, game: Game) -> Game {
         let mut game = with_lua_async(|lua| {
             Box::pin(async move {
                 let mut game = game;
@@ -448,7 +448,7 @@ impl Editor {
             })
         }).await;
 
-        self.game_editor.init_camera(&mut self.camera, &mut game);
+        self.game_editor.init_camera(ctx, &mut self.camera, &mut game);
 
         game
     }

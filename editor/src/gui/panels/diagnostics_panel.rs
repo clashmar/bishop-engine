@@ -88,18 +88,32 @@ impl DiagnosticsPanel {
         y >= top && y <= bottom
     }
 
-    fn draw_section_header(&self, label: &str, y: f32, rect: &Rect) -> f32 {
+    fn draw_section_header(
+        &self, 
+        ctx: &mut WgpuContext,
+        label: &str, 
+        y: f32, 
+        rect: &Rect
+    ) -> f32 {
         if self.is_visible(y, rect) {
-            draw_text_ui(label, rect.x + LEFT_PADDING, y + HEADER_FONT_SIZE, HEADER_FONT_SIZE, Color::YELLOW);
+            ctx.draw_text(label, rect.x + LEFT_PADDING, y + HEADER_FONT_SIZE, HEADER_FONT_SIZE, Color::YELLOW);
         }
         y + ROW_HEIGHT + 4.0
     }
 
-    fn draw_row(&self, label: &str, value: &str, y: f32, rect: &Rect, color: Color) -> f32 {
+    fn draw_row(
+        &self, 
+        ctx: &mut WgpuContext,
+        label: &str, 
+        value: &str, 
+        y: f32, 
+        rect: &Rect, 
+        color: Color
+    ) -> f32 {
         if self.is_visible(y, rect) {
-            draw_text_ui(label, rect.x + LEFT_PADDING + 8.0, y + FONT_SIZE, FONT_SIZE, Color::GREY);
+            ctx.draw_text(label, rect.x + LEFT_PADDING + 8.0, y + FONT_SIZE, FONT_SIZE, Color::GREY);
             let value_x = rect.x + rect.w * 0.55;
-            draw_text_ui(value, value_x, y + FONT_SIZE, FONT_SIZE, color);
+            ctx.draw_text(value, value_x, y + FONT_SIZE, FONT_SIZE, color);
         }
         y + ROW_HEIGHT
     }
@@ -122,13 +136,19 @@ impl PanelDefinition for DiagnosticsPanel {
         DIAGNOSTICS_PANEL
     }
 
-    fn default_rect(&self) -> Rect {
-        Rect::new(screen_width() - 280., 60., 260., 360.)
+    fn default_rect(&self, ctx: &WgpuContext,) -> Rect {
+        Rect::new(ctx.screen_width() - 280., 60., 260., 360.)
     }
 
-    fn draw(&mut self, rect: Rect, editor: &mut Editor, blocked: bool) {
-        let mouse: Vec2 = mouse_position().into();
-        let dt = get_frame_time();
+    fn draw(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        rect: Rect, 
+        editor: &mut Editor, 
+        blocked: bool
+    ) {
+        let mouse: Vec2 = ctx.mouse_position().into();
+        let dt = ctx.get_frame_time();
 
         // Update frame timing continuously
         self.collector.record_frame(dt);
@@ -142,7 +162,7 @@ impl PanelDefinition for DiagnosticsPanel {
 
         // Scroll input
         if !blocked && rect.contains(mouse) {
-            let (_, wheel_y) = mouse_wheel();
+            let (_, wheel_y) = ctx.mouse_wheel();
             self.scroll_y += wheel_y * SCROLL_SPEED;
         }
 
@@ -185,52 +205,52 @@ impl PanelDefinition for DiagnosticsPanel {
         let mut y = rect.y + self.scroll_y + TOP_PADDING;
 
         // Warnings section
-        y = self.draw_section_header("Warnings", y, &rect);
+        y = self.draw_section_header(ctx, "Warnings", y, &rect);
         if warnings.is_empty() {
-            y = self.draw_row("Status", "OK", y, &rect, Color::GREEN);
+            y = self.draw_row(ctx, "Status", "OK", y, &rect, Color::GREEN);
         } else {
             for warning in &warnings {
-                y = self.draw_row("!", &warning.description(), y, &rect, Color::RED);
+                y = self.draw_row(ctx, "!", &warning.description(), y, &rect, Color::RED);
             }
         }
         y += SECTION_SPACING;
 
         // Performance section
-        y = self.draw_section_header("Performance", y, &rect);
+        y = self.draw_section_header(ctx, "Performance", y, &rect);
         let fps = snapshot.frame.fps;
-        y = self.draw_row("FPS", &format!("{:.1}", fps), y, &rect, Self::fps_color(fps));
-        y = self.draw_row("Avg", &format!("{:.2} ms", snapshot.frame.avg_frame_time_ms), y, &rect, Color::WHITE);
-        y = self.draw_row("Min", &format!("{:.2} ms", snapshot.frame.min_frame_time_ms), y, &rect, Color::WHITE);
-        y = self.draw_row("Max", &format!("{:.2} ms", snapshot.frame.max_frame_time_ms), y, &rect, Color::WHITE);
-        y = self.draw_row("Render", &format!("{:.2} ms", editor.render_system.render_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "FPS", &format!("{:.1}", fps), y, &rect, Self::fps_color(fps));
+        y = self.draw_row(ctx, "Avg", &format!("{:.2} ms", snapshot.frame.avg_frame_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Min", &format!("{:.2} ms", snapshot.frame.min_frame_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Max", &format!("{:.2} ms", snapshot.frame.max_frame_time_ms), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Render", &format!("{:.2} ms", editor.render_system.render_time_ms), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Assets section
-        y = self.draw_section_header("Assets", y, &rect);
-        y = self.draw_row("Textures", &snapshot.assets.texture_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Tile Defs", &snapshot.assets.tile_def_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Sprite IDs", &snapshot.assets.sprite_id_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_section_header(ctx, "Assets", y, &rect);
+        y = self.draw_row(ctx, "Textures", &snapshot.assets.texture_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Tile Defs", &snapshot.assets.tile_def_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Sprite IDs", &snapshot.assets.sprite_id_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Scripts section
-        y = self.draw_section_header("Scripts", y, &rect);
-        y = self.draw_row("Script IDs", &snapshot.assets.script_id_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Loaded", &snapshot.scripts.loaded_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Instances", &snapshot.scripts.instance_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Listeners", &snapshot.scripts.event_listener_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_section_header(ctx, "Scripts", y, &rect);
+        y = self.draw_row(ctx, "Script IDs", &snapshot.assets.script_id_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Loaded", &snapshot.scripts.loaded_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Instances", &snapshot.scripts.instance_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Listeners", &snapshot.scripts.event_listener_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // ECS section
-        y = self.draw_section_header("ECS", y, &rect);
-        y = self.draw_row("Entities", &snapshot.ecs.entity_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Component Stores", &snapshot.ecs.component_store_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_section_header(ctx, "ECS", y, &rect);
+        y = self.draw_row(ctx, "Entities", &snapshot.ecs.entity_count.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Component Stores", &snapshot.ecs.component_store_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Undo/Redo section
-        y = self.draw_section_header("Undo/Redo", y, &rect);
-        y = self.draw_row("Undo Stack", &snapshot.commands.undo_stack_size.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row("Redo Stack", &snapshot.commands.redo_stack_size.to_string(), y, &rect, Color::WHITE);
-        let _ = self.draw_row("Pending", &snapshot.commands.pending_size.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_section_header(ctx, "Undo/Redo", y, &rect);
+        y = self.draw_row(ctx, "Undo Stack", &snapshot.commands.undo_stack_size.to_string(), y, &rect, Color::WHITE);
+        y = self.draw_row(ctx, "Redo Stack", &snapshot.commands.redo_stack_size.to_string(), y, &rect, Color::WHITE);
+        let _ = self.draw_row(ctx, "Pending", &snapshot.commands.pending_size.to_string(), y, &rect, Color::WHITE);
 
         // Scrollbar
         if scroll_range > 0.0 {
@@ -240,8 +260,8 @@ impl PanelDefinition for DiagnosticsPanel {
             let bar_x = rect.x + rect.w - SCROLLBAR_W - 2.0;
             let bar_y = rect.y + t * (rect.h - bar_h);
 
-            draw_rectangle(bar_x, rect.y, SCROLLBAR_W, rect.h, Color::new(0.15, 0.15, 0.15, 0.6));
-            draw_rectangle(bar_x, bar_y, SCROLLBAR_W, bar_h, Color::new(0.7, 0.7, 0.7, 0.9));
+            ctx.draw_rectangle(bar_x, rect.y, SCROLLBAR_W, rect.h, Color::new(0.15, 0.15, 0.15, 0.6));
+            ctx.draw_rectangle(bar_x, bar_y, SCROLLBAR_W, bar_h, Color::new(0.7, 0.7, 0.7, 0.9));
         }
     }
 }

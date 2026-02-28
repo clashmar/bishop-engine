@@ -17,6 +17,7 @@ impl InspectorModule for PlayerModule {
 
     fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         _blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
@@ -25,9 +26,9 @@ impl InspectorModule for PlayerModule {
         let ecs = &game_ctx.ecs;
 
         if ecs.has::<Player>(entity) {
-            draw_text_ui("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
+            ctx.draw_text("Player Entity", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         } else if ecs.has::<PlayerProxy>(entity) {
-            draw_text_ui("Player Proxy", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
+            ctx.draw_text("Player Proxy", rect.x, rect.y + 20.0, 18.0, FIELD_TEXT_COLOR);
         }
     }
 

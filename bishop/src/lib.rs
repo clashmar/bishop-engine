@@ -1,18 +1,14 @@
 //! Bishop - Backend abstraction traits for the bishop-engine.
 //!
 //! This crate provides trait abstractions for input, drawing, and text rendering
-//! that can be implemented by different backends (macroquad, winit+wgpu, etc.).
+//! that can be implemented by different backends (winit+wgpu, console, etc.).
 //!
 //! # Backend Support
 //!
 //! The `BishopContext` trait can be implemented for any backend:
-//! - Graphics backends (macroquad, wgpu) implement full rendering
+//! - Graphics backends (wgpu) implement full rendering
 //! - Console backends can implement with text-based or stub graphics
 //! - Headless backends can implement with no-op rendering for testing
-//!
-//! # Features
-//!
-//! - `macroquad` (default): Enables the macroquad backend implementation.
 //!
 //! # Example
 //!
@@ -40,12 +36,6 @@ pub mod time;
 pub mod types;
 pub mod window;
 
-#[cfg(feature = "macroquad")]
-pub mod macroquad;
-
-#[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
-pub mod macroquad_backend;
-
 #[cfg(feature = "wgpu")]
 pub mod wgpu;
 
@@ -57,8 +47,8 @@ pub use time::*;
 pub use types::*;
 pub use window::*;
 
-#[cfg(feature = "macroquad")]
-pub use macroquad::MacroquadContext;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[cfg(feature = "wgpu")]
 pub use wgpu::WgpuContext;
@@ -70,22 +60,15 @@ impl<T: Input + Draw + Text + Camera + Window + Time> BishopContext for T {}
 
 /// Trait for applications that can be run by bishop.
 pub trait BishopApp {
-    /// Called once per frame. The app handles its own update/render logic.
-    fn frame(&mut self, ctx: &mut impl BishopContext) -> impl std::future::Future<Output = ()>;
-}
-
-/// Runs the main loop for a BishopApp using macroquad.
-#[cfg(feature = "macroquad")]
-pub async fn run<A, C>(app: &mut A, ctx: &mut C)
-where
-    A: BishopApp,
-    C: BishopContext,
-{
-    loop {
-        ctx.update();
-        app.frame(ctx).await;
-        ::macroquad::prelude::next_frame().await;
+    /// Called once after the backend is ready but before the main loop.
+    /// Use for async initialization (loading assets, setting up state, etc.).
+    /// Default implementation is a no-op.
+    fn init(&mut self, _ctx: PlatformContext) -> impl std::future::Future<Output = ()> {
+        async {}
     }
+
+    /// Called once per frame. The app handles its own update/render logic.
+    fn frame(&mut self, ctx: PlatformContext) -> impl std::future::Future<Output = ()>;
 }
 
 /// Error type for the wgpu run function.
@@ -131,20 +114,48 @@ pub fn run_wgpu<A: BishopApp + 'static>(
     Ok(())
 }
 
+/// Runs a BishopApp with the appropriate backend for the current platform.
+///
+/// This is the main entry point for running bishop applications. It automatically
+/// selects and runs the correct backend based on enabled features:
+/// - `wgpu`: Uses the native wgpu/winit backend (desktop platforms)
+///
+/// # Example
+///
+/// ```ignore
+/// use bishop::prelude::*;
+///
+/// struct MyApp;
+///
+/// impl BishopApp for MyApp {
+///     async fn frame(&mut self, ctx: &mut impl BishopContext) {
+///         // Game logic here
+///     }
+/// }
+///
+/// fn main() -> Result<(), RunError> {
+///     let config = WindowConfig::new("My Game").with_size(800, 600);
+///     run_backend(config, MyApp)
+/// }
+/// ```
+#[cfg(feature = "wgpu")]
+pub fn run_backend<A: BishopApp + 'static>(
+    config: window::WindowConfig,
+    app: A,
+) -> Result<(), RunError> {
+    run_wgpu(config, app)
+}
+
 /// The context type for the active graphics backend.
 ///
 /// This is a type alias that resolves to:
-/// - `MacroquadContext` when the `macroquad` feature is enabled (default)
-/// - `WgpuContext` when the `wgpu` feature is enabled
+/// - `Rc<RefCell<WgpuContext>>` when the `wgpu` feature is enabled
 ///
 /// Use this at application entry points (main.rs) to create the context.
 /// For function parameters, prefer `impl BishopContext` for flexibility.
-/// When wgpu is enabled, it takes priority over macroquad.
 #[cfg(feature = "wgpu")]
-pub type PlatformContext = wgpu::WgpuContext;
+pub type PlatformContext = Rc<RefCell<wgpu::WgpuContext>>;
 
-#[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
-pub type PlatformContext = macroquad::MacroquadContext;
 
 /// Prelude module for convenient glob imports.
 ///
@@ -166,22 +177,9 @@ pub mod prelude {
     pub use crate::BishopContext;
     pub use glam::{Vec2, Vec3, vec4};
 
-    #[cfg(feature = "macroquad")]
-    pub use crate::run;
-
-    #[cfg(feature = "macroquad")]
-    pub use crate::macroquad::MacroquadContext;
-
-    // Export backend-specific free functions
-    #[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
-    pub use crate::macroquad_backend::*;
-
     #[cfg(feature = "wgpu")]
     pub use crate::wgpu::{empty_texture, load_texture, WgpuContext};
 
     #[cfg(feature = "wgpu")]
-    pub use crate::{run_wgpu, RunError};
-
-    #[cfg(any(feature = "macroquad", feature = "wgpu"))]
-    pub use crate::PlatformContext;
+    pub use crate::{run_backend, run_wgpu, PlatformContext, RunError};
 }

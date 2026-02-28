@@ -1,7 +1,7 @@
 //! 2D camera for controlling the viewport.
 
 use glam::{Mat4, Vec2, vec2, vec3};
-use crate::types::Rect;
+use crate::{types::Rect, wgpu::BishopRenderTarget};
 
 /// 2D camera for controlling the viewport.
 #[derive(Clone, Debug)]
@@ -14,9 +14,7 @@ pub struct Camera2D {
     pub rotation: f32,
     /// Offset from the target in screen space.
     pub offset: Vec2,
-    /// Optional render target for off-screen rendering.
-    #[cfg(feature = "macroquad")]
-    pub render_target: Option<crate::material::RenderTarget>,
+    pub render_target: Option<BishopRenderTarget>,
     pub viewport: Option<(i32, i32, i32, i32)>,
 }
 
@@ -27,7 +25,6 @@ impl Default for Camera2D {
             zoom: Vec2::ONE,
             rotation: 0.0,
             offset: Vec2::ZERO,
-            #[cfg(feature = "macroquad")]
             render_target: None,
             viewport: None,
         }
@@ -52,16 +49,8 @@ impl Camera2D {
     }
 
     /// Returns the world space position for a 2d camera screen space position.
+    /// Note: Screen dimensions default to 0,0 - this method is typically called through the context.
     pub fn screen_to_world(&self, point: Vec2) -> Vec2 {
-        #[cfg(all(feature = "macroquad", not(feature = "wgpu")))]
-        let (screen_w, screen_h) = (
-            crate::macroquad_backend::screen_width(),
-            crate::macroquad_backend::screen_height(),
-        );
-
-        // For wgpu, screen dimensions should be passed via context.
-        // This fallback uses 0,0 but screen_to_world is typically called through the context.
-        #[cfg(feature = "wgpu")]
         let (screen_w, screen_h) = (0.0, 0.0);
 
         let dims = self
@@ -92,16 +81,7 @@ impl Camera2D {
     fn matrix(&self) -> Mat4 {
         let mat_origin = Mat4::from_translation(vec3(-self.target.x, -self.target.y, 0.0));
         let mat_rotation = Mat4::from_axis_angle(vec3(0.0, 0.0, 1.0), self.rotation.to_radians());
-        #[cfg(feature = "macroquad")]
-        let invert_y = if self.render_target.is_some() {
-            1.0
-        } else {
-            -1.0
-        };
-        
-        #[cfg(not(feature = "macroquad"))]
         let invert_y = -1.0;
-
         let mat_scale = Mat4::from_scale(vec3(self.zoom.x, self.zoom.y * invert_y, 1.0));
         let mat_translation = Mat4::from_translation(vec3(self.offset.x, self.offset.y, 0.0));
 

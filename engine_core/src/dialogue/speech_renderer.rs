@@ -78,7 +78,8 @@ pub fn collect_speech_bubbles(
 
 /// Renders speech bubbles in screen space for crisp text.
 /// Call this AFTER present_game() with the render camera used for the room.
-pub fn render_speech_bubbles(
+pub fn render_speech_bubbles<C: BishopContext>(
+    ctx: &mut C,
     bubbles: &[SpeechBubbleRenderData],
     config: &DialogueConfig,
     render_cam: &Camera2D,
@@ -86,8 +87,8 @@ pub fn render_speech_bubbles(
 ) {
     let virt_w = world_virtual_width(grid_size);
     let virt_h = world_virtual_height(grid_size);
-    let win_w = screen_width();
-    let win_h = screen_height();
+    let win_w = ctx.screen_width();
+    let win_h = ctx.screen_height();
 
     let scale_w = win_w / virt_w;
     let scaled_h = virt_h * scale_w;
@@ -101,12 +102,23 @@ pub fn render_speech_bubbles(
     };
 
     for bubble in bubbles {
-        render_bubble_screen_space(bubble, config, render_cam, virt_w, virt_h, scale, offset_x, offset_y);
+        render_bubble_screen_space(
+            ctx,
+            bubble, 
+            config, 
+            render_cam, 
+            virt_w, 
+            virt_h, 
+            scale, 
+            offset_x, 
+            offset_y
+        );
     }
 }
 
 /// Renders a single speech bubble in screen space.
-fn render_bubble_screen_space(
+fn render_bubble_screen_space<C: BishopContext>(
+    ctx: &mut C,
     bubble: &SpeechBubbleRenderData,
     config: &DialogueConfig,
     render_cam: &Camera2D,
@@ -120,7 +132,7 @@ fn render_bubble_screen_space(
     let max_width = bubble.max_width.unwrap_or(config.max_width) * scale;
     let padding = config.padding * scale;
 
-    let lines = wrap_text(&bubble.text, max_width, font_size);
+    let lines = wrap_text(ctx, &bubble.text, max_width, font_size);
     if lines.is_empty() {
         return;
     }
@@ -130,7 +142,7 @@ fn render_bubble_screen_space(
 
     let max_line_width = lines
         .iter()
-        .map(|line| measure_text_ui(line, font_size, 1.0).width)
+        .map(|line| measure_text_ui(ctx, line, font_size).width)
         .fold(0.0_f32, f32::max);
 
     let bubble_width = max_line_width + padding * 2.0;
@@ -162,7 +174,7 @@ fn render_bubble_screen_space(
             bubble.background_color[2],
             bubble.background_color[3],
         );
-        draw_rectangle(bubble_x, bubble_y, bubble_width, bubble_height, bg_color);
+        ctx.draw_rectangle(bubble_x, bubble_y, bubble_width, bubble_height, bg_color);
     }
 
     let text_color = Color::new(
@@ -173,16 +185,21 @@ fn render_bubble_screen_space(
     );
 
     for (i, line) in lines.iter().enumerate() {
-        let line_width = measure_text_ui(line, font_size, 1.0).width;
+        let line_width = measure_text_ui(ctx, line, font_size).width;
         let text_x = bubble_x + (bubble_width - line_width) / 2.0;
         let text_y = bubble_y + padding + (i as f32 + 1.0) * line_height - line_height * 0.2;
 
-        draw_text_ui(line, text_x, text_y, font_size, text_color);
+        ctx.draw_text(line, text_x, text_y, font_size, text_color);
     }
 }
 
 /// Wraps text to fit within a maximum width.
-fn wrap_text(text: &str, max_width: f32, font_size: f32) -> Vec<String> {
+fn wrap_text<C: BishopContext>(
+    ctx: &mut C,
+    text: &str, 
+    max_width: f32, 
+    font_size: f32
+) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current_line = String::new();
 
@@ -193,7 +210,7 @@ fn wrap_text(text: &str, max_width: f32, font_size: f32) -> Vec<String> {
             format!("{} {}", current_line, word)
         };
 
-        let test_width = measure_text_ui(&test_line, font_size, 1.0).width;
+        let test_width = measure_text_ui(ctx, &test_line, font_size).width;
 
         if test_width <= max_width || current_line.is_empty() {
             current_line = test_line;
