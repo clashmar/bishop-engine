@@ -220,6 +220,10 @@ impl Time for WgpuContext {
         self.time.frame_time()
     }
 
+    fn get_frame_spike_ms(&self) -> f32 {
+        self.time.frame_spike_ms()
+    }
+
     fn update(&mut self) {
         self.input.end_frame();
     }

@@ -9,7 +9,10 @@ use bishop::prelude::*;
 use bishop::BishopApp;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::Instant;
 use mlua::Lua;
+
+const SECTION_SPIKE_THRESHOLD_MS: f32 = 1.0;
 
 pub struct Engine {
     /// Handle for the game.
@@ -33,6 +36,10 @@ pub struct Engine {
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let dt = ctx.borrow().get_frame_time();
+        let spike = ctx.borrow().get_frame_spike_ms();
+        if spike > 0.0 {
+            // onscreen_debug!("Frame spike: {:.1}ms", spike);
+        }
 
         self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
 
@@ -41,19 +48,35 @@ impl BishopApp for Engine {
             self.diagnostics.handle_input(&mut *ctx.borrow_mut());
         }
 
+        let t0 = Instant::now();
         while self.accumulator >= FIXED_DT {
             self.accumulator -= FIXED_DT;
             self.fixed_update(&mut *ctx.borrow_mut(), FIXED_DT);
         }
+        let physics_ms = t0.elapsed().as_secs_f32() * 1000.0;
 
+        let t1 = Instant::now();
         self.update_async(dt).await;
+        let update_ms = t1.elapsed().as_secs_f32() * 1000.0;
 
         if self.is_playtest {
             self.update_diagnostics_metrics();
         }
 
+        let t2 = Instant::now();
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
         self.render(&mut *ctx.borrow_mut(), alpha);
+        let render_ms = t2.elapsed().as_secs_f32() * 1000.0;
+
+        if physics_ms > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("  physics: {:.1}ms", physics_ms);
+        }
+        if update_ms > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("  update: {:.1}ms", update_ms);
+        }
+        if render_ms > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("  render: {:.1}ms", render_ms);
+        }
     }
 }
 
@@ -80,7 +103,7 @@ impl Engine {
     }
 
     pub fn fixed_update<C: BishopContext>(
-        &mut self, 
+        &mut self,
         ctx: &mut C,
         dt: f32
     ) {
@@ -97,23 +120,36 @@ impl Engine {
 
         let grid_size = game_ctx.cur_world.grid_size;
 
+        let t0 = Instant::now();
         update_physics(
-            asset_manager, 
-            ecs, 
-            current_room, 
-            dt, 
+            asset_manager,
+            ecs,
+            current_room,
+            dt,
             grid_size
         );
+        let t_phys = t0.elapsed().as_secs_f32() * 1000.0;
 
+        let t1 = Instant::now();
         self.camera_manager.update_active(
-            ctx, 
-            ecs, 
-            current_room, 
+            ctx,
+            ecs,
+            current_room,
             game_ctx.cur_world.grid_size
         );
+        let t_cam = t1.elapsed().as_secs_f32() * 1000.0;
+
+        if t_phys > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("    phys_calc: {:.1}ms", t_phys);
+        }
+        if t_cam > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("    camera: {:.1}ms", t_cam);
+        }
     }
 
     pub async fn update_async(&mut self, dt: f32) {
+        let t_anim;
+        let t_load;
         {
             // Keep borrow_mut in this scope
             let mut game_state = self.game_state.borrow_mut();
@@ -124,20 +160,36 @@ impl Engine {
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
 
+            let t0 = Instant::now();
             if let Some(current_room) = game_ctx.cur_world.current_room() {
                 update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
             }
+            t_anim = t0.elapsed().as_secs_f32() * 1000.0;
 
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
+            let t1 = Instant::now();
             let ctx = game_state.game.ctx_mut();
             if let Err(e) = ScriptSystem::load_scripts(&self.lua, ctx.ecs, ctx.script_manager) {
                 onscreen_error!("Error loading scripts: {}", e);
             }
+            t_load = t1.elapsed().as_secs_f32() * 1000.0;
         }
 
         // Run scripts outside borrow_mut scope
+        let t2 = Instant::now();
         if let Err(e) = ScriptSystem::run_scripts(dt, self) {
             onscreen_error!("Error running scripts: {}", e);
+        }
+        let t_run = t2.elapsed().as_secs_f32() * 1000.0;
+
+        if t_anim > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("    anim: {:.1}ms", t_anim);
+        }
+        if t_load > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("    load_scripts: {:.1}ms", t_load);
+        }
+        if t_run > SECTION_SPIKE_THRESHOLD_MS {
+            onscreen_debug!("    run_scripts: {:.1}ms", t_run);
         }
     }
 
