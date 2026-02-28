@@ -29,16 +29,17 @@ impl TileMap {
     }
 
     /// Draw the tilemap.
-    pub fn draw(
+    pub fn draw<C: BishopContext>(
         &self,
+        ctx: &mut C,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
         grid_size: f32,
     ) {
-        clear_background(Color::RED);
+        ctx.clear_background(Color::RED);
 
         // Background
-        draw_rectangle(
+        ctx.draw_rectangle(
             room_position.x,
             room_position.y,
             self.width as f32 * grid_size,
@@ -51,7 +52,7 @@ impl TileMap {
 
             if let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) {
                 let tex = asset_manager.get_texture_from_id(tile_def.sprite_id);
-                draw_texture_ex(
+                ctx.draw_texture_ex(
                     tex,
                     tile_pos.x,
                     tile_pos.y,

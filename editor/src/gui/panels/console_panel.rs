@@ -63,7 +63,12 @@ impl ConsolePanel {
     }
 
     /// Wraps text to fit within the given pixel width.
-    fn wrap_text(text: &str, max_width: f32, font_size: f32) -> Vec<String> {
+    fn wrap_text(
+        ctx: &WgpuContext, 
+        text: &str, 
+        max_width: f32, 
+        font_size: f32
+    ) -> Vec<String> {
         if text.is_empty() {
             return vec![String::new()];
         }
@@ -76,7 +81,7 @@ impl ConsolePanel {
         let tokens = Self::tokenize_for_wrap(text);
 
         for token in tokens {
-            let token_width = measure_text_ui(&token, font_size, 1.0).width;
+            let token_width = measure_text_ui(ctx, &token, font_size).width;
 
             // If this token alone exceeds max_width, break it character by character
             if token_width > max_width {
@@ -90,7 +95,7 @@ impl ConsolePanel {
                 // Break the long token character by character
                 for c in token.chars() {
                     let char_str = c.to_string();
-                    let char_width = measure_text_ui(&char_str, font_size, 1.0).width;
+                    let char_width = measure_text_ui(ctx, &char_str, font_size).width;
 
                     if current_width + char_width > max_width && !current_line.is_empty() {
                         lines.push(current_line);
@@ -109,7 +114,7 @@ impl ConsolePanel {
                 // Skip leading whitespace on new lines
                 let trimmed = token.trim_start();
                 current_line = trimmed.to_string();
-                current_width = measure_text_ui(&current_line, font_size, 1.0).width;
+                current_width = measure_text_ui(ctx, &current_line, font_size).width;
             } else {
                 // Token fits, append it
                 current_line.push_str(&token);
@@ -169,6 +174,7 @@ impl ConsolePanel {
 
     /// Converts mouse position to line and character index.
     fn pos_from_mouse(
+        ctx: &WgpuContext,
         mouse: Vec2,
         content_rect: Rect,
         scroll_y: f32,
@@ -196,7 +202,7 @@ impl ConsolePanel {
         let mut prev_width = 0.0;
         for (byte_idx, ch) in line_text.char_indices() {
             let char_idx = line_text[..byte_idx].chars().count();
-            let width = measure_text_ui(&line_text[..byte_idx + ch.len_utf8()], font_size, 1.0).width;
+            let width = measure_text_ui(ctx, &line_text[..byte_idx + ch.len_utf8()], font_size).width;
 
             if relative_x < width {
                 let mid = (prev_width + width) / 2.0;
@@ -265,12 +271,18 @@ impl PanelDefinition for ConsolePanel {
         CONSOLE_PANEL
     }
 
-    fn default_rect(&self) -> Rect {
+    fn default_rect(&self, _ctx: &WgpuContext) -> Rect {
         Rect::new(20., 460., 520., 200.)
     }
 
-    fn draw(&mut self, rect: Rect, _editor: &mut Editor, blocked: bool) {
-        let mouse: Vec2 = mouse_position().into();
+    fn draw(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        rect: Rect, 
+        _editor: &mut Editor, 
+        blocked: bool
+    ) {
+        let mouse: Vec2 = ctx.mouse_position().into();
 
         // Clear button centered in header row
         let btn_width = 50.0;
@@ -282,7 +294,7 @@ impl PanelDefinition for ConsolePanel {
             CLEAR_BUTTON_HEIGHT,
         );
 
-        let clicked = Button::new(clear_btn_rect, "Clear").blocked(blocked).show();
+        let clicked = Button::new(clear_btn_rect, "Clear").blocked(blocked).show(ctx);
         if !blocked && clicked {
             if let Ok(mut history) = LOG_HISTORY.lock() {
                 history.clear();
@@ -299,7 +311,7 @@ impl PanelDefinition for ConsolePanel {
 
         // Scroll input
         if !blocked && content_rect.contains(mouse) {
-            let (_, wheel_y) = mouse_wheel();
+            let (_, wheel_y) = ctx.mouse_wheel();
             if wheel_y.abs() > 0.0 {
                 self.scroll_y += wheel_y * SCROLL_SPEED;
                 self.auto_scroll = false;
@@ -331,7 +343,7 @@ impl PanelDefinition for ConsolePanel {
             self.cached_wrapped = entries.iter().map(|(level, message)| {
                 let prefix = Self::level_prefix(*level);
                 let full_message = format!("{}{}", prefix, message);
-                let lines = Self::wrap_text(&full_message, usable_w, font_size);
+                let lines = Self::wrap_text(ctx, &full_message, usable_w, font_size);
                 (*level, lines)
             }).collect();
 
@@ -371,8 +383,8 @@ impl PanelDefinition for ConsolePanel {
 
         // Handle mouse selection
         if !blocked && content_rect.contains(mouse) {
-            if is_mouse_button_pressed(MouseButton::Left) {
-                if let Some(pos) = Self::pos_from_mouse(mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
+            if ctx.is_mouse_button_pressed(MouseButton::Left) {
+                if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
                     self.selection_anchor = Some(pos);
                     self.selection_end = Some(pos);
                     self.dragging = true;
@@ -380,13 +392,13 @@ impl PanelDefinition for ConsolePanel {
             }
         }
 
-        if self.dragging && is_mouse_button_down(MouseButton::Left) {
-            if let Some(pos) = Self::pos_from_mouse(mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
+        if self.dragging && ctx.is_mouse_button_down(MouseButton::Left) {
+            if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
                 self.selection_end = Some(pos);
             }
         }
 
-        if is_mouse_button_released(MouseButton::Left) && self.dragging {
+        if ctx.is_mouse_button_released(MouseButton::Left) && self.dragging {
             self.dragging = false;
             if self.selection_anchor == self.selection_end {
                 self.clear_selection();
@@ -394,7 +406,7 @@ impl PanelDefinition for ConsolePanel {
         }
 
         // Handle copy with Ctrl+C
-        if !blocked && Controls::copy() {
+        if !blocked && Controls::copy(ctx) {
             if let Some((start, end)) = self.ordered_selection() {
                 let selected_text = Self::extract_selected_text(&all_line_texts, start, end);
                 clipboard_set_text(&selected_text);
@@ -423,10 +435,10 @@ impl PanelDefinition for ConsolePanel {
                         let start_byte = line_text.char_indices().nth(sel_start_char).map(|(b, _)| b).unwrap_or(0);
                         let end_byte = line_text.char_indices().nth(sel_end_char).map(|(b, _)| b).unwrap_or(line_text.len());
 
-                        let sel_start_x = content_rect.x + 6.0 + measure_text_ui(&line_text[..start_byte], font_size, 1.0).width;
-                        let sel_end_x = content_rect.x + 6.0 + measure_text_ui(&line_text[..end_byte], font_size, 1.0).width;
+                        let sel_start_x = content_rect.x + 6.0 + measure_text_ui(ctx, &line_text[..start_byte], font_size).width;
+                        let sel_end_x = content_rect.x + 6.0 + measure_text_ui(ctx, &line_text[..end_byte], font_size).width;
 
-                        draw_rectangle(
+                        ctx.draw_rectangle(
                             sel_start_x,
                             line_y,
                             sel_end_x - sel_start_x,
@@ -437,7 +449,7 @@ impl PanelDefinition for ConsolePanel {
                 }
             }
 
-            draw_text_ui(
+            ctx.draw_text(
                 line_text,
                 content_rect.x + 6.,
                 line_y + ROW_HEIGHT * 0.75,
@@ -455,7 +467,7 @@ impl PanelDefinition for ConsolePanel {
             let bar_y = content_rect.y + t * (content_h - bar_h);
 
             // Track
-            draw_rectangle(
+            ctx.draw_rectangle(
                 bar_x,
                 content_rect.y,
                 SCROLLBAR_W,
@@ -463,7 +475,7 @@ impl PanelDefinition for ConsolePanel {
                 Color::new(0.15, 0.15, 0.15, 0.6),
             );
             // Thumb
-            draw_rectangle(
+            ctx.draw_rectangle(
                 bar_x,
                 bar_y,
                 SCROLLBAR_W,

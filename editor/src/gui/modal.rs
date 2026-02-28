@@ -23,7 +23,7 @@ pub fn is_modal_open() -> bool {
     MODAL_OPEN.with(|f| *f.borrow())
 }
 
-pub type BoxedWidget = Box<dyn FnMut(&mut AssetManager) + 'static>;
+pub type BoxedWidget = Box<dyn FnMut(&mut WgpuContext, &mut AssetManager) + 'static>;
 type BoxedWidgets = Vec<BoxedWidget>;
 
 /// Used by callers of a a modal to decide what should happen if 
@@ -36,10 +36,10 @@ pub enum ModalResult {
 
 impl Modal {
     /// Creates a new modal of the given size. It is automatically centered.
-    pub fn new(width: f32, height: f32) -> Self {
+    pub fn new(ctx: &WgpuContext, width: f32, height: f32) -> Self {
         let rect = Rect::new(
-            (screen_width() - width) / 2.0,
-            (screen_height() - height) / 2.0,
+            (ctx.screen_width() - width) / 2.0,
+            (ctx.screen_height() - height) / 2.0,
             width,
             height,
         );
@@ -82,7 +82,11 @@ impl Modal {
 
     /// Render the modal. Returns `true`` when the user clicked outside the window.
     /// Needs asset manager for widgets that need to access assets.
-    pub fn draw(&mut self, asset_manager: &mut AssetManager) -> bool {
+    pub fn draw(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        asset_manager: &mut AssetManager
+    ) -> bool {
         if !self.open {
             return false;
         }
@@ -94,16 +98,16 @@ impl Modal {
         }
 
         // Dim the whole screen
-        draw_rectangle(
+        ctx.draw_rectangle(
             0.0, 
             0.0, 
-            screen_width(), 
-            screen_height(),
+            ctx.screen_width(), 
+            ctx.screen_height(),
             Color::new(0.0, 0.0, 0.0, 0.6)
         );
 
         // Window background & outline
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x, 
             self.rect.y, 
             self.rect.w, 
@@ -111,7 +115,7 @@ impl Modal {
             Color::new(0.08, 0.08, 0.10, 0.95)
         );
 
-        draw_rectangle_lines(
+        ctx.draw_rectangle_lines(
             self.rect.x, 
             self.rect.y, 
             self.rect.w, 
@@ -122,12 +126,12 @@ impl Modal {
 
         // Run all widgets
         for widget in self.widgets.iter_mut() {
-            widget.as_mut()(asset_manager);
+            widget.as_mut()(ctx, asset_manager);
         }
 
         // Detect a click outside the window
-        if is_mouse_button_pressed(MouseButton::Left) {
-            let mouse = mouse_position().into();
+        if ctx.is_mouse_button_pressed(MouseButton::Left) {
+            let mouse = ctx.mouse_position().into();
             if !self.rect.contains(mouse) {
                 return true;
             }
@@ -138,15 +142,15 @@ impl Modal {
 
     /// Opens a model with a confirm prompt widget.
     /// The caller must pass in a static reference to the result store.
-    pub fn open_confirm_modal(result_store: &'static LocalKey<RefCell<Option<ConfirmPromptResult>>>) -> Modal {
+    pub fn open_confirm_modal(ctx: &WgpuContext, result_store: &'static LocalKey<RefCell<Option<ConfirmPromptResult>>>) -> Modal {
         let prompt_message = "Are You Sure?";
-        let mut modal = Modal::new(300.0, 120.0);
+        let mut modal = Modal::new(ctx, 300.0, 120.0);
 
         let mut prompt = ConfirmPrompt::new(modal.rect, prompt_message);
 
         let widgets: Vec<BoxedWidget> = vec![ 
-            Box::new(move |_| {
-                if let Some(result) = prompt.draw() {
+            Box::new(move |ctx, _| {
+                if let Some(result) = prompt.draw(ctx) {
                     // Write the result to the static thread local
                     result_store.with(|c| *c.borrow_mut() = Some(result));
                 }

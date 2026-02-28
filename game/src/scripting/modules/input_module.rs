@@ -1,6 +1,7 @@
 // game/src/scripting/modules/input_module.rs
-use crate::game_global::get_input_snapshot;
 use crate::input::input_snapshot::InputSnapshot;
+use crate::scripting::lua_ctx::LuaBishopCtx;
+use crate::game_global::get_input_snapshot;
 use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
 use std::collections::HashMap;
@@ -47,10 +48,11 @@ pub fn make_snapshot_query_fn<'lua, Sel>(
 where
     Sel: Fn(&InputSnapshot) -> &HashMap<&'static str, bool> + Copy + Send + 'static,
 {
-    lua.create_function(move |_lua, key: String| {
+    lua.create_function(move |lua, key: String| {
+        let bishop_ctx = LuaBishopCtx::borrow_ctx(lua)?;
         let mut snapshot = get_input_snapshot();
-        snapshot.capture_input_state();
-        
+        snapshot.capture_input_state(&bishop_ctx.ctx);
+
         let value = map_selector(&snapshot)
             .get(key.as_str())
             .copied()

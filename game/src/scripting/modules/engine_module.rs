@@ -1,5 +1,5 @@
 // game/src/scripting/modules/engine_module.rs
-use crate::scripting::lua_game_ctx::LuaGameCtx;
+use crate::scripting::lua_ctx::LuaGameCtx;
 use engine_core::scripting::modules::lua_module::*;
 use engine_core::scripting::lua_constants::*;
 use engine_core::scripting::script::Script;

@@ -78,7 +78,12 @@ impl TilePalette {
         self.entries.get(self.selected_index).copied()
     }
 
-    pub async fn draw(&mut self, rect: Rect, asset_manager: &mut AssetManager) {
+    pub async fn draw(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        rect: Rect, asset_manager: 
+        &mut AssetManager
+    ) {
         // Draw grid
         for i in 0..self.entries.len() {
             let col = i % self.columns;
@@ -100,7 +105,7 @@ impl TilePalette {
 
             let tex = asset_manager.get_texture_from_id(sprite_id);
 
-            draw_texture_ex(
+            ctx.draw_texture_ex(
                 tex,
                 x,
                 y,
@@ -111,11 +116,11 @@ impl TilePalette {
                 },
             );
             if i == self.selected_index {
-                draw_rectangle_lines(x, y, self.tile_size, self.tile_size, 3.0, Color::RED);
+                ctx.draw_rectangle_lines(x, y, self.tile_size, self.tile_size, 3.0, Color::RED);
             }
         }
 
-        self.draw_tile_dialog(asset_manager).await;
+        self.draw_tile_dialog(ctx, asset_manager).await;
     }
 
     /// Called from `TileMapEditor::handle_ui_click` when the mouse
@@ -144,7 +149,11 @@ impl TilePalette {
         false
     }
 
-    async fn draw_tile_dialog(&mut self, asset_manager: &mut AssetManager) {
+    async fn draw_tile_dialog(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        asset_manager: &mut AssetManager
+    ) {
         if !self.ui.open {
             return;
         }
@@ -171,12 +180,12 @@ impl TilePalette {
 
         // Background panel
         let panel = Rect::new(100., 80., 300., 260.);
-        draw_rectangle(panel.x, panel.y, panel.w, panel.h, Color::new(0., 0., 0., 0.6));
-        draw_rectangle_lines(panel.x, panel.y, panel.w, panel.h, 2., Color::WHITE);
+        ctx.draw_rectangle(panel.x, panel.y, panel.w, panel.h, Color::new(0., 0., 0., 0.6));
+        ctx.draw_rectangle_lines(panel.x, panel.y, panel.w, panel.h, 2., Color::WHITE);
 
         // Sprite selector
         let sprite_rect = Rect::new(panel.x + 10., panel.y + 60., panel.w - 20., 30.);
-        if Button::new(sprite_rect, "Pick sprite").show() {
+        if Button::new(sprite_rect, "Pick sprite").show(ctx) {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("PNG images", &["png"])
                 .pick_file()
@@ -192,7 +201,7 @@ impl TilePalette {
         // Preview
         if !self.ui.sprite_id.0 != 0 {
             let tex = asset_manager.get_texture_from_id(self.ui.sprite_id);
-            draw_texture_ex(
+            ctx.draw_texture_ex(
                 tex,
                 panel.x + panel.w - 50.,
                 panel.y + 60.,
@@ -209,16 +218,16 @@ impl TilePalette {
         let mut solid = self.ui.solid;
 
         let cb_walk = Rect::new(panel.x + 10., panel.y + 110., 20., 20.);
-        if gui_checkbox(cb_walk, &mut walk) {
+        if gui_checkbox(ctx, cb_walk, &mut walk) {
             self.ui.walkable = walk;
         }
-        draw_text_ui("Walkable", cb_walk.x + 30., cb_walk.y + 15., 18., Color::WHITE);
+        ctx.draw_text("Walkable", cb_walk.x + 30., cb_walk.y + 15., 18., Color::WHITE);
 
         let cb_solid = Rect::new(panel.x + 10., panel.y + 140., 20., 20.);
-        if gui_checkbox(cb_solid, &mut solid) {
+        if gui_checkbox(ctx, cb_solid, &mut solid) {
             self.ui.solid = solid;
         }
-        draw_text_ui("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., Color::WHITE);
+        ctx.draw_text("Solid", cb_solid.x + 30., cb_solid.y + 15., 18., Color::WHITE);
 
         let btn_label = match self.ui.mode {
             TilePaletteUiMode::Create => { "Create" },
@@ -227,7 +236,7 @@ impl TilePalette {
 
         // Create/Update
         let btn_ok = Rect::new(panel.x + 30., panel.y + 220., 100., 30.);
-        if Button::new(btn_ok, btn_label).show() {
+        if Button::new(btn_ok, btn_label).show(ctx) {
             // Add the request to the queue, it will be excecuted next frame
             let cmd = match self.ui.mode {
                 TilePaletteUiMode::Create => PaletteCmd::Create,
@@ -239,14 +248,14 @@ impl TilePalette {
 
         // Cancel
         let btn_cancel = Rect::new(panel.x + 170., panel.y + 220., 100., 30.);
-        if Button::new(btn_cancel, "Cancel").show() {
+        if Button::new(btn_cancel, "Cancel").show(ctx) {
             self.ui.open = false;
         }
 
         // Draw delete button if in edit mode
         if self.ui.mode == TilePaletteUiMode::Edit {
             let btn_del = Rect::new(panel.x + 30., panel.y + 260., 240., 30.);
-            if Button::new(btn_del, "Delete").show() {
+            if Button::new(btn_del, "Delete").show(ctx) {
                 //Add the request to the queue
                 let cmd = PaletteCmd::Delete(self.ui.edit_index);
                 self.command_queue.push_back(cmd);

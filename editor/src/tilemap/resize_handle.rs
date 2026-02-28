@@ -215,7 +215,14 @@ impl ResizeHandle {
     }
 
     /// Draw the handle rectangle.
-    pub fn draw(&self, camera: &Camera2D, is_active: bool, preview_valid: bool, grid_size: f32) {
+    pub fn draw(
+        &self, 
+        ctx: &mut WgpuContext,
+        camera: &Camera2D, 
+        is_active: bool, 
+        preview_valid: bool, 
+        grid_size: f32
+    ) {
         let draw_rect = self.current_draw_rect(grid_size);
 
         let color = if is_active {
@@ -228,12 +235,12 @@ impl ResizeHandle {
             Color::new(0.3, 0.5, 1.0, 0.5) // Blue for idle
         };
 
-        draw_rectangle(draw_rect.x, draw_rect.y, draw_rect.w, draw_rect.h, color);
+        ctx.draw_rectangle(draw_rect.x, draw_rect.y, draw_rect.w, draw_rect.h, color);
 
         // Draw border for visibility
         let zoom_scale = camera.zoom.x.abs();
         let line_width = (0.5 / zoom_scale).clamp(1.0, 3.0);
-        draw_rectangle_lines(
+        ctx.draw_rectangle_lines(
             draw_rect.x,
             draw_rect.y,
             draw_rect.w,
@@ -244,7 +251,14 @@ impl ResizeHandle {
     }
 
     /// Draw the preview overlay showing the proposed new bounds.
-    pub fn draw_preview(&self, room_position: Vec2, room_size: Vec2, grid_size: f32, is_valid: bool) {
+    pub fn draw_preview(
+        &self, 
+        ctx: &mut WgpuContext,
+        room_position: Vec2, 
+        room_size: Vec2, 
+        grid_size: f32, 
+        is_valid: bool
+    ) {
         if !self.drag_state.is_dragging || self.drag_state.preview_delta == 0 {
             return;
         }
@@ -269,14 +283,14 @@ impl ResizeHandle {
             Color::new(1.0, 0.0, 0.0, 0.2)
         };
 
-        draw_rectangle(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, color);
+        ctx.draw_rectangle(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, color);
 
         let border_color = if is_valid {
             Color::new(0.0, 1.0, 0.0, 0.8)
         } else {
             Color::new(1.0, 0.0, 0.0, 0.8)
         };
-        draw_rectangle_lines(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, 2.0, border_color);
+        ctx.draw_rectangle_lines(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, 2.0, border_color);
 
         // Draw dimension text centered above preview
         let dim_text = format!("{} x {}", new_width, new_height);
@@ -284,7 +298,7 @@ impl ResizeHandle {
         let text_x = preview_pos.x + preview_size.x / 2.0 - (dim_text.len() as f32 * font_size * 0.3);
         let text_y = preview_pos.y - font_size * 0.5;
         let text_color = if is_valid { Color::GREEN } else { Color::RED };
-        draw_text(&dim_text, text_x, text_y, font_size, text_color);
+        ctx.draw_text(&dim_text, text_x, text_y, font_size, text_color);
     }
 }
 

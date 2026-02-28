@@ -157,14 +157,13 @@ impl fmt::Display for FollowRestriction {
 }
 
 /// Creates a render target sized for the given grid size.
-pub fn game_render_target(grid_size: f32) -> RenderTarget {
+pub fn game_render_target<C: BishopContext>(
+    ctx: &mut C, 
+    grid_size: f32
+) -> BishopRenderTarget {
     let width = world_virtual_width(grid_size) as u32;
     let height = world_virtual_height(grid_size) as u32;
-
-    let rt = render_target(width, height);
-    // Always use Nearest
-    rt.texture.set_filter(FilterMode::Nearest);
-    rt
+    ctx.create_render_target(width, height, FilterMode::Nearest)
 }
 
 /// Returns every `GameCamera` for a room from its id.
@@ -186,7 +185,8 @@ pub fn get_room_cameras(ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)>
 }
 
 /// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
-pub fn room_to_game_camera(
+pub fn room_to_game_camera<C: BishopContext>(
+    ctx: &mut C,
     ecs: &Ecs,
     entity: &Entity,
     room_camera: &RoomCamera,
@@ -210,7 +210,7 @@ pub fn room_to_game_camera(
     let camera = Camera2D {
         target,
         zoom: room_camera.zoom,
-        render_target: Some(game_render_target(grid_size)),
+        render_target: Some(game_render_target(ctx, grid_size)),
         ..Default::default()
     };
 
@@ -219,7 +219,8 @@ pub fn room_to_game_camera(
 
 /// Returns a `GameCamera` for a room by its entity id.
 /// If the id is None or not found, returns the first camera in the room.
-pub fn get_room_camera_by_id(
+pub fn get_room_camera_by_id<C: BishopContext>(
+    ctx: &mut C,
     ecs: &Ecs,
     room_id: RoomId,
     grid_size: f32,
@@ -246,7 +247,7 @@ pub fn get_room_camera_by_id(
     let camera = Camera2D {
         target: origin,
         zoom: room_cam.zoom,
-        render_target: Some(game_render_target(grid_size)),
+        render_target: Some(game_render_target(ctx, grid_size)),
         ..Default::default()
     };
 
@@ -256,6 +257,7 @@ pub fn get_room_camera_by_id(
 /// Returns the next `GameCamera` for a room, cycling through all available cameras.
 /// If `current_id` is None or not found, returns the first camera.
 pub fn get_next_room_camera(
+    ctx: &mut impl BishopContext,
     ecs: &Ecs,
     room_id: RoomId,
     grid_size: f32,
@@ -288,7 +290,7 @@ pub fn get_next_room_camera(
     let camera = Camera2D {
         target: origin,
         zoom: room_cam.zoom,
-        render_target: Some(game_render_target(grid_size)),
+        render_target: Some(game_render_target(ctx, grid_size)),
         ..Default::default()
     };
 

@@ -7,6 +7,7 @@ use winit::window::{Fullscreen, Window};
 
 use super::conversions::{convert_keycode, convert_mouse_button, keycode_to_char};
 use super::conversions_window::convert_cursor_icon;
+use super::exec::FrameFuture;
 use super::graphics_state::{GraphicsState, GraphicsStateError};
 use super::input_state::InputState;
 use super::render::{
@@ -265,6 +266,12 @@ impl WgpuContext {
     /// Returns a reference to the fullscreen quad renderer.
     pub fn fullscreen_quad_renderer(&self) -> &FullscreenQuadRenderer {
         &self.fullscreen_quad_renderer
+    }
+
+    /// Returns a future that completes on the next frame.
+    /// Use this to yield from async code and allow the frame to render.
+    pub fn next_frame(&self) -> FrameFuture {
+        FrameFuture::new()
     }
 
     /// Renders the current frame and presents it.

@@ -12,6 +12,7 @@ pub struct InputState {
     mouse_pressed: HashSet<MouseButton>,
     mouse_released: HashSet<MouseButton>,
     mouse_position: (f32, f32),
+    mouse_position_prev: (f32, f32),
     mouse_wheel: (f32, f32),
     char_buffer: Vec<char>,
 }
@@ -27,6 +28,7 @@ impl InputState {
             mouse_pressed: HashSet::new(),
             mouse_released: HashSet::new(),
             mouse_position: (0.0, 0.0),
+            mouse_position_prev: (0.0, 0.0),
             mouse_wheel: (0.0, 0.0),
             char_buffer: Vec::new(),
         }
@@ -38,6 +40,7 @@ impl InputState {
         self.keys_released.clear();
         self.mouse_pressed.clear();
         self.mouse_released.clear();
+        self.mouse_position_prev = self.mouse_position;
         self.mouse_wheel = (0.0, 0.0);
         self.char_buffer.clear();
     }
@@ -119,6 +122,14 @@ impl InputState {
     /// Returns the current mouse position.
     pub fn mouse_position(&self) -> (f32, f32) {
         self.mouse_position
+    }
+
+    /// Returns the mouse position delta since the last frame.
+    pub fn mouse_delta_position(&self) -> (f32, f32) {
+        (
+            self.mouse_position.0 - self.mouse_position_prev.0,
+            self.mouse_position.1 - self.mouse_position_prev.1,
+        )
     }
 
     /// Returns the accumulated mouse wheel delta for this frame.

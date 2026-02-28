@@ -3,8 +3,8 @@ use bishop::prelude::*;
 
 /// Convert the current mouse position (screen pixels) to world
 /// coordinates using the supplied camera.
-pub fn mouse_world_pos(camera: &Camera2D) -> Vec2 {
-    let (x, y) = mouse_position();
+pub fn mouse_world_pos(ctx: &WgpuContext, camera: &Camera2D) -> Vec2 {
+    let (x, y) = ctx.mouse_position();
     camera.screen_to_world(vec2(x, y))
 }
 
@@ -16,8 +16,12 @@ pub fn snap_to_grid(pos: Vec2) -> Vec2 {
 
 /// Return the grid cell (integer coordinates) that the mouse is
 /// hovering over.
-pub fn mouse_world_grid(camera: &Camera2D, grid_size: f32) -> Vec2 {
-    let world = mouse_world_pos(camera);
+pub fn mouse_world_grid(
+    ctx: &WgpuContext,
+    camera: &Camera2D, 
+    grid_size: f32
+) -> Vec2 {
+    let world = mouse_world_pos(ctx, camera);
     (world / grid_size).floor()
 }
 

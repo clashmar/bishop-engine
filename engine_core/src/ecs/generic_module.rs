@@ -57,6 +57,7 @@ where
 
     fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         blocked: bool,
         rect: Rect,
         game_ctx: &mut GameCtxMut,
@@ -90,10 +91,10 @@ where
             // Prepare the field label
             let display_name = parse_field_name(field.name);
             let label = format!("{} :", display_name);
-            let label_w = measure_text_ui(&label, FONT_SIZE, 1.0).width.max(MIN_LABEL_WIDTH);
+            let label_w = measure_text_ui(ctx, &label, FONT_SIZE).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
 
-            draw_text_ui(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
+            ctx.draw_text(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
 
             // Widget rectangle
             let widget_x = if widget_x > rect.x + rect.w - MIN_WIDGET_WIDTH {
@@ -109,22 +110,22 @@ where
             // Dispatch based on the enum variant
             match (field.value, field.widget_hint) {
                 (FieldValue::SpriteId(id), _) => {
-                    gui_sprite_picker(widget_rect, id, game_ctx.asset_manager, blocked);
+                    gui_sprite_picker(ctx, widget_rect, id, game_ctx.asset_manager, blocked);
                 }
                 (FieldValue::Text(txt), _) => {
-                    let (new, _) = TextInput::new(base_id, widget_rect, txt.as_str()).blocked(blocked).show();
+                    let (new, _) = TextInput::new(base_id, widget_rect, txt.as_str()).blocked(blocked).show(ctx);
                     if new != *txt {
                         *txt = new;
                     }
                 }
                 (FieldValue::Float(f), _) => {
-                    let new = NumberInput::new(base_id, widget_rect, *f).blocked(blocked).show();
+                    let new = NumberInput::new(base_id, widget_rect, *f).blocked(blocked).show(ctx);
                     if (new - *f).abs() > f32::EPSILON {
                         *f = new;
                     }
                 }
                 (FieldValue::Int(i), _) => {
-                    let new = NumberInput::new(base_id, widget_rect, *i).blocked(blocked).show();
+                    let new = NumberInput::new(base_id, widget_rect, *i).blocked(blocked).show(ctx);
                     if new != *i {
                         *i = new;
                     }
@@ -137,7 +138,7 @@ where
                         DEFAULT_CHECKBOX_DIMS,
                     );
                     let mut v = *b;
-                    if gui_checkbox(cb_rect, &mut v) && !blocked {
+                    if gui_checkbox(ctx, cb_rect, &mut v) && !blocked {
                         *b = v;
                     }
                 }
@@ -156,7 +157,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, half - 2.0, widget_rect.h);
-                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show();
+                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show(ctx);
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -167,7 +168,7 @@ where
                         half - 2.0,
                         widget_rect.h,
                     );
-                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show();
+                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show(ctx);
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -190,7 +191,7 @@ where
 
                     // X
                     let rect_x = Rect::new(widget_rect.x, widget_rect.y, third, widget_rect.h);
-                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show();
+                    let new_x = NumberInput::new(id_x, rect_x, v.x).blocked(blocked).show(ctx);
                     if (new_x - v.x).abs() > f32::EPSILON {
                         v.x = new_x;
                     }
@@ -201,7 +202,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show();
+                    let new_y = NumberInput::new(id_y, rect_y, v.y).blocked(blocked).show(ctx);
                     if (new_y - v.y).abs() > f32::EPSILON {
                         v.y = new_y;
                     }
@@ -212,7 +213,7 @@ where
                         third,
                         widget_rect.h,
                     );
-                    let new_z = NumberInput::new(id_z, rect_z, v.z).blocked(blocked).show();
+                    let new_z = NumberInput::new(id_z, rect_z, v.z).blocked(blocked).show(ctx);
                     if (new_z - v.z).abs() > f32::EPSILON {
                         v.z = new_z;
                     }
@@ -224,7 +225,7 @@ where
                         pivot.label(),
                         Pivot::all(),
                         |p| p.label().to_string(),
-                    ).blocked(blocked).show() {
+                    ).blocked(blocked).show(ctx) {
                         *pivot = selected;
                     }
                 }

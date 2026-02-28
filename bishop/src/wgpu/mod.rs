@@ -7,6 +7,7 @@ pub(crate) mod app_runner;
 mod context;
 mod conversions;
 mod conversions_window;
+mod exec;
 mod graphics_state;
 mod impls;
 mod input_state;
@@ -15,6 +16,7 @@ mod texture_loader;
 mod time_state;
 
 pub use context::WgpuContext;
+pub use exec::FrameFuture;
 pub use graphics_state::GraphicsStateError;
 pub use render::{
     AmbientMaterial, AmbientUniforms, BishopRenderTarget, FinalCompositeMaterial,

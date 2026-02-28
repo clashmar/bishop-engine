@@ -17,10 +17,16 @@ pub struct CameraManager {
 
 impl CameraManager {
     /// Initialise with the player's starting room.
-    pub fn new(ecs: &Ecs, room_id: RoomId, player_pos: Vec2, grid_size: f32) -> Self {
+    pub fn new<C: BishopContext>(
+        ctx: &mut C,
+        ecs: &Ecs, 
+        room_id: RoomId, 
+        player_pos: Vec2, 
+        grid_size: f32
+    ) -> Self {
         let room_cameras = get_room_cameras(&ecs, room_id);
         let (active_camera, _) =
-            Self::find_best_camera_for_room(&ecs, &room_cameras, player_pos, grid_size)
+            Self::find_best_camera_for_room(ctx, &ecs, &room_cameras, player_pos, grid_size)
                 .expect("Room must contain at least one camera.");
 
         Self {
@@ -32,7 +38,13 @@ impl CameraManager {
     }
 
     /// Picks the best camera and update it if necessary.
-    pub fn update_active(&mut self, ecs: &Ecs, room: &Room, grid_size: f32) {
+    pub fn update_active<C: BishopContext>(
+        &mut self, 
+        ctx: &mut C,
+        ecs: &Ecs, 
+        room: &Room, 
+        grid_size: f32
+    ) {
         // If the player moved to another room get the new cameras
         if self.current_room != Some(room.id) {
             self.current_room = Some(room.id);
@@ -45,6 +57,7 @@ impl CameraManager {
             .unwrap_or_default();
 
         if let Some((best_cam, mode)) = Self::find_best_camera_for_room(
+            ctx,
             ecs,
             &self.room_cameras,
             player_pos,
@@ -64,7 +77,8 @@ impl CameraManager {
     }
 
     /// Finds the most suitable camera for a given room and player position.
-    pub fn find_best_camera_for_room(
+    pub fn find_best_camera_for_room<C: BishopContext>(
+        ctx: &mut C,
         ecs: &Ecs,
         room_cameras: &[(Entity, RoomCamera)],
         player_pos: Vec2,
@@ -74,7 +88,7 @@ impl CameraManager {
         let mut closest: Option<(f32, GameCamera, CameraMode)> = None;
 
         for &(entity, ref cam) in room_cameras.iter() {
-            let game_cam = room_to_game_camera(ecs, &entity, cam, player_pos, grid_size);
+            let game_cam = room_to_game_camera(ctx, ecs, &entity, cam, player_pos, grid_size);
             match cam.camera_mode {
                 CameraMode::Fixed => {
                     if Self::point_in_camera_view(&game_cam, player_pos) {

@@ -120,6 +120,7 @@ impl MenuBar {
     /// Draw the menu options and return any requested action.
     pub fn draw(
         &mut self, 
+        ctx: &mut WgpuContext,
         title: &str,
         editor_mode: EditorMode,
     ) -> Option<MenuAction> {
@@ -127,7 +128,7 @@ impl MenuBar {
         const HEIGHT: f32 = 30.0;
 
         // The panel is already drawn in each sub editor
-        let panel_rect = menu_panel_rect(); 
+        let panel_rect = menu_panel_rect(ctx); 
 
         let mut x = panel_rect.x + PADDING;
         let y = panel_rect.y + PADDING / 2.0;
@@ -135,7 +136,7 @@ impl MenuBar {
         let title_rect = Rect::new(
             x,
             y,
-            rect_width_for_text(title, HEADER_FONT_SIZE_20),
+            rect_width_for_text(ctx, title, HEADER_FONT_SIZE_20),
             HEIGHT,
         );
 
@@ -144,6 +145,7 @@ impl MenuBar {
         ];
 
         if let Some(selected) = menu_dropdown(
+            ctx,
             self.title_id,
             title_rect,
             title,
@@ -162,7 +164,7 @@ impl MenuBar {
         let file_rect = Rect::new(
             x, 
             y, 
-            rect_width_for_text(file_label, HEADER_FONT_SIZE_20), 
+            rect_width_for_text(ctx, file_label, HEADER_FONT_SIZE_20), 
             HEIGHT
         );
 
@@ -176,6 +178,7 @@ impl MenuBar {
         ];
 
         if let Some(selected) = menu_dropdown(
+            ctx,
             self.file_id,
             file_rect,
             file_label,
@@ -194,7 +197,7 @@ impl MenuBar {
         let edit_rect = Rect::new(
             x, 
             y, 
-            rect_width_for_text(edit_label, HEADER_FONT_SIZE_20), 
+            rect_width_for_text(ctx, edit_label, HEADER_FONT_SIZE_20), 
             HEIGHT
         );
 
@@ -204,6 +207,7 @@ impl MenuBar {
         ];
 
         if let Some(selected) = menu_dropdown(
+            ctx,
             self.view_id,
             edit_rect,
             edit_label,
@@ -222,7 +226,7 @@ impl MenuBar {
         let view_rect = Rect::new(
             x,
             y,
-            rect_width_for_text(view_label, HEADER_FONT_SIZE_20),
+            rect_width_for_text(ctx, view_label, HEADER_FONT_SIZE_20),
             HEIGHT
         );
 
@@ -241,6 +245,7 @@ impl MenuBar {
         }
 
         if let Some(selected) = menu_dropdown(
+            ctx,
             self.edit_id,
             view_rect,
             view_label,
@@ -268,11 +273,12 @@ impl MenuBar {
             let options_rect = Rect::new(
                 x,
                 y,
-                rect_width_for_text(options_label, HEADER_FONT_SIZE_20),
+                rect_width_for_text(ctx, options_label, HEADER_FONT_SIZE_20),
                 HEIGHT
             );
 
             if let Some(selected) = menu_dropdown(
+                ctx,
                 self.options_id,
                 options_rect,
                 options_label,
@@ -290,18 +296,19 @@ impl MenuBar {
 }
 
 /// Draws a the panel background for the top menu across the whole width of the screen and returns its `Rect`.
-pub fn draw_top_panel_full() -> Rect {
-    let rect = menu_panel_rect();
-    draw_rectangle(rect.x, rect.y, rect.w, rect.h, PANEL_COLOR);
+pub fn draw_top_panel_full(ctx: &mut WgpuContext) -> Rect {
+    let rect = menu_panel_rect(ctx);
+    ctx.draw_rectangle(rect.x, rect.y, rect.w, rect.h, PANEL_COLOR);
     rect
 }
 
-fn menu_panel_rect() -> Rect {
-    Rect::new(0.0, 0.0, screen_width(), MENU_PANEL_HEIGHT)
+fn menu_panel_rect(ctx: &mut WgpuContext,) -> Rect {
+    Rect::new(0.0, 0.0, ctx.screen_width(), MENU_PANEL_HEIGHT)
 }
 
 /// Button and dropdown for a menu option. 
 fn menu_dropdown<T: Clone + PartialEq + Display>(
+    ctx: &mut WgpuContext,
     id: WidgetId,
     rect: Rect,
     label: &str,
@@ -315,7 +322,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     // Load previous state
     let mut state = dropdown_state::get(id);
 
-    let mouse_pos: Vec2 = mouse_position().into();
+    let mouse_pos: Vec2 = ctx.mouse_position().into();
     let hovered = rect.contains(mouse_pos);
 
     // Change dropdown on mouse hover (if a dropdown is open)
@@ -340,7 +347,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     }
 
     // Dropdown header
-    let button_clicked = menu_button(rect, label, state.open);
+    let button_clicked = menu_button(ctx, rect, label, state.open);
 
     if button_clicked {
         // Clicking the button toggles open state
@@ -369,10 +376,10 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     let mut max_opt_width = 0.0_f32;
     for opt in options.iter() {
         // label width
-        let label_w = measure_text_ui(&to_string(opt), DEFAULT_FONT_SIZE_16, 1.0).width;
+        let label_w = measure_text_ui(ctx, &to_string(opt), DEFAULT_FONT_SIZE_16).width;
         // optional shortcut width
         let shortcut_w = shortcut(opt)
-            .map(|s| measure_text_ui(s, DEFAULT_FONT_SIZE_16, 1.0).width + SPACING)
+            .map(|s| measure_text_ui(ctx, s, DEFAULT_FONT_SIZE_16).width + SPACING)
             .unwrap_or(0.0);
         let total_w = label_w + shortcut_w;
         if total_w > max_opt_width {
@@ -400,10 +407,10 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
 
     // Draw the list and handle selection
     if list_is_open {
-        let mouse_pos = mouse_position().into();
+        let mouse_pos = ctx.mouse_position().into();
 
         // Background
-        draw_rectangle(
+        ctx.draw_rectangle(
             list_rect.x,
             list_rect.y,
             list_rect.w,
@@ -423,7 +430,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
             );
 
             let hovered = entry_rect.contains(mouse_pos);
-            if hovered && is_mouse_button_pressed(MouseButton::Left) {
+            if hovered && ctx.is_mouse_button_pressed(MouseButton::Left) {
                 // Close the list and return the chosen value
                 state.open = false;
                 dropdown_state::set(id, state);
@@ -432,7 +439,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
             }
 
             if hovered {
-                draw_rectangle(
+                ctx.draw_rectangle(
                     entry_rect.x,
                     entry_rect.y,
                     entry_rect.w,
@@ -442,7 +449,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
             }
             
             // Action 
-            draw_text_ui(
+            ctx.draw_text(
                 &to_string(opt),
                 entry_rect.x + 5.,
                 entry_rect.y + entry_rect.h * 0.7,
@@ -452,9 +459,9 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
 
             // Optional shortcut display
             if let Some(shortcut) = shortcut(opt) {
-                let sc_width = measure_text_ui(shortcut, DEFAULT_FONT_SIZE_16, 1.0).width;
+                let sc_width = measure_text_ui(ctx, shortcut, DEFAULT_FONT_SIZE_16).width;
                 let sc_x = entry_rect.x + entry_rect.w - sc_width - 5.0;
-                draw_text_ui(
+                ctx.draw_text(
                     shortcut,
                     sc_x,
                     entry_rect.y + entry_rect.h * 0.7,
@@ -464,7 +471,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
             }
 
             // Draw the outline last
-            draw_rectangle_lines(
+            ctx.draw_rectangle_lines(
                 list_rect.x, 
                 list_rect.y, 
                 list_rect.w, 
@@ -476,8 +483,8 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     }
 
     // Clicking outside closes the dropdown
-    let mouse_pos = mouse_position().into();
-    if is_mouse_button_pressed(MouseButton::Left)
+    let mouse_pos = ctx.mouse_position().into();
+    if ctx.is_mouse_button_pressed(MouseButton::Left)
         && !rect.contains(mouse_pos)
         && !(state.open && state.rect.contains(mouse_pos.into()))
     {
@@ -493,6 +500,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
 
 /// Returns true if clicked
 pub fn menu_button(
+    ctx: &mut WgpuContext,
     rect: Rect, 
     label: &str,
     is_dropdown_open: bool,
@@ -501,11 +509,11 @@ pub fn menu_button(
     let txt_y = rect.y + rect.h * 0.7;
     let txt_x = rect.x + PADDING / 2.0;
 
-    let mouse = mouse_position();
+    let mouse = ctx.mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));
 
-    if (hovered || is_dropdown_open) && !is_modal_open() && !is_mouse_button_down(MouseButton::Left) {
-        draw_rectangle(
+    if (hovered || is_dropdown_open) && !is_modal_open() && !ctx.is_mouse_button_down(MouseButton::Left) {
+        ctx.draw_rectangle(
             rect.x,
             rect.y,
             rect.w,
@@ -514,7 +522,7 @@ pub fn menu_button(
         );
     }
     
-    draw_text_ui(
+    ctx.draw_text(
         label, 
         txt_x, 
         txt_y,
@@ -522,7 +530,7 @@ pub fn menu_button(
         Color::BLACK
     );
 
-    is_mouse_button_pressed(MouseButton::Left) 
+    ctx.is_mouse_button_pressed(MouseButton::Left) 
     && hovered
     && !is_modal_open()
 }

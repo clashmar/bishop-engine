@@ -30,7 +30,7 @@ impl Toast {
     }
 
     /// Call each frame. Draws the toast if it is still alive.
-    pub fn update<C: BishopContext>(&mut self, ctx: &mut C) {
+    pub fn update(&mut self, ctx: &mut WgpuContext) {
         if !self.active {
             return;
         }

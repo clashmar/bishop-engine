@@ -1,18 +1,12 @@
 // game/src/scripting/modules/entity_module.rs
 use crate::scripting::commands::dialogue_commands::*;
 use crate::scripting::commands::lua_command::*;
-use crate::scripting::lua_game_ctx::LuaGameCtx;
+use crate::scripting::lua_ctx::LuaGameCtx;
 use crate::game_global::push_command;
 use crate::scripting::lua_helpers::*;
-use engine_core::animation::animation_clip::Animation;
-use engine_core::animation::animation_system::CurrentFrame;
-use engine_core::dialogue::{interpolate, SpeechBubble};
-use engine_core::ecs::component_registry::COMPONENTS;
-use engine_core::scripting::interactable::find_best_interactable;
-use engine_core::scripting::modules::lua_module::*;
-use engine_core::scripting::lua_constants::*;
-use engine_core::ecs::entity::Entity;
+use std::collections::HashMap;
 use mlua::prelude::LuaResult;
+use engine_core::prelude::*;
 use mlua::UserDataRegistry;
 use mlua::UserDataMethods;
 use mlua::Variadic;
@@ -21,7 +15,6 @@ use mlua::Table;
 use engine_core::*;
 use mlua::Value;
 use mlua::Lua;
-use std::collections::HashMap;
 
 /// Lua module that exposes a constructor for `EntityHandle`.
 #[derive(Default)]

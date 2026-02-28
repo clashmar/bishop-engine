@@ -1,6 +1,6 @@
 // game/src/scripting/modules/dialogue_module.rs
 use crate::scripting::commands::dialogue_commands::SetLanguageCmd;
-use crate::scripting::lua_game_ctx::LuaGameCtx;
+use crate::scripting::lua_ctx::LuaGameCtx;
 use crate::game_global::push_command;
 use engine_core::register_lua_api;
 use engine_core::register_lua_module;

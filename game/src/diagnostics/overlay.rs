@@ -2,7 +2,6 @@
 //! In-game diagnostics overlay toggled with F3/F4.
 
 use engine_core::diagnostics::DiagnosticsCollector;
-use engine_core::ui::text::draw_text_ui;
 use bishop::prelude::*;
 
 /// Detail level for the diagnostics overlay.
@@ -111,17 +110,23 @@ impl DiagnosticsOverlay {
     }
 
     /// Handle input for toggling the overlay.
-    pub fn handle_input(&mut self) {
-        if is_key_pressed(KeyCode::F3) {
+    pub fn handle_input(
+        &mut self, 
+        ctx: &mut impl BishopContext,
+    ) {
+        if ctx.is_key_pressed(KeyCode::F3) {
             self.toggle();
         }
-        if is_key_pressed(KeyCode::F4) {
+        if ctx.is_key_pressed(KeyCode::F4) {
             self.cycle_detail();
         }
     }
 
     /// Draw the overlay.
-    pub fn draw(&self) {
+    pub fn draw<C: BishopContext>(
+        &self,
+        ctx: &mut C,
+    ) {
         if self.detail_level == OverlayDetailLevel::Off {
             return;
         }
@@ -151,14 +156,14 @@ impl DiagnosticsOverlay {
         // Calculate background size
         let max_width = lines
             .iter()
-            .map(|s| measure_text(s, FONT_SIZE).width)
+            .map(|s| ctx.measure_text(s, FONT_SIZE).width)
             .fold(0.0_f32, f32::max);
 
         let bg_width = max_width + PADDING * 2.0;
         let bg_height = lines.len() as f32 * LINE_HEIGHT + PADDING * 2.0;
 
         // Draw background
-        draw_rectangle(
+        ctx.draw_rectangle(
             PADDING,
             PADDING,
             bg_width,
@@ -172,7 +177,7 @@ impl DiagnosticsOverlay {
         for (i, line) in lines.iter().enumerate() {
             let color = if i == 0 { fps_color } else { Color::WHITE };
             let y = PADDING * 2.0 + LINE_HEIGHT * i as f32;
-            draw_text_ui(line, PADDING * 2.0, y + FONT_SIZE, FONT_SIZE, color);
+            ctx.draw_text(line, PADDING * 2.0, y + FONT_SIZE, FONT_SIZE, color);
         }
     }
 

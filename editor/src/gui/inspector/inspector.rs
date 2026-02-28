@@ -124,6 +124,7 @@ impl Inspector {
     /// Returns true if 'Create' was pressed.
     pub fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         game_ctx: &mut GameCtxMut
     ) -> bool {
         self.active_rects.clear();
@@ -132,7 +133,7 @@ impl Inspector {
 
         // When an entity is selected we show “Remove” and “Add Component”
         if let Some(entity) = self.target {
-            if Controls::copy() {
+            if Controls::copy(ctx) {
                 copy_entity(game_ctx.ecs, entity);
             }
 
@@ -141,14 +142,14 @@ impl Inspector {
             let add_label = "Add Component";
 
             // Measure text to obtain proper button widths
-            let txt_remove = measure_text_ui(remove_label, HEADER_FONT_SIZE_20, 1.0);
-            let txt_add = measure_text_ui(add_label, HEADER_FONT_SIZE_20, 1.0);
+            let txt_remove = measure_text_ui(ctx, remove_label, HEADER_FONT_SIZE_20);
+            let txt_add = measure_text_ui(ctx, add_label, HEADER_FONT_SIZE_20);
             let btn_w_remove = txt_remove.width + WIDGET_PADDING;
             let btn_w_add = txt_add.width + WIDGET_PADDING;
 
             // Compute left‑most X so the pair stays inside the screen
             let total_w = btn_w_remove + btn_w_add + WIDGET_SPACING;
-            let x_start = screen_width() - INSET - total_w;
+            let x_start = ctx.screen_width() - INSET - total_w;
 
             // Add Component button
             let add_rect = self.register_rect(Rect::new(
@@ -160,7 +161,7 @@ impl Inspector {
 
             // Draw the drop‑down menu when in add mode
             if self.add_mode {
-                self.draw_add_component_menu(add_rect, game_ctx.ecs);
+                self.draw_add_component_menu(ctx, add_rect, game_ctx.ecs);
             }
 
             // Normal inspector UI (hidden while add_mode is true)
@@ -177,7 +178,7 @@ impl Inspector {
                 );
 
                 // Background
-                draw_rectangle(
+                ctx.draw_rectangle(
                     inner.x,
                     inner.y,
                     inner.w,
@@ -187,8 +188,8 @@ impl Inspector {
 
                 let total_content_h = self.total_content_height(&game_ctx.ecs, entity);
 
-                if inner.contains(mouse_position().into()) && !is_mouse_over_dropdown_list() {
-                    let (_, dy) = mouse_wheel();
+                if inner.contains(ctx.mouse_position().into()) && !is_mouse_over_dropdown_list(ctx) {
+                    let (_, dy) = ctx.mouse_wheel();
                     if dy != 0.0 {
                         let max_offset = (total_content_h - inner.h).max(0.0);
                         self.scroll_offset = (self.scroll_offset - dy * SCROLL_SPEED)
@@ -198,7 +199,7 @@ impl Inspector {
 
                 // Render modules inside the scroll‑view
                 let mut y = inner.y + INSET - self.scroll_offset;
-                let blocked = self.is_blocked();
+                let blocked = self.is_blocked(ctx);
                 let comp_target = component_target(game_ctx.ecs, entity);
                 for module in &mut self.modules {
                     // Transform uses the proxy directly, others use Player
@@ -214,7 +215,7 @@ impl Inspector {
                         // Only draw when the module intersects the visible area
                         if y + h > inner.y && y < inner.y + inner.h {
                             let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
-                            module.draw(blocked, sub_rect.into(), game_ctx, module_entity);
+                            module.draw(ctx, blocked, sub_rect.into(), game_ctx, module_entity);
                         }
 
                         y += h + WIDGET_SPACING;
@@ -222,7 +223,7 @@ impl Inspector {
                 }
 
                 // Render deferred dropdown lists on top of modules
-                flush_dropdown_lists();
+                flush_dropdown_lists(ctx);
 
                 // Scroll bar
                 if total_content_h > inner.h {
@@ -231,7 +232,7 @@ impl Inspector {
                     // Position of the thumb inside the panel
                     let thumb_y = inner.y + (self.scroll_offset / total_content_h) * inner.h;
                     // Draw a simple grey bar on the right edge of the panel
-                    draw_rectangle(
+                    ctx.draw_rectangle(
                         inner.x + inner.w - 6.0,
                         thumb_y,
                         4.0,
@@ -241,15 +242,15 @@ impl Inspector {
                 }
 
                 // Cover modules overflowing the top/bottom
-                self.draw_overflow_covers(inner);
+                self.draw_overflow_covers(ctx, inner);
 
                 // Outline 
-                draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., Color::WHITE);
+                ctx.draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., Color::WHITE);
             }
             
             // Draw buttons at the top after the covers
             // Add entity
-            if menu_button(add_rect, add_label, false) {
+            if menu_button(ctx, add_rect, add_label, false) {
                 if self.can_show_any_component(game_ctx.ecs) {
                     self.add_mode = !self.add_mode;
                 }
@@ -260,7 +261,7 @@ impl Inspector {
             if !(game_ctx.ecs.get_store::<Player>().contains(entity)) {
                 let remove_rect = self.register_rect(Rect::new(x_start, INSET, btn_w_remove, BTN_HEIGHT));
 
-                if menu_button(remove_rect, remove_label, false) || Controls::delete() && !input_is_focused() {
+                if menu_button(ctx, remove_rect, remove_label, false) || Controls::delete(ctx) && !input_is_focused() {
                     let room_id = game_ctx.cur_world.current_room_id.unwrap_or_default();
                     let command = DeleteEntityCmd {
                         entity,
@@ -277,7 +278,7 @@ impl Inspector {
         } else {
             // No entity selected
             let create_label = "+ Entity";
-            let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
+            let txt_create = measure_text_ui(ctx, create_label, HEADER_FONT_SIZE_20);
             let create_btn = Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - (WIDGET_PADDING * 2.0),
                 self.rect.y + BTN_MARGIN,
@@ -286,7 +287,7 @@ impl Inspector {
             );
 
             let add_cam_label = "+ Camera";
-            let txt_cam = measure_text_ui(add_cam_label, HEADER_FONT_SIZE_20, 1.0);
+            let txt_cam = measure_text_ui(ctx, add_cam_label, HEADER_FONT_SIZE_20);
             let cam_btn_w = txt_cam.width + WIDGET_PADDING * 2.0;
             let cam_btn = Rect::new(
                 create_btn.x - WIDGET_SPACING - cam_btn_w,
@@ -295,7 +296,7 @@ impl Inspector {
                 BTN_HEIGHT,
             );
 
-            if menu_button(cam_btn, add_cam_label, false) {
+            if menu_button(ctx, cam_btn, add_cam_label, false) {
                 // Create a new RoomCamera entity that belongs to the current room
                 let ecs = &mut game_ctx.ecs;
                 let cur_room = game_ctx.cur_world.current_room().unwrap();
@@ -314,6 +315,7 @@ impl Inspector {
             ));
 
             let (new_val, changed) = gui_slider(
+                ctx,
                 self.widget_ids.darkness_slider_id,
                 slider_rect,
                 0.0,
@@ -327,12 +329,12 @@ impl Inspector {
             }
 
             let txt_val = format!("{:.2}", cur_room.darkness);
-            let txt_measure = measure_text_ui(&txt_val, DEFAULT_FONT_SIZE_16, 1.0);
+            let txt_measure = measure_text_ui(ctx, &txt_val, DEFAULT_FONT_SIZE_16);
             let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;
-            draw_text_ui(&txt_val, txt_x, txt_y, 20.0, Color::WHITE);
+            ctx.draw_text(&txt_val, txt_x, txt_y, 20.0, Color::WHITE);
 
-            return menu_button(create_btn, create_label, false);
+            return menu_button(ctx, create_btn, create_label, false);
         }
 
         // Process pending component addition
@@ -348,12 +350,17 @@ impl Inspector {
         false
     }
 
-    fn is_blocked(&self) -> bool {
-        is_mouse_over_panel()
+    fn is_blocked(&self, ctx: &mut WgpuContext) -> bool {
+        is_mouse_over_panel(ctx)
     }
 
     /// Draw the drop‑down list that appears under the Add Component button
-    fn draw_add_component_menu(&mut self, button_rect: Rect, ecs: &mut Ecs) {
+    fn draw_add_component_menu(
+        &mut self,
+        ctx: &mut WgpuContext, 
+        button_rect: Rect, 
+        ecs: &mut Ecs
+    ) {
         let entity = match self.target {
             Some(e) => e,
             None => return,
@@ -397,7 +404,7 @@ impl Inspector {
         // Determine width
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
-            let txt = measure_text_ui(reg.type_name, DEFAULT_FONT_SIZE_16, 1.0);
+            let txt = measure_text_ui(ctx, reg.type_name, DEFAULT_FONT_SIZE_16);
             let w = txt.width + 20.0;
             if w > needed_w {
                 needed_w = w;
@@ -405,7 +412,7 @@ impl Inspector {
         }
 
         // Clamp width to usable screen area
-        let max_w = screen_width() - 2.0 * MIN_INSET;
+        let max_w = ctx.screen_width() - 2.0 * MIN_INSET;
         let menu_w = needed_w.min(max_w);
         
         // Height depends on number of entries
@@ -413,8 +420,8 @@ impl Inspector {
 
         // Horizontal position
         let mut menu_x = button_rect.x;
-        if menu_x + menu_w > screen_width() - MIN_INSET {
-            menu_x = screen_width() - MIN_INSET - menu_w;
+        if menu_x + menu_w > ctx.screen_width() - MIN_INSET {
+            menu_x = ctx.screen_width() - MIN_INSET - menu_w;
         }
         if menu_x < MIN_INSET {
             menu_x = MIN_INSET;
@@ -424,7 +431,7 @@ impl Inspector {
         let menu_rect = self.register_rect(Rect::new(menu_x, menu_y, menu_w, menu_h));
 
         // Background & border
-        draw_rectangle(
+        ctx.draw_rectangle(
             menu_rect.x,
             menu_rect.y,
             menu_rect.w,
@@ -432,7 +439,7 @@ impl Inspector {
             Color::new(0.0, 0.0, 0.0, 0.8),
         );
         
-        draw_rectangle_lines(menu_rect.x, menu_rect.y, menu_rect.w, menu_rect.h, 2.0, Color::WHITE);
+        ctx.draw_rectangle_lines(menu_rect.x, menu_rect.y, menu_rect.w, menu_rect.h, 2.0, Color::WHITE);
 
         // Entries
         for (idx, reg) in shown.iter().enumerate() {
@@ -442,7 +449,7 @@ impl Inspector {
                 menu_rect.w - 10.0,
                 25.0,
             );
-            if Button::new(entry_rect, reg.type_name).show() {
+            if Button::new(entry_rect, reg.type_name).show(ctx) {
                 self.pending_add = Some(reg.type_name.to_string());
                 self.add_mode = false;
             }
@@ -479,8 +486,8 @@ impl Inspector {
         rect
     }
 
-    pub fn is_mouse_over(&self) -> bool {
-        let mouse_screen: Vec2 = mouse_position().into();
+    pub fn is_mouse_over(&self, ctx: &WgpuContext) -> bool {
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || (self.rect.contains(mouse_screen) && self.target.is_some())
     }
@@ -510,9 +517,9 @@ impl Inspector {
 
     /// Draw the four solid‑grey mask rectangles which hide anything 
     /// that scrolls outside the visible inspector area.
-    fn draw_overflow_covers(&self, inner: Rect) {
+    fn draw_overflow_covers(&self, ctx: &mut WgpuContext, inner: Rect) {
         // Top cover
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x,
             self.rect.y,
             self.rect.w,
@@ -524,7 +531,7 @@ impl Inspector {
         let inner_bottom = inner.y + inner.h;
         let panel_bottom = self.rect.y + self.rect.h;
 
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x,
             inner_bottom,
             self.rect.w,
@@ -533,7 +540,7 @@ impl Inspector {
         );
         
         // Left strip
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x - INSET,
             self.rect.y,
             INSET,
@@ -544,7 +551,7 @@ impl Inspector {
         // Right strip
         let inner_right = inner.x + inner.w;
         let panel_right = self.rect.x + self.rect.w;
-        draw_rectangle(
+        ctx.draw_rectangle(
             inner_right,
             self.rect.y,
             panel_right - inner_right,

@@ -37,13 +37,13 @@ impl ConfirmPrompt {
     }
 
     /// Draws the widget and, return the result if confirmed/cancelled or None.
-    pub fn draw(&mut self) -> Option<ConfirmPromptResult> {
+    pub fn draw(&mut self, ctx: &mut WgpuContext) -> Option<ConfirmPromptResult> {
         // Message
         let center_x = self.rect.x + (self.rect.w / 2.0);
-        let message_x = center_text(center_x, &self.message, DEFAULT_FONT_SIZE_16).0;
-        let message_height = measure_text_ui(&self.message, DEFAULT_FONT_SIZE_16, 1.0).height;
+        let message_x = center_text(ctx, center_x, &self.message, DEFAULT_FONT_SIZE_16).0;
+        let message_height = measure_text_ui(ctx, &self.message, DEFAULT_FONT_SIZE_16).height;
 
-        draw_text_ui(
+        ctx.draw_text(
             &self.message,
             message_x,
             self.rect.y,
@@ -54,15 +54,15 @@ impl ConfirmPrompt {
         // Buttons
         let btn_y = self.rect.y + message_height + WIDGET_SPACING;
         let (confirm_rect, cancel_rect) = confirm_cancel_rects(self.rect, btn_y);
-        let confirm_clicked = Button::new(confirm_rect, "Confirm").show();
-        let cancel_clicked = Button::new(cancel_rect, "Cancel").show();
+        let confirm_clicked = Button::new(confirm_rect, "Confirm").show(ctx);
+        let cancel_clicked = Button::new(cancel_rect, "Cancel").show(ctx);
 
         // Handle result
-        if confirm_clicked || Controls::enter() {
+        if confirm_clicked || Controls::enter(ctx) {
             return Some(ConfirmPromptResult::Confirmed);
         }
 
-        if cancel_clicked || Controls::escape() {
+        if cancel_clicked || Controls::escape(ctx) {
             return Some(ConfirmPromptResult::Cancelled);
         }
 

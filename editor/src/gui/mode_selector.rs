@@ -11,7 +11,7 @@ pub trait ModeInfo {
     /// The texture that represents the mode.
     fn icon(&self) -> &'static Texture2D;
     /// Keyboard shortcut for the mode.
-    fn shortcut(self) -> Option<fn() -> bool>;
+    fn shortcut(self) -> Option<fn(&WgpuContext) -> bool>;
 }
 
 /// The UI component.
@@ -24,13 +24,13 @@ pub struct ModeSelector <M: ModeInfo + Copy + PartialEq + 'static> {
 
 impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
     /// Draws icons and handles clicks. Returns the total Rect and whether the mode changed.
-    pub fn draw(&mut self) -> (Rect, bool) {
+    pub fn draw(&mut self, ctx: &mut WgpuContext) -> (Rect, bool) {
         let mut changed = false;
         const PADDING: f32 = 8.0;
         let icon_size = MENU_PANEL_HEIGHT - 2.0 * PADDING;
 
         let total_width = self.options.len() as f32 * (icon_size + PADDING) - PADDING;
-        let start_x = (screen_width() - total_width) / 2.0;
+        let start_x = (ctx.screen_width() - total_width) / 2.0;
 
         let total_rect = Rect::new(start_x, PADDING - 2.0, total_width, MENU_PANEL_HEIGHT);
 
@@ -40,7 +40,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
 
             // Highlight the active mode
             if *mode == self.current {
-                draw_rectangle_lines(
+                ctx.draw_rectangle_lines(
                     rect.x - 2.0, rect.y - 2.0,
                     rect.w + 4.0, rect.h + 4.0,
                     2.0,
@@ -49,8 +49,8 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
             }
 
             // Click handling
-            if is_mouse_button_pressed(MouseButton::Left)
-                && rect.contains(mouse_position().into())
+            if ctx.is_mouse_button_pressed(MouseButton::Left)
+                && rect.contains(ctx.mouse_position().into())
                 && !is_modal_open()
             {
                 if *mode != self.current {
@@ -60,7 +60,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
             }
 
             // Draw icon
-            draw_texture_ex(
+            ctx.draw_texture_ex(
                 &mode.icon(),
                 rect.x,
                 rect.y,
@@ -76,20 +76,20 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
 
     /// Draws tooltips for hovered mode icons. Call this after other UI elements
     /// to ensure tooltips appear on top.
-    pub fn draw_tooltips(&self) {
+    pub fn draw_tooltips(&self, ctx: &mut WgpuContext) {
         const PADDING: f32 = 8.0;
         let icon_size = MENU_PANEL_HEIGHT - 2.0 * PADDING;
 
         let total_width = self.options.len() as f32 * (icon_size + PADDING) - PADDING;
-        let start_x = (screen_width() - total_width) / 2.0;
+        let start_x = (ctx.screen_width() - total_width) / 2.0;
 
         for (i, mode) in self.options.iter().enumerate() {
             let x = start_x + i as f32 * (icon_size + PADDING);
             let rect = Rect::new(x, PADDING, icon_size, icon_size);
 
-            if rect.contains(mouse_position().into()) && !is_modal_open() {
+            if rect.contains(ctx.mouse_position().into()) && !is_modal_open() {
                 let tip = mode.label();
-                let tip_size = measure_text_ui(tip, 16.0, 1.0);
+                let tip_size = measure_text_ui(ctx, tip, 16.0);
 
                 let tip_rect = Rect::new(
                     rect.x,
@@ -98,7 +98,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                     20.0,
                 );
 
-                draw_rectangle(
+                ctx.draw_rectangle(
                     tip_rect.x,
                     tip_rect.y,
                     tip_rect.w,
@@ -106,7 +106,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
                     Color::new(0.0, 0.0, 0.0, 0.8)
                 );
 
-                draw_text_ui(
+                ctx.draw_text(
                     tip,
                     tip_rect.x + 4.0,
                     tip_rect.y + 15.0,
@@ -137,10 +137,15 @@ fn sub_mode_strip_layout(anchor_x: f32, anchor_y: f32, option_count: usize) -> (
 
 /// Draws only the background of the sub-mode strip.
 /// Call this before drawing the mode selector so tooltips appear on top.
-pub fn draw_sub_mode_strip_background(anchor_x: f32, anchor_y: f32, option_count: usize) -> Rect {
+pub fn draw_sub_mode_strip_background(
+    ctx: &mut WgpuContext, 
+    anchor_x: f32, 
+    anchor_y: f32, 
+    option_count: usize
+) -> Rect {
     let (strip_rect, _, _) = sub_mode_strip_layout(anchor_x, anchor_y, option_count);
 
-    draw_rectangle(
+    ctx.draw_rectangle(
         strip_rect.x,
         strip_rect.y,
         strip_rect.w,
@@ -155,6 +160,7 @@ pub fn draw_sub_mode_strip_background(anchor_x: f32, anchor_y: f32, option_count
 /// Call this after drawing the mode selector.
 /// Returns the rect of the strip and whether the sub-mode changed.
 pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
+    ctx: &mut WgpuContext,
     anchor_x: f32,
     anchor_y: f32,
     options: &'static [S],
@@ -170,7 +176,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
 
         // Highlight the active sub-mode
         if *mode == *current {
-            draw_rectangle_lines(
+            ctx.draw_rectangle_lines(
                 rect.x - 2.0,
                 rect.y - 2.0,
                 rect.w + 4.0,
@@ -181,8 +187,8 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
         }
 
         // Click handling
-        if is_mouse_button_pressed(MouseButton::Left)
-            && rect.contains(mouse_position().into())
+        if ctx.is_mouse_button_pressed(MouseButton::Left)
+            && rect.contains(ctx.mouse_position().into())
             && !is_modal_open()
         {
             if *mode != *current {
@@ -192,7 +198,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
         }
 
         // Draw icon
-        draw_texture_ex(
+        ctx.draw_texture_ex(
             mode.icon(),
             rect.x,
             rect.y,
@@ -204,9 +210,9 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
         );
 
         // Tooltip
-        if rect.contains(mouse_position().into()) && !is_modal_open() {
+        if rect.contains(ctx.mouse_position().into()) && !is_modal_open() {
             let tip = mode.label();
-            let tip_size = measure_text_ui(tip, 16.0, 1.0);
+            let tip_size = measure_text_ui(ctx, tip, 16.0);
 
             let tip_rect = Rect::new(
                 rect.x,
@@ -215,7 +221,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
                 20.0,
             );
 
-            draw_rectangle(
+            ctx.draw_rectangle(
                 tip_rect.x,
                 tip_rect.y,
                 tip_rect.w,
@@ -223,7 +229,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
                 Color::new(0.0, 0.0, 0.0, 0.8),
             );
 
-            draw_text_ui(tip, tip_rect.x + 4.0, tip_rect.y + 15.0, 16.0, Color::WHITE);
+            ctx.draw_text(tip, tip_rect.x + 4.0, tip_rect.y + 15.0, 16.0, Color::WHITE);
         }
     }
 

@@ -1,11 +1,9 @@
 //! Text rendering and measurement.
 
 mod dimensions;
-pub mod font;
 mod params;
 
 pub use dimensions::*;
-pub use font::*;
 pub use params::*;
 
 use crate::types::Color;

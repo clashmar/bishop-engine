@@ -1,12 +1,12 @@
-use crate::gui::panels::panel_manager::is_mouse_over_panel;
 // editor/src/tilemap/tilemap_panel.rs
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::tilemap::background_module::BackgroundModule;
 use crate::assets::asset_manager::AssetManager;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::tilemap::tile_palette::*;
 use crate::tiles::tilemap::TileMap;
 use crate::gui::gui_constants::*;
-use engine_core::ui::widgets::Button;
+use engine_core::prelude::*;
 use bishop::prelude::*;
 
 const INSET: f32 = 10.0;
@@ -55,6 +55,7 @@ impl TilemapPanel {
     /// Render the panel and any visible sub‑modules
     pub async fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
         asset_manager: &mut AssetManager,
         tilemap: &mut TileMap,
     ) {
@@ -64,8 +65,8 @@ impl TilemapPanel {
 
         // Layout create button
         let create_label = "Create Tile";
-        let create_width = measure_text(create_label, 20.0).width + PADDING;
-        let create_start = screen_width() - INSET - create_width;
+        let create_width = measure_text_ui(ctx, create_label, 20.0).width + PADDING;
+        let create_start = ctx.screen_width() - INSET - create_width;
         let create_rect = self.register_rect(Rect::new(create_start, INSET, create_width, BTN_HEIGHT));
 
         // Compute the top offset for the panel
@@ -81,7 +82,7 @@ impl TilemapPanel {
         ));
 
         // Background
-        draw_rectangle(
+        ctx.draw_rectangle(
             inner.x,
             inner.y,
             inner.w,
@@ -90,30 +91,30 @@ impl TilemapPanel {
         );
 
         // Top/bottom/side panelling
-        self.draw_overflow_covers(inner);
+        self.draw_overflow_covers(ctx, inner);
 
         // Outline
-        draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., Color::WHITE);
+        ctx.draw_rectangle_lines(inner.x, inner.y, inner.w, inner.h, 2., Color::WHITE);
 
         // Layout the modules vertically
         let mut y = inner.y + 10.0;
 
-        let blocked = is_mouse_over_panel();
+        let blocked = is_mouse_over_panel(ctx);
 
         // Palette
         self.palette.set_columns_for_width(inner.w - 20.0);
         let height = self.palette.height();
         let palette_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.palette.draw(palette_rect, asset_manager).await;
+        self.palette.draw(ctx, palette_rect, asset_manager).await;
 
         y += height + 20.0; // Create gap for next module
 
         // Background module
         let background_rect = Rect::new(inner.x + 10.0, y, inner.w, height);
-        self.background.draw(background_rect, tilemap, blocked);
+        self.background.draw(ctx, background_rect, tilemap, blocked);
 
         // Draw create button
-        if Button::new(create_rect, create_label).blocked(blocked).show() {
+        if Button::new(create_rect, create_label).blocked(blocked).show(ctx) {
             if self.palette.ui.open && self.palette.ui.mode == TilePaletteUiMode::Create {
                 self.palette.ui.open = false; // Hide dialog
             } else {
@@ -126,11 +127,11 @@ impl TilemapPanel {
         // Edit button appears only when there is a selected palette tile
         if !self.palette.entries.is_empty() {
             let edit_label = "Edit";
-            let edit_width = measure_text(edit_label, 20.0).width + PADDING;
-            let edit_start = screen_width() - INSET - SPACING - create_width - edit_width;
+            let edit_width = measure_text_ui(ctx, edit_label, 20.0).width + PADDING;
+            let edit_start = ctx.screen_width() - INSET - SPACING - create_width - edit_width;
             let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
 
-            if Button::new(edit_rect, edit_label).blocked(blocked).show() {
+            if Button::new(edit_rect, edit_label).blocked(blocked).show(ctx) {
                 self.palette.ui.mode = TilePaletteUiMode::Edit;
                 self.palette.ui.edit_index = self.palette.selected_index;
                 self.palette.ui.edit_initialized = true;
@@ -171,13 +172,13 @@ impl TilemapPanel {
 
     /// Draw the four solid‑grey mask rectangles which hide anything 
     /// that scrolls outside the visible inspector area.
-    fn draw_overflow_covers(&self, inner: Rect) {
+    fn draw_overflow_covers(&self, ctx: &mut WgpuContext, inner: Rect) {
         // Top cover
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x,
             self.rect.y,
-            self.rect.w,
             inner.y - self.rect.y,
+            self.rect.w,
             PANEL_COLOR,
         );
 
@@ -185,7 +186,7 @@ impl TilemapPanel {
         let inner_bottom = inner.y + inner.h;
         let panel_bottom = self.rect.y + self.rect.h;
 
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x,
             inner_bottom,
             self.rect.w,
@@ -194,7 +195,7 @@ impl TilemapPanel {
         );
         
         // Left strip
-        draw_rectangle(
+        ctx.draw_rectangle(
             self.rect.x - INSET,
             self.rect.y,
             INSET,
@@ -205,7 +206,7 @@ impl TilemapPanel {
         // Right strip
         let inner_right = inner.x + inner.w;
         let panel_right = self.rect.x + self.rect.w;
-        draw_rectangle(
+        ctx.draw_rectangle(
             inner_right,
             self.rect.y,
             panel_right - inner_right,

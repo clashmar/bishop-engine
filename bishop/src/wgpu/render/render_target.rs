@@ -4,6 +4,7 @@ use crate::types::FilterMode;
 
 /// A render target for off-screen rendering.
 /// Wraps a wgpu texture with both render attachment and texture binding capabilities.
+#[derive(Debug, Clone)]
 pub struct BishopRenderTarget {
     texture: wgpu::Texture,
     render_view: wgpu::TextureView,

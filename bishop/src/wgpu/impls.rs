@@ -5,11 +5,11 @@ use std::cell::RefCell;
 use super::context::WgpuContext;
 use super::render::{FontAtlas, WgpuTexture};
 use crate::camera::{Camera, Camera2D};
-use crate::draw::{Draw, DrawTexture, DrawTextureParams};
+use crate::draw::{Draw, DrawTextureParams};
 use crate::input::{Input, KeyCode, MouseButton};
 use crate::text::{Text, TextDimensions};
 use crate::time::Time;
-use crate::types::{Color, Vec2};
+use crate::types::{Color, Texture2D, Vec2};
 use crate::window::Window;
 
 thread_local! {
@@ -44,6 +44,10 @@ impl Input for WgpuContext {
 
     fn mouse_position(&self) -> (f32, f32) {
         self.input.mouse_position()
+    }
+
+    fn mouse_delta_position(&self) -> (f32, f32) {
+        self.input.mouse_delta_position()
     }
 
     fn mouse_wheel(&self) -> (f32, f32) {
@@ -98,6 +102,22 @@ impl Draw for WgpuContext {
     fn clear_background(&mut self, color: Color) {
         self.clear_color = Some(color);
     }
+
+    fn draw_texture(&mut self, texture: &Texture2D, x: f32, y: f32, color: Color) {
+        self.texture_renderer.draw_texture(texture.inner(), x, y, color);
+    }
+
+    fn draw_texture_ex(
+        &mut self,
+        texture: &Texture2D,
+        x: f32,
+        y: f32,
+        color: Color,
+        params: DrawTextureParams,
+    ) {
+        self.texture_renderer
+            .draw_texture_ex(texture.inner(), x, y, color, params);
+    }
 }
 
 impl Text for WgpuContext {
@@ -125,25 +145,25 @@ impl Text for WgpuContext {
     }
 }
 
-impl DrawTexture for WgpuContext {
-    type Texture = WgpuTexture;
+// impl DrawTexture for WgpuContext {
+//     type Texture = WgpuTexture;
 
-    fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color) {
-        self.texture_renderer.draw_texture(texture, x, y, color);
-    }
+//     fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color) {
+//         self.texture_renderer.draw_texture(texture, x, y, color);
+//     }
 
-    fn draw_texture_ex(
-        &mut self,
-        texture: &Self::Texture,
-        x: f32,
-        y: f32,
-        color: Color,
-        params: DrawTextureParams,
-    ) {
-        self.texture_renderer
-            .draw_texture_ex(texture, x, y, color, params);
-    }
-}
+//     fn draw_texture_ex(
+//         &mut self,
+//         texture: &Self::Texture,
+//         x: f32,
+//         y: f32,
+//         color: Color,
+//         params: DrawTextureParams,
+//     ) {
+//         self.texture_renderer
+//             .draw_texture_ex(texture, x, y, color, params);
+//     }
+// }
 
 impl Camera for WgpuContext {
     fn set_camera(&mut self, camera: &Camera2D) {
@@ -156,6 +176,15 @@ impl Camera for WgpuContext {
 
     fn screen_to_world(&self, camera: &Camera2D, screen_pos: Vec2) -> Vec2 {
         camera.screen_to_world(screen_pos)
+    }
+
+    fn create_render_target(
+        &self,
+        width: u32,
+        height: u32,
+        filter: crate::types::FilterMode,
+    ) -> super::render::BishopRenderTarget {
+        WgpuContext::create_render_target(self, width, height, filter)
     }
 }
 

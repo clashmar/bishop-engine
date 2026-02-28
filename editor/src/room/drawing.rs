@@ -16,13 +16,14 @@ impl RoomEditor {
     /// Draw static UI for the scene editor
     pub fn draw_ui(
         &mut self,
+        ctx: &mut WgpuContext,
         game_ctx: &mut GameCtxMut,
         camera: &Camera2D,
     ) {
         // Reset to static camera
-        set_default_camera();
+        ctx.set_default_camera();
 
-        self.draw_coordinates(camera, game_ctx.cur_world.current_room().unwrap(), game_ctx.cur_world.grid_size);
+        self.draw_coordinates(ctx, camera, game_ctx.cur_world.grid_size);
 
         // Clear sub-mode rect at start of frame
         self.sub_mode_rect = None;
@@ -38,12 +39,13 @@ impl RoomEditor {
                 const PADDING: f32 = 8.0;
                 let icon_size = MENU_PANEL_HEIGHT - 2.0 * PADDING;
                 let total_width = self.mode_selector.options.len() as f32 * (icon_size + PADDING) - PADDING;
-                let start_x = (screen_width() - total_width) / 2.0;
+                let start_x = (ctx.screen_width() - total_width) / 2.0;
                 let tilemap_icon_x = start_x + tilemap_icon_index as f32 * (icon_size + PADDING);
                 let sub_strip_y = PADDING + icon_size + 4.0;
 
                 // Draw sub-mode strip background first so tooltips appear on top
                 let bg_rect = draw_sub_mode_strip_background(
+                    ctx,
                     tilemap_icon_x,
                     sub_strip_y,
                     TILEMAP_SUB_MODES.len(),
@@ -51,22 +53,24 @@ impl RoomEditor {
                 self.sub_mode_rect = Some(bg_rect);
 
                 // Mode selector
-                let (_mode_rect, changed) = self.mode_selector.draw();
+                let (_mode_rect, changed) = self.mode_selector.draw(ctx);
                 if changed {
                     self.mode = self.mode_selector.current;
                 }
 
                 // Draw sub-mode strip icons
                 let (sub_rect, sub_changed) = draw_sub_mode_strip(
+                    ctx,
                     tilemap_icon_x,
                     sub_strip_y,
                     TILEMAP_SUB_MODES,
                     &mut self.tilemap_sub_mode,
                 );
+
                 self.sub_mode_rect = Some(sub_rect);
 
                 // Draw tooltips last so they appear on top of everything
-                self.mode_selector.draw_tooltips();
+                self.mode_selector.draw_tooltips(ctx);
 
                 if sub_changed {
                     self.tilemap_editor.mode = self.tilemap_sub_mode;
@@ -75,7 +79,7 @@ impl RoomEditor {
                 // Handle sub-mode keyboard shortcuts
                 for sub_mode in TILEMAP_SUB_MODES.iter() {
                     if let Some(shortcut_fn) = sub_mode.shortcut() {
-                        if shortcut_fn() && *sub_mode != self.tilemap_sub_mode {
+                        if shortcut_fn(ctx) && *sub_mode != self.tilemap_sub_mode {
                             self.tilemap_sub_mode = *sub_mode;
                             self.tilemap_editor.mode = self.tilemap_sub_mode;
                         }
@@ -84,26 +88,27 @@ impl RoomEditor {
             }
             RoomEditorMode::Scene => {
                 // Top menu background
-                self.register_rect(draw_top_panel_full());
+                self.register_rect(draw_top_panel_full(ctx));
 
                 // Draw inspector
                 self.create_entity_requested = self.inspector.draw(
+                    ctx,
                     game_ctx
                 );
 
                 // Mode selector (menu bar)
-                let (mode_rect, changed) = self.mode_selector.draw();
+                let (mode_rect, changed) = self.mode_selector.draw(ctx);
                 if changed {
                     self.mode = self.mode_selector.current;
                 }
 
                 // Play‑test button (menu bar)
                 let play_label = "Play";
-                let play_width = measure_text_ui(play_label, HEADER_FONT_SIZE_20, 1.0).width + WIDGET_PADDING * 2.0;
+                let play_width = measure_text_ui(ctx, play_label, HEADER_FONT_SIZE_20).width + WIDGET_PADDING * 2.0;
                 let play_x = mode_rect.x + mode_rect.w + WIDGET_SPACING;
                 let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
 
-                if menu_button(play_rect, play_label, false) {
+                if menu_button(ctx, play_rect, play_label, false) {
                     self.request_play = true;
                 }
             }
@@ -111,27 +116,33 @@ impl RoomEditor {
     }
 
     /// Draw the cursor coordinates in world space.
-    pub fn draw_coordinates(&self, camera: &Camera2D, _room: &Room, grid_size: f32) {
-        let world_grid = coord::mouse_world_grid(camera, grid_size);
+    pub fn draw_coordinates(
+        &self, 
+        ctx: &mut WgpuContext, 
+        camera: &Camera2D, 
+        grid_size: f32
+    ) {
+        let world_grid = coord::mouse_world_grid(ctx, camera, grid_size);
         
         let txt = format!(
             "({:.0}, {:.0})",
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text_ui(&txt, DEFAULT_FONT_SIZE_16, 1.0);
+        let txt_metrics = measure_text_ui(ctx, &txt, DEFAULT_FONT_SIZE_16,);
         let margin = 10.0;
 
-        let x = (screen_width() - txt_metrics.width) / 2.0;
-        let y = screen_height() - margin;
+        let x = (ctx.screen_width() - txt_metrics.width) / 2.0;
+        let y = ctx.screen_height() - margin;
 
-        draw_text_ui(&txt, x, y, DEFAULT_FONT_SIZE_16, Color::BLUE);
+        ctx.draw_text(&txt, x, y, DEFAULT_FONT_SIZE_16, Color::BLUE);
     }
 
     /// Draw viewport rectangles for all cameras in the room when a camera is selected.
     /// The selected camera is drawn in yellow, others in pink.
     pub fn draw_camera_viewport(
         &self,
+        ctx: &mut WgpuContext, 
         editor_cam: &Camera2D,
         ecs: &Ecs,
         selected: Entity,
@@ -146,13 +157,13 @@ impl RoomEditor {
         let pos_store = ecs.get_store::<Transform>();
         let room_store = ecs.get_store::<CurrentRoom>();
 
-        let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
+        let editor_scalar = EditorCameraController::scalar_zoom(ctx, editor_cam);
         const BASE_THICKNESS: f32 = 1.;
         const THICKNESS_SCALE: f32 = 0.01;
         let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 
         let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
-        let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
+        let tr = editor_cam.screen_to_world(vec2(ctx.screen_width(), ctx.screen_height()));
         let editor_w = (tr.x - bl.x).abs();
         let editor_h = (tr.y - bl.y).abs();
 
@@ -188,7 +199,7 @@ impl RoomEditor {
                 Color::PINK
             };
 
-            draw_rectangle_lines(
+            ctx.draw_rectangle_lines(
                 top_left.x,
                 top_left.y,
                 viewport_w,
@@ -202,6 +213,7 @@ impl RoomEditor {
 
 /// Draw the outline of the collider for an entity if it has one.
 pub fn draw_collider(
+    ctx: &mut WgpuContext, 
     ecs: &Ecs,
     entity: Entity,
 ) {
@@ -217,7 +229,7 @@ pub fn draw_collider(
 
             // Apply pivot offset to collider position
             let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
-            draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, Color::PINK);
+            ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, Color::PINK);
      }
 }
 
@@ -263,7 +275,12 @@ pub fn entity_hitbox(
 }
 
 /// Draw an icon for a `RoomCamera`.
-pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId, grid_size: f32) {
+pub fn draw_camera_placeholders(
+    ctx: &mut WgpuContext, 
+    ecs: &Ecs, 
+    room_id: RoomId, 
+    grid_size: f32
+) {
     let cam_store = ecs.get_store::<RoomCamera>();
     let pos_store = ecs.get_store::<Transform>();
     let room_store = ecs.get_store::<CurrentRoom>();
@@ -295,7 +312,7 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId, grid_size: f32) {
         let blue = Color::new(0.0, 0.47, 0.95, PLACEHOLDER_OPACITY);
         let red = Color::new(0.9, 0.16, 0.22, PLACEHOLDER_OPACITY);
 
-        draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), green);
+        ctx.draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), green);
 
         let finder_w = grid_size * 0.3;
         let finder_h = grid_size * 0.6;
@@ -305,7 +322,7 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId, grid_size: f32) {
             finder_w,
             finder_h,
         );
-        draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
+        ctx.draw_rectangle_lines(finder.x, finder.y, finder.w, finder.h,
                             thickness(grid_size) * 0.75, blue);
 
         let lens_radius = grid_size * 0.1;
@@ -313,13 +330,14 @@ pub fn draw_camera_placeholders(ecs: &Ecs, room_id: RoomId, grid_size: f32) {
             body.x + body.w - lens_radius * 2.0 - thickness(grid_size),
             body.y + body.h / 2.0,
         );
-        draw_circle_lines(lens_center.x, lens_center.y,
+        ctx.draw_circle_lines(lens_center.x, lens_center.y,
                         lens_radius, thickness(grid_size) * 0.75, red);
     }
 }
 
 /// Draw an icon for a `Light` that has no other visual component.
 pub fn draw_light_placeholders(
+    ctx: &mut WgpuContext, 
     ecs: &Ecs,
     room_id: RoomId,
     grid_size: f32
@@ -351,7 +369,7 @@ pub fn draw_light_placeholders(
             let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
 
             // Outer square
-            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), cyan);
+            ctx.draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), cyan);
 
             // Lens
             let lens_radius = grid_size * 0.2;
@@ -360,7 +378,7 @@ pub fn draw_light_placeholders(
                 body.y + body.h / 2.,
             );
 
-            draw_circle_lines(
+            ctx.draw_circle_lines(
                 lens_center.x,
                 lens_center.y,
                 lens_radius,
@@ -373,6 +391,7 @@ pub fn draw_light_placeholders(
 
 /// Draw a placeholder for a `Glow` that has no other visual component.
 pub fn draw_glow_placeholders(
+    ctx: &mut WgpuContext,
     ecs: &Ecs,
     asset_manager: &mut AssetManager,
     room_id: RoomId,
@@ -408,7 +427,7 @@ pub fn draw_glow_placeholders(
             let yellow = Color::new(0.94, 0.86, 0.0, PLACEHOLDER_OPACITY);
 
             // Outer square
-            draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), cyan);
+            ctx.draw_rectangle_lines(body.x, body.y, body.w, body.h, thickness(grid_size), cyan);
 
             // Lens
             let lens_radius = grid_size * 0.2;
@@ -417,7 +436,7 @@ pub fn draw_glow_placeholders(
                 body.y + body.h / 2.,
             );
 
-            draw_circle_lines(
+            ctx.draw_circle_lines(
                 lens_center.x,
                 lens_center.y,
                 lens_radius,
@@ -429,14 +448,18 @@ pub fn draw_glow_placeholders(
 }
 
 /// Draws a small white dot at the pivot point of the selected entity.
-pub fn draw_pivot_marker(ecs: &Ecs, entity: Entity) {
+pub fn draw_pivot_marker(
+    ctx: &mut WgpuContext, 
+    ecs: &Ecs, 
+    entity: Entity
+) {
     let transform = match ecs.get_store::<Transform>().get(entity) {
         Some(t) => t,
         None => return,
     };
 
     const PIVOT_RADIUS: f32 = 1.0;
-    draw_circle(transform.position.x, transform.position.y, PIVOT_RADIUS, Color::WHITE);
+    ctx.draw_circle(transform.position.x, transform.position.y, PIVOT_RADIUS, Color::WHITE);
 }
 
 /// Returns true if the entity is a pure placeholder (Camera or Light without visible sprites).
@@ -446,15 +469,21 @@ pub fn is_pure_placeholder(ecs: &Ecs, entity: Entity) -> bool {
 }
 
 /// Draw exit arrows for all exits in the room.
-pub fn draw_exit_placeholders(exits: &[Exit], room_position: Vec2, grid_size: f32) {
+pub fn draw_exit_placeholders(
+    ctx: &mut WgpuContext, 
+    exits: &[Exit], 
+    room_position: Vec2, 
+    grid_size: f32
+) {
     for exit in exits {
         let position = exit.position * grid_size + room_position;
-        draw_exit_arrow(position, exit.direction, grid_size);
+        draw_exit_arrow(ctx, position, exit.direction, grid_size);
     }
 }
 
 /// Draw all camera viewports in a room.
 pub fn draw_all_camera_viewports(
+    ctx: &mut WgpuContext, 
     editor_cam: &Camera2D,
     ecs: &Ecs,
     room_id: RoomId,
@@ -463,13 +492,13 @@ pub fn draw_all_camera_viewports(
     let pos_store = ecs.get_store::<Transform>();
     let room_store = ecs.get_store::<CurrentRoom>();
 
-    let editor_scalar = EditorCameraController::scalar_zoom(editor_cam);
+    let editor_scalar = EditorCameraController::scalar_zoom(ctx, editor_cam);
     const BASE_THICKNESS: f32 = 1.;
     const THICKNESS_SCALE: f32 = 0.01;
     let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 
     let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
-    let tr = editor_cam.screen_to_world(vec2(screen_width(), screen_height()));
+    let tr = editor_cam.screen_to_world(vec2(ctx.screen_width(), ctx.screen_height()));
     let editor_w = (tr.x - bl.x).abs();
     let editor_h = (tr.y - bl.y).abs();
 
@@ -496,7 +525,7 @@ pub fn draw_all_camera_viewports(
         let half = vec2(viewport_w, viewport_h) * 0.5;
         let top_left = pos - half;
 
-        draw_rectangle_lines(
+        ctx.draw_rectangle_lines(
             top_left.x,
             top_left.y,
             viewport_w,
@@ -508,17 +537,17 @@ pub fn draw_all_camera_viewports(
 }
 
 /// Draw a semi-transparent arrow at the given position indicating exit direction.
-pub fn draw_exit_arrow(position: Vec2, direction: ExitDirection, grid_size: f32) {
-    draw_exit_arrow_colored(position, direction, grid_size, HIGHLIGHT_GREEN);
+pub fn draw_exit_arrow(ctx: &mut WgpuContext, position: Vec2, direction: ExitDirection, grid_size: f32) {
+    draw_exit_arrow_colored(ctx, position, direction, grid_size, HIGHLIGHT_GREEN);
 }
 
 /// Draw an arrow for an adjacent room's exit (pink color to distinguish from current room).
-pub fn draw_adjacent_exit_arrow(position: Vec2, direction: ExitDirection, grid_size: f32) {
-    draw_exit_arrow_colored(position, direction, grid_size, Color::YELLOW);
+pub fn draw_adjacent_exit_arrow(ctx: &mut WgpuContext, position: Vec2, direction: ExitDirection, grid_size: f32) {
+    draw_exit_arrow_colored(ctx, position, direction, grid_size, Color::YELLOW);
 }
 
 /// Draw a selection box rectangle in world space.
-pub fn draw_selection_box(start: Vec2, end: Vec2) {
+pub fn draw_selection_box(ctx: &mut WgpuContext, start: Vec2, end: Vec2) {
     let min_x = start.x.min(end.x);
     let min_y = start.y.min(end.y);
     let max_x = start.x.max(end.x);
@@ -527,9 +556,9 @@ pub fn draw_selection_box(start: Vec2, end: Vec2) {
     let height = max_y - min_y;
 
     // Semi-transparent fill
-    draw_rectangle(min_x, min_y, width, height, Color::new(1.0, 1.0, 0.0, 0.1));
+    ctx.draw_rectangle(min_x, min_y, width, height, Color::new(1.0, 1.0, 0.0, 0.1));
     // Yellow outline
-    draw_rectangle_lines(min_x, min_y, width, height, 1.0, Color::YELLOW);
+    ctx.draw_rectangle_lines(min_x, min_y, width, height, 1.0, Color::YELLOW);
 }
 
 /// Returns a world-space Rect for an entity based on its sprite or placeholder size.
@@ -560,7 +589,13 @@ pub fn entity_world_rect(
 }
 
 /// Draw an exit arrow with a specified color.
-fn draw_exit_arrow_colored(position: Vec2, direction: ExitDirection, grid_size: f32, color: Color) {
+fn draw_exit_arrow_colored(
+    ctx: &mut WgpuContext, 
+    position: Vec2, 
+    direction: ExitDirection, 
+    grid_size: f32, 
+    color: Color
+) {
     let x = position.x;
     let y = position.y;
 
@@ -573,7 +608,7 @@ fn draw_exit_arrow_colored(position: Vec2, direction: ExitDirection, grid_size: 
         ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
     };
 
-    draw_triangle(
+    ctx.draw_triangle(
         arrow_center + offsets[0] * grid_size / 3.0,
         arrow_center + offsets[1] * grid_size / 3.0,
         arrow_center + offsets[2] * grid_size / 3.0,

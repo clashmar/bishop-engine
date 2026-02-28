@@ -29,6 +29,9 @@ pub trait Input {
     /// Returns the current mouse position in screen coordinates.
     fn mouse_position(&self) -> (f32, f32);
 
+    /// Returns the mouse position delta since the last frame.
+    fn mouse_delta_position(&self) -> (f32, f32);
+
     /// Returns the mouse wheel scroll delta (horizontal, vertical).
     fn mouse_wheel(&self) -> (f32, f32);
 

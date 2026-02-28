@@ -8,12 +8,10 @@ name = "wgpu_test"
 required-features = ["wgpu"]
 
 [features]
-default = ["macroquad"]
-macroquad = ["dep:macroquad"]
+default = ["wgpu"]
 wgpu = ["dep:wgpu", "dep:winit", "dep:pollster", "dep:bytemuck", "dep:image", "dep:fontdue"]
 
 [dependencies]
-macroquad = { version = "0.4.14", optional = true }
 wgpu = { version = "24.0", optional = true }
 winit = { version = "0.30", optional = true }
 pollster = { version = "0.4", optional = true }

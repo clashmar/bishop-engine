@@ -57,9 +57,14 @@ impl PanelManager {
         }
     }
 
-    pub fn update_and_draw(&mut self, editor_mode: EditorMode, editor: &mut Editor) {
-        let mouse_screen = mouse_position().into();
-        let mouse_pressed = is_mouse_button_pressed(MouseButton::Left);
+    pub fn update_and_draw(
+        &mut self, 
+        ctx: &mut WgpuContext, 
+        editor_mode: EditorMode, 
+        editor: &mut Editor
+    ) {
+        let mouse_screen = ctx.mouse_position().into();
+        let mouse_pressed = ctx.is_mouse_button_pressed(MouseButton::Left);
 
         // Find which panel was clicked (iterate back-to-front for z-order).
         let mut clicked_panel_id: Option<PanelId> = None;
@@ -106,7 +111,7 @@ impl PanelManager {
             // Block this panel if the mouse is over a different (higher-z) panel
             let blocked = topmost_panel_at_mouse.is_some() && topmost_panel_at_mouse != Some(*id);
 
-            panel.update_and_draw(editor, blocked);
+            panel.update_and_draw(ctx, editor, blocked);
         }
     }
 
@@ -117,28 +122,28 @@ impl PanelManager {
     }
 
     /// Register all standard panels.
-    pub fn register_all_panels(&mut self) {
+    pub fn register_all_panels(&mut self, ctx: &WgpuContext) {
         self.register(
-            GenericPanel::new(ConsolePanel::new()),
+            GenericPanel::new(ConsolePanel::new(), ctx),
             vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
         );
 
         self.register(
-            GenericPanel::new(HierarchyPanel::new()),
+            GenericPanel::new(HierarchyPanel::new(), ctx),
             vec![PanelMode::Room],
         );
 
         self.register(
-            GenericPanel::new(DiagnosticsPanel::new()),
+            GenericPanel::new(DiagnosticsPanel::new(), ctx),
             vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
         );
     }
 }
 
 /// Returns whether a panel should block interaction.
-pub fn is_mouse_over_panel() -> bool {
+pub fn is_mouse_over_panel(ctx: &WgpuContext) -> bool {
     with_panel_manager(|pm| {
-        let mouse_screen = mouse_position().into();
+        let mouse_screen = ctx.mouse_position().into();
         pm.panels.iter()
             .any(|(_, p)|
             p.visible

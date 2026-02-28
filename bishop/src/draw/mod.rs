@@ -4,7 +4,7 @@ mod params;
 
 pub use params::*;
 
-use crate::types::{Color, Vec2};
+use crate::types::{Color, Texture2D, Vec2};
 
 /// Core drawing operations for 2D primitives.
 pub trait Draw {
@@ -28,23 +28,36 @@ pub trait Draw {
 
     /// Clears the screen with the specified color.
     fn clear_background(&mut self, color: Color);
-}
-
-/// Extended drawing operations for textures.
-pub trait DrawTexture {
-    /// Backend-specific texture type.
-    type Texture;
 
     /// Draws a texture at the specified position.
-    fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color);
+    fn draw_texture(&mut self, texture: &Texture2D, x: f32, y: f32, color: Color);
 
     /// Draws a texture with extended parameters.
     fn draw_texture_ex(
         &mut self,
-        texture: &Self::Texture,
+        texture: &Texture2D,
         x: f32,
         y: f32,
         color: Color,
         params: DrawTextureParams,
     );
 }
+
+// /// Extended drawing operations for textures.
+// pub trait DrawTexture {
+//     /// Backend-specific texture type.
+//     type Texture;
+
+//     /// Draws a texture at the specified position.
+//     fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color);
+
+//     /// Draws a texture with extended parameters.
+//     fn draw_texture_ex(
+//         &mut self,
+//         texture: &Self::Texture,
+//         x: f32,
+//         y: f32,
+//         color: Color,
+//         params: DrawTextureParams,
+//     );
+// }

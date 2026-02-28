@@ -75,30 +75,30 @@ impl RoomEditor {
         rect
     }
 
-    pub fn is_mouse_over_ui(&self) -> bool {
-        let mouse_screen: Vec2 = mouse_position().into();
+    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
             || self.sub_mode_rect.map_or(false, |r| r.contains(mouse_screen))
-            || self.inspector.is_mouse_over()
+            || self.inspector.is_mouse_over(ctx)
             || is_dropdown_open()
             || is_modal_open()
-            || is_mouse_over_panel()
+            || is_mouse_over_panel(ctx)
     }
 
-    pub(crate) fn ui_was_clicked(&self) -> bool {
-        is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over_ui()
+    pub(crate) fn ui_was_clicked(&self, ctx: &mut WgpuContext,) -> bool {
+        ctx.is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over_ui(ctx)
     }
 
-    pub(crate) fn handle_mouse_cursor(&self) {
-        if self.is_mouse_over_ui() {
-            set_cursor_icon(CursorIcon::Default);
+    pub(crate) fn handle_mouse_cursor(&self, ctx: &mut WgpuContext,) {
+        if self.is_mouse_over_ui(ctx) {
+            ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
                 RoomEditorMode::Scene => {
-                    set_cursor_icon(CursorIcon::Default);
+                    ctx.set_cursor_icon(CursorIcon::Default);
                 }
                 RoomEditorMode::Tilemap => {
-                    set_cursor_icon(CursorIcon::Crosshair);
+                    ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
         }

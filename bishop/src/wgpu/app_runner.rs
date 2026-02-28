@@ -1,5 +1,9 @@
 //! Internal application runner for wgpu backend.
 
+use std::cell::RefCell;
+use std::future::Future;
+use std::pin::Pin;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use winit::application::ApplicationHandler;
@@ -9,6 +13,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Window, WindowId};
 
 use super::context::WgpuContext;
+use super::exec::poll_once;
 use crate::time::Time;
 use crate::window::{IconData, WindowConfig, WindowIcon};
 use crate::BishopApp;
@@ -16,9 +21,12 @@ use crate::BishopApp;
 /// Internal application handler for running BishopApp with wgpu/winit.
 pub(crate) struct WgpuAppRunner<A: BishopApp> {
     config: WindowConfig,
-    app: A,
-    ctx: Option<WgpuContext>,
+    app: Rc<RefCell<A>>,
+    ctx: Option<Rc<RefCell<WgpuContext>>>,
     window: Option<Arc<Window>>,
+    initialized: bool,
+    init_future: Option<Pin<Box<dyn Future<Output = ()>>>>,
+    frame_future: Option<Pin<Box<dyn Future<Output = ()>>>>,
 }
 
 impl<A: BishopApp> WgpuAppRunner<A> {
@@ -26,14 +34,17 @@ impl<A: BishopApp> WgpuAppRunner<A> {
     pub fn new(config: WindowConfig, app: A) -> Self {
         Self {
             config,
-            app,
+            app: Rc::new(RefCell::new(app)),
             ctx: None,
             window: None,
+            initialized: false,
+            init_future: None,
+            frame_future: None,
         }
     }
 }
 
-impl<A: BishopApp> ApplicationHandler for WgpuAppRunner<A> {
+impl<A: BishopApp + 'static> ApplicationHandler for WgpuAppRunner<A> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
             return;
@@ -67,7 +78,7 @@ impl<A: BishopApp> ApplicationHandler for WgpuAppRunner<A> {
         };
 
         match WgpuContext::new_sync(window.clone()) {
-            Ok(ctx) => self.ctx = Some(ctx),
+            Ok(ctx) => self.ctx = Some(Rc::new(RefCell::new(ctx))),
             Err(e) => {
                 eprintln!("Failed to create WgpuContext: {e}");
                 event_loop.exit();
@@ -79,20 +90,53 @@ impl<A: BishopApp> ApplicationHandler for WgpuAppRunner<A> {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        if let Some(ctx) = &mut self.ctx {
-            ctx.handle_window_event(&event);
+        if let Some(ctx) = &self.ctx {
+            ctx.borrow_mut().handle_window_event(&event);
         }
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
-                if let Some(ctx) = &mut self.ctx {
-                    ctx.begin_frame();
-                    pollster::block_on(self.app.frame(ctx));
-                    if let Err(e) = ctx.render_frame() {
+                if let Some(ctx) = &self.ctx {
+                    ctx.borrow_mut().begin_frame();
+
+                    // Handle initialization with yielding support
+                    if !self.initialized {
+                        if self.init_future.is_none() {
+                            let app = self.app.clone();
+                            let ctx_clone = ctx.clone();
+                            self.init_future = Some(Box::pin(async move {
+                                app.borrow_mut().init(ctx_clone).await
+                            }));
+                        }
+
+                        if let Some(ref mut future) = self.init_future {
+                            if poll_once(future).is_some() {
+                                self.initialized = true;
+                                self.init_future = None;
+                            }
+                        }
+                    } else {
+                        // Normal frame - start new future if none pending
+                        if self.frame_future.is_none() {
+                            let app = self.app.clone();
+                            let ctx_clone = ctx.clone();
+                            self.frame_future = Some(Box::pin(async move {
+                                app.borrow_mut().frame(ctx_clone).await
+                            }));
+                        }
+
+                        if let Some(ref mut future) = self.frame_future {
+                            if poll_once(future).is_some() {
+                                self.frame_future = None;
+                            }
+                        }
+                    }
+
+                    if let Err(e) = ctx.borrow_mut().render_frame() {
                         eprintln!("Render error: {e}");
                     }
-                    ctx.update();
+                    ctx.borrow_mut().update();
                 }
                 if let Some(window) = &self.window {
                     window.request_redraw();
