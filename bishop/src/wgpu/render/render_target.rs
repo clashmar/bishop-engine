@@ -1,7 +1,5 @@
 //! Render target for off-screen rendering to texture.
 
-use crate::types::FilterMode;
-
 /// A render target for off-screen rendering.
 /// Wraps a wgpu texture with both render attachment and texture binding capabilities.
 #[derive(Debug, Clone)]
@@ -15,7 +13,6 @@ pub struct BishopRenderTarget {
     width: u32,
     height: u32,
     format: wgpu::TextureFormat,
-    filter: FilterMode,
 }
 
 impl BishopRenderTarget {
@@ -26,10 +23,9 @@ impl BishopRenderTarget {
         width: u32,
         height: u32,
         format: wgpu::TextureFormat,
-        filter: FilterMode,
     ) -> Self {
         let (texture, render_view, sample_view, sampler, bind_group) =
-            Self::create_resources(device, &bind_group_layout, width, height, format, filter);
+            Self::create_resources(device, &bind_group_layout, width, height, format);
 
         Self {
             texture,
@@ -41,7 +37,6 @@ impl BishopRenderTarget {
             width,
             height,
             format,
-            filter,
         }
     }
 
@@ -97,8 +92,7 @@ impl BishopRenderTarget {
             &self.bind_group_layout,
             width,
             height,
-            self.format,
-            self.filter,
+            self.format        
         );
 
         self.texture = texture;
@@ -115,8 +109,7 @@ impl BishopRenderTarget {
         bind_group_layout: &wgpu::BindGroupLayout,
         width: u32,
         height: u32,
-        format: wgpu::TextureFormat,
-        filter: FilterMode,
+        format: wgpu::TextureFormat
     ) -> (
         wgpu::Texture,
         wgpu::TextureView,
@@ -153,18 +146,13 @@ impl BishopRenderTarget {
             ..Default::default()
         });
 
-        let wgpu_filter = match filter {
-            FilterMode::Nearest => wgpu::FilterMode::Nearest,
-            FilterMode::Linear => wgpu::FilterMode::Linear,
-        };
-
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("render_target_sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu_filter,
-            min_filter: wgpu_filter,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });

@@ -14,7 +14,6 @@ use super::render::{
     create_texture_bind_group_layout, BishopRenderTarget, CameraUniforms, FullscreenQuadRenderer,
     PrimitiveRenderer, TextRenderer, TextureRenderer,
 };
-use crate::types::FilterMode;
 use super::texture_loader::init_texture_loader;
 use super::time_state::TimeState;
 use crate::camera::Camera2D;
@@ -36,6 +35,9 @@ pub struct WgpuContext {
     fullscreen_quad_renderer: FullscreenQuadRenderer,
     fullscreen: bool,
     scale_factor: f32,
+    current_surface_texture: Option<wgpu::SurfaceTexture>,
+    current_surface_view: Option<wgpu::TextureView>,
+    has_cleared_this_frame: bool,
 }
 
 impl WgpuContext {
@@ -77,6 +79,9 @@ impl WgpuContext {
             fullscreen_quad_renderer,
             fullscreen,
             scale_factor,
+            current_surface_texture: None,
+            current_surface_view: None,
+            has_cleared_this_frame: false,
         })
     }
 
@@ -87,13 +92,32 @@ impl WgpuContext {
 
     /// Prepares for a new frame by clearing per-frame state.
     pub fn begin_frame(&mut self) {
+        match self.graphics.surface.get_current_texture() {
+            Ok(texture) => {
+                let view = texture
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+                self.current_surface_texture = Some(texture);
+                self.current_surface_view = Some(view);
+            }
+            Err(e) => {
+                eprintln!("Failed to acquire surface texture: {e}");
+                self.current_surface_texture = None;
+                self.current_surface_view = None;
+            }
+        }
+
+        // Now measure timing
         self.input.begin_frame();
         self.time.begin_frame();
+
+        // Clear state
         self.clear_color = None;
         self.primitive_renderer.clear();
         self.texture_renderer.clear();
         self.text_renderer.clear();
         self.current_camera = None;
+        self.has_cleared_this_frame = false;
     }
 
     /// Processes a winit WindowEvent and updates internal state.
@@ -148,9 +172,8 @@ impl WgpuContext {
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
-                // Convert physical to logical coordinates
-                let x = position.x as f32 / self.scale_factor;
-                let y = position.y as f32 / self.scale_factor;
+                let x = position.x as f32;
+                let y = position.y as f32;
                 self.input.on_mouse_move(x, y);
             }
             WindowEvent::MouseWheel { delta, .. } => {
@@ -169,14 +192,14 @@ impl WgpuContext {
         &self.window
     }
 
-    /// Returns the current screen width in logical pixels.
+    /// Returns the current screen width in physical pixels.
     pub fn screen_width(&self) -> f32 {
-        self.graphics.size.0 as f32 / self.scale_factor
+        self.graphics.size.0 as f32
     }
 
-    /// Returns the current screen height in logical pixels.
+    /// Returns the current screen height in physical pixels.
     pub fn screen_height(&self) -> f32 {
-        self.graphics.size.1 as f32 / self.scale_factor
+        self.graphics.size.1 as f32
     }
 
     /// Sets the mouse cursor icon.
@@ -242,14 +265,13 @@ impl WgpuContext {
     }
 
     /// Creates a render target with the specified dimensions.
-    pub fn create_render_target(&self, width: u32, height: u32, filter: FilterMode) -> BishopRenderTarget {
+    pub fn create_render_target(&self, width: u32, height: u32) -> BishopRenderTarget {
         BishopRenderTarget::new(
             &self.graphics.device,
             self.render_target_bind_group_layout.clone(),
             width,
             height,
-            self.graphics.config.format,
-            filter,
+            self.graphics.config.format
         )
     }
 
@@ -274,13 +296,21 @@ impl WgpuContext {
         FrameFuture::new()
     }
 
-    /// Renders the current frame and presents it.
-    pub fn render_frame(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let output = self.graphics.surface.get_current_texture()?;
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+    /// Clears per-frame input state (pressed/released events).
+    /// Called by app_runner when a frame completes.
+    pub fn end_frame_input(&mut self) {
+        self.input.end_frame();
+    }
 
+    /// Returns true if any renderer has pending draw calls.
+    fn has_pending_draws(&self) -> bool {
+        !self.primitive_renderer.is_empty()
+            || !self.texture_renderer.is_empty()
+            || !self.text_renderer.is_empty()
+    }
+
+    /// Flushes batched draw calls with the current camera state.
+    fn flush_batched(&mut self, view: &wgpu::TextureView, load_op: wgpu::LoadOp<wgpu::Color>) {
         let width = self.graphics.size.0 as f32;
         let height = self.graphics.size.1 as f32;
 
@@ -301,23 +331,17 @@ impl WgpuContext {
             self.graphics
                 .device
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("render_encoder"),
+                    label: Some("flush_encoder"),
                 });
 
         {
-            let clear_color = self.clear_color.unwrap_or(Color::BLACK);
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("render_pass"),
+                label: Some("flush_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: clear_color.r as f64,
-                            g: clear_color.g as f64,
-                            b: clear_color.b as f64,
-                            a: clear_color.a as f64,
-                        }),
+                        load: load_op,
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -335,7 +359,49 @@ impl WgpuContext {
         }
 
         self.graphics.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
+
+        self.primitive_renderer.clear();
+        self.texture_renderer.clear();
+        self.text_renderer.clear();
+    }
+
+    /// Flushes pending draws if there are any batched vertices.
+    /// Called before camera changes to ensure draws use the correct transform.
+    pub(crate) fn flush_if_needed(&mut self) {
+        if !self.has_pending_draws() {
+            return;
+        }
+
+        let Some(view) = self.current_surface_view.take() else {
+            return;
+        };
+
+        let load_op = if self.has_cleared_this_frame {
+            wgpu::LoadOp::Load
+        } else {
+            let clear_color = self.clear_color.unwrap_or(Color::BLACK);
+            self.has_cleared_this_frame = true;
+            wgpu::LoadOp::Clear(wgpu::Color {
+                r: clear_color.r as f64,
+                g: clear_color.g as f64,
+                b: clear_color.b as f64,
+                a: clear_color.a as f64,
+            })
+        };
+
+        self.flush_batched(&view, load_op);
+
+        self.current_surface_view = Some(view);
+    }
+
+    /// Renders the current frame and presents it.
+    pub fn render_frame(&mut self) -> Result<(), wgpu::SurfaceError> {
+        self.flush_if_needed();
+
+        if let Some(texture) = self.current_surface_texture.take() {
+            texture.present();
+        }
+        self.current_surface_view = None;
 
         Ok(())
     }

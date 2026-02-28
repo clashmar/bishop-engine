@@ -242,6 +242,11 @@ impl PrimitiveRenderer {
         self.vertices.len()
     }
 
+    /// Returns true if there are no queued vertices.
+    pub fn is_empty(&self) -> bool {
+        self.vertices.is_empty()
+    }
+
     /// Uploads vertices and renders to the given render pass.
     pub fn flush<'a>(&'a self, queue: &wgpu::Queue, render_pass: &mut wgpu::RenderPass<'a>) {
         if self.vertices.is_empty() {

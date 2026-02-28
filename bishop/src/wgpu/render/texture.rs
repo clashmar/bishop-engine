@@ -303,6 +303,11 @@ impl TextureRenderer {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[*uniforms]));
     }
 
+    /// Returns true if there are no queued draws.
+    pub fn is_empty(&self) -> bool {
+        self.vertices.is_empty() && self.batches.is_empty()
+    }
+
     /// Draws a texture at the specified position.
     pub fn draw_texture(&mut self, texture: &WgpuTexture, x: f32, y: f32, color: Color) {
         self.draw_texture_ex(texture, x, y, color, DrawTextureParams::default());

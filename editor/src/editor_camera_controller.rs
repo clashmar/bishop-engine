@@ -15,7 +15,8 @@ impl EditorCameraController {
         if ctx.is_mouse_button_down(MouseButton::Middle) || ctx.is_key_down(KeyCode::Space) {
             let delta = ctx.mouse_delta_position();
             let delta_vec = vec2(delta.0, delta.1);
-            camera.target -= delta_vec * 2.0 / camera.zoom;
+            let screen_size = vec2(ctx.screen_width(), ctx.screen_height());
+            camera.target -= delta_vec * 2.0 / (camera.zoom * screen_size);
         }
 
         // Zoom (mouse wheel) - zoom towards mouse cursor
@@ -25,7 +26,9 @@ impl EditorCameraController {
             let mouse_screen = vec2(mouse_screen.0, mouse_screen.1);
 
             // Get world position under mouse before zoom
-            let world_before = camera.screen_to_world(mouse_screen);
+            let screen_w = ctx.screen_width();
+            let screen_h = ctx.screen_height();
+            let world_before = camera.screen_to_world(mouse_screen, screen_w, screen_h);
 
             // Apply zoom
             let mut scalar = Self::current_scalar(ctx, camera);
@@ -35,7 +38,7 @@ impl EditorCameraController {
             Self::apply_aspect(ctx, camera, scalar);
 
             // Get world position under mouse after zoom
-            let world_after = camera.screen_to_world(mouse_screen);
+            let world_after = camera.screen_to_world(mouse_screen, screen_w, screen_h);
 
             // Adjust target so the original world position stays under the mouse
             camera.target += world_before - world_after;

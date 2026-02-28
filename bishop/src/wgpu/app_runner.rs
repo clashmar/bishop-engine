@@ -14,7 +14,6 @@ use winit::window::{Fullscreen, Window, WindowId};
 
 use super::context::WgpuContext;
 use super::exec::poll_once;
-use crate::time::Time;
 use crate::window::{IconData, WindowConfig, WindowIcon};
 use crate::BishopApp;
 
@@ -129,6 +128,8 @@ impl<A: BishopApp + 'static> ApplicationHandler for WgpuAppRunner<A> {
                         if let Some(ref mut future) = self.frame_future {
                             if poll_once(future).is_some() {
                                 self.frame_future = None;
+                                // Clear input only when frame completes
+                                ctx.borrow_mut().end_frame_input();
                             }
                         }
                     }
@@ -136,7 +137,6 @@ impl<A: BishopApp + 'static> ApplicationHandler for WgpuAppRunner<A> {
                     if let Err(e) = ctx.borrow_mut().render_frame() {
                         eprintln!("Render error: {e}");
                     }
-                    ctx.borrow_mut().update();
                 }
                 if let Some(window) = &self.window {
                     window.request_redraw();

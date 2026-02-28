@@ -1,10 +1,5 @@
 // editor/src/gui/inspector/player_module.rs
-use engine_core::ecs::component::{Player, PlayerProxy};
-use engine_core::ecs::inpsector_module::InspectorModule;
-use engine_core::game::game::GameCtxMut;
-use engine_core::ecs::entity::Entity;
-use engine_core::ui::{text::*, widgets::*};
-use engine_core::ecs::ecs::Ecs;
+use engine_core::prelude::*;
 use bishop::prelude::*;
 
 #[derive(Default)]

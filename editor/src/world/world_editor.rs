@@ -493,7 +493,12 @@ impl WorldEditor {
         room: &Room, 
         grid_size: f32
     ) {
-        *camera = EditorCameraController::camera_for_room(ctx, room.size, room.position, grid_size);
+        *camera = EditorCameraController::camera_for_room(
+            ctx, 
+            room.size, 
+            room.position, 
+            grid_size
+        );
     }
 
     fn handle_shortcuts(&mut self, ctx: &WgpuContext) {

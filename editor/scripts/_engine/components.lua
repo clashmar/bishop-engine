@@ -3,10 +3,37 @@
 ---@alias vec2 { x: number, y: number }
 ---@alias vec3 { x: number, y: number, z: number }
 
+---@class SpeechBubble
+---@field text string
+---@field timer number
+---@field color table
+---@field offset table
+---@field font_size table
+---@field max_width table
+---@field show_background boolean
+---@field background_color table
+
+---@class Sprite
+---@field sprite number
+
+---@class CurrentFrame
+---@field clip_id number
+---@field col number
+---@field row number
+---@field offset vec2
+---@field sprite_id number
+---@field frame_size vec2
+---@field flip_x boolean
+
+---@class Glow
+---@field color vec3
+---@field intensity number
+---@field brightness number
+---@field emission number
+---@field sprite_id number
+
 ---@class Interactable
 ---@field range number
-
----@alias FacingDirection table
 
 ---@class Animation
 ---@field clips table
@@ -16,33 +43,6 @@
 ---@field sprite_cache table
 ---@field flip_x boolean
 ---@field speed_multiplier number
-
----@class Script
----@field script_id number
----@field data table
-
----@class Transform
----@field visible boolean
----@field position vec2
----@field pivot table
-
----@class RoomCamera
----@field zoom vec2
----@field room_id number
----@field zoom_mode table
----@field camera_mode table
-
----@class Sprite
----@field sprite number
-
----@class Light
----@field pos vec2
----@field color vec3
----@field intensity number
----@field radius number
----@field spread number
----@field alpha number
----@field brightness number
 
 ---@alias Name string
 
@@ -83,46 +83,44 @@
 ---@field width number
 ---@field height number
 
+---@alias FacingDirection table
+
+---@class RoomCamera
+---@field zoom vec2
+---@field room_id number
+---@field zoom_mode table
+---@field camera_mode table
+
+---@class Transform
+---@field visible boolean
+---@field position vec2
+---@field pivot table
+
 ---@class Children
 ---@field entities table
 
 ---@alias Parent table
 
----@class SpeechBubble
----@field text string
----@field timer number
----@field color table
----@field offset table
----@field font_size table
----@field max_width table
----@field show_background boolean
----@field background_color table
+---@class Script
+---@field script_id number
+---@field data table
 
----@class CurrentFrame
----@field clip_id number
----@field col number
----@field row number
----@field offset vec2
----@field sprite_id number
----@field frame_size vec2
----@field flip_x boolean
-
----@class Glow
+---@class Light
+---@field pos vec2
 ---@field color vec3
 ---@field intensity number
+---@field radius number
+---@field spread number
+---@field alpha number
 ---@field brightness number
----@field emission number
----@field sprite_id number
 
 ---@class ComponentId
----@field Interactable string
----@field FacingDirection string
----@field Animation string
----@field Script string
----@field Transform string
----@field RoomCamera string
+---@field SpeechBubble string
 ---@field Sprite string
----@field Light string
+---@field CurrentFrame string
+---@field Glow string
+---@field Interactable string
+---@field Animation string
 ---@field Name string
 ---@field PhysicsBody string
 ---@field PlayerProxy string
@@ -137,22 +135,22 @@
 ---@field Walkable string
 ---@field Grounded string
 ---@field Collider string
+---@field FacingDirection string
+---@field RoomCamera string
+---@field Transform string
 ---@field Children string
 ---@field Parent string
----@field SpeechBubble string
----@field CurrentFrame string
----@field Glow string
+---@field Script string
+---@field Light string
 
 local C = {}
 
-C.Interactable = "Interactable"
-C.FacingDirection = "FacingDirection"
-C.Animation = "Animation"
-C.Script = "Script"
-C.Transform = "Transform"
-C.RoomCamera = "RoomCamera"
+C.SpeechBubble = "SpeechBubble"
 C.Sprite = "Sprite"
-C.Light = "Light"
+C.CurrentFrame = "CurrentFrame"
+C.Glow = "Glow"
+C.Interactable = "Interactable"
+C.Animation = "Animation"
 C.Name = "Name"
 C.PhysicsBody = "PhysicsBody"
 C.PlayerProxy = "PlayerProxy"
@@ -167,10 +165,12 @@ C.Velocity = "Velocity"
 C.Walkable = "Walkable"
 C.Grounded = "Grounded"
 C.Collider = "Collider"
+C.FacingDirection = "FacingDirection"
+C.RoomCamera = "RoomCamera"
+C.Transform = "Transform"
 C.Children = "Children"
 C.Parent = "Parent"
-C.SpeechBubble = "SpeechBubble"
-C.CurrentFrame = "CurrentFrame"
-C.Glow = "Glow"
+C.Script = "Script"
+C.Light = "Light"
 
 return C

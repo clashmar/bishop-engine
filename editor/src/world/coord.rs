@@ -5,7 +5,7 @@ use bishop::prelude::*;
 /// coordinates using the supplied camera.
 pub fn mouse_world_pos(ctx: &WgpuContext, camera: &Camera2D) -> Vec2 {
     let (x, y) = ctx.mouse_position();
-    camera.screen_to_world(vec2(x, y))
+    camera.screen_to_world(vec2(x, y), ctx.screen_width(), ctx.screen_height())
 }
 
 /// Snap an world‑space point to the integer grid that the

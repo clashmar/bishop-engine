@@ -34,15 +34,9 @@ impl InputState {
         }
     }
 
-    /// Clears per-frame state (pressed, released, wheel, chars).
+    /// Resets continuous state for new frame.
     pub fn begin_frame(&mut self) {
-        self.keys_pressed.clear();
-        self.keys_released.clear();
-        self.mouse_pressed.clear();
-        self.mouse_released.clear();
-        self.mouse_position_prev = self.mouse_position;
-        self.mouse_wheel = (0.0, 0.0);
-        self.char_buffer.clear();
+        // mouse_position_prev is updated at end_frame, not here
     }
 
     /// Handles a key press event.
@@ -142,7 +136,7 @@ impl InputState {
         self.char_buffer.clone()
     }
 
-    /// Clears per-frame state at end of frame (same as begin_frame for symmetry).
+    /// Clears per-frame state at end of frame.
     pub fn end_frame(&mut self) {
         self.keys_pressed.clear();
         self.keys_released.clear();
@@ -150,6 +144,7 @@ impl InputState {
         self.mouse_released.clear();
         self.mouse_wheel = (0.0, 0.0);
         self.char_buffer.clear();
+        self.mouse_position_prev = self.mouse_position;
     }
 }
 

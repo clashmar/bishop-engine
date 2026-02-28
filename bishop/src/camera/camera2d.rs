@@ -49,10 +49,7 @@ impl Camera2D {
     }
 
     /// Returns the world space position for a 2d camera screen space position.
-    /// Note: Screen dimensions default to 0,0 - this method is typically called through the context.
-    pub fn screen_to_world(&self, point: Vec2) -> Vec2 {
-        let (screen_w, screen_h) = (0.0, 0.0);
-
+    pub fn screen_to_world(&self, point: Vec2, screen_w: f32, screen_h: f32) -> Vec2 {
         let dims = self
             .viewport()
             .map(|(vx, vy, vw, vh)| Rect {

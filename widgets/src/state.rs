@@ -109,8 +109,7 @@ pub fn reset_click_consumed() {
 }
 
 /// Called at the start of each frame to update widget state.
-pub fn widgets_frame_start<C: BishopContext>(ctx: &mut C) {
-    ctx.update();
+pub fn widgets_frame_start<C: BishopContext>(_ctx: &mut C) {
     tab_registry_clear();
     reset_click_consumed();
 }

@@ -437,6 +437,11 @@ impl TextRenderer {
         self.vertices.clear();
     }
 
+    /// Returns true if there are no queued text draws.
+    pub fn is_empty(&self) -> bool {
+        self.vertices.is_empty()
+    }
+
     /// Updates the camera uniform buffer.
     pub fn update_uniforms(&self, queue: &wgpu::Queue, uniforms: &CameraUniforms) {
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[*uniforms]));

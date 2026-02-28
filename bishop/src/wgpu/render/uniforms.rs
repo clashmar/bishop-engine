@@ -21,9 +21,10 @@ impl CameraUniforms {
     }
 
     /// Creates projection from a Camera2D.
-    pub fn from_camera2d(camera: &Camera2D, width: f32, height: f32) -> Self {
-        let half_w = width / (2.0 * camera.zoom.x);
-        let half_h = height / (2.0 * camera.zoom.y);
+    /// The camera zoom convention follows macroquad: zoom = 2.0 / screen_size for 1:1 mapping.
+    pub fn from_camera2d(camera: &Camera2D, _width: f32, _height: f32) -> Self {
+        let half_w = 1.0 / camera.zoom.x;
+        let half_h = 1.0 / camera.zoom.y;
 
         let left = camera.target.x - half_w + camera.offset.x / camera.zoom.x;
         let right = camera.target.x + half_w + camera.offset.x / camera.zoom.x;
