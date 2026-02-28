@@ -162,8 +162,10 @@ impl RoomEditor {
         const THICKNESS_SCALE: f32 = 0.01;
         let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 
-        let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
-        let tr = editor_cam.screen_to_world(vec2(ctx.screen_width(), ctx.screen_height()));
+        let screen_w = ctx.screen_width();
+        let screen_h = ctx.screen_height();
+        let bl = editor_cam.screen_to_world(vec2(0.0, 0.0), screen_w, screen_h);
+        let tr = editor_cam.screen_to_world(vec2(screen_w, screen_h), screen_w, screen_h);
         let editor_w = (tr.x - bl.x).abs();
         let editor_h = (tr.y - bl.y).abs();
 
@@ -497,8 +499,10 @@ pub fn draw_all_camera_viewports(
     const THICKNESS_SCALE: f32 = 0.01;
     let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 
-    let bl = editor_cam.screen_to_world(vec2(0.0, 0.0));
-    let tr = editor_cam.screen_to_world(vec2(ctx.screen_width(), ctx.screen_height()));
+    let screen_w = ctx.screen_width();
+    let screen_h = ctx.screen_height();
+    let bl = editor_cam.screen_to_world(vec2(0.0, 0.0), screen_w, screen_h);
+    let tr = editor_cam.screen_to_world(vec2(screen_w, screen_h), screen_w, screen_h);
     let editor_w = (tr.x - bl.x).abs();
     let editor_h = (tr.y - bl.y).abs();
 

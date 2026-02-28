@@ -1,16 +1,15 @@
 // editor/src/editor_assets/editor_assets.rs
 #![allow(unused)]
-use std::hash::Hasher;
 use std::hash::BuildHasherDefault;
-use std::hash::DefaultHasher;
-use engine_core::animation::animation_clip::generate_animations_lua;
-use engine_core::assets::core_assets::load_rgba_resized;
 use futures::executor::block_on;
-use std::{env, fs, io};
-use std::hash::BuildHasher;
 use std::path::{Path, PathBuf};
+use std::hash::DefaultHasher;
+use engine_core::prelude::*;
+use std::hash::BuildHasher;
 use std::sync::LazyLock;
+use std::{env, fs, io};
 use bishop::prelude::*;
+use std::hash::Hasher;
 
 /// Windows .exe for the game binary.
 pub static GAME_EXE: &[u8] = include_bytes!(
@@ -107,7 +106,6 @@ fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
             .expect("Failed to load texture from temporary file.")
     });
 
-    texture.set_filter(FilterMode::Nearest);
     texture
 }
 

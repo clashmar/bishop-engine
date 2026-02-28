@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 
 use super::context::WgpuContext;
-use super::render::{FontAtlas, WgpuTexture};
+use super::render::FontAtlas;
 use crate::camera::{Camera, Camera2D};
 use crate::draw::{Draw, DrawTextureParams};
 use crate::input::{Input, KeyCode, MouseButton};
@@ -167,24 +167,25 @@ impl Text for WgpuContext {
 
 impl Camera for WgpuContext {
     fn set_camera(&mut self, camera: &Camera2D) {
+        self.flush_if_needed();
         self.current_camera = Some(camera.clone());
     }
 
     fn set_default_camera(&mut self) {
+        self.flush_if_needed();
         self.current_camera = None;
     }
 
     fn screen_to_world(&self, camera: &Camera2D, screen_pos: Vec2) -> Vec2 {
-        camera.screen_to_world(screen_pos)
+        camera.screen_to_world(screen_pos, self.screen_width(), self.screen_height())
     }
 
     fn create_render_target(
         &self,
         width: u32,
         height: u32,
-        filter: crate::types::FilterMode,
     ) -> super::render::BishopRenderTarget {
-        WgpuContext::create_render_target(self, width, height, filter)
+        WgpuContext::create_render_target(self, width, height)
     }
 }
 
@@ -221,6 +222,5 @@ impl Time for WgpuContext {
 
     fn update(&mut self) {
         self.input.end_frame();
-        self.time.tick();
     }
 }

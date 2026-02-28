@@ -113,7 +113,9 @@ impl TileMapEditor {
         }
 
         let mouse_screen: Vec2 = ctx.mouse_position().into();
-        let mouse_world = camera.screen_to_world(mouse_screen);
+        let screen_w = ctx.screen_width();
+        let screen_h = ctx.screen_height();
+        let mouse_world = camera.screen_to_world(mouse_screen, screen_w, screen_h);
 
         // Handle resize drag before tile placement
         let drag_active = self.handle_resize_drag(
@@ -434,7 +436,11 @@ impl TileMapEditor {
         grid_size: f32,
     ) -> Option<GridPos> {
         let mouse_pos: Vec2 = ctx.mouse_position().into();
-        let world_pos = camera.screen_to_world(mouse_pos);
+        let world_pos = camera.screen_to_world(
+            mouse_pos,
+            ctx.screen_width(),
+            ctx.screen_height(),
+        );
         let local_pos = world_pos - room_position;
         let pos = GridPos::from_world(local_pos.into(), grid_size);
 
@@ -454,7 +460,11 @@ impl TileMapEditor {
         grid_size: f32,
     ) -> Option<GridPos> {
         let mouse_pos: Vec2 = ctx.mouse_position().into();
-        let world_pos = camera.screen_to_world(mouse_pos);
+        let world_pos = camera.screen_to_world(
+            mouse_pos,
+            ctx.screen_width(),
+            ctx.screen_height(),
+        );
         let local_pos = world_pos - room_position;
         let edge_pos = GridPos::from_world_edge(local_pos.into(), map, grid_size);
 
@@ -471,7 +481,11 @@ impl TileMapEditor {
 
     fn is_mouse_over_ui(&self, ctx: &WgpuContext, camera: &Camera2D) -> bool {
         let mouse_screen: Vec2 = ctx.mouse_position().into();
-        let mouse_world = camera.screen_to_world(mouse_screen);
+        let mouse_world = camera.screen_to_world(
+            mouse_screen,
+            ctx.screen_width(),
+            ctx.screen_height(),
+        );
 
         // Check menu bar area
         let over_menu_bar = mouse_screen.y < MENU_PANEL_HEIGHT;

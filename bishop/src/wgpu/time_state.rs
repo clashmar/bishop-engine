@@ -36,11 +36,6 @@ impl TimeState {
     pub fn elapsed(&self) -> f64 {
         self.start_time.elapsed().as_secs_f64()
     }
-
-    /// Updates timing at the end of a frame (alias for begin_frame).
-    pub fn tick(&mut self) {
-        self.begin_frame();
-    }
 }
 
 impl Default for TimeState {

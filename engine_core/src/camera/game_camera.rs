@@ -163,7 +163,7 @@ pub fn game_render_target<C: BishopContext>(
 ) -> BishopRenderTarget {
     let width = world_virtual_width(grid_size) as u32;
     let height = world_virtual_height(grid_size) as u32;
-    ctx.create_render_target(width, height, FilterMode::Nearest)
+    ctx.create_render_target(width, height)
 }
 
 /// Returns every `GameCamera` for a room from its id.
