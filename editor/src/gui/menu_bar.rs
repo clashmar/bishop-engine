@@ -376,10 +376,10 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     let mut max_opt_width = 0.0_f32;
     for opt in options.iter() {
         // label width
-        let label_w = measure_text_ui(ctx, &to_string(opt), DEFAULT_FONT_SIZE_16).width;
+        let label_w = measure_text(ctx, &to_string(opt), DEFAULT_FONT_SIZE_16).width;
         // optional shortcut width
         let shortcut_w = shortcut(opt)
-            .map(|s| measure_text_ui(ctx, s, DEFAULT_FONT_SIZE_16).width + SPACING)
+            .map(|s| measure_text(ctx, s, DEFAULT_FONT_SIZE_16).width + SPACING)
             .unwrap_or(0.0);
         let total_w = label_w + shortcut_w;
         if total_w > max_opt_width {
@@ -459,7 +459,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
 
             // Optional shortcut display
             if let Some(shortcut) = shortcut(opt) {
-                let sc_width = measure_text_ui(ctx, shortcut, DEFAULT_FONT_SIZE_16).width;
+                let sc_width = measure_text(ctx, shortcut, DEFAULT_FONT_SIZE_16).width;
                 let sc_x = entry_rect.x + entry_rect.w - sc_width - 5.0;
                 ctx.draw_text(
                     shortcut,

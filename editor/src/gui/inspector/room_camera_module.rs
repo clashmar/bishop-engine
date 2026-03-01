@@ -40,7 +40,7 @@ impl InspectorModule for RoomCameraModule {
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
-        let label_width = measure_text_ui(ctx, mode_label, FIELD_TEXT_SIZE_16).width;
+        let label_width = measure_text(ctx, mode_label, FIELD_TEXT_SIZE_16).width;
         ctx.draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         let mode_rect = Rect::new(rect.x + label_width + WIDGET_SPACING, y, rect.w - label_width - WIDGET_SPACING, 30.0);
@@ -98,7 +98,7 @@ impl InspectorModule for RoomCameraModule {
 
         // Camera mode
         let cam_mode_label = "Camera Mode: ";
-        let cam_label_width = measure_text_ui(ctx, cam_mode_label, FIELD_TEXT_SIZE_16).width;
+        let cam_label_width = measure_text(ctx, cam_mode_label, FIELD_TEXT_SIZE_16).width;
         ctx.draw_text(
             cam_mode_label,
             rect.x,
@@ -176,8 +176,8 @@ impl RoomCameraModule {
 
         // Label
         let label = "Scale: ";
-        let label_width = measure_text_ui(ctx, label, FIELD_TEXT_SIZE_16).width + 1.0;
-        let num_width = measure_text_ui(ctx, "0.00", FIELD_TEXT_SIZE_16).width;
+        let label_width = measure_text(ctx, label, FIELD_TEXT_SIZE_16).width + 1.0;
+        let num_width = measure_text(ctx, "0.00", FIELD_TEXT_SIZE_16).width;
         ctx.draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         // Numeric field

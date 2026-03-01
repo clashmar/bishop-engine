@@ -71,8 +71,8 @@ impl InspectorModule for AnimationModule {
         // Button dimensions
         const ADD_LABEL: &str = "Add Clip";
         const REMOVE_LABEL: &str = "Remove Clip";
-        let add_txt = measure_text_ui(ctx, ADD_LABEL, DEFAULT_FONT_SIZE_16);
-        let remove_txt = measure_text_ui(ctx, REMOVE_LABEL, DEFAULT_FONT_SIZE_16);
+        let add_txt = measure_text(ctx, ADD_LABEL, DEFAULT_FONT_SIZE_16);
+        let remove_txt = measure_text(ctx, REMOVE_LABEL, DEFAULT_FONT_SIZE_16);
         let btn_h = add_txt.height + 8.0;
         let add_btn_w = add_txt.width + 12.0;
         let remove_btn_w = remove_txt.width + 12.0;
@@ -202,9 +202,9 @@ impl InspectorModule for AnimationModule {
             const JSON_LABEL: &str = "JSON";
             const VARIANT_LABEL: &str = "Variant";
 
-            let import_label_w = measure_text_ui(ctx, IMPORT_LABEL, LABEL_FONT_SIZE).width + COLON_GAP;
-            let json_btn_w = measure_text_ui(ctx, JSON_LABEL, DEFAULT_FONT_SIZE_16).width + 16.0;
-            let variant_btn_w = measure_text_ui(ctx, VARIANT_LABEL, DEFAULT_FONT_SIZE_16).width + 16.0;
+            let import_label_w = measure_text(ctx, IMPORT_LABEL, LABEL_FONT_SIZE).width + COLON_GAP;
+            let json_btn_w = measure_text(ctx, JSON_LABEL, DEFAULT_FONT_SIZE_16).width + 16.0;
+            let variant_btn_w = measure_text(ctx, VARIANT_LABEL, DEFAULT_FONT_SIZE_16).width + 16.0;
             let btn_gap = 8.0;
 
             let start_x = rect.x + WIDGET_PADDING;
@@ -492,7 +492,7 @@ pub fn draw_fps_loop_and_mirrored(
 
     // Mirrored checkbox
     let mirrored_label = "Mirror:";
-    let mirrored_label_w = measure_text_ui(ctx, mirrored_label, LABEL_FONT_SIZE).width + COLON_GAP;
+    let mirrored_label_w = measure_text(ctx, mirrored_label, LABEL_FONT_SIZE).width + COLON_GAP;
     let mirrored_lbl_x = inp_loop.x + inp_loop.w + FIELD_GAP;
     ctx.draw_text(mirrored_label, mirrored_lbl_x, lbl_loop.y, LABEL_FONT_SIZE, FIELD_TEXT_COLOR);
 
@@ -586,8 +586,8 @@ fn layout_pair(
     labels: [&'static str; 2],
 ) -> (Rect, Rect, Rect, Rect) {
     // Width of each label
-    let width1 = measure_text_ui(ctx, labels[0], LABEL_FONT_SIZE).width + COLON_GAP;
-    let width2 = measure_text_ui(ctx, labels[1], LABEL_FONT_SIZE).width + COLON_GAP;
+    let width1 = measure_text(ctx, labels[0], LABEL_FONT_SIZE).width + COLON_GAP;
+    let width2 = measure_text(ctx, labels[1], LABEL_FONT_SIZE).width + COLON_GAP;
 
     // First label
     let label1 = Rect::new(

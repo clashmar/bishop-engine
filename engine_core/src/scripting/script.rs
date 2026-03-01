@@ -112,14 +112,25 @@ impl Script {
     }
 
     /// Sync the current ScriptData back to Lua table.
-    pub fn sync_to_lua(&self, lua: &Lua, script_manager: &mut ScriptManager, entity: Entity) -> LuaResult<()> {
+    pub fn sync_to_lua(
+        &self,
+        lua: &Lua,
+        script_manager: &mut ScriptManager,
+        entity: Entity,
+    ) -> LuaResult<()> {
         if self.script_id.0 == 0 {
             return Ok(());
         }
 
-        // Get the instance for this entity
-        let (instance, _created) = script_manager.get_or_create_instance(lua, entity, self.script_id)?;
+        let (instance, _created) = script_manager
+            .get_or_create_instance(lua, entity, self.script_id)?;
 
+        self.sync_to_lua_with_instance(lua, instance)
+    }
+
+    /// Sync the current ScriptData to an already-retrieved Lua instance.
+    /// Use this when you already have the instance to avoid redundant lookups.
+    pub fn sync_to_lua_with_instance(&self, lua: &Lua, instance: &Table) -> LuaResult<()> {
         let public = instance.get::<Option<Table>>(PUBLIC)?
             .unwrap_or_else(|| instance.clone());
 

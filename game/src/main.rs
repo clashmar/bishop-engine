@@ -33,15 +33,16 @@ impl BishopApp for GameApp {
         // Store the context for later use
         self.ctx = Some(ctx.clone());
 
-        // Pre-cache font to avoid black rectangle rendering bug
-        engine_core::assets::core_assets::precache_font();
-
         let lua = Lua::new();
         let mut camera_manager = CameraManager::default();
 
         let game_state = {
             let mut ctx_ref = ctx.borrow_mut();
-            Rc::new(RefCell::new(GameState::new(&mut *ctx_ref, &lua, &mut camera_manager).await))
+            Rc::new(RefCell::new(GameState::new(
+                &mut *ctx_ref, 
+                &lua, 
+                &mut camera_manager
+            ).await))
         };
         let grid_size = game_state.borrow().game.current_world().grid_size;
 

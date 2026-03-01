@@ -1,18 +1,16 @@
 // game/src/engine.rs
+use crate::transitions::transition_manager::TransitionManager;
+use crate::scripting::script_system::ScriptSystem;
+use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::physics::physics_system::*;
 use crate::game_state::GameState;
-use crate::scripting::script_system::ScriptSystem;
-use crate::transitions::transition_manager::TransitionManager;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use bishop::BishopApp;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Instant;
 use mlua::Lua;
-
-const SECTION_SPIKE_THRESHOLD_MS: f32 = 1.0;
 
 pub struct Engine {
     /// Handle for the game.
@@ -36,10 +34,6 @@ pub struct Engine {
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let dt = ctx.borrow().get_frame_time();
-        let spike = ctx.borrow().get_frame_spike_ms();
-        if spike > 0.0 {
-            // onscreen_debug!("Frame spike: {:.1}ms", spike);
-        }
 
         self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
 
@@ -48,35 +42,19 @@ impl BishopApp for Engine {
             self.diagnostics.handle_input(&mut *ctx.borrow_mut());
         }
 
-        let t0 = Instant::now();
         while self.accumulator >= FIXED_DT {
             self.accumulator -= FIXED_DT;
             self.fixed_update(&mut *ctx.borrow_mut(), FIXED_DT);
         }
-        let physics_ms = t0.elapsed().as_secs_f32() * 1000.0;
 
-        let t1 = Instant::now();
         self.update_async(dt).await;
-        let update_ms = t1.elapsed().as_secs_f32() * 1000.0;
 
         if self.is_playtest {
             self.update_diagnostics_metrics();
         }
 
-        let t2 = Instant::now();
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
         self.render(&mut *ctx.borrow_mut(), alpha);
-        let render_ms = t2.elapsed().as_secs_f32() * 1000.0;
-
-        if physics_ms > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("  physics: {:.1}ms", physics_ms);
-        }
-        if update_ms > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("  update: {:.1}ms", update_ms);
-        }
-        if render_ms > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("  render: {:.1}ms", render_ms);
-        }
     }
 }
 
@@ -120,7 +98,6 @@ impl Engine {
 
         let grid_size = game_ctx.cur_world.grid_size;
 
-        let t0 = Instant::now();
         update_physics(
             asset_manager,
             ecs,
@@ -128,28 +105,16 @@ impl Engine {
             dt,
             grid_size
         );
-        let t_phys = t0.elapsed().as_secs_f32() * 1000.0;
 
-        let t1 = Instant::now();
         self.camera_manager.update_active(
             ctx,
             ecs,
             current_room,
             game_ctx.cur_world.grid_size
         );
-        let t_cam = t1.elapsed().as_secs_f32() * 1000.0;
-
-        if t_phys > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("    phys_calc: {:.1}ms", t_phys);
-        }
-        if t_cam > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("    camera: {:.1}ms", t_cam);
-        }
     }
 
     pub async fn update_async(&mut self, dt: f32) {
-        let t_anim;
-        let t_load;
         {
             // Keep borrow_mut in this scope
             let mut game_state = self.game_state.borrow_mut();
@@ -160,76 +125,49 @@ impl Engine {
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
 
-            let t0 = Instant::now();
             if let Some(current_room) = game_ctx.cur_world.current_room() {
                 update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
             }
-            t_anim = t0.elapsed().as_secs_f32() * 1000.0;
 
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
-            let t1 = Instant::now();
             let ctx = game_state.game.ctx_mut();
             if let Err(e) = ScriptSystem::load_scripts(&self.lua, ctx.ecs, ctx.script_manager) {
                 onscreen_error!("Error loading scripts: {}", e);
             }
-            t_load = t1.elapsed().as_secs_f32() * 1000.0;
         }
 
         // Run scripts outside borrow_mut scope
-        let t2 = Instant::now();
         if let Err(e) = ScriptSystem::run_scripts(dt, self) {
             onscreen_error!("Error running scripts: {}", e);
         }
-        let t_run = t2.elapsed().as_secs_f32() * 1000.0;
-
-        if t_anim > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("    anim: {:.1}ms", t_anim);
-        }
-        if t_load > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("    load_scripts: {:.1}ms", t_load);
-        }
-        if t_run > SECTION_SPIKE_THRESHOLD_MS {
-            onscreen_debug!("    run_scripts: {:.1}ms", t_run);
-        }
     }
 
-    pub fn render<C: BishopContext>(
-        &mut self,
-        ctx: &mut C, 
-        alpha: f32
-    ) {
+    pub fn render<C: BishopContext>(&mut self, ctx: &mut C, alpha: f32) {
         ctx.clear_background(Color::BLACK);
 
         let mut game_state = self.game_state.borrow_mut();
         let prev_positions = game_state.prev_positions.clone();
-
+        let dialogue_config = game_state.game.dialogue_manager.config.clone();
         let game_ctx = game_state.game.ctx_mut();
-
-        let asset_manager = game_ctx.asset_manager;
-        let ecs = game_ctx.ecs;
 
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
         };
 
-        let current_room_id = current_room.id;
         let grid_size = game_ctx.cur_world.grid_size;
-
-        let target = self.camera_manager.interpolated_target(alpha);
-
         let render_cam = Camera2D {
-            target,
+            target: self.camera_manager.interpolated_target(alpha),
             zoom: self.camera_manager.active.camera.zoom,
             ..Default::default()
         };
 
-        self.render_system.resize_for_camera(render_cam.zoom.clone());
+        self.render_system.resize_for_camera(render_cam.zoom);
 
         render_room(
             ctx,
-            ecs,
+            game_ctx.ecs,
             current_room,
-            asset_manager,
+            game_ctx.asset_manager,
             &mut self.render_system,
             &render_cam,
             alpha,
@@ -239,25 +177,19 @@ impl Engine {
 
         self.render_system.present_game(ctx);
 
-        // Collect speech bubble data
-        let speech_bubbles = collect_speech_bubbles(
-            ecs,
-            asset_manager,
-            current_room_id,
-            alpha,
+        render_screen_space(
+            ctx,
+            game_ctx.ecs,
+            game_ctx.asset_manager,
+            &dialogue_config,
+            &render_cam,
+            current_room.id,
             Some(&prev_positions),
+            alpha,
             grid_size,
         );
 
-        // Render speech bubbles in screen space
-        let dialogue_config = game_state.game.dialogue_manager.config.clone();
-        render_speech_bubbles(ctx, &speech_bubbles, &dialogue_config, &render_cam, grid_size);
-    
-
-        // Draw diagnostics overlay after game rendering (playtest only)
         if self.is_playtest {
-            // TODO: IMPLEMENT
-            // ctx.draw_fps();
             self.diagnostics.draw(ctx);
         }
     }

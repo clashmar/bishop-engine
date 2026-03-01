@@ -311,6 +311,7 @@ impl GameEditor {
         if self.mode_selector.draw(ctx).1 {
             self.mode = self.mode_selector.current;
         }
+        self.mode_selector.draw_tooltips(ctx);
 
         self.draw_menu_buttons(ctx, camera, game);
 
@@ -386,7 +387,7 @@ impl GameEditor {
         const BTN_MARGIN: f32 = 10.0;
 
         let create_label = "New World";
-        let txt_create = measure_text_ui(ctx, create_label, HEADER_FONT_SIZE_20);
+        let txt_create = measure_text(ctx, create_label, HEADER_FONT_SIZE_20);
         let create_btn = Rect::new(
             ctx.screen_width() - txt_create.width - BTN_MARGIN - PADDING,
             BTN_MARGIN,

@@ -81,7 +81,7 @@ impl ConsolePanel {
         let tokens = Self::tokenize_for_wrap(text);
 
         for token in tokens {
-            let token_width = measure_text_ui(ctx, &token, font_size).width;
+            let token_width = measure_text(ctx, &token, font_size).width;
 
             // If this token alone exceeds max_width, break it character by character
             if token_width > max_width {
@@ -95,7 +95,7 @@ impl ConsolePanel {
                 // Break the long token character by character
                 for c in token.chars() {
                     let char_str = c.to_string();
-                    let char_width = measure_text_ui(ctx, &char_str, font_size).width;
+                    let char_width = measure_text(ctx, &char_str, font_size).width;
 
                     if current_width + char_width > max_width && !current_line.is_empty() {
                         lines.push(current_line);
@@ -114,7 +114,7 @@ impl ConsolePanel {
                 // Skip leading whitespace on new lines
                 let trimmed = token.trim_start();
                 current_line = trimmed.to_string();
-                current_width = measure_text_ui(ctx, &current_line, font_size).width;
+                current_width = measure_text(ctx, &current_line, font_size).width;
             } else {
                 // Token fits, append it
                 current_line.push_str(&token);
@@ -202,7 +202,7 @@ impl ConsolePanel {
         let mut prev_width = 0.0;
         for (byte_idx, ch) in line_text.char_indices() {
             let char_idx = line_text[..byte_idx].chars().count();
-            let width = measure_text_ui(ctx, &line_text[..byte_idx + ch.len_utf8()], font_size).width;
+            let width = measure_text(ctx, &line_text[..byte_idx + ch.len_utf8()], font_size).width;
 
             if relative_x < width {
                 let mid = (prev_width + width) / 2.0;
@@ -435,8 +435,8 @@ impl PanelDefinition for ConsolePanel {
                         let start_byte = line_text.char_indices().nth(sel_start_char).map(|(b, _)| b).unwrap_or(0);
                         let end_byte = line_text.char_indices().nth(sel_end_char).map(|(b, _)| b).unwrap_or(line_text.len());
 
-                        let sel_start_x = content_rect.x + 6.0 + measure_text_ui(ctx, &line_text[..start_byte], font_size).width;
-                        let sel_end_x = content_rect.x + 6.0 + measure_text_ui(ctx, &line_text[..end_byte], font_size).width;
+                        let sel_start_x = content_rect.x + 6.0 + measure_text(ctx, &line_text[..start_byte], font_size).width;
+                        let sel_end_x = content_rect.x + 6.0 + measure_text(ctx, &line_text[..end_byte], font_size).width;
 
                         ctx.draw_rectangle(
                             sel_start_x,

@@ -49,9 +49,6 @@ impl BishopApp for EditorApp {
         // Initialize logging
         init_file_logger();
 
-        // Pre-cache font to avoid text rendering bugs
-        engine_core::assets::core_assets::precache_font();
-
         if !ensure_save_root().await {
             // User cancelled
             onscreen_warn!("No save root selected. Exiting.");

@@ -98,6 +98,11 @@ impl InputState {
         self.keys_released.contains(&key)
     }
 
+    /// Returns true if any key was pressed this frame.
+    pub fn any_key_pressed(&self) -> bool {
+        !self.keys_pressed.is_empty()
+    }
+
     /// Returns true if the mouse button is currently held down.
     pub fn is_mouse_button_down(&self, button: MouseButton) -> bool {
         self.mouse_down.contains(&button)

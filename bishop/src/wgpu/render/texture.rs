@@ -2,6 +2,7 @@
 
 use wgpu::util::DeviceExt;
 
+use super::sampler::create_nearest_sampler;
 use super::uniforms::CameraUniforms;
 use super::vertex::TexturedVertex;
 use crate::draw::DrawTextureParams;
@@ -67,16 +68,7 @@ impl WgpuTexture {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("texture_sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
+        let sampler = create_nearest_sampler(device, "texture_sampler");
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("texture_bind_group"),

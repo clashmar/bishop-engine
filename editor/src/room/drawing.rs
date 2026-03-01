@@ -104,7 +104,7 @@ impl RoomEditor {
 
                 // Play‑test button (menu bar)
                 let play_label = "Play";
-                let play_width = measure_text_ui(ctx, play_label, HEADER_FONT_SIZE_20).width + WIDGET_PADDING * 2.0;
+                let play_width = measure_text(ctx, play_label, HEADER_FONT_SIZE_20).width + WIDGET_PADDING * 2.0;
                 let play_x = mode_rect.x + mode_rect.w + WIDGET_SPACING;
                 let play_rect = Rect::new(play_x, INSET, play_width, BTN_HEIGHT);
 
@@ -129,7 +129,7 @@ impl RoomEditor {
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text_ui(ctx, &txt, DEFAULT_FONT_SIZE_16,);
+        let txt_metrics = measure_text(ctx, &txt, DEFAULT_FONT_SIZE_16,);
         let margin = 10.0;
 
         let x = (ctx.screen_width() - txt_metrics.width) / 2.0;
@@ -238,6 +238,7 @@ pub fn draw_collider(
 /// Returns a `Rect` hitbox for an entity based on its sprite if it has one,
 /// otherwise it returns a hitbox based on the default sprite dimensions.
 pub fn entity_hitbox(
+    ctx: &WgpuContext,
     entity: Entity,
     position: Vec2,
     camera: &Camera2D,
@@ -264,12 +265,12 @@ pub fn entity_hitbox(
     };
 
     // Convert the two opposite corners of the entity to screen coords
-    let top_left = coord::world_to_screen(camera, corrected_pos);
-    let bottom_right = coord::world_to_screen(camera, corrected_pos + vec2(width, height));
+    let top_left = coord::world_to_screen(ctx, camera, corrected_pos);
+    let bottom_right = coord::world_to_screen(ctx, camera, corrected_pos + vec2(width, height));
 
     // Build the rectangle from those screen‑space points
-    let rect_x = top_left.x;
-    let rect_y = top_left.y;
+    let rect_x = top_left.x.min(bottom_right.x);
+    let rect_y = top_left.y.min(bottom_right.y);
     let rect_w = (bottom_right.x - top_left.x).abs();
     let rect_h = (bottom_right.y - top_left.y).abs();
 

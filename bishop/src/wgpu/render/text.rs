@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use wgpu::util::DeviceExt;
 
+use super::sampler::create_nearest_sampler;
 use super::uniforms::CameraUniforms;
 use super::vertex::TexturedVertex;
 use crate::text::TextDimensions;
@@ -102,16 +103,7 @@ impl FontAtlas {
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("font_atlas_sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
+        let sampler = create_nearest_sampler(device, "font_atlas_sampler");
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("font_atlas_bind_group"),
@@ -461,7 +453,7 @@ impl TextRenderer {
         let mut max_ascent = 0.0f32;
         let mut max_descent = 0.0f32;
 
-        let baseline_y = y + font_size;
+        let baseline_y = y;
 
         for ch in text.chars() {
             if let Some(info) = self.font_atlas.get_glyph(ch, font_size) {
@@ -505,6 +497,101 @@ impl TextRenderer {
     #[allow(dead_code)]
     pub fn measure_text(&mut self, text: &str, font_size: f32) -> TextDimensions {
         self.font_atlas.measure_text(text, font_size)
+    }
+
+    /// Draws text with extended parameters including rotation support.
+    pub fn draw_text_ex(
+        &mut self,
+        text: &str,
+        x: f32,
+        y: f32,
+        params: &crate::text::TextParams,
+    ) -> TextDimensions {
+        let effective_font_size = params.font_size as f32 * params.font_scale;
+
+        if params.rotation == 0.0 {
+            return self.draw_text(text, x, y, effective_font_size, params.color);
+        }
+
+        let c: [f32; 4] = params.color.into();
+        let font_scale_x = params.font_scale * params.font_scale_aspect;
+        let font_scale_y = params.font_scale;
+
+        let dims = self.font_atlas.measure_text(text, params.font_size as f32);
+        let scaled_width = dims.width * font_scale_x;
+        let scaled_height = dims.height * font_scale_y;
+        let scaled_ascent = dims.offset_y * font_scale_y;
+
+        let pivot_x = scaled_width * 0.5;
+        let pivot_y = scaled_height * 0.5;
+
+        let center_x = x + pivot_x;
+        let center_y = y - scaled_ascent + pivot_y;
+
+        let cos_r = params.rotation.cos();
+        let sin_r = params.rotation.sin();
+
+        let mut cursor_x = 0.0f32;
+        let mut max_ascent = 0.0f32;
+        let mut max_descent = 0.0f32;
+
+        for ch in text.chars() {
+            if let Some(info) = self.font_atlas.get_glyph(ch, params.font_size as f32) {
+                if info.width > 0 && info.height > 0 {
+                    let local_x = cursor_x * font_scale_x + info.offset_x * font_scale_x;
+                    let local_y = dims.offset_y * font_scale_y
+                        - info.height as f32 * font_scale_y
+                        - info.offset_y * font_scale_y;
+
+                    let gw = info.width as f32 * font_scale_x;
+                    let gh = info.height as f32 * font_scale_y;
+
+                    let u0 = info.x as f32 / ATLAS_SIZE as f32;
+                    let v0 = info.y as f32 / ATLAS_SIZE as f32;
+                    let u1 = (info.x + info.width) as f32 / ATLAS_SIZE as f32;
+                    let v1 = (info.y + info.height) as f32 / ATLAS_SIZE as f32;
+
+                    let corners = [
+                        [local_x, local_y],
+                        [local_x + gw, local_y],
+                        [local_x + gw, local_y + gh],
+                        [local_x, local_y + gh],
+                    ];
+
+                    let mut rotated = [[0.0f32; 2]; 4];
+                    for (i, corner) in corners.iter().enumerate() {
+                        let dx = corner[0] - pivot_x;
+                        let dy = corner[1] - pivot_y;
+                        rotated[i] = [
+                            center_x + dx * cos_r - dy * sin_r,
+                            center_y + dx * sin_r + dy * cos_r,
+                        ];
+                    }
+
+                    let v0_vert = TexturedVertex::new(rotated[0], [u0, v0], c);
+                    let v1_vert = TexturedVertex::new(rotated[1], [u1, v0], c);
+                    let v2_vert = TexturedVertex::new(rotated[2], [u1, v1], c);
+                    let v3_vert = TexturedVertex::new(rotated[3], [u0, v1], c);
+
+                    self.vertices.extend_from_slice(&[
+                        v0_vert, v1_vert, v2_vert,
+                        v0_vert, v2_vert, v3_vert,
+                    ]);
+                }
+
+                cursor_x += info.advance_width;
+                let ascent = info.height as f32 + info.offset_y;
+                let descent = -info.offset_y;
+                max_ascent = max_ascent.max(ascent);
+                max_descent = max_descent.max(descent);
+            }
+        }
+
+        TextDimensions {
+            width: scaled_width,
+            height: scaled_height,
+            offset_y: dims.offset_y * font_scale_y,
+        }
     }
 
     /// Uploads any dirty atlas data and renders text to the given render pass.

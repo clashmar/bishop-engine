@@ -142,8 +142,8 @@ impl Inspector {
             let add_label = "Add Component";
 
             // Measure text to obtain proper button widths
-            let txt_remove = measure_text_ui(ctx, remove_label, HEADER_FONT_SIZE_20);
-            let txt_add = measure_text_ui(ctx, add_label, HEADER_FONT_SIZE_20);
+            let txt_remove = measure_text(ctx, remove_label, HEADER_FONT_SIZE_20);
+            let txt_add = measure_text(ctx, add_label, HEADER_FONT_SIZE_20);
             let btn_w_remove = txt_remove.width + WIDGET_PADDING;
             let btn_w_add = txt_add.width + WIDGET_PADDING;
 
@@ -278,7 +278,7 @@ impl Inspector {
         } else {
             // No entity selected
             let create_label = "+ Entity";
-            let txt_create = measure_text_ui(ctx, create_label, HEADER_FONT_SIZE_20);
+            let txt_create = measure_text(ctx, create_label, HEADER_FONT_SIZE_20);
             let create_btn = Rect::new(
                 self.rect.x + self.rect.w - txt_create.width - BTN_MARGIN - (WIDGET_PADDING * 2.0),
                 self.rect.y + BTN_MARGIN,
@@ -287,7 +287,7 @@ impl Inspector {
             );
 
             let add_cam_label = "+ Camera";
-            let txt_cam = measure_text_ui(ctx, add_cam_label, HEADER_FONT_SIZE_20);
+            let txt_cam = measure_text(ctx, add_cam_label, HEADER_FONT_SIZE_20);
             let cam_btn_w = txt_cam.width + WIDGET_PADDING * 2.0;
             let cam_btn = Rect::new(
                 create_btn.x - WIDGET_SPACING - cam_btn_w,
@@ -329,7 +329,7 @@ impl Inspector {
             }
 
             let txt_val = format!("{:.2}", cur_room.darkness);
-            let txt_measure = measure_text_ui(ctx, &txt_val, DEFAULT_FONT_SIZE_16);
+            let txt_measure = measure_text(ctx, &txt_val, DEFAULT_FONT_SIZE_16);
             let txt_x = slider_rect.x - txt_measure.width - WIDGET_SPACING;
             let txt_y = slider_rect.y + 20.;
             ctx.draw_text(&txt_val, txt_x, txt_y, 20.0, Color::WHITE);
@@ -404,7 +404,7 @@ impl Inspector {
         // Determine width
         let mut needed_w = DEFAULT_MENU_W;
         for reg in &shown {
-            let txt = measure_text_ui(ctx, reg.type_name, DEFAULT_FONT_SIZE_16);
+            let txt = measure_text(ctx, reg.type_name, DEFAULT_FONT_SIZE_16);
             let w = txt.width + 20.0;
             if w > needed_w {
                 needed_w = w;

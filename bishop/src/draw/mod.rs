@@ -42,22 +42,3 @@ pub trait Draw {
         params: DrawTextureParams,
     );
 }
-
-// /// Extended drawing operations for textures.
-// pub trait DrawTexture {
-//     /// Backend-specific texture type.
-//     type Texture;
-
-//     /// Draws a texture at the specified position.
-//     fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color);
-
-//     /// Draws a texture with extended parameters.
-//     fn draw_texture_ex(
-//         &mut self,
-//         texture: &Self::Texture,
-//         x: f32,
-//         y: f32,
-//         color: Color,
-//         params: DrawTextureParams,
-//     );
-// }

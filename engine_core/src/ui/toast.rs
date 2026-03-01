@@ -40,7 +40,7 @@ impl Toast {
             return;
         }
 
-        let txt = measure_text_ui(ctx, &self.msg, DEFAULT_FONT_SIZE_16);
+        let txt = measure_text(ctx, &self.msg, DEFAULT_FONT_SIZE_16);
 
         // Bottom left
         let bg_rect = Rect::new(

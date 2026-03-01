@@ -32,13 +32,18 @@ impl RoomEditor {
             && !self.dragging
             && !self.box_select_active
         {
-            // Find entity under cursor
-            let mut clicked_entity: Option<Entity> = None;
+            // Find ALL entities under cursor and select topmost by z-order
+            // Tuple: (entity, z, is_camera) - cameras always on top
+            let mut candidates: Vec<(Entity, i32, bool)> = Vec::new();
+            let layer_store = ecs.get_store::<Layer>();
+            let camera_store = ecs.get_store::<RoomCamera>();
+
             for (entity, pos) in ecs.get_store::<Transform>().data.iter() {
                 if !can_select_entity_in_room(ecs, *entity, room_id) {
                     continue;
                 }
                 let hitbox = entity_hitbox(
+                    ctx,
                     *entity,
                     pos.position,
                     camera,
@@ -47,10 +52,21 @@ impl RoomEditor {
                     grid_size,
                 );
                 if hitbox.contains(mouse_screen) {
-                    clicked_entity = Some(*entity);
-                    break;
+                    let z = layer_store.get(*entity).map_or(0, |l| l.z);
+                    let is_camera = camera_store.get(*entity).is_some();
+                    candidates.push((*entity, z, is_camera));
                 }
             }
+
+            // Sort: cameras first, then by z descending (highest z = visually on top)
+            candidates.sort_by(|a, b| {
+                match (a.2, b.2) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => b.1.cmp(&a.1),
+                }
+            });
+            let clicked_entity = candidates.first().map(|(e, _, _)| *e);
 
             if let Some(entity) = clicked_entity {
                 // Clicked on an entity

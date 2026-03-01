@@ -3,7 +3,6 @@ use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::tiles::tile::TileComponent;
 use crate::tiles::tile::TileDef;
-use crate::ui::text::draw_text_ui;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use engine_core::prelude::*;

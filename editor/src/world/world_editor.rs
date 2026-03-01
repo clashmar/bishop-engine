@@ -1,4 +1,5 @@
 // editor/src/world/world_editor.rs
+use crate::canvas::grid_shader::GridRenderer;
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::editor_assets::editor_assets::*;
@@ -13,11 +14,11 @@ use strum_macros::EnumIter;
 use once_cell::sync::Lazy;
 use bishop::prelude::*;
 
-pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.01;
+pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.005;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
 const HIGHLIGHT_ERROR_COLOR: Color = Color::new(1.0, 0.0, 0.0, 0.5);
-const ROOM_LINE_INSET: f32 = 0.5;
-const HOVER_LINE_THICKNESS: f32 = 0.02;
+const ROOM_LINE_INSET: f32 = 1.0;
+const HOVER_LINE_THICKNESS: f32 = 0.01;
 
 #[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum WorldEditorMode {
@@ -168,7 +169,7 @@ impl WorldEditor {
                     // Create the room and get its id back.
                     let new_id = self.place_room_from_drag(game, top_left, size, grid_size);
                     self.reset_placing();
-                    self.mode = WorldEditorMode::SelectRoom;
+                    self.reset();
                     return Some(new_id);
                 }
                 // Overlap – just abort placement.
@@ -199,11 +200,12 @@ impl WorldEditor {
     }
 
     pub fn draw(
-        &mut self, 
+        &mut self,
         ctx: &mut WgpuContext,
         world_id: WorldId,
-        camera: &Camera2D, 
-        game: &mut Game
+        camera: &Camera2D,
+        game: &mut Game,
+        grid_renderer: &GridRenderer,
     ) {
         ctx.set_camera(camera);
         ctx.clear_background(Color::LIGHTGREY);
@@ -211,7 +213,7 @@ impl WorldEditor {
         let world = game.get_world_mut(world_id);
         let rooms = &world.rooms;
 
-        grid::draw_grid(ctx, camera, world.grid_size);
+        grid::draw_grid(ctx, grid_renderer, camera, world.grid_size);
 
         self.draw_rooms(ctx, camera, rooms, world.grid_size);
         self.draw_exits(ctx, rooms, world.grid_size);
@@ -280,7 +282,13 @@ impl WorldEditor {
                 } else {
                     Color::RED
                 };
-                self.draw_exit_marker(ctx, exit_world_coord, exit.direction, color, grid_size);
+                self.draw_exit_marker(
+                    ctx, 
+                    exit_world_coord, 
+                    exit.direction, 
+                    color, 
+                    grid_size
+                );
             }
         }
     }
@@ -293,7 +301,7 @@ impl WorldEditor {
         color: Color, 
         grid_size: f32
     ) {
-        let thickness = 4.0;
+        const THICKNESS: f32 = 2.0;
         let length = grid_size;
         let offset = 1.0; 
 
@@ -302,27 +310,27 @@ impl WorldEditor {
                 exit_world_coord.x * grid_size,
                 exit_world_coord.y * grid_size + grid_size,
                 length,
-                thickness,
+                THICKNESS,
                 color,
             ),
             ExitDirection::Down => ctx.draw_rectangle(
                 exit_world_coord.x * grid_size,
-                exit_world_coord.y * grid_size - thickness + offset,
+                exit_world_coord.y * grid_size - THICKNESS + offset,
                 length,
-                thickness,
+                THICKNESS,
                 color,
             ),
             ExitDirection::Left => ctx.draw_rectangle(
                 (exit_world_coord.x + 1.0) * grid_size - offset,
                 exit_world_coord.y * grid_size,
-                thickness,
+                THICKNESS,
                 length,
                 color,
             ),
             ExitDirection::Right => ctx.draw_rectangle(
-                (exit_world_coord.x - 1.0) * grid_size + grid_size - thickness + offset,
+                (exit_world_coord.x - 1.0) * grid_size + grid_size - THICKNESS + offset,
                 exit_world_coord.y * grid_size,
-                thickness,
+                THICKNESS,
                 length,
                 color,
             ),
@@ -374,9 +382,11 @@ impl WorldEditor {
             let rect = scaled_room_rect(room, grid_size);
 
             // Screen coordinates of room center
-            let screen_pos = camera.world_to_screen(rect.top_left() + rect.size() / 2.0);
-
-            let text_len = room.name.len() as f32;
+            let screen_pos = camera.world_to_screen(
+                rect.top_left() + rect.size() / 2.0,
+                ctx.screen_width(),
+                ctx.screen_height(),
+            );
 
             // Base text size
             let base_font_size: f32 = 40.0;
@@ -389,29 +399,23 @@ impl WorldEditor {
             // Rotation: vertical if tall
             let rotation = if rect.h > rect.w { std::f32::consts::FRAC_PI_2 } else { 0.0 };
 
-            // Approximate text half-size
-            let half_width = font_size * text_len * 0.25; 
-            let half_height = font_size * 1.5;           
+            // Measure text to center it properly
+            let dims = ctx.measure_text(&room.name, font_size);
 
-            // Offset along rotated axes
-            let offset = if rotation != 0.0 {
-                vec2(half_height * 0.1, -half_width * 0.85) 
-            } else {
-                vec2(half_width * 0.875, half_height * 0.1)
-            };
+            // Center text at room center (x - half_width, y + ascent - half_height)
+            let x = screen_pos.x - dims.width / 2.0;
+            let y = screen_pos.y + dims.offset_y - dims.height / 2.0;
 
-            // TODO: Re-implement with extended params
-            // Draw
-            // ctx.draw_text_ex(
-            //     &room.name,
-            //     screen_pos.x - offset.x,
-            //     screen_pos.y + offset.y,
-            //     TextParams {
-            //         font_size: font_size as u16,
-            //         color: Color::BLACK,
-            //         rotation,
-            //         ..Default::default()
-            //     });
+            ctx.draw_text_ex(
+                &room.name,
+                x,
+                y,
+                TextParams {
+                    font_size: font_size as u16,
+                    color: Color::BLACK,
+                    rotation,
+                    ..Default::default()
+                });
             }
             
         ctx.set_camera(camera); // back to world camera
@@ -466,6 +470,7 @@ impl WorldEditor {
         if self.mode_selector.draw(ctx).1 {
             self.mode = self.mode_selector.current;
         }
+        self.mode_selector.draw_tooltips(ctx);
 
         ctx.set_camera(camera); // Back to world camera
     }
@@ -551,6 +556,7 @@ impl WorldEditor {
 
     pub fn reset(&mut self) {
         self.mode = WorldEditorMode::SelectRoom;
+        self.mode_selector.current = WorldEditorMode::SelectRoom;
         self.placing_start = None;
         self.placing_end = None;
         self.active_rects.clear();

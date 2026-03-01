@@ -41,9 +41,8 @@ impl BishopApp for PlaytestApp {
         // Store the context for later use
         self.ctx = Some(ctx.clone());
 
-        // Set engine mode to Playtest (uses editor paths, not exe_dir)
-        engine_core::engine_global::set_engine_mode(
-            engine_core::engine_global::EngineMode::Playtest
+        set_engine_mode(
+            EngineMode::Playtest
         );
 
         let payload_str = match fs::read_to_string(&self.payload_path) {
@@ -66,13 +65,16 @@ impl BishopApp for PlaytestApp {
         let mut camera_manager = CameraManager::default();
         let grid_size = game.current_world().grid_size;
 
-        // Pre-cache font to avoid black rectangle rendering bug
-        engine_core::assets::core_assets::precache_font();
-
         let game_state = {
             let mut ctx_ref = ctx.borrow_mut();
             Rc::new(RefCell::new(
-                GameState::for_room(&mut *ctx_ref, room, game, &lua, &mut camera_manager, grid_size).await
+                GameState::for_room(
+                    &mut *ctx_ref, 
+                    room, game, 
+                    &lua, 
+                    &mut camera_manager, 
+                    grid_size
+                ).await
             ))
         };
 

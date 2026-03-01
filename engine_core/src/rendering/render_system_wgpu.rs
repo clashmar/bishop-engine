@@ -87,7 +87,7 @@ impl RenderSystem {
         ctx: &mut C, 
     ) {
         // TODO Re-enable
-        // ctx.set_default_camera();
+        ctx.set_default_camera();
         // let tex = &self.final_comp_rt.texture;
 
         // let virt_w = self.rt_width;

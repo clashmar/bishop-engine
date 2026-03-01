@@ -1,4 +1,5 @@
 // editor/src/room/room_editor.rs
+use crate::canvas::grid_shader::GridRenderer;
 use crate::tilemap::tilemap_editor::{TileMapEditor, TilemapEditorMode};
 use crate::editor_camera_controller::EditorCameraController;
 use crate::gui::inspector::inspector::Inspector;
@@ -273,6 +274,7 @@ impl RoomEditor {
         room_id: RoomId,
         game: &mut Game,
         render_system: &mut RenderSystem,
+        grid_renderer: &GridRenderer,
     ) {
         self.request_play = false; // This is very important
         self.active_rects.clear();
@@ -305,7 +307,7 @@ impl RoomEditor {
 
                 ctx.set_camera(camera);
                 if self.show_grid {
-                    grid::draw_grid(ctx, camera, grid_size);
+                    grid::draw_grid(ctx, grid_renderer, camera, grid_size);
                 }
             }
             RoomEditorMode::Scene => {
@@ -355,7 +357,7 @@ impl RoomEditor {
                     ctx.set_camera(camera);
 
                     if self.show_grid {
-                        grid::draw_grid(ctx, camera, grid_size);
+                        grid::draw_grid(ctx, grid_renderer, camera, grid_size);
                     }
 
                     draw_exit_placeholders(ctx, &room.exits, room.position, grid_size);

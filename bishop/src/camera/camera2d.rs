@@ -42,10 +42,29 @@ impl Camera2D {
     }
 
     /// Converts a world position to screen coordinates.
-    pub fn world_to_screen(&self, world_pos: Vec2) -> Vec2 {
-        let x = (world_pos.x - self.target.x) * self.zoom.x + self.offset.x;
-        let y = (world_pos.y - self.target.y) * self.zoom.y + self.offset.y;
-        Vec2::new(x, y)
+    pub fn world_to_screen(&self, world_pos: Vec2, screen_w: f32, screen_h: f32) -> Vec2 {
+        let dims = self
+            .viewport()
+            .map(|(vx, vy, vw, vh)| Rect {
+                x: vx as f32,
+                y: screen_h - (vy + vh) as f32,
+                w: vw as f32,
+                h: vh as f32,
+            })
+            .unwrap_or(Rect {
+                x: 0.0,
+                y: 0.0,
+                w: screen_w,
+                h: screen_h,
+            });
+
+        let mat = self.matrix();
+        let transformed = mat.transform_point3(vec3(world_pos.x, world_pos.y, 0.0));
+
+        vec2(
+            (transformed.x + 1.0) / 2.0 * dims.w + dims.x,
+            (1.0 - transformed.y) / 2.0 * dims.h + dims.y,
+        )
     }
 
     /// Returns the world space position for a 2d camera screen space position.

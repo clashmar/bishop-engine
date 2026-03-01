@@ -901,6 +901,7 @@ dependencies = [
  "flexi_logger",
  "futures",
  "game",
+ "glam",
  "inventory",
  "log",
  "mlua",
@@ -913,6 +914,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "uuid",
+ "wgpu",
  "winres",
  "winres-edit",
 ]

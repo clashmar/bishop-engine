@@ -6,25 +6,25 @@ pub struct Controls;
 impl Controls {
     pub fn save(ctx: &WgpuContext) -> bool {
         ctx.is_key_pressed(KeyCode::S) &&
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::RightControl))
+        (ctx.is_key_down(KeyCode::LeftSuper))
         && !(ctx.is_key_down(KeyCode::LeftShift) || ctx.is_key_down(KeyCode::RightShift))
     }
 
     pub fn save_as(ctx: &WgpuContext) -> bool {
         ctx.is_key_pressed(KeyCode::S) &&
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::RightControl))
+        (ctx.is_key_down(KeyCode::LeftSuper))
         && (ctx.is_key_down(KeyCode::LeftShift) || ctx.is_key_down(KeyCode::RightShift))
     }
 
     pub fn undo(ctx: &WgpuContext) -> bool {
         ctx.is_key_pressed(KeyCode::Z) &&
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::RightControl)) &&
+        (ctx.is_key_down(KeyCode::LeftSuper)) &&
         !(ctx.is_key_down(KeyCode::LeftShift) || ctx.is_key_down(KeyCode::RightShift))
     }
 
     pub fn redo(ctx: &WgpuContext) -> bool {
         ctx.is_key_pressed(KeyCode::Z) &&
-        ctx.is_key_down(KeyCode::LeftControl) &&
+        ctx.is_key_down(KeyCode::LeftSuper) &&
         (ctx.is_key_down(KeyCode::LeftShift) || ctx.is_key_down(KeyCode::RightShift))
     }
 
@@ -33,22 +33,22 @@ impl Controls {
     }
 
     pub fn copy(ctx: &WgpuContext) -> bool {
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::LeftSuper)) &&
+        (ctx.is_key_down(KeyCode::LeftSuper)) &&
         ctx.is_key_pressed(KeyCode::C)
     }
 
     pub fn paste(ctx: &WgpuContext) -> bool {
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::LeftSuper)) &&
+        (ctx.is_key_down(KeyCode::LeftSuper)) &&
         ctx.is_key_pressed(KeyCode::V)
     }
 
     pub fn select_all(ctx: &WgpuContext) -> bool {
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::LeftSuper)) &&
+        (ctx.is_key_down(KeyCode::LeftSuper)) &&
         ctx.is_key_pressed(KeyCode::A)
     }
 
     pub fn duplicate(ctx: &WgpuContext) -> bool {
-        (ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::LeftSuper)) &&
+        (ctx.is_key_down(KeyCode::LeftSuper)) &&
         ctx.is_key_pressed(KeyCode::D)
     }
 
@@ -114,9 +114,7 @@ impl Controls {
 
     /// Returns true if any key was pressed this frame.
     pub fn any_key_pressed(ctx: &WgpuContext) -> bool {
-        false
-        // TODO IMPLEMENT THIS!
-        // ctx.get_last_key_pressed().is_some()
+        ctx.any_key_pressed()
     }
 
     /// Returns true if alt key is currently held.

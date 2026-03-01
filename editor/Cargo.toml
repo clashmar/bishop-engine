@@ -31,6 +31,8 @@ strum = "0.26"
 strum_macros = "0.26"
 once_cell = "1"
 winres-edit = "0.2.0"
+wgpu = "24.0"
+glam = "0.32.0"
 
 # For windows
 [build-dependencies]

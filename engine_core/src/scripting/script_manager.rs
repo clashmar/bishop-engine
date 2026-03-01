@@ -108,18 +108,22 @@ impl ScriptManager {
 
     /// Load the Lua table by id and return a reference to it.
     pub fn load_script_table(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
+        // Early return if already loaded (single lookup)
         if self.table_defs.contains_key(&id) {
-            return Ok(self.table_defs.get(&id).unwrap());
+            return Ok(self.table_defs.get(&id).ok_or_else(|| {
+                mlua::Error::RuntimeError("Table disappeared unexpectedly".into())
+            })?);
         }
 
+        // Load the table (requires &mut self, so cannot use entry API)
         let table = self.get_table_from_id(lua, id)?;
 
         if let Ok(update) = table.get::<_>(UPDATE) {
             self.update_fns.insert(id, update);
         }
 
-        self.table_defs.insert(id, table);
-        Ok(self.table_defs.get(&id).unwrap())
+        // Insert and return (uses entry API to avoid extra lookup)
+        Ok(self.table_defs.entry(id).or_insert(table))
     }
 
     /// Returns the instance and whether the instance was freshly created.
@@ -130,9 +134,13 @@ impl ScriptManager {
         entity: Entity,
         script_id: ScriptId,
     ) -> LuaResult<(&Table, bool)> {
-        // Check if instance already exists
-        if self.instances.contains_key(&(entity, script_id)) {
-            return Ok((self.instances.get(&(entity, script_id)).unwrap(), false));
+        let key = (entity, script_id);
+
+        // Fast path: instance already exists (single lookup via entry API)
+        if self.instances.contains_key(&key) {
+            return Ok((self.instances.get(&key).ok_or_else(|| {
+                mlua::Error::RuntimeError("Instance disappeared unexpectedly".into())
+            })?, false));
         }
 
         // Ensure table is loaded first
@@ -141,7 +149,7 @@ impl ScriptManager {
         // Script definition
         let def = self.table_defs.get(&script_id).ok_or_else(|| {
             mlua::Error::RuntimeError("Script definition not loaded".into())
-        })?.clone(); // Clone here to end borrow
+        })?.clone();
 
         // Create instance table
         let instance = lua.create_table()?;
@@ -156,14 +164,14 @@ impl ScriptManager {
             instance.set(PUBLIC, public_copy)?;
         }
 
-        // Setup instance metatable, this makes sure that scripts 
+        // Setup instance metatable, this makes sure that scripts
         // will check the script def for data not on the instance
         let mt = lua.create_table()?;
         mt.set("__index", def.clone())?;
         instance.set_metatable(Some(mt))?;
 
-        self.instances.insert((entity, script_id), instance);
-        Ok((self.instances.get(&(entity, script_id)).unwrap(), true))
+        // Insert and return reference using entry API
+        Ok((self.instances.entry(key).or_insert(instance), true))
     }
 
     /// Returns a reference to the Lua table that represents the script instance.
