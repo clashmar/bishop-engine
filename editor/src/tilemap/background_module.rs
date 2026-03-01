@@ -39,7 +39,7 @@ impl BackgroundModule {
         // Determine the width of a three‑digit number.
         // 255 is the widest possible value for an 8‑bit channel
         let sample = "255";
-        let num_width = measure_text_ui(ctx, sample, DEFAULT_FONT_SIZE_16).width;
+        let num_width = measure_text(ctx, sample, DEFAULT_FONT_SIZE_16).width;
 
         // Add padding so the cursor isn’t glued to the edge.
         let field_w = num_width + 13.0;

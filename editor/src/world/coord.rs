@@ -26,8 +26,12 @@ pub fn mouse_world_grid(
 }
 
 /// Turn a world‑space `Vec2` into screen coordinates using the current camera.
-pub fn world_to_screen(camera: &Camera2D, world_pos: Vec2) -> Vec2 {
-    camera.world_to_screen(world_pos)
+pub fn world_to_screen(
+    ctx: &WgpuContext,
+    camera: &Camera2D,
+    world_pos: Vec2,
+) -> Vec2 {
+    camera.world_to_screen(world_pos, ctx.screen_width(), ctx.screen_height())
 }
 
 /// Check if a room overlaps with existing rooms.

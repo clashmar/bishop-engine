@@ -89,7 +89,7 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
 
             if rect.contains(ctx.mouse_position().into()) && !is_modal_open() {
                 let tip = mode.label();
-                let tip_size = measure_text_ui(ctx, tip, 16.0);
+                let tip_size = measure_text(ctx, tip, 16.0);
 
                 let tip_rect = Rect::new(
                     rect.x,
@@ -212,7 +212,7 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
         // Tooltip
         if rect.contains(ctx.mouse_position().into()) && !is_modal_open() {
             let tip = mode.label();
-            let tip_size = measure_text_ui(ctx, tip, 16.0);
+            let tip_size = measure_text(ctx, tip, 16.0);
 
             let tip_rect = Rect::new(
                 rect.x,

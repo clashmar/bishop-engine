@@ -141,7 +141,7 @@ impl InspectorModule for ScriptModule {
             // Prepare the field label
             let display_name = parse_field_name(&name);
             let label = format!("{} :", display_name);
-            let label_w = measure_text_ui(ctx, &label, FONT_SIZE).width.max(MIN_LABEL_WIDTH);
+            let label_w = measure_text(ctx, &label, FONT_SIZE).width.max(MIN_LABEL_WIDTH);
             let widget_x = rect.x + label_w + LABEL_PADDING;
             ctx.draw_text(&label, rect.x, y + 22.0, FONT_SIZE, FIELD_TEXT_COLOR);
 

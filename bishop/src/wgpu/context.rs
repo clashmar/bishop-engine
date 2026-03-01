@@ -5,17 +5,14 @@ use winit::event::{ElementState, KeyEvent, MouseScrollDelta, WindowEvent};
 use winit::keyboard::PhysicalKey;
 use winit::window::{Fullscreen, Window};
 
-use super::conversions::{convert_keycode, convert_mouse_button, keycode_to_char};
-use super::conversions_window::convert_cursor_icon;
+use super::conversions::{convert_cursor_icon, convert_keycode, convert_mouse_button, keycode_to_char};
 use super::exec::FrameFuture;
-use super::graphics_state::{GraphicsState, GraphicsStateError};
-use super::input_state::InputState;
 use super::render::{
     create_texture_bind_group_layout, BishopRenderTarget, CameraUniforms, FullscreenQuadRenderer,
     PrimitiveRenderer, TextRenderer, TextureRenderer,
 };
+use super::state::{GraphicsState, GraphicsStateError, InputState, TimeState};
 use super::texture_loader::init_texture_loader;
-use super::time_state::TimeState;
 use crate::camera::Camera2D;
 use crate::types::Color;
 use crate::window::CursorIcon;
@@ -172,14 +169,16 @@ impl WgpuContext {
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let x = position.x as f32;
-                let y = position.y as f32;
+                let x = position.x as f32 / self.scale_factor;
+                let y = position.y as f32 / self.scale_factor;
                 self.input.on_mouse_move(x, y);
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let (dx, dy) = match delta {
                     MouseScrollDelta::LineDelta(x, y) => (*x, *y),
-                    MouseScrollDelta::PixelDelta(pos) => (pos.x as f32, pos.y as f32),
+                    MouseScrollDelta::PixelDelta(pos) => {
+                        (pos.x as f32 / self.scale_factor, pos.y as f32 / self.scale_factor)
+                    }
                 };
                 self.input.on_mouse_wheel(dx, dy);
             }
@@ -192,14 +191,24 @@ impl WgpuContext {
         &self.window
     }
 
-    /// Returns the current screen width in physical pixels.
+    /// Returns the current screen width in logical pixels.
     pub fn screen_width(&self) -> f32 {
-        self.graphics.size.0 as f32
+        self.graphics.size.0 as f32 / self.scale_factor
+    }
+
+    /// Returns the current screen height in logical pixels.
+    pub fn screen_height(&self) -> f32 {
+        self.graphics.size.1 as f32 / self.scale_factor
+    }
+
+    /// Returns the current screen width in physical pixels.
+    pub fn physical_width(&self) -> u32 {
+        self.graphics.size.0
     }
 
     /// Returns the current screen height in physical pixels.
-    pub fn screen_height(&self) -> f32 {
-        self.graphics.size.1 as f32
+    pub fn physical_height(&self) -> u32 {
+        self.graphics.size.1
     }
 
     /// Sets the mouse cursor icon.
@@ -290,6 +299,27 @@ impl WgpuContext {
         &self.fullscreen_quad_renderer
     }
 
+    /// Returns a reference to the current surface texture view if available.
+    /// Used for direct rendering passes that bypass the batched rendering system.
+    pub fn current_surface_view(&self) -> Option<&wgpu::TextureView> {
+        self.current_surface_view.as_ref()
+    }
+
+    /// Returns whether the frame has been cleared yet.
+    pub fn has_cleared_this_frame(&self) -> bool {
+        self.has_cleared_this_frame
+    }
+
+    /// Marks the frame as cleared. Call this after performing a clear operation.
+    pub fn mark_cleared(&mut self) {
+        self.has_cleared_this_frame = true;
+    }
+
+    /// Returns the current clear color, if set.
+    pub fn clear_color(&self) -> Option<Color> {
+        self.clear_color
+    }
+
     /// Returns a future that completes on the next frame.
     /// Use this to yield from async code and allow the frame to render.
     pub fn next_frame(&self) -> FrameFuture {
@@ -311,8 +341,8 @@ impl WgpuContext {
 
     /// Flushes batched draw calls with the current camera state.
     fn flush_batched(&mut self, view: &wgpu::TextureView, load_op: wgpu::LoadOp<wgpu::Color>) {
-        let width = self.graphics.size.0 as f32;
-        let height = self.graphics.size.1 as f32;
+        let width = self.screen_width();
+        let height = self.screen_height();
 
         let uniforms = if let Some(camera) = &self.current_camera {
             CameraUniforms::from_camera2d(camera, width, height)
@@ -367,7 +397,9 @@ impl WgpuContext {
 
     /// Flushes pending draws if there are any batched vertices.
     /// Called before camera changes to ensure draws use the correct transform.
-    pub(crate) fn flush_if_needed(&mut self) {
+    /// Also used by external renderers (like GridRenderer) to ensure batched draws
+    /// are flushed before direct rendering.
+    pub fn flush_if_needed(&mut self) {
         if !self.has_pending_draws() {
             return;
         }

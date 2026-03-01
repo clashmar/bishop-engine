@@ -41,7 +41,7 @@ impl ConfirmPrompt {
         // Message
         let center_x = self.rect.x + (self.rect.w / 2.0);
         let message_x = center_text(ctx, center_x, &self.message, DEFAULT_FONT_SIZE_16).0;
-        let message_height = measure_text_ui(ctx, &self.message, DEFAULT_FONT_SIZE_16).height;
+        let message_height = measure_text(ctx, &self.message, DEFAULT_FONT_SIZE_16).height;
 
         ctx.draw_text(
             &self.message,

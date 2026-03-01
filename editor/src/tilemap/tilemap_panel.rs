@@ -65,7 +65,7 @@ impl TilemapPanel {
 
         // Layout create button
         let create_label = "Create Tile";
-        let create_width = measure_text_ui(ctx, create_label, 20.0).width + PADDING;
+        let create_width = measure_text(ctx, create_label, 20.0).width + PADDING;
         let create_start = ctx.screen_width() - INSET - create_width;
         let create_rect = self.register_rect(Rect::new(create_start, INSET, create_width, BTN_HEIGHT));
 
@@ -127,7 +127,7 @@ impl TilemapPanel {
         // Edit button appears only when there is a selected palette tile
         if !self.palette.entries.is_empty() {
             let edit_label = "Edit";
-            let edit_width = measure_text_ui(ctx, edit_label, 20.0).width + PADDING;
+            let edit_width = measure_text(ctx, edit_label, 20.0).width + PADDING;
             let edit_start = ctx.screen_width() - INSET - SPACING - create_width - edit_width;
             let edit_rect = self.register_rect(Rect::new(edit_start, INSET, edit_width, BTN_HEIGHT));
 

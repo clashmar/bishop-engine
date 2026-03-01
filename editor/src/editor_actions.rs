@@ -34,6 +34,7 @@ impl Default for Editor {
             modal: Modal::default(),
             toast: None,
             playtest_process: None,
+            grid_renderer: None,
         }
     }
 }

@@ -7,8 +7,9 @@ use crate::camera::game_camera::*;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
-use crate::dialogue::*;
+use crate::{dialogue::*, onscreen_debug};
 use crate::ui::text::*;
+use crate::logging::*;
 use std::collections::HashMap;
 use bishop::prelude::*;
 
@@ -142,7 +143,7 @@ fn render_bubble_screen_space<C: BishopContext>(
 
     let max_line_width = lines
         .iter()
-        .map(|line| measure_text_ui(ctx, line, font_size).width)
+        .map(|line| measure_text(ctx, line, font_size).width)
         .fold(0.0_f32, f32::max);
 
     let bubble_width = max_line_width + padding * 2.0;
@@ -185,7 +186,8 @@ fn render_bubble_screen_space<C: BishopContext>(
     );
 
     for (i, line) in lines.iter().enumerate() {
-        let line_width = measure_text_ui(ctx, line, font_size).width;
+        onscreen_debug!("{line}");
+        let line_width = measure_text(ctx, line, font_size).width;
         let text_x = bubble_x + (bubble_width - line_width) / 2.0;
         let text_y = bubble_y + padding + (i as f32 + 1.0) * line_height - line_height * 0.2;
 
@@ -210,7 +212,7 @@ fn wrap_text<C: BishopContext>(
             format!("{} {}", current_line, word)
         };
 
-        let test_width = measure_text_ui(ctx, &test_line, font_size).width;
+        let test_width = measure_text(ctx, &test_line, font_size).width;
 
         if test_width <= max_width || current_line.is_empty() {
             current_line = test_line;

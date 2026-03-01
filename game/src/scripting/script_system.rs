@@ -10,7 +10,7 @@ use engine_core::scripting::script::*;
 use engine_core::ecs::ecs::Ecs;
 use mlua::prelude::LuaResult;
 use engine_core::*;
-use mlua::Function;
+use mlua::{Function, Table};
 use std::sync::Arc;
 use mlua::Lua;
 use std::fs;
@@ -60,84 +60,55 @@ impl ScriptSystem {
         dt: f32,
         engine: &mut Engine,
     ) -> LuaResult<()> {
-        // Run all pending init functionsm queued in load phase
-        let pending_init: Vec<_> = {
-            let game_state = engine.game_state.borrow();
-            game_state.game.script_manager.pending_inits.clone()
-        };
-
-        {
+        // Collect all pending inits and their functions in a single borrow
+        let inits_to_run: Vec<(Function, Table)> = {
             let mut game_state = engine.game_state.borrow_mut();
-            game_state.game.script_manager.pending_inits.clear();
-        }
+            let script_manager = &mut game_state.game.script_manager;
 
-        for (entity, script_id) in pending_init {
-            let (instance, init_fn) = {
-                let game_state = engine.game_state.borrow();
-                let script_manager = &game_state.game.script_manager;
+            let pending = std::mem::take(&mut script_manager.pending_inits);
 
-                let instance = script_manager.get_instance(entity, script_id)?.clone();
-                let init = instance.get::<Function>(INIT).ok();
-
-                (instance, init)
-            };
-
-            if let Some(init_fn) = init_fn {
-                init_fn.call::<()>(&instance)?;
-                // Process commands immediately after init completes
-                Self::process_commands(engine);
-            }
-        }
-
-        // Run all update functions on scripts
-        let entities_and_scripts: Vec<_> = {
-            let game_state = engine.game_state.borrow();
-            let ctx = game_state.game.ctx();
-            let ecs = ctx.ecs;
-            let script_store = ecs.get_store::<Script>();
-            
-            // Collect all entities with ScriptId != 0
-            script_store
-                .data
-                .iter()
-                .filter_map(|(entity, script)| {
-                    // Keep only non‑zero script ids
-                    if script.script_id == ScriptId(0) {
-                        None
-                    } else {
-                        // Return the entity and a cloned script id
-                        Some((*entity, script.script_id.clone()))
-                    }
+            pending
+                .into_iter()
+                .filter_map(|(entity, script_id)| {
+                    let instance = script_manager.instances.get(&(entity, script_id))?;
+                    let init_fn = instance.get::<Function>(INIT).ok()?;
+                    Some((init_fn.clone(), instance.clone()))
                 })
                 .collect()
         };
 
-        for (entity, script_id) in entities_and_scripts {
-            let (update, instance) = {
-                let game_state = engine.game_state.borrow();
-                let script_manager = &game_state.game.script_manager;
-                
-                if let Some(update) = script_manager.update_fns.get(&script_id) {
-                    // Instance should exist and be setup already
-                    if let Some(instance) = script_manager.instances.get(&(entity, script_id)) {
-                        // Clone before dropping the borrow
-                        (Some(update.clone()), Some(instance.clone()))
-                    } else {
-                        (None, None)
+        for (init_fn, instance) in inits_to_run {
+            init_fn.call::<()>(&instance)?;
+            Self::process_commands(engine);
+        }
+
+        // Collect all scripts to run in a single borrow
+        let scripts_to_run: Vec<(Function, Table)> = {
+            let game_state = engine.game_state.borrow();
+            let ctx = game_state.game.ctx();
+            let script_manager = &game_state.game.script_manager;
+            let script_store = ctx.ecs.get_store::<Script>();
+
+            script_store
+                .data
+                .iter()
+                .filter_map(|(entity, script)| {
+                    if script.script_id == ScriptId(0) {
+                        return None;
                     }
-                } else {
-                    (None, None)
-                }
-            };
-                
-            // Make sure game_state borrow is dropped
-            if let (Some(update), Some(instance)) = (update, instance) {
-                // Execute the script's update function
-                update.call::<()>((instance, dt))?;
-                
-                // Process commands immediately after this script completes
-                Self::process_commands(engine);
-            }
+
+                    let update_fn = script_manager.update_fns.get(&script.script_id)?;
+                    let instance = script_manager.instances.get(&(*entity, script.script_id))?;
+
+                    Some((update_fn.clone(), instance.clone()))
+                })
+                .collect()
+        };
+
+        // Execute without holding any borrows
+        for (update_fn, instance) in scripts_to_run {
+            update_fn.call::<()>((instance, dt))?;
+            Self::process_commands(engine);
         }
 
         Ok(())
@@ -152,6 +123,7 @@ impl ScriptSystem {
     }
 
     /// Initializes all needed scripts in the game.
+    /// Only creates entity handles and queues init for newly created instances.
     pub fn load_scripts(
         lua: &Lua,
         ecs: &mut Ecs,
@@ -160,33 +132,24 @@ impl ScriptSystem {
         let script_store = ecs.get_store_mut::<Script>();
 
         for (entity, script) in script_store.data.iter_mut() {
-            // 0 means the component has no script yet
             if script.script_id == ScriptId(0) {
                 continue;
             }
 
-            let created;
+            let (instance, created) = script_manager
+                .get_or_create_instance(lua, *entity, script.script_id)?;
 
-            {
-                let (instance, was_created) = script_manager
-                    .get_or_create_instance(lua, *entity, script.script_id)?;
-
-                created = was_created;
-
-                // Always expose the entity handle
+            // Only setup entity handle and queue init for newly created instances
+            if created {
                 let handle = lua_entity_handle(lua, *entity)?;
                 instance.set(ENTITY, handle)?;
-            }
 
-            // Script manager is free again here
-            if created {
-                // Sync first
-                script.sync_to_lua(lua, script_manager, *entity)?;
+                let has_init = instance.get::<Function>(INIT).is_ok();
 
-                let instance = script_manager.get_instance(*entity, script.script_id)?;
+                // Use sync_to_lua_with_instance to avoid redundant lookup
+                script.sync_to_lua_with_instance(lua, instance)?;
 
-                // Queue the init function for a script if present
-                if let Ok(_init_fn) = instance.get::<Function>(INIT) {
+                if has_init {
                     script_manager
                         .pending_inits
                         .push((*entity, script.script_id));

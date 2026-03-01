@@ -30,6 +30,10 @@ impl Input for WgpuContext {
         self.input.is_key_released(key)
     }
 
+    fn any_key_pressed(&self) -> bool {
+        self.input.any_key_pressed()
+    }
+
     fn is_mouse_button_down(&self, button: MouseButton) -> bool {
         self.input.is_mouse_button_down(button)
     }
@@ -132,6 +136,16 @@ impl Text for WgpuContext {
         self.text_renderer.draw_text(text, x, y, font_size, color)
     }
 
+    fn draw_text_ex(
+        &mut self,
+        text: &str,
+        x: f32,
+        y: f32,
+        params: crate::text::TextParams,
+    ) -> TextDimensions {
+        self.text_renderer.draw_text_ex(text, x, y, &params)
+    }
+
     fn measure_text(&self, text: &str, font_size: f32) -> TextDimensions {
         MEASURE_ATLAS.with(|cell| {
             let mut atlas_opt = cell.borrow_mut();
@@ -144,26 +158,6 @@ impl Text for WgpuContext {
         })
     }
 }
-
-// impl DrawTexture for WgpuContext {
-//     type Texture = WgpuTexture;
-
-//     fn draw_texture(&mut self, texture: &Self::Texture, x: f32, y: f32, color: Color) {
-//         self.texture_renderer.draw_texture(texture, x, y, color);
-//     }
-
-//     fn draw_texture_ex(
-//         &mut self,
-//         texture: &Self::Texture,
-//         x: f32,
-//         y: f32,
-//         color: Color,
-//         params: DrawTextureParams,
-//     ) {
-//         self.texture_renderer
-//             .draw_texture_ex(texture, x, y, color, params);
-//     }
-// }
 
 impl Camera for WgpuContext {
     fn set_camera(&mut self, camera: &Camera2D) {

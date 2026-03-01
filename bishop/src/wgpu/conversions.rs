@@ -1,6 +1,7 @@
 //! Type conversions between winit and bishop types.
 
 use crate::input::{KeyCode, MouseButton};
+use crate::window::CursorIcon;
 use winit::keyboard::KeyCode as WinitKeyCode;
 use winit::event::MouseButton as WinitMouseButton;
 
@@ -196,5 +197,21 @@ pub fn keycode_to_char(key: WinitKeyCode, shift: bool) -> Option<char> {
         Some(c.to_ascii_uppercase())
     } else {
         Some(c)
+    }
+}
+
+/// Converts a bishop CursorIcon to a winit CursorIcon.
+pub fn convert_cursor_icon(icon: CursorIcon) -> winit::window::CursorIcon {
+    match icon {
+        CursorIcon::Default => winit::window::CursorIcon::Default,
+        CursorIcon::Pointer => winit::window::CursorIcon::Pointer,
+        CursorIcon::Crosshair => winit::window::CursorIcon::Crosshair,
+        CursorIcon::Move => winit::window::CursorIcon::Move,
+        CursorIcon::Text => winit::window::CursorIcon::Text,
+        CursorIcon::NotAllowed => winit::window::CursorIcon::NotAllowed,
+        CursorIcon::EWResize => winit::window::CursorIcon::EwResize,
+        CursorIcon::NSResize => winit::window::CursorIcon::NsResize,
+        CursorIcon::NESWResize => winit::window::CursorIcon::NeswResize,
+        CursorIcon::NWSEResize => winit::window::CursorIcon::NwseResize,
     }
 }

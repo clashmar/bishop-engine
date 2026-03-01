@@ -150,7 +150,7 @@ impl WorldEditor {
             world_grid.x, world_grid.y,
         );
 
-        let txt_metrics = measure_text_ui(ctx, &txt, DEFAULT_FONT_SIZE_16);
+        let txt_metrics = measure_text(ctx, &txt, DEFAULT_FONT_SIZE_16);
         let margin = 10.0;
 
         let x = (ctx.screen_width() - txt_metrics.width) / 2.0;

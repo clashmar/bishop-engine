@@ -50,8 +50,17 @@ impl<'a> TextInput<'a> {
 
         let pending_focus = consume_pending_focus(self.id);
 
-        let (mut text, mut cursor_char, mut focused, mut selection_anchor, mut last_key_time, mut repeat_key, mut repeat_started, mut dragging, mut scroll_offset_x) =
-            INPUT_TEXT_STATE.with(|s| {
+        let (
+            mut text, 
+            mut cursor_char, 
+            mut focused, 
+            mut selection_anchor, 
+            mut last_key_time, 
+            mut repeat_key, 
+            mut repeat_started, 
+            mut dragging, 
+            mut scroll_offset_x
+        ) = INPUT_TEXT_STATE.with(|s| {
                 let mut map = s.borrow_mut();
 
                 if let Some(state) = map.get(&self.id) {
@@ -59,7 +68,17 @@ impl<'a> TextInput<'a> {
                     let f = if should_focus { true } else { state.focused };
                     just_gained_focus = should_focus && !state.focused;
                     let cc = if should_focus && just_gained_focus { state.text.chars().count() } else { state.cursor_char };
-                    (state.text.clone(), cc, f, state.selection_anchor, state.last_key_time, state.repeat_key, state.repeat_started, state.dragging, state.scroll_offset_x)
+                    (
+                        state.text.clone(), 
+                        cc, 
+                        f, 
+                        state.selection_anchor, 
+                        state.last_key_time, 
+                        state.repeat_key, 
+                        state.repeat_started, 
+                        state.dragging, 
+                        state.scroll_offset_x
+                    )
                 } else {
                     let t = self.current.to_string();
                     let cc = t.chars().count();

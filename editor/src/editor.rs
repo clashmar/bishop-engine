@@ -1,4 +1,5 @@
 // editor/src/editor.rs
+use crate::canvas::grid_shader::GridRenderer;
 use crate::editor_camera_controller::EditorCameraController;
 use crate::playtest::playtest_process::PlaytestProcess;
 use crate::tilemap::tile_palette::TilePalette;
@@ -36,6 +37,7 @@ pub struct Editor {
     pub modal: Modal,
     pub toast: Option<Toast>,
     pub playtest_process: Option<PlaytestProcess>,
+    pub grid_renderer: Option<GridRenderer>,
 }
 
 impl Editor {
@@ -70,6 +72,9 @@ impl Editor {
 
         // Give the palette to the tilemap editor
         editor.room_editor.tilemap_editor.tilemap_panel.palette = palette;
+
+        // Initialize the grid renderer
+        editor.grid_renderer = Some(GridRenderer::new(ctx));
 
         Ok(editor)
     }
@@ -243,12 +248,15 @@ impl Editor {
                     self.cur_world_id = Some(world_id);
                 }
 
-                self.world_editor.draw(
-                    ctx,
-                    world_id,
-                    &self.camera, 
-                    &mut self.game,
-                );
+                if let Some(grid_renderer) = &self.grid_renderer {
+                    self.world_editor.draw(
+                        ctx,
+                        world_id,
+                        &self.camera,
+                        &mut self.game,
+                        grid_renderer,
+                    );
+                }
             },
             EditorMode::Room(room_id) => {
                 // Room id should already be set
@@ -256,15 +264,18 @@ impl Editor {
                     self.cur_room_id = Some(room_id);
                 }
 
-                self.room_editor
-                    .draw(
-                        ctx,
-                        &self.camera,
-                        room_id,
-                        &mut self.game,
-                        &mut self.render_system,
-                    )
-                    .await;
+                if let Some(grid_renderer) = &self.grid_renderer {
+                    self.room_editor
+                        .draw(
+                            ctx,
+                            &self.camera,
+                            room_id,
+                            &mut self.game,
+                            &mut self.render_system,
+                            grid_renderer,
+                        )
+                        .await;
+                }
             }
         }
 

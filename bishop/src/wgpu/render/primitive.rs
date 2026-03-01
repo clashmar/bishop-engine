@@ -143,11 +143,32 @@ impl PrimitiveRenderer {
         thickness: f32,
         color: Color,
     ) {
-        let t = thickness;
-        self.draw_rectangle(x, y, w, t, color);
-        self.draw_rectangle(x, y + h - t, w, t, color);
-        self.draw_rectangle(x, y + t, t, h - 2.0 * t, color);
-        self.draw_rectangle(x + w - t, y + t, t, h - 2.0 * t, color);
+        let half = thickness / 2.0;
+        let c: [f32; 4] = color.into();
+
+        // Outer rectangle corners (clockwise from top-left)
+        let o0 = PrimitiveVertex::new([x - half, y - half], c);
+        let o1 = PrimitiveVertex::new([x + w + half, y - half], c);
+        let o2 = PrimitiveVertex::new([x + w + half, y + h + half], c);
+        let o3 = PrimitiveVertex::new([x - half, y + h + half], c);
+
+        // Inner rectangle corners (clockwise from top-left)
+        let i0 = PrimitiveVertex::new([x + half, y + half], c);
+        let i1 = PrimitiveVertex::new([x + w - half, y + half], c);
+        let i2 = PrimitiveVertex::new([x + w - half, y + h - half], c);
+        let i3 = PrimitiveVertex::new([x + half, y + h - half], c);
+
+        // 8 triangles forming the hollow ring (2 per edge)
+        self.vertices.extend_from_slice(&[
+            // Top edge
+            o0, o1, i1, o0, i1, i0,
+            // Right edge
+            o1, o2, i2, o1, i2, i1,
+            // Bottom edge
+            o2, o3, i3, o2, i3, i2,
+            // Left edge
+            o3, o0, i0, o3, i0, i3,
+        ]);
     }
 
     /// Draws a line between two points with the specified thickness.

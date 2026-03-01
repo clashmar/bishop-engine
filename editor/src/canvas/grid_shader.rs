@@ -1,123 +1,117 @@
-// // editor/src/canvas/grid_shader.rs
-// use once_cell::sync::OnceCell;
-// use bishop::prelude::*;
+// editor/src/canvas/grid_shader.rs
+use bishop::prelude::*;
+use bishop::wgpu::{FullscreenQuadRenderer, GridMaterial, GridUniforms, ModelUniforms};
 
-// const GRID_VERTEX_SHADER: &str = r#"#version 100
-// attribute vec3 position;
-// attribute vec2 texcoord;
-// varying vec2 uv;
+/// Parameters for drawing the shader-based grid.
+pub struct GridParams {
+    pub camera_pos: Vec2,
+    pub camera_zoom: f32,
+    pub viewport_size: Vec2,
+    pub grid_size: f32,
+    pub line_color: Color,
+    pub line_thickness: f32,
+}
 
-// uniform mat4 Model;
-// uniform mat4 Projection;
+/// Renderer for editor grid overlay using wgpu.
+pub struct GridRenderer {
+    material: GridMaterial,
+    fullscreen_quad: FullscreenQuadRenderer,
+}
 
-// void main() {
-//     gl_Position = Projection * Model * vec4(position, 1);
-//     uv = texcoord;
-// }
-// "#;
+impl GridRenderer {
+    /// Creates a new grid renderer.
+    pub fn new(ctx: &WgpuContext) -> Self {
+        let device = ctx.device();
+        let format = ctx.surface_format();
 
-// const GRID_FRAGMENT_SHADER: &str = include_str!("grid.frag");
+        let fullscreen_quad = FullscreenQuadRenderer::new(device);
+        let material = GridMaterial::new(
+            device,
+            format,
+            fullscreen_quad.camera_bind_group_layout(),
+        );
 
-// struct GridResources {
-//     material: Material,
-//     texture: Texture2D,
-// }
+        Self {
+            material,
+            fullscreen_quad,
+        }
+    }
 
-// static GRID_RESOURCES: OnceCell<GridResources> = OnceCell::new();
+    /// Draws the grid to the current surface.
+    pub fn draw(&self, ctx: &mut WgpuContext, params: &GridParams) {
+        let queue = ctx.queue();
+        let width = ctx.screen_width();
+        let height = ctx.screen_height();
 
-// /// Initializes grid shader resources (material and texture).
-// fn get_grid_resources() -> Option<&'static GridResources> {
-//     GRID_RESOURCES.get_or_try_init(|| {
-//         let material = load_material(
-//             ShaderSource::Glsl {
-//                 vertex: GRID_VERTEX_SHADER,
-//                 fragment: GRID_FRAGMENT_SHADER,
-//             },
-//             MaterialParams {
-//                 uniforms: vec![
-//                     UniformDesc::new("camera_pos", UniformType::Float2),
-//                     UniformDesc::new("camera_zoom", UniformType::Float1),
-//                     UniformDesc::new("viewport_size", UniformType::Float2),
-//                     UniformDesc::new("grid_size", UniformType::Float1),
-//                     UniformDesc::new("line_color", UniformType::Float4),
-//                     UniformDesc::new("line_thickness", UniformType::Float1),
-//                 ],
-//                 pipeline_params: PipelineParams {
-//                     color_blend: Some(BlendState::new(
-//                         Equation::Add,
-//                         BlendFactor::Value(BlendValue::SourceAlpha),
-//                         BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
-//                     )),
-//                     alpha_blend: Some(BlendState::new(
-//                         Equation::Add,
-//                         BlendFactor::Value(BlendValue::SourceAlpha),
-//                         BlendFactor::OneMinusValue(BlendValue::SourceAlpha),
-//                     )),
-//                     ..Default::default()
-//                 },
-//                 ..Default::default()
-//             },
-//         )?;
+        let uniforms = GridUniforms {
+            camera_pos: [params.camera_pos.x, params.camera_pos.y],
+            camera_zoom: params.camera_zoom,
+            grid_size: params.grid_size,
+            viewport_size: [params.viewport_size.x, params.viewport_size.y],
+            line_thickness: params.line_thickness,
+            _pad: 0.0,
+            line_color: [
+                params.line_color.r,
+                params.line_color.g,
+                params.line_color.b,
+                params.line_color.a,
+            ],
+        };
 
-//         // Create a 1x1 white texture for the quad
-//         let texture = Texture2D::from_rgba8(1, 1, &[255, 255, 255, 255]);
-//         texture.set_filter(FilterMode::Nearest);
+        self.material.set_uniforms(queue, &uniforms);
+        self.fullscreen_quad.update_camera(queue, width, height);
+        self.fullscreen_quad.update_model(queue, &ModelUniforms {
+            model: glam::Mat4::from_scale(glam::Vec3::new(width, height, 1.0)).to_cols_array_2d(),
+        });
 
-//         Ok::<_, ShaderError>(GridResources { material, texture })
-//     }).ok()
-// }
+        ctx.flush_if_needed();
 
-// /// Parameters for drawing the shader-based grid.
-// pub struct GridParams {
-//     pub camera_pos: Vec2,
-//     pub camera_zoom: f32,
-//     pub viewport_size: Vec2,
-//     pub grid_size: f32,
-//     pub line_color: Color,
-//     pub line_thickness: f32,
-// }
+        // Determine load operation - clear if not yet cleared this frame
+        let load_op = if ctx.has_cleared_this_frame() {
+            wgpu::LoadOp::Load
+        } else {
+            let clear_color = ctx.clear_color().unwrap_or(Color::BLACK);
+            ctx.mark_cleared();
+            wgpu::LoadOp::Clear(wgpu::Color {
+                r: clear_color.r as f64,
+                g: clear_color.g as f64,
+                b: clear_color.b as f64,
+                a: clear_color.a as f64,
+            })
+        };
 
-// /// Draws a grid using the shader-based approach.
-// /// Returns true if the grid was drawn, false if the resources failed to load.
-// pub fn draw_shader_grid(params: &GridParams) -> bool {
-//     let Some(resources) = get_grid_resources() else {
-//         return false;
-//     };
+        let device = ctx.device();
+        let surface_view = match ctx.current_surface_view() {
+            Some(view) => view,
+            None => return,
+        };
 
-//     let material = &resources.material;
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("grid_encoder"),
+        });
 
-//     material.set_uniform("camera_pos", params.camera_pos);
-//     material.set_uniform("camera_zoom", params.camera_zoom);
-//     material.set_uniform("viewport_size", params.viewport_size);
-//     material.set_uniform("grid_size", params.grid_size);
-//     material.set_uniform(
-//         "line_color",
-//         vec4(
-//             params.line_color.r,
-//             params.line_color.g,
-//             params.line_color.b,
-//             params.line_color.a,
-//         ),
-//     );
-//     material.set_uniform("line_thickness", params.line_thickness);
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("grid_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: surface_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: load_op,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
 
-//     gl_use_material(material);
+            render_pass.set_pipeline(self.material.pipeline());
+            self.fullscreen_quad.prepare_pass(&mut render_pass);
+            render_pass.set_bind_group(1, self.material.uniform_bind_group(), &[]);
+            self.fullscreen_quad.draw(&mut render_pass);
+        }
 
-//     // Draw a full-screen quad in world space that covers the viewport
-//     let half_w = params.viewport_size.x / params.camera_zoom * 0.5;
-//     let half_h = params.viewport_size.y / params.camera_zoom * 0.5;
-
-//     draw_texture_ex(
-//         &resources.texture,
-//         params.camera_pos.x - half_w,
-//         params.camera_pos.y - half_h,
-//         Color::WHITE,
-//         DrawTextureParams {
-//             dest_size: Some(vec2(half_w * 2.0, half_h * 2.0)),
-//             ..Default::default()
-//         },
-//     );
-
-//     gl_use_default_material();
-//     true
-// }
+        ctx.queue().submit(std::iter::once(encoder.finish()));
+    }
+}

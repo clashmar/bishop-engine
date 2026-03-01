@@ -17,6 +17,9 @@ pub trait Input {
     /// Returns true if the key was released this frame.
     fn is_key_released(&self, key: KeyCode) -> bool;
 
+    /// Returns true if any key was pressed this frame.
+    fn any_key_pressed(&self) -> bool;
+
     /// Returns true if the mouse button is currently held down.
     fn is_mouse_button_down(&self, button: MouseButton) -> bool;
 
