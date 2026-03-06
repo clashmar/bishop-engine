@@ -1250,6 +1250,7 @@ dependencies = [
  "ron",
  "serde 1.0.228",
  "uuid",
+ "widgets",
  "winres",
 ]
 
