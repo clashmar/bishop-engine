@@ -1,27 +1,6 @@
 use bishop::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// Gamepad button mapping for future controller support.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum GamepadButton {
-    South,
-    East,
-    North,
-    West,
-    LeftShoulder,
-    RightShoulder,
-    LeftTrigger,
-    RightTrigger,
-    Select,
-    Start,
-    LeftStick,
-    RightStick,
-    DPadUp,
-    DPadDown,
-    DPadLeft,
-    DPadRight,
-}
-
 /// Platform-aware input configuration for menu actions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InputBinding {

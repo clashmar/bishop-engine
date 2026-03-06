@@ -5,6 +5,7 @@ use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::physics::physics_system::*;
 use crate::game_state::GameState;
+use crate::menu_handler::{GameMenuHandler, drain_menu_events};
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use bishop::BishopApp;
@@ -85,6 +86,9 @@ impl Engine {
         grid_size: f32,
         is_playtest: bool,
     ) -> Self {
+        let mut menu = MenuManager::new();
+        menu.set_action_handler(GameMenuHandler);
+
         Self {
             game_state,
             ctx,
@@ -92,7 +96,7 @@ impl Engine {
             camera_manager,
             render_system: RenderSystem::with_grid_size(grid_size),
             diagnostics: DiagnosticsOverlay::new(),
-            menu: MenuManager::new(),
+            menu,
             is_playtest,
             accumulator: 0.0,
         }
@@ -158,6 +162,9 @@ impl Engine {
         if let Err(e) = ScriptSystem::run_scripts(dt, self) {
             onscreen_error!("Error running scripts: {}", e);
         }
+
+        // Process menu events and emit to Lua
+        self.process_menu_events();
     }
 
     pub fn render<C: BishopContext>(&mut self, ctx: &mut C, alpha: f32) {
@@ -234,5 +241,21 @@ impl Engine {
             sprite_id_count,
             render_time_ms,
         );
+    }
+
+    /// Process menu events and emit them to Lua.
+    fn process_menu_events(&mut self) {
+        let events = drain_menu_events();
+        if events.is_empty() {
+            return;
+        }
+
+        let game_state = self.game_state.borrow();
+        let event_bus = game_state.game.script_manager.event_bus.clone();
+
+        for action in events {
+            let event_name = format!("menu:{}", action);
+            event_bus.emit(event_name, mlua::Variadic::new());
+        }
     }
 }
