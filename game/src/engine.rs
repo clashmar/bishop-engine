@@ -5,6 +5,7 @@ use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::physics::physics_system::*;
 use crate::game_state::GameState;
+use crate::menu::MenuManager;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use bishop::BishopApp;
@@ -25,6 +26,8 @@ pub struct Engine {
     pub render_system: RenderSystem,
     /// Runtime diagnostics overlay (playtest only).
     pub diagnostics: DiagnosticsOverlay,
+    /// Menu system for pause and overlay menus.
+    pub menu: MenuManager,
     /// Whether the engine is running in playtest mode.
     pub is_playtest: bool,
     /// Accumulator for fixed timestep updates.
@@ -35,26 +38,41 @@ impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let dt = ctx.borrow().get_frame_time();
 
-        self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
+        // Always handle menu input first
+        self.menu.handle_input(&mut *ctx.borrow_mut());
 
         if self.is_playtest {
             self.diagnostics.update(dt);
             self.diagnostics.handle_input(&mut *ctx.borrow_mut());
         }
 
-        while self.accumulator >= FIXED_DT {
-            self.accumulator -= FIXED_DT;
-            self.fixed_update(&mut *ctx.borrow_mut(), FIXED_DT);
-        }
+        // Only update game if not paused
+        if !self.menu.is_pausing_game() {
+            self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
 
-        self.update_async(dt).await;
+            while self.accumulator >= FIXED_DT {
+                self.accumulator -= FIXED_DT;
+                self.fixed_update(&mut *ctx.borrow_mut(), FIXED_DT);
+            }
+
+            self.update_async(dt).await;
+        }
 
         if self.is_playtest {
             self.update_diagnostics_metrics();
         }
 
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
-        self.render(&mut *ctx.borrow_mut(), alpha);
+
+        // Render game if visible
+        if !self.menu.is_hiding_game() {
+            self.render(&mut *ctx.borrow_mut(), alpha);
+        } else {
+            ctx.borrow_mut().clear_background(Color::BLACK);
+        }
+
+        // Render menu on top
+        self.menu.render(&mut *ctx.borrow_mut());
     }
 }
 
@@ -75,6 +93,7 @@ impl Engine {
             camera_manager,
             render_system: RenderSystem::with_grid_size(grid_size),
             diagnostics: DiagnosticsOverlay::new(),
+            menu: MenuManager::new(),
             is_playtest,
             accumulator: 0.0,
         }
