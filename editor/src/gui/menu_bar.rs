@@ -237,6 +237,7 @@ impl MenuBar {
         view_actions.push(EditorAction::ViewDiagnosticsPanel);
 
         match editor_mode {
+            EditorMode::Menu => {},
             EditorMode::Game => {},
             EditorMode::World(_) => {},
             EditorMode::Room(_) => {
@@ -264,7 +265,7 @@ impl MenuBar {
             EditorMode::World(_) | EditorMode::Room(_) => {
                 options_actions.push(EditorAction::WorldSettings);
             }
-            EditorMode::Game => {}
+            EditorMode::Menu | EditorMode::Game => {}
         }
 
         if !options_actions.is_empty() {

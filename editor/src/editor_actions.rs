@@ -2,6 +2,7 @@
 use crate::world::world_editor::WorldEditor;
 use crate::game::game_editor::GameEditor;
 use crate::room::room_editor::RoomEditor;
+use crate::menu_editor::MenuEditor;
 use crate::ui::widgets::input_is_focused;
 use crate::storage::export::export_game;
 use crate::storage::editor_storage::*;
@@ -27,6 +28,7 @@ impl Default for Editor {
             game_editor: GameEditor::new(),
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
+            menu_editor: MenuEditor::new(),
             cur_world_id: None,
             cur_room_id: None,
             render_system: RenderSystem::new(),
@@ -77,6 +79,7 @@ impl Editor {
                 .get_room(id)
                 .map(|room| room.name.clone())
                 .unwrap_or_else(|| "Room".to_string()),
+            EditorMode::Menu => "Menu Editor".to_string(),
         };
 
         if let Some(action) = self.menu_bar.draw(ctx, &menu_title, self.mode) {
@@ -242,6 +245,7 @@ impl Editor {
             EditorMode::Game => "Rename game: ",
             EditorMode::World(_) => "Rename world: ",
             EditorMode::Room(_) => "Rename room: ",
+            EditorMode::Menu => "Rename menu: ",
         };
 
         let mut prompt = self.set_prompt_modal(ctx, prompt_message);
@@ -356,6 +360,7 @@ impl Editor {
                                     room.name = name;
                                 }
                             }
+                            EditorMode::Menu => {}
                         }
                         self.modal.close();
                     }

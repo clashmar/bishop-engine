@@ -121,7 +121,7 @@ impl EditorCommand for ChangeGridSizeCmd {
                         .is_some()
                 })
             }
-            EditorMode::Game => false,
+            EditorMode::Menu | EditorMode::Game => false,
         }
     }
 }

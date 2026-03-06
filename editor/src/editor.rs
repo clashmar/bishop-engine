@@ -6,6 +6,7 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::world::world_editor::WorldEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
+use crate::menu_editor::MenuEditor;
 use crate::storage::editor_storage::*;
 use crate::playtest::room_playtest::*;
 use crate::storage::editor_storage;
@@ -21,6 +22,7 @@ pub enum EditorMode {
     Game,
     World(WorldId),
     Room(RoomId),
+    Menu,
 }
 
 pub struct Editor {
@@ -29,6 +31,7 @@ pub struct Editor {
     pub game_editor: GameEditor,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,
+    pub menu_editor: MenuEditor,
     pub camera: Camera2D,
     pub cur_world_id: Option<WorldId>,
     pub cur_room_id: Option<RoomId>,
@@ -91,6 +94,9 @@ impl Editor {
         }
 
         match self.mode {
+            EditorMode::Menu => {
+                // Menu mode has no update logic
+            }
             EditorMode::Game => {
                 // Returns the id of the world that was clicked on or None
                 if let Some(world_id) = self.game_editor.update(
@@ -100,7 +106,7 @@ impl Editor {
                 ).await {
                     self.world_editor.init_camera(
                         ctx,
-                        &mut self.camera, 
+                        &mut self.camera,
                         self.game.get_world_mut(world_id),
                     );
                     self.game.current_world_id = world_id;
@@ -235,6 +241,9 @@ impl Editor {
 
     pub async fn draw(&mut self, ctx: &mut WgpuContext) {
         match self.mode {
+            EditorMode::Menu => {
+                // Menu mode has no draw logic
+            }
             EditorMode::Game => {
                 self.game_editor.draw(
                     ctx,
