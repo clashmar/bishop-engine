@@ -11,6 +11,7 @@ pub mod game;
 pub mod input;
 pub mod lighting;
 pub mod logging;
+pub mod menu;
 pub mod physics;
 pub mod rendering;
 pub mod scripting;
@@ -35,6 +36,7 @@ pub mod prelude {
     pub use crate::input::*;
     pub use crate::lighting::*;
     pub use crate::logging::*;
+    pub use crate::menu::*;
     pub use crate::physics::*;
     pub use crate::rendering::*;
     pub use crate::scripting::*;

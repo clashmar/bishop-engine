@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 /// Represents the current state of the menu system.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum MenuMode {
     /// No menu active, game runs normally.
     #[default]

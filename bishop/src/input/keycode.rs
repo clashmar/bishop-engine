@@ -1,7 +1,9 @@
 //! Key codes for keyboard input.
 
+use serde::{Deserialize, Serialize};
+
 /// Key codes matching common keyboard layouts.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum KeyCode {
     // Printable characters
     Space,

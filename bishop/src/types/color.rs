@@ -1,7 +1,9 @@
 //! RGBA color type with common color constants.
 
+use serde::{Deserialize, Serialize};
+
 /// RGBA color with components in 0.0-1.0 range.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Color {
     pub r: f32,
     pub g: f32,

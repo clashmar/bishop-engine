@@ -251,6 +251,7 @@ dependencies = [
  "glam",
  "image 0.25.9",
  "pollster",
+ "serde 1.0.228",
  "wgpu",
  "winit",
 ]

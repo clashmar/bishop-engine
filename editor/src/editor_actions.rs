@@ -81,15 +81,15 @@ impl Editor {
 
         if let Some(action) = self.menu_bar.draw(ctx, &menu_title, self.mode) {
             match action {
-                MenuAction::Rename => {
+                EditorAction::Rename => {
                     self.open_rename_modal(ctx);
                 }
-                MenuAction::NewGame => {
+                EditorAction::NewGame => {
                     // Save current
                     self.save();
                     self.open_new_game_modal(ctx);
                 }
-                MenuAction::Open => {
+                EditorAction::Open => {
                     // Open a folder picker rooted at the absolute save folder
                     #[cfg(not(target_arch = "wasm32"))]
                     {
@@ -134,11 +134,11 @@ impl Editor {
                         self.toast = Some(Toast::new("Folder picker unavailable in WASM", 2.5));
                     }
                 }
-                MenuAction::Save => self.save(),
-                MenuAction::SaveAs => self.open_save_as_modal(ctx),
-                MenuAction::Undo => crate::editor_global::request_undo(),
-                MenuAction::Redo => crate::editor_global::request_redo(),
-                MenuAction::Export => match export_game(&self.game).await {
+                EditorAction::Save => self.save(),
+                EditorAction::SaveAs => self.open_save_as_modal(ctx),
+                EditorAction::Undo => crate::editor_global::request_undo(),
+                EditorAction::Redo => crate::editor_global::request_redo(),
+                EditorAction::Export => match export_game(&self.game).await {
                     Ok(path) => {
                         self.toast =
                             Some(Toast::new(format!("Exported to: {}", path.display()), 2.5));
@@ -147,7 +147,7 @@ impl Editor {
                         onscreen_error!("Export failed: {e}");
                     }
                 },
-                MenuAction::ChangeSaveRoot => match change_save_root_async().await {
+                EditorAction::ChangeSaveRoot => match change_save_root_async().await {
                     Some(new_root) => {
                         self.toast = Some(Toast::new(
                             format!("Save root moved to: {}", new_root.display()),
@@ -158,22 +158,22 @@ impl Editor {
                         self.toast = Some(Toast::new("Failed to update save root.", 2.0));
                     }
                 },
-                MenuAction::ViewHierarchyPanel => {
+                EditorAction::ViewHierarchyPanel => {
                     with_panel_manager(|panel_manager| {
                         panel_manager.toggle(HIERARCHY_PANEL);
                     });
                 }
-                MenuAction::ViewConsolePanel => {
+                EditorAction::ViewConsolePanel => {
                     with_panel_manager(|panel_manager| {
                         panel_manager.toggle(CONSOLE_PANEL);
                     });
                 }
-                MenuAction::ViewDiagnosticsPanel => {
+                EditorAction::ViewDiagnosticsPanel => {
                     with_panel_manager(|panel_manager| {
                         panel_manager.toggle(DIAGNOSTICS_PANEL);
                     });
                 }
-                MenuAction::WorldSettings => {
+                EditorAction::WorldSettings => {
                     self.open_world_settings_modal(ctx);
                 }
             }
