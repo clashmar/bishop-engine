@@ -13,6 +13,7 @@ mod menu_template;
 mod menu_action_handler;
 pub mod layout;
 
+pub use bishop::input::GamepadButton;
 pub use menu_mode::MenuMode;
 pub use menu_background::MenuBackground;
 pub use menu_builder::{Menu, MenuBuilder, MenuItem, MenuAction};
@@ -25,7 +26,7 @@ pub use menu_panel::MenuPanel;
 pub use menu_button::MenuButton;
 pub use menu_label::MenuLabel;
 pub use menu_group::MenuGroup;
-pub use input_binding::{InputBinding, GamepadButton};
+pub use input_binding::InputBinding;
 pub use menu_navigation::MenuNavigation;
 pub use menu_template::MenuTemplate;
 pub use menu_action_handler::{MenuActionHandler, NoOpActionHandler};

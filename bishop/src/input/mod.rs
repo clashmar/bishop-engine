@@ -1,8 +1,10 @@
 //! Input handling for keyboard and mouse.
 
+mod gamepad;
 mod keycode;
 mod mouse;
 
+pub use gamepad::*;
 pub use keycode::*;
 pub use mouse::*;
 
