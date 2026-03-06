@@ -1,9 +1,10 @@
 //! Axis-aligned rectangle type.
 
 use glam::Vec2;
+use serde::{Deserialize, Serialize};
 
 /// Axis-aligned rectangle defined by position and size.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,

@@ -15,11 +15,11 @@ pub struct MenuBar {
     view_id: WidgetId,
     options_id: WidgetId,
     title_id: WidgetId,
-    pub pending: Option<MenuAction>,
+    pub pending: Option<EditorAction>,
 }
 
 #[derive(EnumIter, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MenuAction {
+pub enum EditorAction {
     // Game actions
     Rename, // Rename Game/World/Room
     // File actions
@@ -40,21 +40,21 @@ pub enum MenuAction {
     WorldSettings,
 }
 
-impl MenuAction {
+impl EditorAction {
     /// Returns the text that should be shown in dropdowns, lists, etc.
     pub fn ui_label(&self) -> String {
         match self {
-            MenuAction::NewGame => "New Game".to_string(),
-            MenuAction::Save => "Save".to_string(),
-            MenuAction::SaveAs => "Save As".to_string(),
-            MenuAction::Export => "Export".to_string(),
-            MenuAction::Undo => "Undo".to_string(),
-            MenuAction::Redo => "Redo".to_string(),
-            MenuAction::ChangeSaveRoot => "Change Save Root".to_string(),
-            MenuAction::ViewHierarchyPanel => "Hierarchy".to_string(),
-            MenuAction::ViewConsolePanel => "Console".to_string(),
-            MenuAction::ViewDiagnosticsPanel => "Diagnostics".to_string(),
-            MenuAction::WorldSettings => "World Settings".to_string(),
+            EditorAction::NewGame => "New Game".to_string(),
+            EditorAction::Save => "Save".to_string(),
+            EditorAction::SaveAs => "Save As".to_string(),
+            EditorAction::Export => "Export".to_string(),
+            EditorAction::Undo => "Undo".to_string(),
+            EditorAction::Redo => "Redo".to_string(),
+            EditorAction::ChangeSaveRoot => "Change Save Root".to_string(),
+            EditorAction::ViewHierarchyPanel => "Hierarchy".to_string(),
+            EditorAction::ViewConsolePanel => "Console".to_string(),
+            EditorAction::ViewDiagnosticsPanel => "Diagnostics".to_string(),
+            EditorAction::WorldSettings => "World Settings".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -65,13 +65,13 @@ impl MenuAction {
         #[cfg(any(target_os = "windows", target_os = "linux"))]
         {
             match self {
-                MenuAction::Save => Some("^ S"),
-                MenuAction::SaveAs => Some("⇧ ^ S"),
-                MenuAction::Undo => Some("^ Z"),
-                MenuAction::Redo => Some("⇧ ^ Z"),
-                MenuAction::ViewHierarchyPanel => Some("H"),
-                MenuAction::ViewConsolePanel => Some("C"),
-                MenuAction::ViewDiagnosticsPanel => Some("D"),
+                EditorAction::Save => Some("^ S"),
+                EditorAction::SaveAs => Some("⇧ ^ S"),
+                EditorAction::Undo => Some("^ Z"),
+                EditorAction::Redo => Some("⇧ ^ Z"),
+                EditorAction::ViewHierarchyPanel => Some("H"),
+                EditorAction::ViewConsolePanel => Some("C"),
+                EditorAction::ViewDiagnosticsPanel => Some("D"),
                 _ => None,
             }
         }
@@ -80,13 +80,13 @@ impl MenuAction {
         #[cfg(target_os = "macos")]
         {
             match self {
-                MenuAction::Save => Some("^ S"),
-                MenuAction::SaveAs => Some("⇧ ^ S"),
-                MenuAction::Undo => Some("^ Z"),
-                MenuAction::Redo => Some("⇧ ^ Z"),
-                MenuAction::ViewHierarchyPanel => Some("H"),
-                MenuAction::ViewConsolePanel => Some("C"),
-                MenuAction::ViewDiagnosticsPanel => Some("F3"),
+                EditorAction::Save => Some("^ S"),
+                EditorAction::SaveAs => Some("⇧ ^ S"),
+                EditorAction::Undo => Some("^ Z"),
+                EditorAction::Redo => Some("⇧ ^ Z"),
+                EditorAction::ViewHierarchyPanel => Some("H"),
+                EditorAction::ViewConsolePanel => Some("C"),
+                EditorAction::ViewDiagnosticsPanel => Some("F3"),
                 _ => None,
             }
         }
@@ -99,7 +99,7 @@ impl MenuAction {
     }
 }
 
-impl fmt::Display for MenuAction {
+impl fmt::Display for EditorAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.ui_label())
     }
@@ -123,7 +123,7 @@ impl MenuBar {
         ctx: &mut WgpuContext,
         title: &str,
         editor_mode: EditorMode,
-    ) -> Option<MenuAction> {
+    ) -> Option<EditorAction> {
         // Height of each dropdown item
         const HEIGHT: f32 = 30.0;
 
@@ -140,8 +140,8 @@ impl MenuBar {
             HEIGHT,
         );
 
-        let title_actions: Vec<MenuAction> = vec![
-            MenuAction::Rename,
+        let title_actions: Vec<EditorAction> = vec![
+            EditorAction::Rename,
         ];
 
         if let Some(selected) = menu_dropdown(
@@ -168,13 +168,13 @@ impl MenuBar {
             HEIGHT
         );
 
-        let file_actions: Vec<MenuAction> = vec![
-            MenuAction::NewGame,
-            MenuAction::Open,
-            MenuAction::Save,
-            MenuAction::SaveAs,
-            MenuAction::Export,
-            MenuAction::ChangeSaveRoot,
+        let file_actions: Vec<EditorAction> = vec![
+            EditorAction::NewGame,
+            EditorAction::Open,
+            EditorAction::Save,
+            EditorAction::SaveAs,
+            EditorAction::Export,
+            EditorAction::ChangeSaveRoot,
         ];
 
         if let Some(selected) = menu_dropdown(
@@ -201,9 +201,9 @@ impl MenuBar {
             HEIGHT
         );
 
-        let edit_actions: Vec<MenuAction> = vec![
-            MenuAction::Undo,
-            MenuAction::Redo,
+        let edit_actions: Vec<EditorAction> = vec![
+            EditorAction::Undo,
+            EditorAction::Redo,
         ];
 
         if let Some(selected) = menu_dropdown(
@@ -230,17 +230,17 @@ impl MenuBar {
             HEIGHT
         );
 
-        let mut view_actions: Vec<MenuAction> = Vec::new();
+        let mut view_actions: Vec<EditorAction> = Vec::new();
 
         // Console and Diagnostics panels available in all modes
-        view_actions.push(MenuAction::ViewConsolePanel);
-        view_actions.push(MenuAction::ViewDiagnosticsPanel);
+        view_actions.push(EditorAction::ViewConsolePanel);
+        view_actions.push(EditorAction::ViewDiagnosticsPanel);
 
         match editor_mode {
             EditorMode::Game => {},
             EditorMode::World(_) => {},
             EditorMode::Room(_) => {
-                view_actions.push(MenuAction::ViewHierarchyPanel);
+                view_actions.push(EditorAction::ViewHierarchyPanel);
             }
         }
 
@@ -259,10 +259,10 @@ impl MenuBar {
         x += view_rect.w + SPACING;
 
         // Options dropdown (only visible in World/Room modes)
-        let mut options_actions: Vec<MenuAction> = Vec::new();
+        let mut options_actions: Vec<EditorAction> = Vec::new();
         match editor_mode {
             EditorMode::World(_) | EditorMode::Room(_) => {
-                options_actions.push(MenuAction::WorldSettings);
+                options_actions.push(EditorAction::WorldSettings);
             }
             EditorMode::Game => {}
         }

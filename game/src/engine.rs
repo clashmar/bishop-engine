@@ -5,7 +5,6 @@ use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::physics::physics_system::*;
 use crate::game_state::GameState;
-use crate::menu::MenuManager;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use bishop::BishopApp;
