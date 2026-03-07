@@ -1,10 +1,8 @@
-use bishop::prelude::*;
+use crate::menu::layout::*;
+use crate::menu::elements::*;
+use crate::menu::*;
 use serde::{Deserialize, Serialize};
-use crate::menu::{
-    MenuBackground, MenuElement, MenuElementKind, MenuMode,
-    ButtonElement, LabelElement,
-    layout::LayoutConfig,
-};
+use bishop::prelude::*;
 
 /// Serializable menu definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]

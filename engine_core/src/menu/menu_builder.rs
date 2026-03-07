@@ -1,9 +1,8 @@
-use bishop::prelude::*;
+use crate::menu::elements::*;
+use crate::menu::layout::*;
+use crate::menu::*;
 use serde::{Deserialize, Serialize};
-use crate::menu::{
-    MenuBackground, MenuElement, MenuElementKind, MenuMode, MenuTemplate,
-    layout::{LayoutConfig, LayoutDirection},
-};
+use bishop::prelude::*;
 
 /// Actions that can be triggered by menu items.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
