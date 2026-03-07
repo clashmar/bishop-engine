@@ -13,6 +13,7 @@ use crate::editor_global::*;
 use crate::gui::prompts::*;
 use crate::editor::Editor;
 use crate::gui::panels::*;
+use crate::menu_editor::MENU_EDITOR_PANEL;
 use crate::gui::modal::*;
 use crate::editor::*;
 use engine_core::prelude::*;
@@ -25,6 +26,7 @@ impl Default for Editor {
             game: Game::default(),
             camera: Camera2D::default(),
             mode: EditorMode::Game,
+            return_mode: None,
             game_editor: GameEditor::new(),
             world_editor: WorldEditor::new(),
             room_editor: RoomEditor::new(),
@@ -179,6 +181,40 @@ impl Editor {
                 EditorAction::WorldSettings => {
                     self.open_world_settings_modal(ctx);
                 }
+                EditorAction::OpenMenuEditor => {
+                    self.return_mode = Some(self.mode);
+                    self.mode = EditorMode::Menu;
+                    self.load_menus();
+                    with_panel_manager(|pm| pm.show(MENU_EDITOR_PANEL));
+                }
+                EditorAction::ReturnToGameEditor => {
+                    // Save menus before leaving menu mode
+                    self.save_menus();
+                    with_panel_manager(|pm| pm.hide(MENU_EDITOR_PANEL));
+
+                    let return_mode = self.return_mode.unwrap_or(EditorMode::Game);
+                    self.mode = return_mode;
+                    self.return_mode = None;
+
+                    match return_mode {
+                        EditorMode::Game => {
+                            self.game_editor.init_camera(ctx, &mut self.camera, &mut self.game);
+                        }
+                        EditorMode::World(id) => {
+                            self.world_editor.init_camera(
+                                ctx,
+                                &mut self.camera,
+                                self.game.get_world_mut(id),
+                            );
+                        }
+                        EditorMode::Room(_) => {
+                            // Camera is preserved for Room mode
+                        }
+                        EditorMode::Menu => {
+                            // Should not return to Menu mode
+                        }
+                    }
+                }
             }
         }
     }
@@ -215,6 +251,21 @@ impl Editor {
         } else {
             self.toast = Some(Toast::new("Saved", 2.5));
         }
+    }
+
+    /// Saves all menu templates to disk.
+    pub fn save_menus(&self) {
+        for template in &self.menu_editor.templates {
+            if let Err(e) = save_menu(template) {
+                onscreen_error!("Could not save menu '{}': {}", template.id, e);
+            }
+        }
+    }
+
+    /// Loads all menu templates from disk.
+    pub fn load_menus(&mut self) {
+        let templates = load_menus();
+        self.menu_editor.set_templates(templates);
     }
 
     pub fn get_room_from_id(&self, room_id: &RoomId) -> &Room {

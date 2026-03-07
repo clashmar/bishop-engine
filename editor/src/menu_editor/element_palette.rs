@@ -1,5 +1,6 @@
 // editor/src/menu_editor/element_palette.rs
 use bishop::prelude::*;
+use engine_core::prelude::*;
 
 const PALETTE_ITEM_HEIGHT: f32 = 32.0;
 const PALETTE_SPACING: f32 = 4.0;
@@ -15,8 +16,8 @@ impl ElementPalette {
         Self { scroll_y: 0.0 }
     }
 
-    /// Renders the palette with available element types.
-    pub fn draw(&mut self, ctx: &mut WgpuContext, rect: Rect, blocked: bool) {
+    /// Renders the palette and returns a clicked element kind if any.
+    pub fn draw(&mut self, ctx: &mut WgpuContext, rect: Rect, blocked: bool) -> Option<MenuElementKind> {
         let mouse: Vec2 = ctx.mouse_position().into();
 
         if !blocked && rect.contains(mouse) {
@@ -33,16 +34,44 @@ impl ElementPalette {
         ctx.draw_text("Elements", rect.x + 8.0, y + 14.0, 14.0, Color::GREY);
         y += 24.0;
 
-        self.draw_palette_item(ctx, rect, &mut y, "Label", blocked);
-        self.draw_palette_item(ctx, rect, &mut y, "Button", blocked);
-        self.draw_palette_item(ctx, rect, &mut y, "Spacer", blocked);
-        self.draw_palette_item(ctx, rect, &mut y, "Panel", blocked);
+        let mut clicked_kind = None;
+
+        if self.draw_palette_item(ctx, rect, &mut y, "Label", blocked).is_some() {
+            clicked_kind = Some(MenuElementKind::Label(LabelElement {
+                text: "Label".to_string(),
+                ..Default::default()
+            }));
+        }
+
+        if self.draw_palette_item(ctx, rect, &mut y, "Button", blocked).is_some() {
+            clicked_kind = Some(MenuElementKind::Button(ButtonElement {
+                text: "Button".to_string(),
+                ..Default::default()
+            }));
+        }
+
+        if self.draw_palette_item(ctx, rect, &mut y, "Spacer", blocked).is_some() {
+            clicked_kind = Some(MenuElementKind::Spacer(SpacerElement::default()));
+        }
+
+        if self.draw_palette_item(ctx, rect, &mut y, "Panel", blocked).is_some() {
+            clicked_kind = Some(MenuElementKind::Panel(PanelElement::default()));
+        }
+
+        clicked_kind
     }
 
-    fn draw_palette_item(&self, ctx: &mut WgpuContext, rect: Rect, y: &mut f32, name: &str, blocked: bool) {
+    fn draw_palette_item(
+        &self,
+        ctx: &mut WgpuContext,
+        rect: Rect,
+        y: &mut f32,
+        name: &str,
+        blocked: bool,
+    ) -> Option<()> {
         if *y < rect.y || *y + PALETTE_ITEM_HEIGHT > rect.y + rect.h {
             *y += PALETTE_ITEM_HEIGHT + PALETTE_SPACING;
-            return;
+            return None;
         }
 
         let item_rect = Rect::new(
@@ -54,6 +83,7 @@ impl ElementPalette {
 
         let mouse: Vec2 = ctx.mouse_position().into();
         let hover = item_rect.contains(mouse);
+        let clicked = hover && !blocked && ctx.is_mouse_button_pressed(MouseButton::Left);
 
         let bg_color = if hover && !blocked {
             Color::new(0.3, 0.3, 0.35, 1.0)
@@ -87,6 +117,8 @@ impl ElementPalette {
         );
 
         *y += PALETTE_ITEM_HEIGHT + PALETTE_SPACING;
+
+        if clicked { Some(()) } else { None }
     }
 
     fn calculate_content_height(&self) -> f32 {

@@ -14,6 +14,7 @@ pub struct MenuBar {
     edit_id: WidgetId,
     view_id: WidgetId,
     options_id: WidgetId,
+    editors_id: WidgetId,
     title_id: WidgetId,
     pub pending: Option<EditorAction>,
 }
@@ -38,6 +39,9 @@ pub enum EditorAction {
     ViewDiagnosticsPanel,
     // Options actions
     WorldSettings,
+    // Editors actions
+    OpenMenuEditor,
+    ReturnToGameEditor,
 }
 
 impl EditorAction {
@@ -55,6 +59,8 @@ impl EditorAction {
             EditorAction::ViewConsolePanel => "Console".to_string(),
             EditorAction::ViewDiagnosticsPanel => "Diagnostics".to_string(),
             EditorAction::WorldSettings => "World Settings".to_string(),
+            EditorAction::OpenMenuEditor => "Menu Editor".to_string(),
+            EditorAction::ReturnToGameEditor => "Game Editor".to_string(),
             _ => format!("{self:?}"),
         }
     }
@@ -113,6 +119,7 @@ impl MenuBar {
             edit_id: WidgetId::default(),
             view_id: WidgetId::default(),
             options_id: WidgetId::default(),
+            editors_id: WidgetId::default(),
             pending: None,
         }
     }
@@ -289,6 +296,35 @@ impl MenuBar {
             ) {
                 self.pending = Some(selected);
             }
+
+            x += options_rect.w + SPACING;
+        }
+
+        // Editors dropdown
+        let editors_label = "Editors";
+
+        let editors_rect = Rect::new(
+            x,
+            y,
+            rect_width_for_text(ctx, editors_label, HEADER_FONT_SIZE_20),
+            HEIGHT
+        );
+
+        let editors_actions: Vec<EditorAction> = match editor_mode {
+            EditorMode::Menu => vec![EditorAction::ReturnToGameEditor],
+            _ => vec![EditorAction::OpenMenuEditor],
+        };
+
+        if let Some(selected) = menu_dropdown(
+            ctx,
+            self.editors_id,
+            editors_rect,
+            editors_label,
+            &editors_actions,
+            |a| a.ui_label(),
+            |a| a.shortcut(),
+        ) {
+            self.pending = Some(selected);
         }
 
         // Return the action

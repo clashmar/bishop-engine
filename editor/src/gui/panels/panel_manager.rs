@@ -124,6 +124,20 @@ impl PanelManager {
         }
     }
 
+    /// Shows a panel by id.
+    pub fn show(&mut self, id: PanelId) {
+        if let Some((_, panel)) = self.panels.iter_mut().find(|(pid, _)| *pid == id) {
+            panel.visible = true;
+        }
+    }
+
+    /// Hides a panel by id.
+    pub fn hide(&mut self, id: PanelId) {
+        if let Some((_, panel)) = self.panels.iter_mut().find(|(pid, _)| *pid == id) {
+            panel.visible = false;
+        }
+    }
+
     /// Register all standard panels.
     pub fn register_all_panels(&mut self, ctx: &WgpuContext) {
         self.register(

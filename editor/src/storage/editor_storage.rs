@@ -6,6 +6,7 @@ use crate::ecs::transform::Transform;
 use crate::with_lua_async;
 use engine_core::animation::animation_clip::{Animation, ClipId};
 use engine_core::dialogue::DialogueManager;
+use engine_core::menu::MenuTemplate;
 use engine_core::engine_global::set_game_name;
 use engine_core::storage::editor_config::app_dir;
 use engine_core::scripting::script_manager;
@@ -384,4 +385,57 @@ pub fn list_game_names() -> Vec<String> {
         .filter(|e| e.path().is_dir())
         .filter_map(|e| e.file_name().into_string().ok())
         .collect()
+}
+
+/// Returns the path to the menus folder for the current game.
+pub fn menus_folder() -> PathBuf {
+    resources_folder_current().join("menus")
+}
+
+/// Saves a menu template to disk.
+pub fn save_menu(template: &MenuTemplate) -> io::Result<()> {
+    let dir = menus_folder();
+    fs::create_dir_all(&dir)?;
+
+    let path = dir.join(format!("{}.ron", template.id));
+    let pretty = ron::ser::PrettyConfig::new()
+        .separate_tuple_members(true)
+        .enumerate_arrays(true);
+
+    let ron = ron::ser::to_string_pretty(template, pretty)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+    fs::write(path, ron)
+}
+
+/// Loads all menu templates from disk.
+pub fn load_menus() -> Vec<MenuTemplate> {
+    let dir = menus_folder();
+    if !dir.exists() {
+        return Vec::new();
+    }
+
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+
+    entries
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| {
+            entry.path().extension().map_or(false, |ext| ext == "ron")
+        })
+        .filter_map(|entry| {
+            let ron = fs::read_to_string(entry.path()).ok()?;
+            ron::de::from_str(&ron).ok()
+        })
+        .collect()
+}
+
+/// Deletes a menu template from disk.
+pub fn delete_menu(id: &str) -> io::Result<()> {
+    let path = menus_folder().join(format!("{}.ron", id));
+    if path.exists() {
+        fs::remove_file(path)?;
+    }
+    Ok(())
 }
