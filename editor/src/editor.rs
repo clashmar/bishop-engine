@@ -96,7 +96,7 @@ impl Editor {
 
         match self.mode {
             EditorMode::Menu => {
-                // Menu mode has no update logic
+                self.menu_editor.update(ctx);
             }
             EditorMode::Game => {
                 // Returns the id of the world that was clicked on or None
@@ -243,7 +243,11 @@ impl Editor {
     pub async fn draw(&mut self, ctx: &mut WgpuContext) {
         match self.mode {
             EditorMode::Menu => {
-                // Menu mode has no draw logic
+                self.menu_editor.draw(
+                    ctx,
+                    &mut self.game,
+                    &self.camera,
+                )
             }
             EditorMode::Game => {
                 self.game_editor.draw(

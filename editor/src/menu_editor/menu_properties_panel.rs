@@ -1,4 +1,4 @@
-// editor/src/menu_editor/properties_module.rs
+// editor/src/menu_editor/menu_properties_panel.rs
 use crate::menu_editor::MenuEditor;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -25,42 +25,51 @@ pub struct PropertiesWidgetIds {
     nav_right_id: WidgetId,
 }
 
-/// Properties editor for the selected menu element.
-pub struct PropertiesModule {
+/// Groups property panel data.
+pub struct MenuPropertiesPanel {
     scroll_y: f32,
     widget_ids: PropertiesWidgetIds,
 }
 
-impl PropertiesModule {
-    /// Creates a new properties module.
+impl MenuPropertiesPanel {
+    /// Creates a new properties panel.
     pub fn new() -> Self {
         Self {
             scroll_y: 0.0,
             widget_ids: PropertiesWidgetIds::default(),
         }
     }
+}
 
+impl MenuEditor {
     /// Renders the properties panel and handles editing.
-    pub fn draw(&mut self, ctx: &mut WgpuContext, rect: Rect, menu_editor: &mut MenuEditor, blocked: bool) {
+    pub fn draw_properties_panel(
+        &mut self, 
+        ctx: &mut WgpuContext, 
+        rect: Rect, 
+        blocked: bool
+    ) {
+        let content_height = self.calculate_properties_height();
+
+        let properties_panel = &mut self.properties_panel;
         let mouse: Vec2 = ctx.mouse_position().into();
 
         if !blocked && rect.contains(mouse) {
             let (_, wheel_y) = ctx.mouse_wheel();
-            self.scroll_y += wheel_y * 20.0;
+            properties_panel.scroll_y += wheel_y * 20.0;
         }
 
-        let content_height = self.calculate_content_height(menu_editor);
         let scroll_range = (content_height - rect.h).max(0.0);
-        self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
+        properties_panel.scroll_y = properties_panel.scroll_y.clamp(-scroll_range, 0.0);
 
-        let mut y = rect.y + self.scroll_y + 8.0;
+        let mut y = rect.y + properties_panel.scroll_y + 8.0;
         let content_x = rect.x + 8.0;
         let content_w = rect.w - 16.0;
 
         ctx.draw_text("Properties", content_x, y + 14.0, 14.0, Color::GREY);
         y += 24.0;
 
-        if menu_editor.selected_element_index.is_none() {
+        if self.selected_element_index.is_none() {
             ctx.draw_text(
                 "No element selected",
                 content_x,
@@ -71,7 +80,7 @@ impl PropertiesModule {
             return;
         }
 
-        let element_kind = menu_editor
+        let element_kind = self
             .selected_element()
             .map(|e| e.kind.clone());
 
@@ -79,21 +88,21 @@ impl PropertiesModule {
 
         match kind {
             MenuElementKind::Label(_) => {
-                self.draw_label_properties(ctx, &mut y, content_x, content_w, menu_editor, blocked);
+                self.draw_label_properties(ctx, &mut y, content_x, content_w, blocked);
             }
             MenuElementKind::Button(_) => {
-                self.draw_button_properties(ctx, &mut y, content_x, content_w, menu_editor, blocked);
+                self.draw_button_properties(ctx, &mut y, content_x, content_w, blocked);
             }
             MenuElementKind::Spacer(_) => {
-                self.draw_spacer_properties(ctx, &mut y, content_x, content_w, menu_editor, blocked);
+                self.draw_spacer_properties(ctx, &mut y, content_x, content_w, blocked);
             }
             MenuElementKind::Panel(_) => {
-                self.draw_panel_properties(ctx, &mut y, content_x, content_w, menu_editor, blocked);
+                self.draw_panel_properties(ctx, &mut y, content_x, content_w, blocked);
             }
         }
 
         y += 8.0;
-        self.draw_common_properties(ctx, &mut y, content_x, content_w, menu_editor, blocked);
+        self.draw_common_properties(ctx, &mut y, content_x, content_w, blocked);
     }
 
     fn draw_label_properties(
@@ -102,11 +111,10 @@ impl PropertiesModule {
         y: &mut f32,
         x: f32,
         w: f32,
-        menu_editor: &mut MenuEditor,
         blocked: bool,
     ) {
         let (current_text, current_font_size) = {
-            let Some(element) = menu_editor.selected_element() else { return };
+            let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Label(label) = &element.kind else { return };
             (label.text.clone(), label.font_size)
         };
@@ -114,12 +122,17 @@ impl PropertiesModule {
         // Text field
         ctx.draw_text("Text:", x, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-        let (new_text, _) = TextInput::new(self.widget_ids.text_id, field_rect, &current_text)
-            .blocked(blocked)
-            .show(ctx);
+
+        let (new_text, _) = TextInput::new(
+            self.properties_panel.widget_ids.text_id, 
+            field_rect, 
+            &current_text
+        )
+        .blocked(blocked)
+        .show(ctx);
 
         if new_text != current_text {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Label(label) = &mut element.kind {
                     label.text = new_text;
                 }
@@ -129,15 +142,21 @@ impl PropertiesModule {
 
         // Font size
         ctx.draw_text("Font Size:", x, *y + 16.0, 12.0, Color::WHITE);
+
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
-        let new_font_size = NumberInput::new(self.widget_ids.font_size_id, field_rect, current_font_size)
-            .blocked(blocked)
-            .min(8.0)
-            .max(72.0)
-            .show(ctx);
+
+        let new_font_size = NumberInput::new(
+            self.properties_panel.widget_ids.font_size_id, 
+            field_rect, 
+            current_font_size
+        )
+        .blocked(blocked)
+        .min(8.0)
+        .max(72.0)
+        .show(ctx);
 
         if (new_font_size - current_font_size).abs() > 0.01 {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Label(label) = &mut element.kind {
                     label.font_size = new_font_size;
                 }
@@ -152,11 +171,10 @@ impl PropertiesModule {
         y: &mut f32,
         x: f32,
         w: f32,
-        menu_editor: &mut MenuEditor,
         blocked: bool,
     ) {
         let (current_text, current_font_size, current_action, nav_up, nav_down, nav_left, nav_right) = {
-            let Some(element) = menu_editor.selected_element() else { return };
+            let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Button(button) = &element.kind else { return };
             (
                 button.text.clone(),
@@ -171,13 +189,19 @@ impl PropertiesModule {
 
         // Text field
         ctx.draw_text("Text:", x, *y + 16.0, 12.0, Color::WHITE);
+
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-        let (new_text, _) = TextInput::new(self.widget_ids.text_id, field_rect, &current_text)
-            .blocked(blocked)
-            .show(ctx);
+
+        let (new_text, _) = TextInput::new(
+            self.properties_panel.widget_ids.text_id, 
+            field_rect, 
+            &current_text
+        )
+        .blocked(blocked)
+        .show(ctx);
 
         if new_text != current_text {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Button(button) = &mut element.kind {
                     button.text = new_text;
                 }
@@ -188,14 +212,14 @@ impl PropertiesModule {
         // Font size
         ctx.draw_text("Font Size:", x, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
-        let new_font_size = NumberInput::new(self.widget_ids.font_size_id, field_rect, current_font_size)
-            .blocked(blocked)
-            .min(8.0)
-            .max(72.0)
-            .show(ctx);
+        let new_font_size = NumberInput::new(self.properties_panel.widget_ids.font_size_id, field_rect, current_font_size)
+        .blocked(blocked)
+        .min(8.0)
+        .max(72.0)
+        .show(ctx);
 
         if (new_font_size - current_font_size).abs() > 0.01 {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Button(button) = &mut element.kind {
                     button.font_size = new_font_size;
                 }
@@ -223,7 +247,7 @@ impl PropertiesModule {
         };
         let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
         if let Some(selected) = Dropdown::new(
-            self.widget_ids.action_id,
+            self.properties_panel.widget_ids.action_id,
             dropdown_rect,
             current_action_str,
             &action_options,
@@ -242,7 +266,7 @@ impl PropertiesModule {
                 _ => current_action.clone(),
             };
 
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Button(button) = &mut element.kind {
                     button.action = new_action;
                 }
@@ -260,12 +284,12 @@ impl PropertiesModule {
 
             ctx.draw_text("Param:", x, *y + 16.0, 12.0, Color::WHITE);
             let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-            let (new_param, _) = TextInput::new(self.widget_ids.action_param_id, field_rect, &param_value)
+            let (new_param, _) = TextInput::new(self.properties_panel.widget_ids.action_param_id, field_rect, &param_value)
                 .blocked(blocked)
                 .show(ctx);
 
             if new_param != param_value {
-                if let Some(element) = menu_editor.selected_element_mut() {
+                if let Some(element) = self.selected_element_mut() {
                     if let MenuElementKind::Button(button) = &mut element.kind {
                         button.action = match &button.action {
                             MenuAction::OpenMenu(_) => MenuAction::OpenMenu(new_param),
@@ -283,15 +307,15 @@ impl PropertiesModule {
         ctx.draw_text("Navigation", x, *y + 14.0, 12.0, Color::GREY);
         *y += 20.0;
 
-        let focusable_elements = self.get_focusable_element_names(menu_editor);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.widget_ids.nav_up_id, nav_up, &focusable_elements, menu_editor, blocked, |btn, idx| btn.nav_up = idx);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.widget_ids.nav_down_id, nav_down, &focusable_elements, menu_editor, blocked, |btn, idx| btn.nav_down = idx);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.widget_ids.nav_left_id, nav_left, &focusable_elements, menu_editor, blocked, |btn, idx| btn.nav_left = idx);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.widget_ids.nav_right_id, nav_right, &focusable_elements, menu_editor, blocked, |btn, idx| btn.nav_right = idx);
+        let focusable_elements = self.get_focusable_element_names();
+        self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.nav_up_id, nav_up, &focusable_elements, blocked, |btn, idx| btn.nav_up = idx);
+        self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.nav_down_id, nav_down, &focusable_elements, blocked, |btn, idx| btn.nav_down = idx);
+        self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.nav_left_id, nav_left, &focusable_elements, blocked, |btn, idx| btn.nav_left = idx);
+        self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.nav_right_id, nav_right, &focusable_elements, blocked, |btn, idx| btn.nav_right = idx);
     }
 
     fn draw_nav_dropdown<F>(
-        &self,
+        &mut self,
         ctx: &mut WgpuContext,
         y: &mut f32,
         x: f32,
@@ -300,7 +324,6 @@ impl PropertiesModule {
         id: WidgetId,
         current: Option<usize>,
         options: &[(usize, String)],
-        menu_editor: &mut MenuEditor,
         blocked: bool,
         mut setter: F,
     ) where
@@ -333,7 +356,7 @@ impl PropertiesModule {
                 options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
             };
 
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Button(button) = &mut element.kind {
                     setter(button, new_nav);
                 }
@@ -342,8 +365,8 @@ impl PropertiesModule {
         *y += ROW_HEIGHT;
     }
 
-    fn get_focusable_element_names(&self, menu_editor: &MenuEditor) -> Vec<(usize, String)> {
-        let Some(template) = menu_editor.current_template() else {
+    fn get_focusable_element_names(&self) -> Vec<(usize, String)> {
+        let Some(template) = self.current_template() else {
             return Vec::new();
         };
 
@@ -367,25 +390,30 @@ impl PropertiesModule {
         y: &mut f32,
         x: f32,
         _w: f32,
-        menu_editor: &mut MenuEditor,
         blocked: bool,
     ) {
         let current_size = {
-            let Some(element) = menu_editor.selected_element() else { return };
+            let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Spacer(spacer) = &element.kind else { return };
             spacer.size
         };
 
         ctx.draw_text("Size:", x, *y + 16.0, 12.0, Color::WHITE);
+
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
-        let new_size = NumberInput::new(self.widget_ids.spacer_size_id, field_rect, current_size)
+
+        let new_size = NumberInput::new(
+            self.properties_panel.widget_ids.spacer_size_id, 
+            field_rect, 
+            current_size
+        )
             .blocked(blocked)
             .min(1.0)
             .max(500.0)
             .show(ctx);
 
         if (new_size - current_size).abs() > 0.01 {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Spacer(spacer) = &mut element.kind {
                     spacer.size = new_size;
                 }
@@ -400,7 +428,6 @@ impl PropertiesModule {
         y: &mut f32,
         x: f32,
         _w: f32,
-        _menu_editor: &mut MenuEditor,
         _blocked: bool,
     ) {
         ctx.draw_text("Type:", x, *y + 16.0, 12.0, Color::WHITE);
@@ -414,11 +441,10 @@ impl PropertiesModule {
         y: &mut f32,
         x: f32,
         _w: f32,
-        menu_editor: &mut MenuEditor,
         blocked: bool,
     ) {
         let (rect_val, enabled, visible) = {
-            let Some(element) = menu_editor.selected_element() else { return };
+            let Some(element) = self.selected_element() else { return };
             (element.rect, element.enabled, element.visible)
         };
 
@@ -428,19 +454,19 @@ impl PropertiesModule {
         // Position X
         ctx.draw_text("X:", x, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + 24.0, *y, 60.0, FIELD_HEIGHT);
-        let new_x = NumberInput::new(self.widget_ids.pos_x_id, field_rect, rect_val.x)
+        let new_x = NumberInput::new(self.properties_panel.widget_ids.pos_x_id, field_rect, rect_val.x)
             .blocked(blocked)
             .show(ctx);
 
         // Position Y
         ctx.draw_text("Y:", x + 100.0, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + 124.0, *y, 60.0, FIELD_HEIGHT);
-        let new_y = NumberInput::new(self.widget_ids.pos_y_id, field_rect, rect_val.y)
+        let new_y = NumberInput::new(self.properties_panel.widget_ids.pos_y_id, field_rect, rect_val.y)
             .blocked(blocked)
             .show(ctx);
 
         if (new_x - rect_val.x).abs() > 0.01 || (new_y - rect_val.y).abs() > 0.01 {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 element.rect.x = new_x;
                 element.rect.y = new_y;
             }
@@ -450,7 +476,7 @@ impl PropertiesModule {
         // Size W
         ctx.draw_text("W:", x, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + 24.0, *y, 60.0, FIELD_HEIGHT);
-        let new_w = NumberInput::new(self.widget_ids.size_w_id, field_rect, rect_val.w)
+        let new_w = NumberInput::new(self.properties_panel.widget_ids.size_w_id, field_rect, rect_val.w)
             .blocked(blocked)
             .min(10.0)
             .show(ctx);
@@ -458,13 +484,13 @@ impl PropertiesModule {
         // Size H
         ctx.draw_text("H:", x + 100.0, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + 124.0, *y, 60.0, FIELD_HEIGHT);
-        let new_h = NumberInput::new(self.widget_ids.size_h_id, field_rect, rect_val.h)
+        let new_h = NumberInput::new(self.properties_panel.widget_ids.size_h_id, field_rect, rect_val.h)
             .blocked(blocked)
             .min(10.0)
             .show(ctx);
 
         if (new_w - rect_val.w).abs() > 0.01 || (new_h - rect_val.h).abs() > 0.01 {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 element.rect.w = new_w;
                 element.rect.h = new_h;
             }
@@ -476,7 +502,7 @@ impl PropertiesModule {
         let checkbox_rect = Rect::new(x + LABEL_WIDTH, *y + 4.0, 16.0, 16.0);
         let mut enabled_val = enabled;
         if gui_checkbox(ctx, checkbox_rect, &mut enabled_val) {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 element.enabled = enabled_val;
             }
         }
@@ -487,17 +513,17 @@ impl PropertiesModule {
         let checkbox_rect = Rect::new(x + LABEL_WIDTH, *y + 4.0, 16.0, 16.0);
         let mut visible_val = visible;
         if gui_checkbox(ctx, checkbox_rect, &mut visible_val) {
-            if let Some(element) = menu_editor.selected_element_mut() {
+            if let Some(element) = self.selected_element_mut() {
                 element.visible = visible_val;
             }
         }
         *y += ROW_HEIGHT;
     }
 
-    fn calculate_content_height(&self, menu_editor: &MenuEditor) -> f32 {
+    fn calculate_properties_height(&self) -> f32 {
         let base_height = 200.0;
 
-        let element_height = match menu_editor.selected_element().map(|e| &e.kind) {
+        let element_height = match self.selected_element().map(|e| &e.kind) {
             Some(MenuElementKind::Label(_)) => ROW_HEIGHT * 2.0,
             Some(MenuElementKind::Button(btn)) => {
                 let param_row = if matches!(btn.action, MenuAction::OpenMenu(_) | MenuAction::Custom(_)) {
@@ -518,7 +544,7 @@ impl PropertiesModule {
     }
 }
 
-impl Default for PropertiesModule {
+impl Default for MenuPropertiesPanel {
     fn default() -> Self {
         Self::new()
     }
