@@ -38,18 +38,10 @@ impl MenuEditor {
 
     /// Updates the menu editor and handles input.
     pub fn update(
-        &mut self, 
-        ctx: &mut WgpuContext, 
+        &mut self,
+        ctx: &mut WgpuContext,
     ) {
-        let screen_width = ctx.screen_width();
-        let screen_height = ctx.screen_height();
-
-        let canvas_rect = Rect::new(
-            (screen_width - (screen_width / 1.5)) / 2.0,
-            (screen_height - (screen_height / 1.5)) / 2.0,
-            screen_width / 1.5,
-            screen_width / 1.5,
-        );
+        let canvas_rect = compute_canvas_rect(ctx.screen_width(), ctx.screen_height());
 
         let blocked = self.is_mouse_over_ui(ctx);
 
@@ -57,23 +49,15 @@ impl MenuEditor {
     }
 
     pub fn draw(
-        &mut self, 
-        ctx: &mut WgpuContext, 
+        &mut self,
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         game: &mut Game,
     ) {
         ctx.set_camera(camera);
         ctx.clear_background(Color::BLACK);
 
-        let screen_width = ctx.screen_width();
-        let screen_height = ctx.screen_height();
-
-        let canvas_rect = Rect::new(
-            (screen_width - (screen_width / 1.5)) / 2.0,
-            (screen_height - (screen_height / 1.5)) / 2.0,
-            screen_width / 1.5,
-            screen_width / 1.5,
-        );
+        let canvas_rect = compute_canvas_rect(ctx.screen_width(), ctx.screen_height());
 
         // Draw canvas under ui
         self.draw_canvas(ctx, canvas_rect);
@@ -147,10 +131,10 @@ impl MenuEditor {
         };
 
         let default_size = match &kind {
-            MenuElementKind::Label(_) => Vec2::new(200.0, 32.0),
-            MenuElementKind::Button(_) => Vec2::new(200.0, 40.0),
-            MenuElementKind::Spacer(s) => Vec2::new(200.0, s.size),
-            MenuElementKind::Panel(_) => Vec2::new(300.0, 200.0),
+            MenuElementKind::Label(_) => Vec2::new(0.10, 0.03),
+            MenuElementKind::Button(_) => Vec2::new(0.10, 0.037),
+            MenuElementKind::Spacer(s) => Vec2::new(0.10, s.size),
+            MenuElementKind::Panel(_) => Vec2::new(0.16, 0.185),
         };
 
         let rect = Rect::new(position.x, position.y, default_size.x, default_size.y);
@@ -198,6 +182,16 @@ impl MenuEditor {
     pub fn register_rect(&mut self, rect: Rect) -> Rect {
         self.active_rects.push(rect);
         rect
+    }
+
+    /// Initializes the camera centered on the canvas with a 1:1 screen-space mapping.
+    pub fn init_camera(ctx: &WgpuContext, camera: &mut Camera2D) {
+        let sw = ctx.screen_width();
+        let sh = ctx.screen_height();
+        camera.target = Vec2::new(sw / 2.0, sh / 2.0);
+        camera.zoom = Vec2::new(2.0 / sw, 2.0 / sh);
+        camera.rotation = 0.0;
+        camera.offset = Vec2::ZERO;
     }
 
     pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {

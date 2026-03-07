@@ -251,32 +251,43 @@ impl MenuBuilder {
     }
 
     fn compute_next_rect(&self) -> Rect {
-        match self.layout.direction {
+        let (x, y, w, h) = match self.layout.direction {
             LayoutDirection::Vertical => {
                 let x = self.x_cursor.max((self.screen_width - self.layout.item_width) / 2.0);
-                Rect::new(x, self.y_cursor, self.layout.item_width, self.layout.item_height)
+                (x, self.y_cursor, self.layout.item_width, self.layout.item_height)
             }
             LayoutDirection::Horizontal => {
-                Rect::new(self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
+                (self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
             }
             LayoutDirection::Grid { .. } => {
-                Rect::new(self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
+                (self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
             }
-        }
+        };
+        self.normalize_rect(x, y, w, h)
     }
 
     fn compute_spacer_rect(&self, size: f32) -> Rect {
-        match self.layout.direction {
+        let (x, y, w, h) = match self.layout.direction {
             LayoutDirection::Vertical => {
-                Rect::new(self.x_cursor, self.y_cursor, self.layout.item_width, size)
+                (self.x_cursor, self.y_cursor, self.layout.item_width, size)
             }
             LayoutDirection::Horizontal => {
-                Rect::new(self.x_cursor, self.y_cursor, size, self.layout.item_height)
+                (self.x_cursor, self.y_cursor, size, self.layout.item_height)
             }
             LayoutDirection::Grid { .. } => {
-                Rect::new(self.x_cursor, self.y_cursor, size, size)
+                (self.x_cursor, self.y_cursor, size, size)
             }
-        }
+        };
+        self.normalize_rect(x, y, w, h)
+    }
+
+    fn normalize_rect(&self, x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(
+            x / self.screen_width,
+            y / self.screen_height,
+            w / self.screen_width,
+            h / self.screen_height,
+        )
     }
 
     fn advance_cursor(&mut self) {
