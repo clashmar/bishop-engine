@@ -16,6 +16,8 @@ use mlua::Lua;
 pub struct Engine {
     /// Currently running instance of the game.
     pub game_instance: Rc<RefCell<GameInstance>>,
+    /// Current state of the active game.
+    pub game_state: GameState,
     /// Platform context for input/rendering.
     pub ctx: PlatformContext,
     /// Single Lua VM.
@@ -34,11 +36,19 @@ pub struct Engine {
     pub accumulator: f32,
 }
 
+/// Represents the current state of the active game.
+#[derive(Debug, Clone, PartialEq)]
+pub enum GameState {
+    Entry,
+    Running,
+    Paused,
+}
+
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let dt = ctx.borrow().get_frame_time();
 
-        // Always handle menu input first
+        // Handle menu input first
         self.menu.handle_input(&mut *ctx.borrow_mut());
 
         if self.is_playtest {
@@ -46,8 +56,7 @@ impl BishopApp for Engine {
             self.diagnostics.handle_input(&mut *ctx.borrow_mut());
         }
 
-        // Only update game if not paused
-        if !self.menu.is_pausing_game() {
+        if self.game_state == GameState::Running {
             self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
 
             while self.accumulator >= FIXED_DT {
@@ -71,7 +80,7 @@ impl BishopApp for Engine {
             ctx.borrow_mut().clear_background(Color::BLACK);
         }
 
-        // Render menu on top
+        // Render menus/ui on top
         self.menu.render(&mut *ctx.borrow_mut());
     }
 }
@@ -91,6 +100,7 @@ impl Engine {
 
         Self {
             game_instance,
+            game_state: GameState::Entry,
             ctx,
             lua,
             camera_manager,

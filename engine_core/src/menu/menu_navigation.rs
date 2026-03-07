@@ -12,6 +12,7 @@ pub struct MenuNavigation {
     pub confirm: InputBinding,
     pub cancel: InputBinding,
     pub pause: InputBinding,
+    
 }
 
 impl Default for MenuNavigation {

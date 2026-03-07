@@ -2,6 +2,15 @@ use bishop::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::menu::menu_builder::MenuAction;
 
+/// Different kinds of menu elements.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MenuElementKind {
+    Label(LabelElement),
+    Button(ButtonElement),
+    Spacer(SpacerElement),
+    Panel(PanelElement),
+}
+
 /// Label element displaying static text.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabelElement {
@@ -132,13 +141,4 @@ impl MenuElement {
             rect,
         )
     }
-}
-
-/// Different kinds of menu elements.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MenuElementKind {
-    Label(LabelElement),
-    Button(ButtonElement),
-    Spacer(SpacerElement),
-    Panel(PanelElement),
 }
