@@ -1,4 +1,4 @@
-// editor/src/menu_editor/menu_list_module.rs
+// editor/src/menu_editor/menu_list_panel.rs
 use crate::menu_editor::MenuEditor;
 use bishop::prelude::*;
 use engine_core::ui::widgets::*;
@@ -6,16 +6,16 @@ use engine_core::ui::widgets::*;
 const MENU_ITEM_HEIGHT: f32 = 24.0;
 const BUTTON_HEIGHT: f32 = 28.0;
 
-/// Module for managing the list of menu templates.
-pub struct MenuListModule {
+/// Groups data for menu list panel.
+pub struct MenuListPanel {
     scroll_y: f32,
     new_menu_id: WidgetId,
     pending_new_menu: bool,
     new_menu_name: String,
 }
 
-impl MenuListModule {
-    /// Creates a new menu list module.
+impl MenuListPanel {
+    /// Creates a new menu list panel.
     pub fn new() -> Self {
         Self {
             scroll_y: 0.0,
@@ -24,21 +24,28 @@ impl MenuListModule {
             new_menu_name: String::new(),
         }
     }
+}
 
-    /// Renders the menu list and handles input.
-    pub fn draw(&mut self, ctx: &mut WgpuContext, rect: Rect, menu_editor: &mut MenuEditor, blocked: bool) {
+impl MenuEditor {
+    /// Renders the menu panel and handles input.
+    pub fn draw_menu_list_panel(
+        &mut self, 
+        ctx: &mut WgpuContext, 
+        rect: Rect, 
+        blocked: bool
+    ) {
         let mouse: Vec2 = ctx.mouse_position().into();
 
         if !blocked && rect.contains(mouse) {
             let (_, wheel_y) = ctx.mouse_wheel();
-            self.scroll_y += wheel_y * 20.0;
+            self.menu_list_panel.scroll_y += wheel_y * 20.0;
         }
 
-        let content_height = self.calculate_content_height(menu_editor);
+        let content_height = self.calculate_menu_list_height();
         let scroll_range = (content_height - rect.h).max(0.0);
-        self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
+        self.menu_list_panel.scroll_y = self.menu_list_panel.scroll_y.clamp(-scroll_range, 0.0);
 
-        let mut y = rect.y + self.scroll_y + 8.0;
+        let mut y = rect.y + self.menu_list_panel.scroll_y + 8.0;
         let content_x = rect.x + 8.0;
         let content_w = rect.w - 16.0;
 
@@ -52,43 +59,43 @@ impl MenuListModule {
 
         let new_clicked = Button::new(new_btn_rect, "New").blocked(blocked).show(ctx);
         let delete_clicked = Button::new(delete_btn_rect, "Delete")
-            .blocked(blocked || menu_editor.current_template_index.is_none())
+            .blocked(blocked || self.current_template_index.is_none())
             .show(ctx);
 
         if new_clicked {
-            self.pending_new_menu = true;
-            self.new_menu_name = String::new();
+            self.menu_list_panel.pending_new_menu = true;
+            self.menu_list_panel.new_menu_name = String::new();
         }
 
         if delete_clicked {
-            if let Some(index) = menu_editor.current_template_index {
-                menu_editor.delete_template(index);
+            if let Some(index) = self.current_template_index {
+                self.delete_template(index);
             }
         }
         y += BUTTON_HEIGHT + 8.0;
 
         // New menu name input (if pending)
-        if self.pending_new_menu {
+        if self.menu_list_panel.pending_new_menu {
             let field_rect = Rect::new(content_x, y, content_w - 60.0, 24.0);
-            let (new_text, _) = TextInput::new(self.new_menu_id, field_rect, &self.new_menu_name)
+            let (new_text, _) = TextInput::new(self.menu_list_panel.new_menu_id, field_rect, &self.menu_list_panel.new_menu_name)
                 .focused(true)
                 .blocked(blocked)
                 .show(ctx);
-            self.new_menu_name = new_text;
+            self.menu_list_panel.new_menu_name = new_text;
 
             let ok_rect = Rect::new(content_x + content_w - 50.0, y, 50.0, 24.0);
             let ok_clicked = Button::new(ok_rect, "OK").blocked(blocked).show(ctx);
 
-            if (ok_clicked || ctx.is_key_pressed(KeyCode::Enter)) && !self.new_menu_name.trim().is_empty() {
-                let name = self.new_menu_name.trim().to_string();
-                menu_editor.create_new_template(name);
-                self.pending_new_menu = false;
-                self.new_menu_name.clear();
+            if (ok_clicked || ctx.is_key_pressed(KeyCode::Enter)) && !self.menu_list_panel.new_menu_name.trim().is_empty() {
+                let name = self.menu_list_panel.new_menu_name.trim().to_string();
+                self.create_new_template(name);
+                self.menu_list_panel.pending_new_menu = false;
+                self.menu_list_panel.new_menu_name.clear();
             }
 
             if ctx.is_key_pressed(KeyCode::Escape) {
-                self.pending_new_menu = false;
-                self.new_menu_name.clear();
+                self.menu_list_panel.pending_new_menu = false;
+                self.menu_list_panel.new_menu_name.clear();
             }
 
             y += 32.0;
@@ -97,14 +104,14 @@ impl MenuListModule {
         // List of menus - collect click info first to avoid borrow issues
         let mut clicked_index = None;
 
-        for (index, template) in menu_editor.templates.iter().enumerate() {
+        for (index, template) in self.templates.iter().enumerate() {
             if y < rect.y || y + MENU_ITEM_HEIGHT > rect.y + rect.h {
                 y += MENU_ITEM_HEIGHT + 4.0;
                 continue;
             }
 
             let item_rect = Rect::new(content_x, y, content_w, MENU_ITEM_HEIGHT);
-            let is_selected = menu_editor.current_template_index == Some(index);
+            let is_selected = self.current_template_index == Some(index);
             let hover = item_rect.contains(mouse);
 
             let bg_color = if is_selected {
@@ -134,21 +141,21 @@ impl MenuListModule {
 
         // Apply clicked selection after iteration completes
         if let Some(index) = clicked_index {
-            menu_editor.select_template(index);
+            self.select_template(index);
         }
     }
 
-    fn calculate_content_height(&self, menu_editor: &MenuEditor) -> f32 {
+    fn calculate_menu_list_height(&self) -> f32 {
         let header_height = 24.0;
         let buttons_height = BUTTON_HEIGHT + 8.0;
-        let input_height = if self.pending_new_menu { 32.0 } else { 0.0 };
-        let items_height = (MENU_ITEM_HEIGHT + 4.0) * menu_editor.templates.len() as f32;
+        let input_height = if self.menu_list_panel.pending_new_menu { 32.0 } else { 0.0 };
+        let items_height = (MENU_ITEM_HEIGHT + 4.0) * self.templates.len() as f32;
 
         header_height + buttons_height + input_height + items_height + 16.0
     }
 }
 
-impl Default for MenuListModule {
+impl Default for MenuListPanel {
     fn default() -> Self {
         Self::new()
     }

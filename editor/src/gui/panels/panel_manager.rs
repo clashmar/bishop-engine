@@ -2,7 +2,6 @@
 use crate::gui::panels::diagnostics_panel::DiagnosticsPanel;
 use crate::gui::panels::hierarchy_panel::HierarchyPanel;
 use crate::gui::panels::console_panel::ConsolePanel;
-use crate::menu_editor::MenuEditorPanel;
 use crate::gui::panels::generic_panel::*;
 use crate::with_panel_manager;
 use crate::editor::EditorMode;
@@ -153,11 +152,6 @@ impl PanelManager {
         self.register(
             GenericPanel::new(DiagnosticsPanel::new(), ctx),
             vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
-        );
-
-        self.register(
-            GenericPanel::new(MenuEditorPanel::new(), ctx),
-            vec![PanelMode::Menu],
         );
     }
 }

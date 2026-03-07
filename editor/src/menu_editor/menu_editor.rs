@@ -1,24 +1,82 @@
 // editor/src/menu_editor/menu_editor.rs
-use bishop::prelude::*;
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
+use crate::gui::modal::is_modal_open;
+use crate::menu_editor::*;
 use engine_core::prelude::*;
+use bishop::prelude::*;
 
 /// Main menu editor state.
 pub struct MenuEditor {
+    pub(crate) menu_list_panel: MenuListPanel,
+    pub(crate) element_palette: ElementPalette,
+    pub(crate) properties_panel: MenuPropertiesPanel,
     pub templates: Vec<MenuTemplate>,
     pub current_template_index: Option<usize>,
     pub selected_element_index: Option<usize>,
     pub pending_element_type: Option<MenuElementKind>,
+    pub(crate) active_rects: Vec<Rect>,
+    pub(crate) dragging_element: Option<usize>,
+    pub(crate) drag_offset: Vec2,
 }
 
 impl MenuEditor {
     /// Creates a new menu editor.
     pub fn new() -> Self {
         Self {
+            menu_list_panel: MenuListPanel::new(),
+            element_palette: ElementPalette::new(),
+            properties_panel: MenuPropertiesPanel::new(),
             templates: Vec::new(),
             current_template_index: None,
             selected_element_index: None,
             pending_element_type: None,
+            active_rects: Vec::new(),
+            dragging_element: None,
+            drag_offset: Vec2::ZERO,
         }
+    }
+
+    /// Updates the menu editor and handles input.
+    pub fn update(
+        &mut self, 
+        ctx: &mut WgpuContext, 
+    ) {
+        let screen_width = ctx.screen_width();
+        let screen_height = ctx.screen_height();
+
+        let canvas_rect = Rect::new(
+            (screen_width - (screen_width / 1.5)) / 2.0,
+            (screen_height - (screen_height / 1.5)) / 2.0,
+            screen_width / 1.5,
+            screen_width / 1.5,
+        );
+
+        let blocked = self.is_mouse_over_ui(ctx);
+
+        self.update_canvas(ctx, canvas_rect, blocked);
+    }
+
+    pub fn draw(
+        &mut self, 
+        ctx: &mut WgpuContext, 
+        game: &mut Game,
+        camera: &Camera2D,
+    ) {
+        let screen_width = ctx.screen_width();
+        let screen_height = ctx.screen_height();
+
+        let canvas_rect = Rect::new(
+            (screen_width - (screen_width / 1.5)) / 2.0,
+            (screen_height - (screen_height / 1.5)) / 2.0,
+            screen_width / 1.5,
+            screen_width / 1.5,
+        );
+
+        // Draw canvas under ui
+        self.draw_canvas(ctx, canvas_rect);
+
+        // Draw ui after canvas
+        self.draw_ui(ctx);
     }
 
     /// Returns a reference to the current template.
@@ -131,6 +189,20 @@ impl MenuEditor {
     pub fn selected_element_mut(&mut self) -> Option<&mut MenuElement> {
         let index = self.selected_element_index?;
         self.current_template_mut()?.elements.get_mut(index)
+    }
+
+    #[inline]
+    pub fn register_rect(&mut self, rect: Rect) -> Rect {
+        self.active_rects.push(rect);
+        rect
+    }
+
+    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
+        self.active_rects.iter().any(|r| r.contains(mouse_screen))
+            || is_dropdown_open()
+            || is_modal_open()
+            || is_mouse_over_panel(ctx)
     }
 }
 

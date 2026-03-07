@@ -49,7 +49,7 @@ pub fn update_physics(
             grid_size,
         );
 
-        let new_pos = pos_cur + sweep.allowed_delta.round();
+        let new_pos = pos_cur + sweep.allowed_delta;
         let mut new_vel = vel_cur;
 
         if sweep.blocked_x {

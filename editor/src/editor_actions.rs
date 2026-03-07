@@ -13,7 +13,6 @@ use crate::editor_global::*;
 use crate::gui::prompts::*;
 use crate::editor::Editor;
 use crate::gui::panels::*;
-use crate::menu_editor::MENU_EDITOR_PANEL;
 use crate::gui::modal::*;
 use crate::editor::*;
 use engine_core::prelude::*;
@@ -185,12 +184,10 @@ impl Editor {
                     self.return_mode = Some(self.mode);
                     self.mode = EditorMode::Menu;
                     self.load_menus();
-                    with_panel_manager(|pm| pm.show(MENU_EDITOR_PANEL));
                 }
                 EditorAction::ReturnToGameEditor => {
                     // Save menus before leaving menu mode
                     self.save_menus();
-                    with_panel_manager(|pm| pm.hide(MENU_EDITOR_PANEL));
 
                     let return_mode = self.return_mode.unwrap_or(EditorMode::Game);
                     self.mode = return_mode;
