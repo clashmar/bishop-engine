@@ -39,7 +39,6 @@ pub struct Engine {
 /// Represents the current state of the active game.
 #[derive(Debug, Clone, PartialEq)]
 pub enum GameState {
-    Entry,
     Running,
     Paused,
 }
@@ -50,6 +49,7 @@ impl BishopApp for Engine {
 
         // Handle menu input first
         self.menu.handle_input(&mut *ctx.borrow_mut());
+        self.update_game_state();
 
         if self.is_playtest {
             self.diagnostics.update(dt);
@@ -100,7 +100,7 @@ impl Engine {
 
         Self {
             game_instance,
-            game_state: GameState::Entry,
+            game_state: GameState::Running,
             ctx,
             lua,
             camera_manager,
@@ -110,6 +110,15 @@ impl Engine {
             is_playtest,
             accumulator: 0.0,
         }
+    }
+
+    /// Resolves the current game state from all active systems.
+    fn update_game_state(&mut self) {
+        self.game_state = if self.menu.is_pausing_game() {
+            GameState::Paused
+        } else {
+            GameState::Running
+        };
     }
 
     pub fn fixed_update<C: BishopContext>(

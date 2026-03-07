@@ -1,4 +1,3 @@
-use crate::menu::elements::*;
 use crate::menu::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -47,7 +46,7 @@ impl MenuMode {
 
     /// Returns true if the game is hidden by a menu.
     pub fn is_hiding_game(&self) -> bool {
-        !matches!(self, MenuMode::BlackScreen | MenuMode::FullScreen)
+        matches!(self, MenuMode::BlackScreen | MenuMode::FullScreen)
     }
 }
 
