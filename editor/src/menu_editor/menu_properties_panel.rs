@@ -448,7 +448,7 @@ impl MenuEditor {
             (element.rect, element.enabled, element.visible)
         };
 
-        ctx.draw_text("Position", x, *y + 14.0, 12.0, Color::GREY);
+        ctx.draw_text("Position (normalized)", x, *y + 14.0, 12.0, Color::GREY);
         *y += 20.0;
 
         // Position X
@@ -457,15 +457,17 @@ impl MenuEditor {
         let new_x = NumberInput::new(self.properties_panel.widget_ids.pos_x_id, field_rect, rect_val.x)
             .blocked(blocked)
             .show(ctx);
+        let px_x = format!("{}px", (new_x * DESIGN_RESOLUTION_WIDTH) as i32);
+        ctx.draw_text(&px_x, x + 88.0, *y + 16.0, 10.0, Color::GREY);
 
         // Position Y
-        ctx.draw_text("Y:", x + 100.0, *y + 16.0, 12.0, Color::WHITE);
-        let field_rect = Rect::new(x + 124.0, *y, 60.0, FIELD_HEIGHT);
+        ctx.draw_text("Y:", x + 130.0, *y + 16.0, 12.0, Color::WHITE);
+        let field_rect = Rect::new(x + 154.0, *y, 60.0, FIELD_HEIGHT);
         let new_y = NumberInput::new(self.properties_panel.widget_ids.pos_y_id, field_rect, rect_val.y)
             .blocked(blocked)
             .show(ctx);
 
-        if (new_x - rect_val.x).abs() > 0.01 || (new_y - rect_val.y).abs() > 0.01 {
+        if (new_x - rect_val.x).abs() > 0.001 || (new_y - rect_val.y).abs() > 0.001 {
             if let Some(element) = self.selected_element_mut() {
                 element.rect.x = new_x;
                 element.rect.y = new_y;
@@ -478,18 +480,20 @@ impl MenuEditor {
         let field_rect = Rect::new(x + 24.0, *y, 60.0, FIELD_HEIGHT);
         let new_w = NumberInput::new(self.properties_panel.widget_ids.size_w_id, field_rect, rect_val.w)
             .blocked(blocked)
-            .min(10.0)
+            .min(0.005)
             .show(ctx);
+        let px_w = format!("{}px", (new_w * DESIGN_RESOLUTION_WIDTH) as i32);
+        ctx.draw_text(&px_w, x + 88.0, *y + 16.0, 10.0, Color::GREY);
 
         // Size H
-        ctx.draw_text("H:", x + 100.0, *y + 16.0, 12.0, Color::WHITE);
-        let field_rect = Rect::new(x + 124.0, *y, 60.0, FIELD_HEIGHT);
+        ctx.draw_text("H:", x + 130.0, *y + 16.0, 12.0, Color::WHITE);
+        let field_rect = Rect::new(x + 154.0, *y, 60.0, FIELD_HEIGHT);
         let new_h = NumberInput::new(self.properties_panel.widget_ids.size_h_id, field_rect, rect_val.h)
             .blocked(blocked)
-            .min(10.0)
+            .min(0.005)
             .show(ctx);
 
-        if (new_w - rect_val.w).abs() > 0.01 || (new_h - rect_val.h).abs() > 0.01 {
+        if (new_w - rect_val.w).abs() > 0.001 || (new_h - rect_val.h).abs() > 0.001 {
             if let Some(element) = self.selected_element_mut() {
                 element.rect.w = new_w;
                 element.rect.h = new_h;

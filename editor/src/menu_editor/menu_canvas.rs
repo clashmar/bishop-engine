@@ -6,13 +6,15 @@ use bishop::prelude::*;
 impl MenuEditor {
     /// Updates the menu editor and handles input.
     pub fn update_canvas(
-        &mut self, 
-        ctx: &mut WgpuContext, 
+        &mut self,
+        ctx: &mut WgpuContext,
         rect: Rect,
         blocked: bool,
     ) {
         let mouse: Vec2 = ctx.mouse_position().into();
         let mouse_in_canvas = rect.contains(mouse);
+        let canvas_origin = Vec2::new(rect.x, rect.y);
+        let canvas_size = Vec2::new(rect.w, rect.h);
 
         // Handle Delete key to remove selected element
         if !blocked && ctx.is_key_pressed(KeyCode::Delete) || ctx.is_key_pressed(KeyCode::Backspace) {
@@ -26,11 +28,12 @@ impl MenuEditor {
             return;
         }
 
+        let norm_mouse = screen_to_normalized(mouse, canvas_origin, canvas_size);
+
         // Handle adding pending element on canvas click
         if let Some(kind) = self.pending_element_type.take() {
             if ctx.is_mouse_button_pressed(MouseButton::Left) {
-                let position = Vec2::new(mouse.x, mouse.y);
-                self.add_element(kind, position);
+                self.add_element(kind, norm_mouse);
                 return;
             } else {
                 self.pending_element_type = Some(kind);
@@ -41,7 +44,7 @@ impl MenuEditor {
         if ctx.is_mouse_button_pressed(MouseButton::Left) {
             let clicked_element = self.current_template().and_then(|template| {
                 for (i, element) in template.elements.iter().enumerate().rev() {
-                    if element.rect.contains(mouse) {
+                    if element.rect.contains(norm_mouse) {
                         return Some((i, element.rect));
                     }
                 }
@@ -51,7 +54,7 @@ impl MenuEditor {
             if let Some((i, element_rect)) = clicked_element {
                 self.selected_element_index = Some(i);
                 self.dragging_element = Some(i);
-                self.drag_offset = mouse - vec2(element_rect.x, element_rect.y);
+                self.drag_offset = norm_mouse - vec2(element_rect.x, element_rect.y);
             } else {
                 self.selected_element_index = None;
             }
@@ -63,7 +66,7 @@ impl MenuEditor {
                 let drag_offset = self.drag_offset;
                 if let Some(template) = self.current_template_mut() {
                     if let Some(element) = template.elements.get_mut(index) {
-                        let new_pos = mouse - drag_offset;
+                        let new_pos = norm_mouse - drag_offset;
                         element.rect.x = new_pos.x;
                         element.rect.y = new_pos.y;
                     }
@@ -79,6 +82,9 @@ impl MenuEditor {
         ctx.draw_rectangle(rect.x, rect.y, rect.w, rect.h, Color::new(0.15, 0.15, 0.2, 1.0));
 
         ctx.draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 2.0, Color::new(0.4, 0.4, 0.4, 1.0));
+
+        let canvas_origin = Vec2::new(rect.x, rect.y);
+        let canvas_size = Vec2::new(rect.w, rect.h);
 
         // Draw "Menu Canvas" watermark if no template
         if self.current_template().is_none() {
@@ -97,7 +103,8 @@ impl MenuEditor {
         if let Some(template) = self.current_template() {
             for (i, element) in template.elements.iter().enumerate() {
                 let is_selected = self.selected_element_index == Some(i);
-                self.draw_element(ctx, element, is_selected);
+                let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
+                self.draw_element(ctx, element, screen_rect, is_selected);
             }
 
             // Draw "add element" cursor if pending
@@ -124,7 +131,7 @@ impl MenuEditor {
         }
     }
 
-    fn draw_element(&self, ctx: &mut WgpuContext, element: &MenuElement, is_selected: bool) {
+    fn draw_element(&self, ctx: &mut WgpuContext, element: &MenuElement, screen_rect: Rect, is_selected: bool) {
         let bg_color = if is_selected {
             Color::new(0.4, 0.5, 0.7, 0.8)
         } else {
@@ -132,10 +139,10 @@ impl MenuEditor {
         };
 
         ctx.draw_rectangle(
-            element.rect.x,
-            element.rect.y,
-            element.rect.w,
-            element.rect.h,
+            screen_rect.x,
+            screen_rect.y,
+            screen_rect.w,
+            screen_rect.h,
             bg_color,
         );
 
@@ -146,10 +153,10 @@ impl MenuEditor {
         };
 
         ctx.draw_rectangle_lines(
-            element.rect.x,
-            element.rect.y,
-            element.rect.w,
-            element.rect.h,
+            screen_rect.x,
+            screen_rect.y,
+            screen_rect.w,
+            screen_rect.h,
             if is_selected { 2.0 } else { 1.0 },
             outline_color,
         );
@@ -163,15 +170,15 @@ impl MenuEditor {
 
         ctx.draw_text(
             text,
-            element.rect.x + 8.0,
-            element.rect.y + element.rect.h * 0.6,
+            screen_rect.x + 8.0,
+            screen_rect.y + screen_rect.h * 0.6,
             14.0,
             Color::WHITE,
         );
 
         // Draw resize handles for selected element
         if is_selected {
-            self.draw_resize_handles(ctx, element.rect);
+            self.draw_resize_handles(ctx, screen_rect);
         }
     }
 

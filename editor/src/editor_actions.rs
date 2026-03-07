@@ -184,6 +184,7 @@ impl Editor {
                     self.return_mode = Some(self.mode);
                     self.mode = EditorMode::Menu;
                     self.load_menus();
+                    MenuEditor::init_camera(ctx, &mut self.camera);
                 }
                 EditorAction::ReturnToGameEditor => {
                     // Save menus before leaving menu mode

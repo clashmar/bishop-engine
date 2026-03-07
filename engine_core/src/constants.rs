@@ -63,3 +63,8 @@ pub const MIN_WINDOW_WIDTH:  i32 = 640;
 pub const MIN_WINDOW_HEIGHT: i32 = 360;
 pub const MAX_WINDOW_WIDTH:  i32 = 2560;
 pub const MAX_WINDOW_HEIGHT: i32 = 1440;
+
+/// Target design resolution width for menus and UI.
+pub const DESIGN_RESOLUTION_WIDTH: f32 = 1920.0;
+/// Target design resolution height for menus and UI.
+pub const DESIGN_RESOLUTION_HEIGHT: f32 = 1080.0;
