@@ -1,5 +1,5 @@
-use bishop::prelude::*;
 use serde::{Deserialize, Serialize};
+use bishop::prelude::*;
 
 /// Platform-aware input configuration for menu actions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
