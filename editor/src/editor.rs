@@ -245,8 +245,8 @@ impl Editor {
             EditorMode::Menu => {
                 self.menu_editor.draw(
                     ctx,
-                    &mut self.game,
                     &self.camera,
+                    &mut self.game,
                 )
             }
             EditorMode::Game => {
