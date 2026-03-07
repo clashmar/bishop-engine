@@ -1,6 +1,6 @@
 // game/src/scripting/lua_ctx.rs
-use crate::game_state::GameState;
 use engine_core::scripting::lua_constants::*;
+use crate::game_instance::GameInstance;
 use mlua::prelude::LuaResult;
 use bishop::prelude::*;
 use std::cell::RefCell;
@@ -15,7 +15,7 @@ pub const LUA_BISHOP_CTX: &str = "BISHOP_CTX";
 /// The Lua‑exposed game context that gives scripts access to the current `GameState`.
 #[derive(Clone)]
 pub struct LuaGameCtx {
-    pub game_state: Rc<RefCell<GameState>>,
+    pub game_instance: Rc<RefCell<GameInstance>>,
 }
 
 impl UserData for LuaGameCtx {}
@@ -58,10 +58,10 @@ impl LuaBishopCtx {
 /// Registers both game and bishop contexts in the Lua global table.
 pub fn register_lua_contexts(
     lua: &Lua,
-    game_state: Rc<RefCell<GameState>>,
+    game_instance: Rc<RefCell<GameInstance>>,
     ctx: PlatformContext,
 ) -> LuaResult<()> {
-    LuaGameCtx { game_state }.set_lua_ctx(lua)?;
+    LuaGameCtx { game_instance }.set_lua_ctx(lua)?;
     LuaBishopCtx { ctx }.set_lua_ctx(lua)?;
     Ok(())
 }

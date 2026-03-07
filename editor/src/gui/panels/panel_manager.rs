@@ -13,7 +13,6 @@ pub enum PanelMode {
     Room,
     World,
     Game,
-    Menu,
 }
 
 impl PanelMode {
@@ -22,7 +21,6 @@ impl PanelMode {
             (PanelMode::Game, EditorMode::Game) => true,
             (PanelMode::World, EditorMode::World(_)) => true,
             (PanelMode::Room, EditorMode::Room(_)) => true,
-            (PanelMode::Menu, EditorMode::Menu) => true,
             _ => false,
         }
     }
@@ -120,20 +118,6 @@ impl PanelManager {
     pub fn toggle(&mut self, id: PanelId) {
         if let Some((_, panel)) = self.panels.iter_mut().find(|(pid, _)| *pid == id) {
             panel.visible = !panel.visible;
-        }
-    }
-
-    /// Shows a panel by id.
-    pub fn show(&mut self, id: PanelId) {
-        if let Some((_, panel)) = self.panels.iter_mut().find(|(pid, _)| *pid == id) {
-            panel.visible = true;
-        }
-    }
-
-    /// Hides a panel by id.
-    pub fn hide(&mut self, id: PanelId) {
-        if let Some((_, panel)) = self.panels.iter_mut().find(|(pid, _)| *pid == id) {
-            panel.visible = false;
         }
     }
 

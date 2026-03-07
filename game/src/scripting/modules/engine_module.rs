@@ -33,9 +33,9 @@ impl LuaModule for EngineModule {
             let entity_name: String = proxy_table.raw_get("__entity_name")?;
             
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
-            let script_manager = &game_state.game.script_manager;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
+            let script_manager = &game_instance.game.script_manager;
 
             // Find global entity by name
             let global_entity = {
@@ -81,9 +81,9 @@ impl LuaModule for EngineModule {
                     let entity_name_clone = entity_name.clone();
                     let wrapper = lua.create_function(move |lua, args: Variadic<Value>| {
                         let ctx = LuaGameCtx::borrow_ctx(lua)?;
-                        let game_state = ctx.game_state.borrow();
-                        let ecs = &game_state.game.ecs;
-                        let script_manager = &game_state.game.script_manager;
+                        let game_instance = ctx.game_instance.borrow();
+                        let ecs = &game_instance.game.ecs;
+                        let script_manager = &game_instance.game.script_manager;
 
                         // Re-lookup entity and instance
                         let entity = {
@@ -159,9 +159,9 @@ impl LuaModule for EngineModule {
         // engine.player() - returns the player entity's script instance table
         let player_fn = lua.create_function(|lua, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
-            let script_manager = &game_state.game.script_manager;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
+            let script_manager = &game_instance.game.script_manager;
 
             // Find player entity via Player component
             let player_entity = ecs.get_store::<Player>()
@@ -211,9 +211,9 @@ impl LuaModule for EngineModule {
             let method_args: Vec<Value> = iter.collect();
 
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
-            let script_manager = &game_state.game.script_manager;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
+            let script_manager = &game_instance.game.script_manager;
 
             // Find global entity by name
             let global_entity = {
@@ -274,8 +274,8 @@ impl LuaModule for EngineModule {
         // engine.on(event, handler)
         let on_fn = lua.create_function(|lua, (event, handler): (String, Function)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let sm = &game_state.game.script_manager;
+            let game_instance = ctx.game_instance.borrow();
+            let sm = &game_instance.game.script_manager;
             let bus = sm.event_bus.clone();
             bus.on(event, handler);
             Ok(())
@@ -285,8 +285,8 @@ impl LuaModule for EngineModule {
         // engine.emit(event, …)
         let emit_fn = lua.create_function(|lua, (event, args): (String, Variadic<Value>)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let sm = &game_state.game.script_manager;
+            let game_instance = ctx.game_instance.borrow();
+            let sm = &game_instance.game.script_manager;
             let bus = sm.event_bus.clone();
             bus.emit(event, args);
             Ok(())

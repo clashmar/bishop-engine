@@ -1,5 +1,5 @@
 // engine_core/src/world/transition_manager.rs
-use crate::game_state::GameState;
+use crate::game_instance::GameInstance;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use uuid::Uuid;
@@ -58,12 +58,12 @@ impl TransitionManager {
 
     /// Handles entity transitions between rooms.
     pub fn handle_transitions(
-        game_state: &mut GameState,
+        game_instance: &mut GameInstance,
     ) {
-        let grid_size = game_state.game.current_world().grid_size;
-        let rooms = game_state.game.current_world().rooms.clone();
+        let grid_size = game_instance.game.current_world().grid_size;
+        let rooms = game_instance.game.current_world().rooms.clone();
 
-        let entities: Vec<_> = game_state.game.ecs
+        let entities: Vec<_> = game_instance.game.ecs
             .get_store::<Transform>()
             .data
             .keys()
@@ -72,11 +72,11 @@ impl TransitionManager {
 
         for entity in entities {
             let (pos, _coll) = {
-                let p = match game_state.game.ecs.get::<Transform>(entity) {
+                let p = match game_instance.game.ecs.get::<Transform>(entity) {
                     Some(v) => v.position,
                     None => continue,
                 };
-                let c = match game_state.game.ecs.get::<Collider>(entity) {
+                let c = match game_instance.game.ecs.get::<Collider>(entity) {
                     Some(v) => v,
                     None => continue,
                 };
@@ -89,7 +89,7 @@ impl TransitionManager {
                 None => continue,
             };
 
-            if let Some(comp) = game_state.game.ecs.get_mut::<CurrentRoom>(entity) {
+            if let Some(comp) = game_instance.game.ecs.get_mut::<CurrentRoom>(entity) {
                 if comp.0 == target_id {
                     continue;
                 } else {
@@ -97,9 +97,9 @@ impl TransitionManager {
                 }
             }
 
-            if game_state.game.ecs.get_player_entity() == Some(entity) {
+            if game_instance.game.ecs.get_player_entity() == Some(entity) {
                 if let Some(new_room) = rooms.iter().find(|r| r.id == target_id) {
-                    game_state.game.current_world_mut().current_room_id = Some(new_room.id);
+                    game_instance.game.current_world_mut().current_room_id = Some(new_room.id);
                 }
             }
         }

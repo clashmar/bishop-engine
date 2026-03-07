@@ -1,6 +1,6 @@
 // game/src/main.rs
 use game_lib::scripting::lua_ctx::register_lua_contexts;
-use game_lib::game_state::GameState;
+use game_lib::game_instance::GameInstance;
 use game_lib::engine::Engine;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -36,26 +36,26 @@ impl BishopApp for GameApp {
         let lua = Lua::new();
         let mut camera_manager = CameraManager::default();
 
-        let game_state = {
+        let game_instance = {
             let mut ctx_ref = ctx.borrow_mut();
-            Rc::new(RefCell::new(GameState::new(
+            Rc::new(RefCell::new(GameInstance::new(
                 &mut *ctx_ref, 
                 &lua, 
                 &mut camera_manager
             ).await))
         };
-        let grid_size = game_state.borrow().game.current_world().grid_size;
+        let grid_size = game_instance.borrow().game.current_world().grid_size;
 
         if let Err(e) = register_lua_contexts(
             &lua, 
-            game_state.clone(), 
+            game_instance.clone(), 
             ctx.clone()
         ) {
             onscreen_error!("Could not register lua contexts: {}", e)
         }
 
         self.engine = Some(Engine::new(
-            game_state.clone(),
+            game_instance.clone(),
             ctx.clone(),
             lua,
             camera_manager,

@@ -25,11 +25,11 @@ pub struct SetComponentCmd {
 
 impl LuaCommand for SetComponentCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
+        let mut game_instance = engine.game_instance.borrow_mut();
         if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == self.comp_name) {
             if let Ok(boxed) = (reg.from_lua)(&engine.lua, self.value.clone()) {
                 (reg.inserter)(
-                    &mut game_state.game.ecs,
+                    &mut game_instance.game.ecs,
                     Entity(self.entity),
                     boxed,
                 );
@@ -52,15 +52,15 @@ pub struct CallEntityFnCmd {
 // TODO: use this for updates?
 impl LuaCommand for CallEntityFnCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let game_state = engine.game_state.borrow();
-        let ecs = &game_state.game.ecs;
+        let game_instance = engine.game_instance.borrow();
+        let ecs = &game_instance.game.ecs;
 
         let script = match ecs.get::<Script>(self.entity) {
             Some(s) => s,
             None => return,
         };
         
-        let instance = match game_state
+        let instance = match game_instance
         .game
         .script_manager
         .instances
@@ -93,8 +93,8 @@ pub struct SetClipCmd {
 
 impl LuaCommand for SetClipCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        let ecs = &mut game_state.game.ecs;
+        let mut game_instance = engine.game_instance.borrow_mut();
+        let ecs = &mut game_instance.game.ecs;
 
         // Get facing direction first (before mutable borrow of Animation)
         let facing_left = ecs
@@ -121,8 +121,8 @@ pub struct ResetClipCmd {
 
 impl LuaCommand for ResetClipCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        let ecs = &mut game_state.game.ecs;
+        let mut game_instance = engine.game_instance.borrow_mut();
+        let ecs = &mut game_instance.game.ecs;
 
         if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
             if let Some(current_id) = &animation.current.clone() {
@@ -145,8 +145,8 @@ pub struct SetFlipXCmd {
 
 impl LuaCommand for SetFlipXCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        let ecs = &mut game_state.game.ecs;
+        let mut game_instance = engine.game_instance.borrow_mut();
+        let ecs = &mut game_instance.game.ecs;
 
         if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
             animation.flip_x = self.flip_x;
@@ -162,8 +162,8 @@ pub struct SetFacingCmd {
 
 impl LuaCommand for SetFacingCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        let ecs = &mut game_state.game.ecs;
+        let mut game_instance = engine.game_instance.borrow_mut();
+        let ecs = &mut game_instance.game.ecs;
 
         let direction = match self.direction.to_lowercase().as_str() {
             "left" => Direction::Left,
@@ -193,8 +193,8 @@ pub struct SetAnimSpeedCmd {
 
 impl LuaCommand for SetAnimSpeedCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        let ecs = &mut game_state.game.ecs;
+        let mut game_instance = engine.game_instance.borrow_mut();
+        let ecs = &mut game_instance.game.ecs;
 
         if let Some(animation) = ecs.get_mut::<Animation>(self.entity) {
             animation.speed_multiplier = self.speed.max(0.0);

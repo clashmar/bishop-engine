@@ -19,7 +19,7 @@ pub struct ShowSpeechCmd {
 
 impl LuaCommand for ShowSpeechCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
+        let mut game_instance = engine.game_instance.borrow_mut();
         let mut bubble = SpeechBubble::new(self.text.clone(), self.duration);
 
         if let Some(color) = self.color {
@@ -46,7 +46,7 @@ impl LuaCommand for ShowSpeechCmd {
             bubble.background_color = bg_color;
         }
 
-        game_state.game.ecs.add_component_to_entity(self.entity, bubble);
+        game_instance.game.ecs.add_component_to_entity(self.entity, bubble);
     }
 }
 
@@ -57,8 +57,8 @@ pub struct ClearSpeechCmd {
 
 impl LuaCommand for ClearSpeechCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        let ecs = &mut game_state.game.ecs;
+        let mut game_instance = engine.game_instance.borrow_mut();
+        let ecs = &mut game_instance.game.ecs;
         engine_core::dialogue::clear_speech(ecs, self.entity);
     }
 }
@@ -70,7 +70,7 @@ pub struct SetLanguageCmd {
 
 impl LuaCommand for SetLanguageCmd {
     fn execute(&mut self, engine: &mut Engine) {
-        let mut game_state = engine.game_state.borrow_mut();
-        game_state.game.dialogue_manager.set_language(&self.language);
+        let mut game_instance = engine.game_instance.borrow_mut();
+        game_instance.game.dialogue_manager.set_language(&self.language);
     }
 }

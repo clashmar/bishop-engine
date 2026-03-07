@@ -6,14 +6,14 @@ use bishop::prelude::*;
 use mlua::Lua;
 
 /// Top level orchestrator of the game and systems.
-pub struct GameState {
+pub struct GameInstance {
     /// The whole game.
     pub game: Game,
     /// Holds the Transform of every entity rendered in the previous frame.
     pub prev_positions: HashMap<Entity, Vec2>,
 }
 
-impl GameState {
+impl GameInstance {
     // TODO: Make game creation DRYer
     pub async fn new<C: BishopContext>(
         ctx: &mut C, 
