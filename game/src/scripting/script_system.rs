@@ -2,15 +2,9 @@
 use crate::scripting::modules::entity_module::*;
 use crate::game_global::drain_commands;
 use crate::engine::Engine;
-use engine_core::scripting::modules::lua_module::LuaModuleRegistry;
-use engine_core::scripting::script_manager::ScriptManager;
-use engine_core::scripting::lua_constants::*;
-use engine_core::storage::path_utils::*;
-use engine_core::scripting::script::*;
-use engine_core::ecs::ecs::Ecs;
 use mlua::prelude::LuaResult;
-use engine_core::*;
 use mlua::{Function, Table};
+use engine_core::prelude::*;
 use std::sync::Arc;
 use mlua::Lua;
 use std::fs;
@@ -62,8 +56,8 @@ impl ScriptSystem {
     ) -> LuaResult<()> {
         // Collect all pending inits and their functions in a single borrow
         let inits_to_run: Vec<(Function, Table)> = {
-            let mut game_state = engine.game_state.borrow_mut();
-            let script_manager = &mut game_state.game.script_manager;
+            let mut game_instance = engine.game_instance.borrow_mut();
+            let script_manager = &mut game_instance.game.script_manager;
 
             let pending = std::mem::take(&mut script_manager.pending_inits);
 
@@ -84,9 +78,9 @@ impl ScriptSystem {
 
         // Collect all scripts to run in a single borrow
         let scripts_to_run: Vec<(Function, Table)> = {
-            let game_state = engine.game_state.borrow();
-            let ctx = game_state.game.ctx();
-            let script_manager = &game_state.game.script_manager;
+            let game_instance = engine.game_instance.borrow();
+            let ctx = game_instance.game.ctx();
+            let script_manager = &game_instance.game.script_manager;
             let script_store = ctx.ecs.get_store::<Script>();
 
             script_store

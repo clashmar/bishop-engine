@@ -181,8 +181,8 @@ impl LuaMethod<EntityHandle> for GetMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(GET, |lua, this, comp_name: String| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
             let entity = this.entity;
 
             if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
@@ -274,16 +274,16 @@ impl LuaMethod<EntityHandle> for HasMethod {
         // entity:has
         methods.add_method(HAS, |lua, this, comp_name: String| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
             Ok(COMPONENTS.iter().find(|r| r.type_name == comp_name).map_or(false, |r| (r.has)(ecs, this.entity)))
         });
 
         // entity:has_any
         methods.add_method(HAS_ANY, |lua, this, comps: Variadic<String>| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
             for comp_name in comps.iter() {
                 if let Some(r) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
                     if (r.has)(ecs, this.entity) {
@@ -297,8 +297,8 @@ impl LuaMethod<EntityHandle> for HasMethod {
         // entity:has_all
         methods.add_method(HAS_ALL, |lua, this, comps: Variadic<String>| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
             for comp_name in comps.iter() {
                 if let Some(r) = COMPONENTS.iter().find(|r| r.type_name == comp_name) {
                     if !(r.has)(ecs, this.entity) { return Ok(false); }
@@ -359,8 +359,8 @@ impl LuaMethod<EntityHandle> for FindBestInteractableMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(FIND_BEST_INTERACTABLE, |lua, _this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
             if let Some(entity) = find_best_interactable(ecs) {
                 lua_entity_handle(lua, entity)
             } else {
@@ -403,8 +403,8 @@ impl LuaMethod<EntityHandle> for GetClipMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(GET_CLIP, |lua, this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
 
             if let Some(animation) = ecs.get::<Animation>(this.entity) {
                 if let Some(clip_id) = &animation.current {
@@ -472,8 +472,8 @@ impl LuaMethod<EntityHandle> for GetFlipXMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(GET_FLIP_X, |lua, this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
 
             if let Some(animation) = ecs.get::<Animation>(this.entity) {
                 Ok(animation.flip_x)
@@ -539,8 +539,8 @@ impl LuaMethod<EntityHandle> for GetCurrentFrameMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(GET_CURRENT_FRAME, |lua, this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
 
             if let Some(frame) = ecs.get::<CurrentFrame>(this.entity) {
                 let table = lua.create_table()?;
@@ -567,8 +567,8 @@ impl LuaMethod<EntityHandle> for IsClipFinishedMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(IS_CLIP_FINISHED, |lua, this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
 
             if let Some(animation) = ecs.get::<Animation>(this.entity) {
                 if let Some(current_id) = &animation.current {
@@ -595,8 +595,8 @@ impl LuaMethod<EntityHandle> for SayMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(SAY, |lua, this, (text, opts): (String, Option<Table>)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let config = &game_state.game.dialogue_manager.config;
+            let game_instance = ctx.game_instance.borrow();
+            let config = &game_instance.game.dialogue_manager.config;
 
             let duration = opts
                 .as_ref()
@@ -665,17 +665,17 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(SAY_DIALOGUE, |lua, this, (dialogue_id, key, opts): (String, String, Option<Table>)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let config = game_state.game.dialogue_manager.config.clone();
+            let game_instance = ctx.game_instance.borrow();
+            let config = game_instance.game.dialogue_manager.config.clone();
 
-            let text = match game_state.game.dialogue_manager.select_text(&dialogue_id, &key) {
+            let text = match game_instance.game.dialogue_manager.select_text(&dialogue_id, &key) {
                 Some(t) => t,
                 None => {
                     log::warn!("Dialogue not found: {}:{}", dialogue_id, key);
                     return Ok(());
                 }
             };
-            drop(game_state);
+            drop(game_instance);
 
             // Extract vars table and apply interpolation
             let text = if let Some(ref opts_table) = opts {
@@ -781,8 +781,8 @@ impl LuaMethod<EntityHandle> for IsSpeakingMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
         methods.add_method(IS_SPEAKING, |lua, this, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_state = ctx.game_state.borrow();
-            let ecs = &game_state.game.ecs;
+            let game_instance = ctx.game_instance.borrow();
+            let ecs = &game_instance.game.ecs;
             Ok(ecs.has::<SpeechBubble>(this.entity))
         });
     }

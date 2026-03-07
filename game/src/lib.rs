@@ -2,7 +2,7 @@ pub mod constants;
 pub mod diagnostics;
 pub mod engine;
 pub mod game_global;
-pub mod game_state;
+pub mod game_instance;
 pub mod input;
 pub mod menu_handler;
 pub mod physics;

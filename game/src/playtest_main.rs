@@ -1,7 +1,7 @@
 // game/src/playtest_main.rs
 use engine_core::camera::camera_manager::CameraManager;
 use game_lib::scripting::lua_ctx::register_lua_contexts;
-use game_lib::game_state::GameState;
+use game_lib::game_instance::GameInstance;
 use engine_core::prelude::*;
 use game_lib::engine::Engine;
 use bishop::prelude::*;
@@ -65,10 +65,10 @@ impl BishopApp for PlaytestApp {
         let mut camera_manager = CameraManager::default();
         let grid_size = game.current_world().grid_size;
 
-        let game_state = {
+        let game_instance = {
             let mut ctx_ref = ctx.borrow_mut();
             Rc::new(RefCell::new(
-                GameState::for_room(
+                GameInstance::for_room(
                     &mut *ctx_ref, 
                     room, game, 
                     &lua, 
@@ -78,10 +78,10 @@ impl BishopApp for PlaytestApp {
             ))
         };
 
-        let _ = register_lua_contexts(&lua, game_state.clone(), ctx.clone());
+        let _ = register_lua_contexts(&lua, game_instance.clone(), ctx.clone());
 
         self.engine = Some(Engine::new(
-            game_state.clone(),
+            game_instance.clone(),
             ctx.clone(),
             lua,
             camera_manager,

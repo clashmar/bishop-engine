@@ -4,7 +4,7 @@ use crate::scripting::script_system::ScriptSystem;
 use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::physics::physics_system::*;
-use crate::game_state::GameState;
+use crate::game_instance::GameInstance;
 use crate::menu_handler::{GameMenuHandler, drain_menu_events};
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -14,8 +14,8 @@ use std::rc::Rc;
 use mlua::Lua;
 
 pub struct Engine {
-    /// Handle for the game.
-    pub game_state: Rc<RefCell<GameState>>,
+    /// Currently running instance of the game.
+    pub game_instance: Rc<RefCell<GameInstance>>,
     /// Platform context for input/rendering.
     pub ctx: PlatformContext,
     /// Single Lua VM.
@@ -79,7 +79,7 @@ impl BishopApp for Engine {
 impl Engine {
     /// Creates a new Engine with the given configuration.
     pub fn new(
-        game_state: Rc<RefCell<GameState>>,
+        game_instance: Rc<RefCell<GameInstance>>,
         ctx: PlatformContext,
         lua: Lua,
         camera_manager: CameraManager,
@@ -90,7 +90,7 @@ impl Engine {
         menu.set_action_handler(GameMenuHandler);
 
         Self {
-            game_state,
+            game_instance,
             ctx,
             lua,
             camera_manager,
@@ -107,10 +107,10 @@ impl Engine {
         ctx: &mut C,
         dt: f32
     ) {
-        let mut game_state = self.game_state.borrow_mut();
-        game_state.store_previous_positions(&mut self.camera_manager);
+        let mut game_instance = self.game_instance.borrow_mut();
+        game_instance.store_previous_positions(&mut self.camera_manager);
 
-        let game_ctx = game_state.game.ctx_mut();
+        let game_ctx = game_instance.game.ctx_mut();
         let asset_manager = game_ctx.asset_manager;
         let ecs = game_ctx.ecs;
 
@@ -139,11 +139,11 @@ impl Engine {
     pub async fn update_async(&mut self, dt: f32) {
         {
             // Keep borrow_mut in this scope
-            let mut game_state = self.game_state.borrow_mut();
-            TransitionManager::handle_transitions(&mut game_state);
-            update_speech_timers(&mut game_state.game.ecs, dt);
+            let mut game_instance = self.game_instance.borrow_mut();
+            TransitionManager::handle_transitions(&mut game_instance);
+            update_speech_timers(&mut game_instance.game.ecs, dt);
 
-            let game_ctx = game_state.game.ctx_mut();
+            let game_ctx = game_instance.game.ctx_mut();
             let asset_manager = game_ctx.asset_manager;
             let ecs = game_ctx.ecs;
 
@@ -152,7 +152,7 @@ impl Engine {
             }
 
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized
-            let ctx = game_state.game.ctx_mut();
+            let ctx = game_instance.game.ctx_mut();
             if let Err(e) = ScriptSystem::load_scripts(&self.lua, ctx.ecs, ctx.script_manager) {
                 onscreen_error!("Error loading scripts: {}", e);
             }
@@ -170,10 +170,10 @@ impl Engine {
     pub fn render<C: BishopContext>(&mut self, ctx: &mut C, alpha: f32) {
         ctx.clear_background(Color::BLACK);
 
-        let mut game_state = self.game_state.borrow_mut();
-        let prev_positions = game_state.prev_positions.clone();
-        let dialogue_config = game_state.game.dialogue_manager.config.clone();
-        let game_ctx = game_state.game.ctx_mut();
+        let mut game_instance = self.game_instance.borrow_mut();
+        let prev_positions = game_instance.prev_positions.clone();
+        let dialogue_config = game_instance.game.dialogue_manager.config.clone();
+        let game_ctx = game_instance.game.ctx_mut();
 
         let Some(current_room) = game_ctx.cur_world.current_room() else {
             return;
@@ -221,8 +221,8 @@ impl Engine {
 
     /// Update diagnostics metrics from game state.
     pub fn update_diagnostics_metrics(&mut self) {
-        let game_state = self.game_state.borrow();
-        let game = &game_state.game;
+        let game_instance = self.game_instance.borrow();
+        let game = &game_instance.game;
 
         let entity_count = game.ecs.get_store::<Transform>().data.len();
         let texture_count = game.asset_manager.texture_count();
@@ -250,8 +250,8 @@ impl Engine {
             return;
         }
 
-        let game_state = self.game_state.borrow();
-        let event_bus = game_state.game.script_manager.event_bus.clone();
+        let game_instance = self.game_instance.borrow();
+        let event_bus = game_instance.game.script_manager.event_bus.clone();
 
         for action in events {
             let event_name = format!("menu:{}", action);

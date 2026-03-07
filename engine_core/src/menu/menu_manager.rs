@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use bishop::prelude::*;
+use widgets::*;
 use crate::menu::{
     MenuAction, MenuActionHandler, MenuBackground, MenuBuilder, MenuMode,
     MenuNavigation, MenuTemplate, NoOpActionHandler,
@@ -70,23 +71,23 @@ impl MenuManager {
     }
 
     /// Returns the current menu mode based on active menu.
-    pub fn mode(&self) -> MenuMode {
+    pub fn mode(&self) -> Option<MenuMode> {
         if let Some(menu_id) = self.menu_stack.last() {
             if let Some(template) = self.templates.get(menu_id) {
-                return template.mode;
+                return Some(template.mode);
             }
         }
-        MenuMode::Running
+        None
     }
 
     /// Returns true if the menu is blocking game updates.
     pub fn is_pausing_game(&self) -> bool {
-        !self.mode().is_game_running()
+        self.mode().map_or(false, |m| m.is_paused())
     }
 
     /// Returns true if the menu is hiding the game.
     pub fn is_hiding_game(&self) -> bool {
-        !self.mode().is_game_visible()
+        self.mode().map_or(false, |m| m.is_hiding_game())
     }
 
     /// Returns true if any menu is active.
@@ -156,7 +157,7 @@ impl MenuManager {
             return;
         }
 
-        ::widgets::widgets_frame_start(ctx);
+        widgets_frame_start(ctx);
 
         let mut triggered_action = None;
 
@@ -168,7 +169,7 @@ impl MenuManager {
                 let mut button_index = 0;
                 for (button, rect, enabled) in template.buttons() {
                     let _is_focused = button_index == self.focus_index;
-                    let btn = ::widgets::Button::new(rect, &button.text)
+                    let btn = Button::new(rect, &button.text)
                         .blocked(!enabled);
 
                     if btn.show(ctx) {
@@ -180,7 +181,7 @@ impl MenuManager {
             }
         }
 
-        ::widgets::widgets_frame_end(ctx);
+        widgets_frame_end(ctx);
 
         if let Some(action) = triggered_action {
             self.handle_action(action);
