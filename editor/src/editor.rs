@@ -28,6 +28,7 @@ pub enum EditorMode {
 pub struct Editor {
     pub game: Game,
     pub mode: EditorMode,
+    pub return_mode: Option<EditorMode>,
     pub game_editor: GameEditor,
     pub world_editor: WorldEditor,
     pub room_editor: RoomEditor,

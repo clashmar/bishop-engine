@@ -26,6 +26,10 @@ pub struct ButtonElement {
     pub text: String,
     pub action: MenuAction,
     pub font_size: f32,
+    pub nav_up: Option<usize>,
+    pub nav_down: Option<usize>,
+    pub nav_left: Option<usize>,
+    pub nav_right: Option<usize>,
 }
 
 impl Default for ButtonElement {
@@ -34,6 +38,10 @@ impl Default for ButtonElement {
             text: String::new(),
             action: MenuAction::CloseMenu,
             font_size: 20.0,
+            nav_up: None,
+            nav_down: None,
+            nav_left: None,
+            nav_right: None,
         }
     }
 }
