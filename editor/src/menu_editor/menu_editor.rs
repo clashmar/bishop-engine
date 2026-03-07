@@ -59,9 +59,12 @@ impl MenuEditor {
     pub fn draw(
         &mut self, 
         ctx: &mut WgpuContext, 
-        game: &mut Game,
         camera: &Camera2D,
+        game: &mut Game,
     ) {
+        ctx.set_camera(camera);
+        ctx.clear_background(Color::BLACK);
+
         let screen_width = ctx.screen_width();
         let screen_height = ctx.screen_height();
 
