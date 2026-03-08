@@ -35,6 +35,9 @@ pub struct WgpuContext {
     current_surface_texture: Option<wgpu::SurfaceTexture>,
     current_surface_view: Option<wgpu::TextureView>,
     has_cleared_this_frame: bool,
+    saved_has_cleared: bool,
+    saved_surface_view: Option<wgpu::TextureView>,
+    render_target_dims: Option<(f32, f32)>,
 }
 
 impl WgpuContext {
@@ -79,6 +82,9 @@ impl WgpuContext {
             current_surface_texture: None,
             current_surface_view: None,
             has_cleared_this_frame: false,
+            saved_has_cleared: false,
+            saved_surface_view: None,
+            render_target_dims: None,
         })
     }
 
@@ -217,12 +223,20 @@ impl WgpuContext {
     }
 
     /// Returns the current screen width in logical pixels.
+    /// When rendering to a target, returns the target width instead.
     pub fn screen_width(&self) -> f32 {
+        if let Some((w, _)) = self.render_target_dims {
+            return w;
+        }
         self.graphics.size.0 as f32 / self.scale_factor
     }
 
     /// Returns the current screen height in logical pixels.
+    /// When rendering to a target, returns the target height instead.
     pub fn screen_height(&self) -> f32 {
+        if let Some((_, h)) = self.render_target_dims {
+            return h;
+        }
         self.graphics.size.1 as f32 / self.scale_factor
     }
 
@@ -451,6 +465,60 @@ impl WgpuContext {
         self.flush_batched(&view, load_op);
 
         self.current_surface_view = Some(view);
+    }
+
+    /// Redirects rendering to an offscreen render target.
+    /// All subsequent draw calls will render into the target until `end_render_to_target` is called.
+    pub fn begin_render_to_target(&mut self, rt: &BishopRenderTarget) {
+        self.flush_if_needed();
+        self.saved_has_cleared = self.has_cleared_this_frame;
+        self.saved_surface_view = self.current_surface_view.take();
+        self.current_surface_view = Some(rt.render_view().clone());
+        self.render_target_dims = Some((rt.width() as f32, rt.height() as f32));
+        self.has_cleared_this_frame = false;
+    }
+
+    /// Stops rendering to the offscreen target and restores the screen surface.
+    pub fn end_render_to_target(&mut self) {
+        self.flush_if_needed();
+        self.current_surface_view = self.saved_surface_view.take();
+        self.render_target_dims = None;
+        self.has_cleared_this_frame = self.saved_has_cleared;
+    }
+
+    /// Draws a render target's contents as a textured quad at the given position and size.
+    pub fn draw_render_target(
+        &mut self,
+        rt: &BishopRenderTarget,
+        x: f32,
+        y: f32,
+        dest_w: f32,
+        dest_h: f32,
+    ) {
+        self.texture_renderer
+            .draw_render_target_quad(rt.bind_group(), x, y, dest_w, dest_h);
+    }
+
+    /// Creates a render target whose bind group is compatible with the texture renderer pipeline.
+    /// Use this for render targets that will be drawn via `draw_render_target`.
+    pub fn create_drawable_render_target(&self, width: u32, height: u32) -> BishopRenderTarget {
+        BishopRenderTarget::new(
+            &self.graphics.device,
+            self.texture_renderer.texture_bind_group_layout_arc(),
+            width,
+            height,
+            self.graphics.config.format,
+        )
+    }
+
+    /// Returns the actual window width in logical pixels, ignoring any render target override.
+    pub fn window_width(&self) -> f32 {
+        self.graphics.size.0 as f32 / self.scale_factor
+    }
+
+    /// Returns the actual window height in logical pixels, ignoring any render target override.
+    pub fn window_height(&self) -> f32 {
+        self.graphics.size.1 as f32 / self.scale_factor
     }
 
     /// Renders the current frame and presents it.

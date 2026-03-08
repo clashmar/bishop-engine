@@ -403,6 +403,43 @@ impl TextureRenderer {
         }
     }
 
+    /// Draws a render target as a textured quad using its bind group directly.
+    pub fn draw_render_target_quad(
+        &mut self,
+        bind_group: &wgpu::BindGroup,
+        x: f32,
+        y: f32,
+        dest_w: f32,
+        dest_h: f32,
+    ) {
+        let bind_group_ptr = bind_group as *const wgpu::BindGroup;
+        let bind_group_id = bind_group_ptr as usize;
+
+        let needs_new_batch = self.current_texture_bind_group != Some(bind_group_id);
+        if needs_new_batch {
+            self.batches.push(TextureBatch {
+                bind_group_ptr,
+                start_vertex: self.vertices.len() as u32,
+                vertex_count: 0,
+            });
+            self.current_texture_bind_group = Some(bind_group_id);
+        }
+
+        let c: [f32; 4] = Color::WHITE.into();
+
+        let v0 = TexturedVertex::new([x, y], [0.0, 0.0], c);
+        let v1 = TexturedVertex::new([x + dest_w, y], [1.0, 0.0], c);
+        let v2 = TexturedVertex::new([x + dest_w, y + dest_h], [1.0, 1.0], c);
+        let v3 = TexturedVertex::new([x, y + dest_h], [0.0, 1.0], c);
+
+        self.vertices
+            .extend_from_slice(&[v0, v1, v2, v0, v2, v3]);
+
+        if let Some(batch) = self.batches.last_mut() {
+            batch.vertex_count += 6;
+        }
+    }
+
     /// Uploads vertices and renders to the given render pass.
     pub fn flush<'a>(&'a self, queue: &wgpu::Queue, render_pass: &mut wgpu::RenderPass<'a>) {
         if self.vertices.is_empty() {

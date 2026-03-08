@@ -329,6 +329,7 @@ impl RoomEditor {
 
                 if self.view_preview {
                     render_system.resize_for_camera(render_cam.zoom);
+                    render_system.begin_scene(ctx);
                 } else {
                     render_system.resize_to_window(ctx);
                 }
@@ -347,10 +348,8 @@ impl RoomEditor {
                 );
 
                 if self.view_preview {
+                    render_system.end_scene(ctx);
                     render_system.present_game(ctx);
-                } else {
-                    // TODO: RE-IMPLEMENT
-                    // render_system.present(ctx);
                 }
 
                 if !self.view_preview {
