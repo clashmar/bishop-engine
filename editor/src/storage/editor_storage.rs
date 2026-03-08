@@ -4,24 +4,10 @@ use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::ecs::transform::Transform;
 use crate::with_lua_async;
-use engine_core::animation::animation_clip::{Animation, ClipId};
-use engine_core::dialogue::DialogueManager;
-use engine_core::menu::MenuTemplate;
-use engine_core::engine_global::set_game_name;
-use engine_core::storage::editor_config::app_dir;
-use engine_core::scripting::script_manager;
-use engine_core::assets::asset_manager::*;
-use engine_core::game::game_map::GameMap;
-use engine_core::storage::path_utils::*;
-use engine_core::world::room::Room;
-use engine_core::ecs::component::*;
-use engine_core::world::world::*;
-use engine_core::game::game::*;
-use engine_core::constants::*;
-use engine_core::ecs::ecs::*;
-use bishop::prelude::*;
 use std::collections::HashSet;
+use engine_core::prelude::*;
 use std::time::SystemTime;
+use bishop::prelude::*;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::cell::RefCell;
@@ -385,11 +371,6 @@ pub fn list_game_names() -> Vec<String> {
         .filter(|e| e.path().is_dir())
         .filter_map(|e| e.file_name().into_string().ok())
         .collect()
-}
-
-/// Returns the path to the menus folder for the current game.
-pub fn menus_folder() -> PathBuf {
-    resources_folder_current().join("menus")
 }
 
 /// Saves a menu template to disk.
