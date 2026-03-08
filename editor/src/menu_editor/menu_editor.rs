@@ -2,6 +2,7 @@
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::gui::modal::is_modal_open;
 use crate::menu_editor::*;
+use crate::storage::editor_storage::delete_menu;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -110,6 +111,12 @@ impl MenuEditor {
         if index >= self.templates.len() {
             return;
         }
+
+        if let Err(err) = delete_menu(&self.templates[index].id) {
+            onscreen_error!("Error deleting template: {err}");
+            return;
+        }
+
         self.templates.remove(index);
 
         if self.templates.is_empty() {

@@ -37,13 +37,16 @@ pub const SCRIPTS_FOLDER: &str = "scripts";
 /// Name of the dialogue folder.
 pub const DIALOGUE_FOLDER: &str = "dialogue";
 
+/// Name of the folder that contains menu templates.
+pub const MENUS_FOLDER: &str = "menus";
+
 /// Name of the folder for windows-specific game assets.
 pub const WINDOWS_FOLDER: &str = "windows";
 
 /// Name of the folder for macOS-specific game assets.
 pub const MAC_OS_FOLDER: &str = "mac_os";
 
-/// Name of the macOS contents folder 
+/// Name of the macOS contents folder.
 pub const CONTENTS_FOLDER: &str = "Contents";
 
 /// Name of the bundle assets for the macOS editor;
