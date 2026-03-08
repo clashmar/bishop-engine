@@ -50,10 +50,6 @@ impl ElementPalette {
             }));
         }
 
-        if self.draw_palette_item(ctx, rect, &mut y, "Spacer", blocked).is_some() {
-            clicked_kind = Some(MenuElementKind::Spacer(SpacerElement::default()));
-        }
-
         if self.draw_palette_item(ctx, rect, &mut y, "Panel", blocked).is_some() {
             clicked_kind = Some(MenuElementKind::Panel(PanelElement::default()));
         }

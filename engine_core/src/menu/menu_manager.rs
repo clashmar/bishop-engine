@@ -235,7 +235,6 @@ impl MenuManager {
             .background(MenuBackground::Dimmed(0.7))
             .vertical()
             .label("PAUSED")
-            .spacer(8.0)
             .button("Resume", MenuAction::Resume)
             .build();
 
@@ -254,7 +253,6 @@ impl MenuManager {
             .background(MenuBackground::Dimmed(0.7))
             .vertical()
             .label("PAUSED")
-            .spacer(8.0)
             .button("Resume", MenuAction::Resume)
             .build();
         self.register_template(pause_template);

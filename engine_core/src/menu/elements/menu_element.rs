@@ -7,7 +7,6 @@ use crate::menu::menu_builder::MenuAction;
 pub enum MenuElementKind {
     Label(LabelElement),
     Button(ButtonElement),
-    Spacer(SpacerElement),
     Panel(PanelElement),
 }
 
@@ -52,18 +51,6 @@ impl Default for ButtonElement {
             nav_left: None,
             nav_right: None,
         }
-    }
-}
-
-/// Spacer element for adding vertical or horizontal space.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpacerElement {
-    pub size: f32,
-}
-
-impl Default for SpacerElement {
-    fn default() -> Self {
-        Self { size: 16.0 }
     }
 }
 
@@ -124,11 +111,6 @@ impl MenuElement {
             }),
             rect,
         )
-    }
-
-    /// Creates a spacer element.
-    pub fn spacer(size: f32, rect: Rect) -> Self {
-        Self::new(MenuElementKind::Spacer(SpacerElement { size }), rect)
     }
 
     /// Creates a panel element.
