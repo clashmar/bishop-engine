@@ -89,6 +89,14 @@ impl WgpuContext {
 
     /// Prepares for a new frame by clearing per-frame state.
     pub fn begin_frame(&mut self) {
+        // Proactively resize if the window size changed (e.g. fullscreen transition)
+        // before the Resized event arrives, avoiding stale-size reconfigures.
+        let inner = self.window.inner_size();
+        let (cw, ch) = self.graphics.size;
+        if (inner.width, inner.height) != (cw, ch) {
+            self.graphics.resize(inner.width, inner.height);
+        }
+
         match self.graphics.surface.get_current_texture() {
             Ok(texture) => {
                 let view = texture
@@ -96,6 +104,23 @@ impl WgpuContext {
                     .create_view(&wgpu::TextureViewDescriptor::default());
                 self.current_surface_texture = Some(texture);
                 self.current_surface_view = Some(view);
+            }
+            Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => {
+                self.graphics.reconfigure();
+                match self.graphics.surface.get_current_texture() {
+                    Ok(texture) => {
+                        let view = texture
+                            .texture
+                            .create_view(&wgpu::TextureViewDescriptor::default());
+                        self.current_surface_texture = Some(texture);
+                        self.current_surface_view = Some(view);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to acquire surface texture after reconfigure: {e}");
+                        self.current_surface_texture = None;
+                        self.current_surface_view = None;
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("Failed to acquire surface texture: {e}");
@@ -225,6 +250,8 @@ impl WgpuContext {
             None
         };
         self.window.set_fullscreen(fullscreen_mode);
+        let size = self.window.inner_size();
+        self.graphics.resize(size.width, size.height);
         self.fullscreen
     }
 
