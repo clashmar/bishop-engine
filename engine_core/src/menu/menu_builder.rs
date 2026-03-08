@@ -191,14 +191,6 @@ impl MenuBuilder {
         self
     }
 
-    /// Adds vertical or horizontal spacing.
-    pub fn spacer(mut self, size: f32) -> Self {
-        let rect = self.compute_spacer_rect(size);
-        self.elements.push(MenuElement::spacer(size, rect));
-        self.advance_cursor_by(size);
-        self
-    }
-
     /// Adds a nested panel with its own layout.
     pub fn panel<F>(mut self, build_fn: F) -> Self
     where
@@ -237,9 +229,6 @@ impl MenuBuilder {
                     rect: element.rect,
                     action: button.action,
                 },
-                MenuElementKind::Spacer(spacer) => MenuItem::Spacer {
-                    height: spacer.size,
-                },
                 MenuElementKind::Panel(_) => MenuItem::Spacer { height: 0.0 },
             }
         }).collect();
@@ -261,21 +250,6 @@ impl MenuBuilder {
             }
             LayoutDirection::Grid { .. } => {
                 (self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
-            }
-        };
-        self.normalize_rect(x, y, w, h)
-    }
-
-    fn compute_spacer_rect(&self, size: f32) -> Rect {
-        let (x, y, w, h) = match self.layout.direction {
-            LayoutDirection::Vertical => {
-                (self.x_cursor, self.y_cursor, self.layout.item_width, size)
-            }
-            LayoutDirection::Horizontal => {
-                (self.x_cursor, self.y_cursor, size, self.layout.item_height)
-            }
-            LayoutDirection::Grid { .. } => {
-                (self.x_cursor, self.y_cursor, size, size)
             }
         };
         self.normalize_rect(x, y, w, h)
@@ -305,20 +279,6 @@ impl MenuBuilder {
                     self.x_cursor = 0.0;
                     self.y_cursor += self.layout.item_height + self.layout.spacing;
                 }
-            }
-        }
-    }
-
-    fn advance_cursor_by(&mut self, amount: f32) {
-        match self.layout.direction {
-            LayoutDirection::Vertical => {
-                self.y_cursor += amount;
-            }
-            LayoutDirection::Horizontal => {
-                self.x_cursor += amount;
-            }
-            LayoutDirection::Grid { .. } => {
-                self.y_cursor += amount;
             }
         }
     }

@@ -14,7 +14,6 @@ pub struct PropertiesWidgetIds {
     font_size_id: WidgetId,
     action_id: WidgetId,
     action_param_id: WidgetId,
-    spacer_size_id: WidgetId,
     pos_x_id: WidgetId,
     pos_y_id: WidgetId,
     size_w_id: WidgetId,
@@ -92,9 +91,6 @@ impl MenuEditor {
             }
             MenuElementKind::Button(_) => {
                 self.draw_button_properties(ctx, &mut y, content_x, content_w, blocked);
-            }
-            MenuElementKind::Spacer(_) => {
-                self.draw_spacer_properties(ctx, &mut y, content_x, content_w, blocked);
             }
             MenuElementKind::Panel(_) => {
                 self.draw_panel_properties(ctx, &mut y, content_x, content_w, blocked);
@@ -384,44 +380,6 @@ impl MenuEditor {
             .collect()
     }
 
-    fn draw_spacer_properties(
-        &mut self,
-        ctx: &mut WgpuContext,
-        y: &mut f32,
-        x: f32,
-        _w: f32,
-        blocked: bool,
-    ) {
-        let current_size = {
-            let Some(element) = self.selected_element() else { return };
-            let MenuElementKind::Spacer(spacer) = &element.kind else { return };
-            spacer.size
-        };
-
-        ctx.draw_text("Size:", x, *y + 16.0, 12.0, Color::WHITE);
-
-        let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
-
-        let new_size = NumberInput::new(
-            self.properties_panel.widget_ids.spacer_size_id, 
-            field_rect, 
-            current_size
-        )
-            .blocked(blocked)
-            .min(1.0)
-            .max(500.0)
-            .show(ctx);
-
-        if (new_size - current_size).abs() > 0.01 {
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Spacer(spacer) = &mut element.kind {
-                    spacer.size = new_size;
-                }
-            }
-        }
-        *y += ROW_HEIGHT;
-    }
-
     fn draw_panel_properties(
         &mut self,
         ctx: &mut WgpuContext,
@@ -537,7 +495,6 @@ impl MenuEditor {
                 };
                 ROW_HEIGHT * 3.0 + param_row + 28.0 + ROW_HEIGHT * 4.0
             }
-            Some(MenuElementKind::Spacer(_)) => ROW_HEIGHT,
             Some(MenuElementKind::Panel(_)) => ROW_HEIGHT,
             None => 0.0,
         };

@@ -140,7 +140,6 @@ impl MenuEditor {
         let default_size = match &kind {
             MenuElementKind::Label(_) => Vec2::new(0.10, 0.03),
             MenuElementKind::Button(_) => Vec2::new(0.10, 0.037),
-            MenuElementKind::Spacer(s) => Vec2::new(0.10, s.size),
             MenuElementKind::Panel(_) => Vec2::new(0.16, 0.185),
         };
 

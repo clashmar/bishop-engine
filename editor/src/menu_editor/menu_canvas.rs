@@ -131,7 +131,13 @@ impl MenuEditor {
         }
     }
 
-    fn draw_element(&self, ctx: &mut WgpuContext, element: &MenuElement, screen_rect: Rect, is_selected: bool) {
+    fn draw_element(
+        &self, 
+        ctx: &mut WgpuContext, 
+        element: &MenuElement, 
+        screen_rect: Rect, 
+        is_selected: bool
+    ) {
         let bg_color = if is_selected {
             Color::new(0.4, 0.5, 0.7, 0.8)
         } else {
@@ -164,7 +170,6 @@ impl MenuEditor {
         let text = match &element.kind {
             MenuElementKind::Label(label) => label.text.as_str(),
             MenuElementKind::Button(button) => button.text.as_str(),
-            MenuElementKind::Spacer(_) => "[Spacer]",
             MenuElementKind::Panel(_) => "[Panel]",
         };
 
