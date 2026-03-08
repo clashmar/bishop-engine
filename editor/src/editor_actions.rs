@@ -32,7 +32,7 @@ impl Default for Editor {
             menu_editor: MenuEditor::new(),
             cur_world_id: None,
             cur_room_id: None,
-            render_system: RenderSystem::new(),
+            render_system: RenderSystem::with_default_grid_size(),
             menu_bar: MenuBar::new(),
             modal: Modal::default(),
             toast: None,

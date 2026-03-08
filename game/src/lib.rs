@@ -4,7 +4,6 @@ pub mod engine;
 pub mod game_global;
 pub mod game_instance;
 pub mod input;
-pub mod menu_handler;
 pub mod physics;
 pub mod screen_space;
 pub mod scripting;
