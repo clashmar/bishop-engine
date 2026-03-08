@@ -53,10 +53,12 @@ use std::rc::Rc;
 #[cfg(feature = "wgpu")]
 pub use wgpu::WgpuContext;
 
-/// Combined context trait for widgets that need input, drawing, text, camera, window, and time.
-pub trait BishopContext: Input + Draw + Text + Camera + Window + Time {}
+use material::RenderOps;
 
-impl<T: Input + Draw + Text + Camera + Window + Time> BishopContext for T {}
+/// Combined context trait for widgets that need input, drawing, text, camera, window, time, and render operations.
+pub trait BishopContext: Input + Draw + Text + Camera + Window + Time + RenderOps {}
+
+impl<T: Input + Draw + Text + Camera + Window + Time + RenderOps> BishopContext for T {}
 
 /// Trait for applications that can be run by bishop.
 pub trait BishopApp {

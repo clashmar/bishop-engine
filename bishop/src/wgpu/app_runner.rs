@@ -137,9 +137,9 @@ impl<A: BishopApp + 'static> ApplicationHandler for WgpuAppRunner<A> {
                     if let Err(e) = ctx.borrow_mut().render_frame() {
                         eprintln!("Render error: {e}");
                     }
-                }
-                if let Some(window) = &self.window {
-                    window.request_redraw();
+                    if let Some(window) = &self.window {
+                        window.request_redraw();
+                    }
                 }
             }
             _ => {}

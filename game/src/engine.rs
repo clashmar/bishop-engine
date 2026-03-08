@@ -205,6 +205,7 @@ impl Engine {
         };
 
         self.render_system.resize_for_camera(render_cam.zoom);
+        self.render_system.begin_scene(ctx);
 
         render_room(
             ctx,
@@ -218,6 +219,7 @@ impl Engine {
             grid_size,
         );
 
+        self.render_system.end_scene(ctx);
         self.render_system.present_game(ctx);
 
         render_screen_space(

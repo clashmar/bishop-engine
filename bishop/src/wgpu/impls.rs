@@ -7,6 +7,7 @@ use super::render::FontAtlas;
 use crate::camera::{Camera, Camera2D};
 use crate::draw::{Draw, DrawTextureParams};
 use crate::input::{Input, KeyCode, MouseButton};
+use crate::material::RenderOps;
 use crate::text::{Text, TextDimensions};
 use crate::time::Time;
 use crate::types::{Color, Texture2D, Vec2};
@@ -180,6 +181,35 @@ impl Camera for WgpuContext {
         height: u32,
     ) -> super::render::BishopRenderTarget {
         WgpuContext::create_render_target(self, width, height)
+    }
+}
+
+impl RenderOps for WgpuContext {
+    fn begin_render_to_target(&mut self, rt: &super::render::BishopRenderTarget) {
+        WgpuContext::begin_render_to_target(self, rt);
+    }
+
+    fn end_render_to_target(&mut self) {
+        WgpuContext::end_render_to_target(self);
+    }
+
+    fn draw_render_target(
+        &mut self,
+        rt: &super::render::BishopRenderTarget,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+    ) {
+        WgpuContext::draw_render_target(self, rt, x, y, w, h);
+    }
+
+    fn create_drawable_render_target(
+        &self,
+        width: u32,
+        height: u32,
+    ) -> super::render::BishopRenderTarget {
+        WgpuContext::create_drawable_render_target(self, width, height)
     }
 }
 

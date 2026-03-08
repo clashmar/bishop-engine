@@ -1,23 +1,13 @@
 // engine_core/src/rendering/render_system_wgpu.rs
-// Wgpu-specific implementation of RenderSystem.
-// NOTE: Multi-pass rendering temporarily disabled while rewiring codebase.
 
 use crate::prelude::*;
 use bishop::prelude::*;
 
-// TODO: Re-enable multi-pass rendering imports
-// use bishop::prelude::*;
-// use bishop::wgpu::{
-//     AmbientMaterial, BishopRenderTarget, FinalCompositeMaterial,
-//     FullscreenQuadRenderer, GlowData, GlowMaterial, GlowUniforms, SceneCompositeMaterial,
-//     SpotLightData, SpotMaterial, SpotUniforms, UndarkenedMaterial, WgpuContext, Texture
-// };
-
 /// Max lights per layer.
 pub const MAX_LIGHTS: usize = 10;
 
-/// Simplified render system for direct drawing.
-/// Multi-pass rendering is temporarily disabled.
+/// Render system that draws the game scene to an offscreen target and scales it to the window.
+/// Multi-pass lighting is temporarily disabled.
 pub struct RenderSystem {
     /// Current render target width
     pub rt_width: f32,
@@ -25,35 +15,18 @@ pub struct RenderSystem {
     pub rt_height: f32,
     /// Time spent rendering last frame (ms)
     pub render_time_ms: f32,
-
-    // TODO: Re-enable multi-pass rendering fields
-    // pub scene_rt: BishopRenderTarget,
-    // pub ambient_rt: BishopRenderTarget,
-    // pub glow_rt: BishopRenderTarget,
-    // pub undarkened_rt: BishopRenderTarget,
-    // pub spot_rt: BishopRenderTarget,
-    // pub mask_rt: BishopRenderTarget,
-    // pub scene_comp_rt: BishopRenderTarget,
-    // pub final_comp_rt: BishopRenderTarget,
-    // ambient_mat: AmbientMaterial,
-    // glow_mat: GlowMaterial,
-    // undarkened_mat: UndarkenedMaterial,
-    // spot_mat: SpotMaterial,
-    // scene_comp_mat: SceneCompositeMaterial,
-    // final_comp_mat: FinalCompositeMaterial,
-    // fullscreen_quad: FullscreenQuadRenderer,
-    // placeholder_texture: Texture,
-    // placeholder_view: TextureView,
-    // placeholder_sampler: Sampler,
+    /// Offscreen render target at virtual resolution for scene rendering.
+    scene_rt: Option<BishopRenderTarget>,
 }
 
 impl RenderSystem {
-    /// Create a new simplified render system with the given dimensions.
+    /// Create a new render system with the given dimensions.
     fn new(width: f32, height: f32) -> Self {
         Self {
             rt_width: width,
             rt_height: height,
             render_time_ms: 0.0,
+            scene_rt: None,
         }
     }
 
@@ -69,50 +42,54 @@ impl RenderSystem {
         Self::with_grid_size(16.0)
     }
 
-    // TODO: Re-enable multi-pass rendering constructor
-    // pub fn with_grid_size_wgpu(ctx: &WgpuContext, grid_size: f32) -> Self { ... }
+    /// Begins rendering to the offscreen scene render target at virtual resolution.
+    /// Lazily creates or resizes the render target as needed.
+    pub fn begin_scene<C: BishopContext>(&mut self, ctx: &mut C) {
+        let w = self.rt_width as u32;
+        let h = self.rt_height as u32;
 
-    // TODO: Re-enable multi-pass rendering passes
-    // pub fn run_ambient_pass<C: BishopContext>(&mut self, ctx: &mut C, darkness: f32) { ... }
-    // pub fn run_glow_pass<C: BishopContext>(...) { ... }
-    // pub fn run_undarkened_pass<C: BishopContext>(&mut self, ctx: &mut C) { ... }
-    // pub fn run_spotlight_pass<C: BishopContext>(...) { ... }
-    // pub fn run_scene_pass<C: BishopContext>(&mut self, ctx: &mut C) { ... }
-    // pub fn run_final_pass<C: BishopContext>(&mut self, ctx: &mut C) { ... }
+        let needs_create = match &self.scene_rt {
+            Some(rt) => rt.width() != w || rt.height() != h,
+            None => true,
+        };
 
-    /// Presents the final visual of the game with hybrid scaling.
-    /// Uses fractional scale to fill screen while maintaining aspect ratio, minimizing letterboxing.
-    pub fn present_game<C: BishopContext>(
-        &self,
-        ctx: &mut C, 
-    ) {
-        // TODO Re-enable
+        if needs_create {
+            self.scene_rt = Some(ctx.create_drawable_render_target(w, h));
+        }
+
+        if let Some(rt) = &self.scene_rt {
+            ctx.begin_render_to_target(rt);
+        }
+    }
+
+    /// Ends rendering to the offscreen scene render target.
+    pub fn end_scene<C: BishopContext>(&self, ctx: &mut C) {
+        if self.scene_rt.is_some() {
+            ctx.end_render_to_target();
+        }
+    }
+
+    /// Presents the scene render target scaled to the window with aspect-ratio-preserving letterboxing.
+    pub fn present_game<C: BishopContext>(&self, ctx: &mut C) {
+        let Some(rt) = &self.scene_rt else {
+            return;
+        };
+
         ctx.set_default_camera();
-        // let tex = &self.final_comp_rt.texture;
 
-        // let virt_w = self.rt_width;
-        // let virt_h = self.rt_height;
-        // let win_w = ctx.screen_width();
-        // let win_h = ctx.screen_height();
+        let virt_w = self.rt_width;
+        let virt_h = self.rt_height;
+        let win_w = ctx.screen_width();
+        let win_h = ctx.screen_height();
 
-        // // Hybrid scaling: use fractional scale to fill screen while maintaining aspect ratio
-        // let scale = (win_w / virt_w).min(win_h / virt_h);
-        // let scaled_w = virt_w * scale;
-        // let scaled_h = virt_h * scale;
+        let scale = (win_w / virt_w).min(win_h / virt_h);
+        let scaled_w = virt_w * scale;
+        let scaled_h = virt_h * scale;
 
-        // let offset_x = ((win_w - scaled_w) / 2.0).floor();
-        // let offset_y = ((win_h - scaled_h) / 2.0).floor();
+        let offset_x = ((win_w - scaled_w) / 2.0).floor();
+        let offset_y = ((win_h - scaled_h) / 2.0).floor();
 
-        // ctx.draw_texture_ex(
-        //     tex,
-        //     offset_x,
-        //     offset_y,
-        //     Color::WHITE,
-        //     DrawTextureParams {
-        //         dest_size: Some(Vec2::new(scaled_w, scaled_h)),
-        //         ..Default::default()
-        //     },
-        // );
+        ctx.draw_render_target(rt, offset_x, offset_y, scaled_w, scaled_h);
     }
 
     /// Re-creates every render target with the supplied size.
