@@ -4,7 +4,7 @@ mod menu_manager;
 mod input_binding;
 mod menu_navigation;
 mod menu_template;
-mod menu_action_handler;
+mod menu_handler;
 pub mod elements;
 pub mod layout;
 
@@ -15,6 +15,6 @@ pub use menu_manager::*;
 pub use input_binding::*;
 pub use menu_navigation::*;
 pub use menu_template::*;
-pub use menu_action_handler::*;
+pub use menu_handler::*;
 pub use elements::*;
 pub use layout::*;

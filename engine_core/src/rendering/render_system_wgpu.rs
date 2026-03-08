@@ -49,7 +49,7 @@ pub struct RenderSystem {
 
 impl RenderSystem {
     /// Create a new simplified render system with the given dimensions.
-    pub fn new_simple(width: f32, height: f32) -> Self {
+    fn new(width: f32, height: f32) -> Self {
         Self {
             rt_width: width,
             rt_height: height,
@@ -61,11 +61,11 @@ impl RenderSystem {
     pub fn with_grid_size(grid_size: f32) -> Self {
         let width = world_virtual_width(grid_size);
         let height = world_virtual_height(grid_size);
-        Self::new_simple(width, height)
+        Self::new(width, height)
     }
 
     /// Create a new render system with default grid size (16.0).
-    pub fn new() -> Self {
+    pub fn with_default_grid_size() -> Self {
         Self::with_grid_size(16.0)
     }
 
@@ -165,6 +165,6 @@ impl RenderSystem {
 
 impl Default for RenderSystem {
     fn default() -> Self {
-        Self::new()
+        Self::with_default_grid_size()
     }
 }
