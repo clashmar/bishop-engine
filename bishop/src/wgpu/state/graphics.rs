@@ -74,7 +74,7 @@ impl GraphicsState {
             present_mode: wgpu::PresentMode::Fifo,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 1,
+            desired_maximum_frame_latency: 2,
         };
 
         surface.configure(&device, &config);
@@ -98,6 +98,11 @@ impl GraphicsState {
             self.config.height = height;
             self.surface.configure(&self.device, &self.config);
         }
+    }
+
+    /// Reconfigures the surface with current settings without changing size.
+    pub fn reconfigure(&self) {
+        self.surface.configure(&self.device, &self.config);
     }
 }
 
