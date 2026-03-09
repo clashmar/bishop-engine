@@ -33,6 +33,8 @@ pub struct Engine {
     pub is_playtest: bool,
     /// Accumulator for fixed timestep updates.
     pub accumulator: f32,
+    /// Exponential moving average of frame time, used to smooth accumulator input.
+    pub smoothed_dt: Option<f32>,
 }
 
 /// Represents the current state of the active game.
@@ -44,26 +46,27 @@ pub enum GameState {
 
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
-        let dt = ctx.borrow().get_frame_time();
+        let raw_dt = ctx.borrow().get_frame_time();
+        let smoothed_dt = smooth_dt(&mut self.smoothed_dt, raw_dt, 0.8);
 
         // Handle menu input first
         self.menu.handle_input(&mut *ctx.borrow_mut());
         self.update_game_state();
 
         if self.is_playtest {
-            self.diagnostics.update(dt);
+            self.diagnostics.update(raw_dt);
             self.diagnostics.handle_input(&mut *ctx.borrow_mut());
         }
 
         if self.game_state == GameState::Running {
-            self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
+            self.accumulator = (self.accumulator + smoothed_dt).min(MAX_ACCUM);
 
             while self.accumulator >= FIXED_DT {
                 self.accumulator -= FIXED_DT;
                 self.fixed_update(&mut *ctx.borrow_mut(), FIXED_DT);
             }
 
-            self.update_async(dt).await;
+            self.update_async(raw_dt).await;
         }
 
         if self.is_playtest {
@@ -108,6 +111,7 @@ impl Engine {
             menu,
             is_playtest,
             accumulator: 0.0,
+            smoothed_dt: None,
         }
     }
 
