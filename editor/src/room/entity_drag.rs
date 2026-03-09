@@ -3,7 +3,6 @@ use crate::ecs::component_registry::ComponentRegistry;
 use crate::room::room_editor::*;
 use crate::room::selection::*;
 use crate::commands::room::*;
-use crate::room::drawing::*;
 use crate::editor_global::*;
 use crate::world::coord;
 use std::collections::{HashMap, HashSet};

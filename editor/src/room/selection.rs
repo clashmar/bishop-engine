@@ -2,6 +2,7 @@
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::gui::modal::is_modal_open;
 use crate::room::room_editor::*;
+use crate::world::coord;
 use std::collections::HashSet;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -103,6 +104,75 @@ impl RoomEditor {
             }
         }
     }
+}
+
+/// Returns a `Rect` hitbox for an entity based on its sprite if it has one,
+/// otherwise it returns a hitbox based on the default sprite dimensions.
+pub fn entity_hitbox(
+    ctx: &WgpuContext,
+    entity: Entity,
+    position: Vec2,
+    camera: &Camera2D,
+    ecs: &Ecs,
+    asset_manager: &mut AssetManager,
+    grid_size: f32,
+) -> Rect {
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
+
+    // Only use the center-offset for pure placeholder entities (Camera/Light without sprites)
+    let is_pure_placeholder = ecs.has::<RoomCamera>(entity)
+        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
+
+    let corrected_pos = if is_pure_placeholder {
+        position - vec2(grid_size * 0.5, grid_size * 0.5)
+    } else {
+        // Apply pivot offset for regular entities
+        let pivot = ecs
+            .get_store::<Transform>()
+            .get(entity)
+            .map(|t| t.pivot)
+            .unwrap_or(Pivot::TopLeft);
+        pivot_adjusted_position(position, vec2(width, height), pivot)
+    };
+
+    // Convert the two opposite corners of the entity to screen coords
+    let top_left = coord::world_to_screen(ctx, camera, corrected_pos);
+    let bottom_right = coord::world_to_screen(ctx, camera, corrected_pos + vec2(width, height));
+
+    // Build the rectangle from those screen‑space points
+    let rect_x = top_left.x.min(bottom_right.x);
+    let rect_y = top_left.y.min(bottom_right.y);
+    let rect_w = (bottom_right.x - top_left.x).abs();
+    let rect_h = (bottom_right.y - top_left.y).abs();
+
+    Rect::new(rect_x, rect_y, rect_w, rect_h)
+}
+
+/// Returns a world-space Rect for an entity based on its sprite or placeholder size.
+pub fn entity_world_rect(
+    entity: Entity,
+    position: Vec2,
+    ecs: &Ecs,
+    asset_manager: &mut AssetManager,
+    grid_size: f32,
+) -> Rect {
+    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
+
+    let is_placeholder = ecs.has::<RoomCamera>(entity)
+        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
+
+    let corrected_pos = if is_placeholder {
+        position - vec2(grid_size * 0.5, grid_size * 0.5)
+    } else {
+        let pivot = ecs
+            .get_store::<Transform>()
+            .get(entity)
+            .map(|t| t.pivot)
+            .unwrap_or(Pivot::TopLeft);
+        pivot_adjusted_position(position, vec2(width, height), pivot)
+    };
+
+    Rect::new(corrected_pos.x, corrected_pos.y, width, height)
 }
 
 /// Returns true if an entity can be selected in a room (is in the room).

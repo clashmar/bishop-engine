@@ -7,6 +7,7 @@ pub fn lerp_rounded(prev_pos: Vec2, current_pos: Vec2, alpha: f32) -> Vec2 {
 }
 
 /// Mitigates erratic dt by smoothing `raw_dt`, initializing from the first sample.
+/// `alpha` is the weight of the previous smoothed value (higher = smoother but slower to react). 
 #[inline]
 pub fn smooth_dt(smoothed_dt: &mut Option<f32>, raw_dt: f32, alpha: f32) -> f32 {
     let s = smoothed_dt.get_or_insert(raw_dt);

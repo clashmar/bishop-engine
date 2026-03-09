@@ -47,7 +47,7 @@ pub enum GameState {
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let raw_dt = ctx.borrow().get_frame_time();
-        let smoothed_dt = smooth_dt(&mut self.smoothed_dt, raw_dt, 0.8);
+        let smoothed_dt = smooth_dt(&mut self.smoothed_dt, raw_dt, 0.95);
 
         // Handle menu input first
         self.menu.handle_input(&mut *ctx.borrow_mut());
