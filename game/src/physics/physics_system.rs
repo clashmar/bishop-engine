@@ -50,6 +50,7 @@ pub fn update_physics(
         );
 
         let new_pos = pos_cur + sweep.allowed_delta;
+        onscreen_info!("{new_pos}");
         let mut new_vel = vel_cur;
 
         if sweep.blocked_x {

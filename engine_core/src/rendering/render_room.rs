@@ -312,7 +312,7 @@ fn interpolate_draw_position(
 ) -> Vec2 {
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
-            let interpolated = lerp(*prev_pos, current_pos, alpha).round();
+            let interpolated = lerp_floored(*prev_pos, current_pos, alpha);
             interpolated
         }
         else {
@@ -321,11 +321,6 @@ fn interpolate_draw_position(
     } else {
         current_pos
     }
-}
-
-#[inline]
-pub fn lerp(prev_pos: Vec2, current_pos: Vec2, alpha: f32) -> Vec2 {
-    prev_pos * (1.0 - alpha) + current_pos * alpha
 }
 
 /// Calculates draw position adjusted for pivot.

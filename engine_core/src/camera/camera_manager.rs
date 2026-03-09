@@ -140,10 +140,9 @@ impl CameraManager {
         }
     }
 
-    /// Returns the interpolated camera target for rendering, rounded for pixel-perfect alignment.
+    /// Returns the interpolated camera target for rendering.
     pub fn interpolated_target(&self, alpha: f32) -> Vec2 {
         let prev = self.previous_position.unwrap_or(self.active.camera.target);
-        let interpolated = (prev * (1.0 - alpha) + self.active.camera.target * alpha).round();
-        return interpolated;
+        lerp_floored(prev, self.active.camera.target, alpha)
     }
 }
