@@ -213,6 +213,33 @@ impl RoomEditor {
     }
 }
 
+/// Highlight a selected entity with a colored outline.
+pub fn highlight_selected_entity<C: BishopContext>(
+    ctx: &mut C,
+    ecs: &Ecs,
+    entity: Entity,
+    asset_manager: &mut AssetManager,
+    color: Color,
+    grid_size: f32,
+) {
+    let transform = match ecs.get_store::<Transform>().get(entity) {
+        Some(t) => t,
+        None => return,
+    };
+
+    // If this is a proxy, use Player's visual components for dimensions
+    let visual_entity = if ecs.has::<PlayerProxy>(entity) {
+        ecs.get_player_entity().unwrap_or(entity)
+    } else {
+        entity
+    };
+
+    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
+    let draw_pos = pivot_adjusted_position(transform.position, Vec2::new(width, height), transform.pivot);
+
+    ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 1.0, color);
+}
+
 /// Draw the outline of the collider for an entity if it has one.
 pub fn draw_collider(
     ctx: &mut WgpuContext, 
@@ -231,50 +258,8 @@ pub fn draw_collider(
 
             // Apply pivot offset to collider position
             let draw_pos = pivot_adjusted_position(transform.position, vec2(width, height), transform.pivot);
-            ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, Color::PINK);
+            ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 1.0, Color::PINK);
      }
-}
-
-/// Returns a `Rect` hitbox for an entity based on its sprite if it has one,
-/// otherwise it returns a hitbox based on the default sprite dimensions.
-pub fn entity_hitbox(
-    ctx: &WgpuContext,
-    entity: Entity,
-    position: Vec2,
-    camera: &Camera2D,
-    ecs: &Ecs,
-    asset_manager: &mut AssetManager,
-    grid_size: f32,
-) -> Rect {
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
-
-    // Only use the center-offset for pure placeholder entities (Camera/Light without sprites)
-    let is_pure_placeholder = ecs.has::<RoomCamera>(entity)
-        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
-
-    let corrected_pos = if is_pure_placeholder {
-        position - vec2(grid_size * 0.5, grid_size * 0.5)
-    } else {
-        // Apply pivot offset for regular entities
-        let pivot = ecs
-            .get_store::<Transform>()
-            .get(entity)
-            .map(|t| t.pivot)
-            .unwrap_or(Pivot::TopLeft);
-        pivot_adjusted_position(position, vec2(width, height), pivot)
-    };
-
-    // Convert the two opposite corners of the entity to screen coords
-    let top_left = coord::world_to_screen(ctx, camera, corrected_pos);
-    let bottom_right = coord::world_to_screen(ctx, camera, corrected_pos + vec2(width, height));
-
-    // Build the rectangle from those screen‑space points
-    let rect_x = top_left.x.min(bottom_right.x);
-    let rect_y = top_left.y.min(bottom_right.y);
-    let rect_w = (bottom_right.x - top_left.x).abs();
-    let rect_h = (bottom_right.y - top_left.y).abs();
-
-    Rect::new(rect_x, rect_y, rect_w, rect_h)
 }
 
 /// Draw an icon for a `RoomCamera`.
@@ -564,33 +549,6 @@ pub fn draw_selection_box(ctx: &mut WgpuContext, start: Vec2, end: Vec2) {
     ctx.draw_rectangle(min_x, min_y, width, height, Color::new(1.0, 1.0, 0.0, 0.1));
     // Yellow outline
     ctx.draw_rectangle_lines(min_x, min_y, width, height, 1.0, Color::YELLOW);
-}
-
-/// Returns a world-space Rect for an entity based on its sprite or placeholder size.
-pub fn entity_world_rect(
-    entity: Entity,
-    position: Vec2,
-    ecs: &Ecs,
-    asset_manager: &mut AssetManager,
-    grid_size: f32,
-) -> Rect {
-    let (width, height) = entity_dimensions(ecs, asset_manager, entity, grid_size);
-
-    let is_placeholder = ecs.has::<RoomCamera>(entity)
-        || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity));
-
-    let corrected_pos = if is_placeholder {
-        position - vec2(grid_size * 0.5, grid_size * 0.5)
-    } else {
-        let pivot = ecs
-            .get_store::<Transform>()
-            .get(entity)
-            .map(|t| t.pivot)
-            .unwrap_or(Pivot::TopLeft);
-        pivot_adjusted_position(position, vec2(width, height), pivot)
-    };
-
-    Rect::new(corrected_pos.x, corrected_pos.y, width, height)
 }
 
 /// Draw an exit arrow with a specified color.

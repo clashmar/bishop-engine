@@ -172,10 +172,20 @@ impl Default for Collider {
     }
 }
 
+/// Accumulated sub-pixel remainder for pixel-perfect physics.
+#[ecs_component]
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct SubPixel {
+    #[serde(skip)]
+    pub x: f32,
+    #[serde(skip)]
+    pub y: f32,
+}
+
 /// Marker for participation in the physics system.
-#[ecs_component(deps = [Grounded])]
+#[ecs_component(deps = [Grounded, SubPixel])]
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
-pub struct PhysicsBody;  
+pub struct PhysicsBody;
 
 /// Marker for entities that move by code.
 #[ecs_component]

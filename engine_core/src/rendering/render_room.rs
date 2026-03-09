@@ -161,33 +161,6 @@ fn draw_entity<C: BishopContext>(
     draw_entity_placeholder(ctx, draw_base, grid_size);
 }
 
-/// Highlight a selected entity with a colored outline.
-pub fn highlight_selected_entity<C: BishopContext>(
-    ctx: &mut C,
-    ecs: &Ecs,
-    entity: Entity,
-    asset_manager: &mut AssetManager,
-    color: Color,
-    grid_size: f32,
-) {
-    let transform = match ecs.get_store::<Transform>().get(entity) {
-        Some(t) => t,
-        None => return,
-    };
-
-    // If this is a proxy, use Player's visual components for dimensions
-    let visual_entity = if ecs.has::<PlayerProxy>(entity) {
-        ecs.get_player_entity().unwrap_or(entity)
-    } else {
-        entity
-    };
-
-    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
-    let draw_pos = pivot_adjusted_position(transform.position, Vec2::new(width, height), transform.pivot);
-
-    ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 2.0, color);
-}
-
 /// Get the dimensions of an entity for rendering.
 pub fn entity_dimensions(
     ecs: &Ecs,

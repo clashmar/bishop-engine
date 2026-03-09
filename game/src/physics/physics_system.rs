@@ -32,16 +32,25 @@ pub fn update_physics(
             (t.position, t.pivot, *v, c)
         };
 
+        let mut sub_pixel = ecs
+            .get::<SubPixel>(entity)
+            .copied()
+            .unwrap_or_default();
+
         vel_cur.y += GRAVITY * dt;
 
         let delta = Vec2::new(vel_cur.x * dt, vel_cur.y * dt);
+
+        // Sweep from the true float position (integer + sub-pixel remainder)
+        // so collision detection measures distances correctly.
+        let true_pos = pos_cur + Vec2::new(sub_pixel.x, sub_pixel.y);
 
         let sweep = sweep_move(
             asset_manager,
             ecs,
             tilemap,
             room.position,
-            pos_cur,
+            true_pos,
             delta,
             collider,
             pivot,
@@ -49,26 +58,33 @@ pub fn update_physics(
             grid_size,
         );
 
-        let new_pos = (pos_cur + sweep.allowed_delta).floor();
-        let mut new_vel = vel_cur;
+        // Snap to integer positions, storing the fractional part for next frame.
+        let new_true_pos = true_pos + sweep.allowed_delta;
+        let new_int_pos = new_true_pos.round();
 
+        sub_pixel.x = new_true_pos.x - new_int_pos.x;
+        sub_pixel.y = new_true_pos.y - new_int_pos.y;
+
+        let was_falling = vel_cur.y >= 0.0;
+
+        // On collision, zero out velocity and discard sub-pixel remainder
         if sweep.blocked_x {
-            new_vel.x = 0.0;
+            vel_cur.x = 0.0;
+            sub_pixel.x = 0.0;
         }
         if sweep.blocked_y {
-            new_vel.y = 0.0;
+            vel_cur.y = 0.0;
+            sub_pixel.y = 0.0;
         }
 
-        update_entity_position(ecs, entity, new_pos);
+        update_entity_position(ecs, entity, new_int_pos);
+        *ecs.get_mut::<Velocity>(entity).unwrap() = vel_cur;
 
-        {
-            let vel_mut = ecs.get_mut::<Velocity>(entity).unwrap();
-            *vel_mut = new_vel;
+        if let Some(sp) = ecs.get_mut::<SubPixel>(entity) {
+            *sp = sub_pixel;
         }
-
-        // Grounded when blocked_y while moving down
         if let Some(grounded) = ecs.get_mut::<Grounded>(entity) {
-            grounded.0 = sweep.blocked_y && vel_cur.y >= 0.0;
+            grounded.0 = sweep.blocked_y && was_falling;
         }
     }
 }
