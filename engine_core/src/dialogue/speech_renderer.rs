@@ -1,5 +1,6 @@
 // engine_core/src/dialogue/speech_renderer.rs
 use crate::rendering::render_room::entity_dimensions;
+use crate::rendering::helpers::lerp_rounded;
 use crate::assets::asset_manager::AssetManager;
 use crate::ecs::component::CurrentRoom;
 use crate::ecs::transform::Transform;
@@ -7,9 +8,9 @@ use crate::camera::game_camera::*;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
-use crate::{dialogue::*, onscreen_debug};
+use crate::dialogue::*;
 use crate::ui::text::*;
-use crate::logging::*;
+use crate::ecs::Pivot;
 use std::collections::HashMap;
 use bishop::prelude::*;
 
@@ -19,7 +20,7 @@ pub struct SpeechBubbleRenderData {
     pub world_pos: Vec2,
     pub entity_width: f32,
     pub entity_height: f32,
-    pub pivot: crate::ecs::transform::Pivot,
+    pub pivot: Pivot,
     pub color: [f32; 4],
     pub offset: (f32, f32),
     pub font_size: Option<f32>,
@@ -186,7 +187,6 @@ fn render_bubble_screen_space<C: BishopContext>(
     );
 
     for (i, line) in lines.iter().enumerate() {
-        onscreen_debug!("{line}");
         let line_width = measure_text(ctx, line, font_size).width;
         let text_x = bubble_x + (bubble_width - line_width) / 2.0;
         let text_y = bubble_y + padding + (i as f32 + 1.0) * line_height - line_height * 0.2;
@@ -242,7 +242,7 @@ fn interpolate_position(
 ) -> Vec2 {
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
-            return *prev_pos + (current_pos - *prev_pos) * alpha;
+            return lerp_rounded(*prev_pos, current_pos, alpha);
         }
     }
     current_pos

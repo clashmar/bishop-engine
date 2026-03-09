@@ -130,6 +130,8 @@ fn modifier_not_pressed(ctx: &WgpuContext) -> bool {
     && !ctx.is_key_down(KeyCode::RightShift)
     && !ctx.is_key_down(KeyCode::LeftAlt)
     && !ctx.is_key_down(KeyCode::RightAlt)
+    && !ctx.is_key_down(KeyCode::LeftSuper)
+    && !ctx.is_key_down(KeyCode::RightSuper)
 }
 
 pub fn get_omni_input(ctx: &WgpuContext) -> Vec2 {

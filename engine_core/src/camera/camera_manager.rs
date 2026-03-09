@@ -143,6 +143,6 @@ impl CameraManager {
     /// Returns the interpolated camera target for rendering.
     pub fn interpolated_target(&self, alpha: f32) -> Vec2 {
         let prev = self.previous_position.unwrap_or(self.active.camera.target);
-        lerp_floored(prev, self.active.camera.target, alpha)
+        lerp_rounded(prev, self.active.camera.target, alpha)
     }
 }

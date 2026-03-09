@@ -312,7 +312,7 @@ fn interpolate_draw_position(
 ) -> Vec2 {
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
-            let interpolated = lerp_floored(*prev_pos, current_pos, alpha);
+            let interpolated = lerp_rounded(*prev_pos, current_pos, alpha);
             interpolated
         }
         else {
