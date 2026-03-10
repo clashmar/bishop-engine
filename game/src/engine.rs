@@ -47,7 +47,8 @@ pub enum GameState {
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let raw_dt = ctx.borrow().get_frame_time();
-        let smoothed_dt = smooth_dt(&mut self.smoothed_dt, raw_dt, 0.95);
+        let smoothed = smooth_dt(&mut self.smoothed_dt, raw_dt, 0.9);
+        let dt = snap_dt(smoothed);
 
         // Handle menu input first
         self.menu.handle_input(&mut *ctx.borrow_mut());
@@ -59,7 +60,7 @@ impl BishopApp for Engine {
         }
 
         if self.game_state == GameState::Running {
-            self.accumulator = (self.accumulator + smoothed_dt).min(MAX_ACCUM);
+            self.accumulator = (self.accumulator + dt).min(MAX_ACCUM);
 
             while self.accumulator >= FIXED_DT {
                 self.accumulator -= FIXED_DT;

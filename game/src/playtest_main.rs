@@ -112,8 +112,9 @@ fn main() -> Result<(), RunError> {
     let height = FIXED_WINDOW_HEIGHT.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
 
     let config = WindowConfig::new("Playtest")
-        .with_size(width as u32, height as u32)
-        .with_resizable(true);
+        .with_fullscreen(true);
+        // .with_size(width as u32, height as u32)
+        // .with_resizable(true);
 
     let app = PlaytestApp::new(payload_path);
     run_backend(config, app)
