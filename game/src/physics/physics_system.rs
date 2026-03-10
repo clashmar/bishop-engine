@@ -58,7 +58,7 @@ pub fn update_physics(
             grid_size,
         );
 
-        // Snap to integer positions, storing the fractional part for next frame.
+        // Snap to integer positions, storing the fractional part for next frame
         let new_true_pos = true_pos + sweep.allowed_delta;
         let new_int_pos = new_true_pos.round();
 

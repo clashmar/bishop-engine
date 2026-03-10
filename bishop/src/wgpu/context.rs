@@ -95,6 +95,9 @@ impl WgpuContext {
 
     /// Prepares for a new frame by clearing per-frame state.
     pub fn begin_frame(&mut self) {
+        // Measure timing before surface acquire to avoid double-buffer jitter
+        self.time.begin_frame();
+
         // Proactively resize if the window size changed (e.g. fullscreen transition)
         // before the Resized event arrives, avoiding stale-size reconfigures.
         let inner = self.window.inner_size();
@@ -135,9 +138,7 @@ impl WgpuContext {
             }
         }
 
-        // Now measure timing
         self.input.begin_frame();
-        self.time.begin_frame();
 
         // Clear state
         self.clear_color = None;
