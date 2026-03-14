@@ -60,6 +60,12 @@ pub const IS_SPEAKING: &str = "is_speaking";
 // Dialogue module
 pub const DIALOGUE: &str = "dialogue";
 pub const DIALOGUE_FILE: &str = "dialogue.lua";
+
+// Menu module
+pub const LUA_MENU: &str = "menu";
+pub const MENU_FILE: &str = "menu.lua";
+pub const OPEN_MENU: &str = "open";
+pub const CLOSE_MENU: &str = "close";
 pub const SET_LANGUAGE: &str = "set_language";
 pub const GET_LANGUAGE: &str = "get_language";
 pub const GET_LANGUAGES: &str = "get_languages";

@@ -28,7 +28,7 @@ pub struct Engine {
     /// Runtime diagnostics overlay (playtest only).
     pub diagnostics: DiagnosticsOverlay,
     /// Menu system for pause and overlay menus.
-    pub menu: MenuManager,
+    pub menu_manager: MenuManager,
     /// Whether the engine is running in playtest mode.
     pub is_playtest: bool,
     /// Accumulator for fixed timestep updates.
@@ -51,7 +51,7 @@ impl BishopApp for Engine {
         let dt = snap_dt(smoothed);
 
         // Handle menu input first
-        self.menu.handle_input(&mut *ctx.borrow_mut());
+        self.menu_manager.handle_input(&mut *ctx.borrow_mut());
         self.update_game_state();
 
         if self.is_playtest {
@@ -71,20 +71,23 @@ impl BishopApp for Engine {
         }
 
         if self.is_playtest {
-            self.update_diagnostics_metrics();
+            self.diagnostics.update_from_game(
+                &self.game_instance.borrow(), 
+                self.render_system.render_time_ms
+            );
         }
 
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
 
         // Render game if visible
-        if !self.menu.is_hiding_game() {
+        if !self.menu_manager.is_hiding_game() {
             self.render(&mut *ctx.borrow_mut(), alpha);
         } else {
             ctx.borrow_mut().clear_background(Color::BLACK);
         }
 
         // Render menus/ui on top
-        self.menu.render(&mut *ctx.borrow_mut());
+        self.render_menus(&ctx);
     }
 }
 
@@ -98,8 +101,9 @@ impl Engine {
         grid_size: f32,
         is_playtest: bool,
     ) -> Self {
-        let mut menu = MenuManager::new();
-        menu.set_action_handler(GameMenuHandler);
+        let mut menu_manager = MenuManager::new();
+        menu_manager.load_templates_from_disk();
+        menu_manager.set_action_handler(GameMenuHandler);
 
         Self {
             game_instance,
@@ -109,7 +113,7 @@ impl Engine {
             camera_manager,
             render_system: RenderSystem::with_grid_size(grid_size),
             diagnostics: DiagnosticsOverlay::new(),
-            menu,
+            menu_manager,
             is_playtest,
             accumulator: 0.0,
             smoothed_dt: None,
@@ -118,7 +122,7 @@ impl Engine {
 
     /// Resolves the current game state from all active systems.
     fn update_game_state(&mut self) {
-        self.game_state = if self.menu.is_pausing_game() {
+        self.game_state = if self.menu_manager.is_pausing_game() {
             GameState::Paused
         } else {
             GameState::Running
@@ -187,7 +191,7 @@ impl Engine {
         }
 
         // Process menu events and emit to Lua
-        self.process_menu_events();
+        self.game_instance.borrow().emit_menu_events();
     }
 
     pub fn render<C: BishopContext>(&mut self, ctx: &mut C, alpha: f32) {
@@ -244,43 +248,10 @@ impl Engine {
         }
     }
 
-    /// Update diagnostics metrics from game state.
-    pub fn update_diagnostics_metrics(&mut self) {
-        let game_instance = self.game_instance.borrow();
-        let game = &game_instance.game;
-
-        let entity_count = game.ecs.get_store::<Transform>().data.len();
-        let texture_count = game.asset_manager.texture_count();
-        let script_instances = game.script_manager.instances.len();
-        let listener_count = game.script_manager.event_bus.listener_count();
-        let script_id_count = game.script_manager.script_id_to_path.len();
-        let sprite_id_count = game.asset_manager.sprite_id_to_path.len();
-        let render_time_ms = self.render_system.render_time_ms;
-
-        self.diagnostics.update_metrics(
-            entity_count,
-            texture_count,
-            script_instances,
-            listener_count,
-            script_id_count,
-            sprite_id_count,
-            render_time_ms,
-        );
-    }
-
-    /// Process menu events and emit them to Lua.
-    fn process_menu_events(&mut self) {
-        let events = drain_menu_events();
-        if events.is_empty() {
-            return;
-        }
-
-        let game_instance = self.game_instance.borrow();
-        let event_bus = game_instance.game.script_manager.event_bus.clone();
-
-        for action in events {
-            let event_name = format!("menu:{}", action);
-            event_bus.emit(event_name, mlua::Variadic::new());
-        }
+    fn render_menus(&mut self, ctx: &PlatformContext) {
+        ctx.borrow_mut().flush_if_needed();
+        let viewport = self.render_system.viewport_rect(&*ctx.borrow());
+        self.menu_manager.set_viewport(viewport);
+        self.menu_manager.render(&mut *ctx.borrow_mut());
     }
 }

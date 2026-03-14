@@ -47,6 +47,27 @@ impl Color {
     pub const BLACK: Color = Color::new(0.00, 0.00, 0.00, 1.00);
     pub const MAGENTA: Color = Color::new(1.00, 0.00, 1.00, 1.00);
     pub const TRANSPARENT: Color = Color::new(0.00, 0.00, 0.00, 0.00);
+
+    /// Parses a 6-character hex RGB string into a Color with alpha 1.0.
+    /// Accepts with or without leading `#`. Returns `None` on invalid input.
+    pub fn from_hex(hex: &str) -> Option<Color> {
+        let hex = hex.strip_prefix('#').unwrap_or(hex);
+        if hex.len() != 6 {
+            return None;
+        }
+        let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+        Some(Color::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0))
+    }
+
+    /// Returns the color as a 6-character uppercase hex string (no `#` prefix).
+    pub fn to_hex(&self) -> String {
+        let r = (self.r * 255.0).round() as u8;
+        let g = (self.g * 255.0).round() as u8;
+        let b = (self.b * 255.0).round() as u8;
+        format!("{:02X}{:02X}{:02X}", r, g, b)
+    }
 }
 
 impl From<[f32; 4]> for Color {

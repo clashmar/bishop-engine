@@ -7,6 +7,7 @@ pub use widgets::{
     gui_slider,
     gui_stepper,
     NumberInput, number_input_reset,
+    ColorInput, color_input_reset,
     TextInput, text_input_reset,
     WidgetId, widget_id,
     TextInputState, NumberInputState, RepeatableKey,

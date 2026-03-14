@@ -41,4 +41,5 @@ pub trait Draw {
         color: Color,
         params: DrawTextureParams,
     );
+
 }

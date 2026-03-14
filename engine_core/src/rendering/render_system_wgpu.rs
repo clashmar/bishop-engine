@@ -69,14 +69,8 @@ impl RenderSystem {
         }
     }
 
-    /// Presents the scene render target scaled to the window with aspect-ratio-preserving letterboxing.
-    pub fn present_game<C: BishopContext>(&self, ctx: &mut C) {
-        let Some(rt) = &self.scene_rt else {
-            return;
-        };
-
-        ctx.set_default_camera();
-
+    /// Returns the letterboxed viewport rect for the current window size.
+    pub fn viewport_rect<C: BishopContext>(&self, ctx: &C) -> Rect {
         let virt_w = self.rt_width;
         let virt_h = self.rt_height;
         let win_w = ctx.screen_width();
@@ -86,10 +80,24 @@ impl RenderSystem {
         let scaled_w = virt_w * scale;
         let scaled_h = virt_h * scale;
 
-        let offset_x = ((win_w - scaled_w) / 2.0).floor();
-        let offset_y = ((win_h - scaled_h) / 2.0).floor();
+        Rect::new(
+            ((win_w - scaled_w) / 2.0).floor(),
+            ((win_h - scaled_h) / 2.0).floor(),
+            scaled_w,
+            scaled_h,
+        )
+    }
 
-        ctx.draw_render_target(rt, offset_x, offset_y, scaled_w, scaled_h);
+    /// Presents the scene render target scaled to the window with aspect-ratio-preserving letterboxing.
+    pub fn present_game<C: BishopContext>(&self, ctx: &mut C) {
+        let Some(rt) = &self.scene_rt else {
+            return;
+        };
+
+        ctx.set_default_camera();
+
+        let vp = self.viewport_rect(ctx);
+        ctx.draw_render_target(rt, vp.x, vp.y, vp.w, vp.h);
     }
 
     /// Re-creates every render target with the supplied size.

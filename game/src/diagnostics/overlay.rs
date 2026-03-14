@@ -1,6 +1,7 @@
 // game/src/diagnostics/overlay.rs
 //! In-game diagnostics overlay toggled with F3/F4.
 
+use crate::game_instance::GameInstance;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -89,23 +90,15 @@ impl DiagnosticsOverlay {
         self.cached_frame_time = self.collector.frame_metrics.avg_frame_time_ms;
     }
 
-    /// Update cached metrics from game state.
-    pub fn update_metrics(
-        &mut self,
-        entity_count: usize,
-        texture_count: usize,
-        script_instances: usize,
-        listener_count: usize,
-        script_id_count: usize,
-        sprite_id_count: usize,
-        render_time_ms: f32,
-    ) {
-        self.cached_entity_count = entity_count;
-        self.cached_texture_count = texture_count;
-        self.cached_script_instances = script_instances;
-        self.cached_listener_count = listener_count;
-        self.cached_script_id_count = script_id_count;
-        self.cached_sprite_id_count = sprite_id_count;
+    /// Pulls current metrics from the game instance and render system.
+    pub fn update_from_game(&mut self, game_instance: &GameInstance, render_time_ms: f32) {
+        let game = &game_instance.game;
+        self.cached_entity_count = game.ecs.get_store::<Transform>().data.len();
+        self.cached_texture_count = game.asset_manager.texture_count();
+        self.cached_script_instances = game.script_manager.instances.len();
+        self.cached_listener_count = game.script_manager.event_bus.listener_count();
+        self.cached_script_id_count = game.script_manager.script_id_to_path.len();
+        self.cached_sprite_id_count = game.asset_manager.sprite_id_to_path.len();
         self.cached_render_time = render_time_ms;
     }
 

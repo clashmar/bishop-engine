@@ -9,6 +9,9 @@ use std::sync::Arc;
 use mlua::Lua;
 use std::fs;
 
+/// Registry key for the global update function from main.lua.
+const GLOBAL_UPDATE_KEY: &str = "__global_update";
+
 pub struct ScriptSystem;
 
 impl ScriptSystem {
@@ -19,9 +22,18 @@ impl ScriptSystem {
             onscreen_error!("Error registering engine module: {e}")
         };
         
-        // Run main.lua after registering `engine``
+        // Run main.lua after registering `engine`
         if let Err(e) = Self::load_main(lua) {
             onscreen_error!("Main failed: {e}");
+        }
+
+        // Store the global update function if main.lua set engine.update
+        if let Ok(engine_tbl) = lua.globals().get::<Table>(ENGINE) {
+            if let Ok(update_fn) = engine_tbl.get::<Function>(UPDATE) {
+                if let Err(e) = lua.set_named_registry_value(GLOBAL_UPDATE_KEY, update_fn) {
+                    onscreen_error!("Failed to store global update: {e}");
+                }
+            }
         }
 
         // Sub-modules
@@ -102,6 +114,12 @@ impl ScriptSystem {
         // Execute without holding any borrows
         for (update_fn, instance) in scripts_to_run {
             update_fn.call::<()>((instance, dt))?;
+            Self::process_commands(engine);
+        }
+
+        // Call the global update function from main.lua if one was defined
+        if let Ok(global_update) = engine.lua.named_registry_value::<Function>(GLOBAL_UPDATE_KEY) {
+            global_update.call::<()>(dt)?;
             Self::process_commands(engine);
         }
 

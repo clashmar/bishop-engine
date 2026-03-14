@@ -1,8 +1,11 @@
 use crate::menu::*;
+use crate::storage::path_utils::menus_folder;
+use crate::{onscreen_error, onscreen_log};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use bishop::prelude::*;
 use widgets::*;
+use std::fs;
 
 /// Manages menu templates, active menu stack, and navigation.
 pub struct MenuManager {
@@ -16,6 +19,8 @@ pub struct MenuManager {
     focus_index: usize,
     /// Action handler for custom menu actions.
     action_handler: Box<dyn MenuActionHandler>,
+    /// The game viewport rect used to transform normalized menu coordinates to screen space.
+    viewport: Rect,
 }
 
 impl Default for MenuManager {
@@ -59,9 +64,15 @@ impl MenuManager {
             navigation: MenuNavigation::default(),
             focus_index: 0,
             action_handler: Box::new(NoOpActionHandler),
+            viewport: Rect::new(0.0, 0.0, 1.0, 1.0),
         };
         manager.register_default_menus();
         manager
+    }
+
+    /// Sets the game viewport rect so menu coordinates are correctly mapped to screen space.
+    pub fn set_viewport(&mut self, viewport: Rect) {
+        self.viewport = viewport;
     }
 
     /// Sets the custom action handler.
@@ -183,17 +194,20 @@ impl MenuManager {
 
         widgets_frame_start(ctx);
 
+        let canvas_origin = Vec2::new(self.viewport.x, self.viewport.y);
+        let canvas_size = Vec2::new(self.viewport.w, self.viewport.h);
         let mut triggered_action = None;
 
         if let Some(menu_id) = self.menu_stack.last() {
             if let Some(template) = self.templates.get(menu_id) {
-                template.render_background(ctx);
-                template.render_labels(ctx);
+                template.render_background(ctx, self.viewport);
+                template.render_labels(ctx, canvas_origin, canvas_size);
 
                 let mut button_index = 0;
                 for (button, rect, enabled) in template.buttons() {
                     let _is_focused = button_index == self.focus_index;
-                    let btn = Button::new(rect, &button.text)
+                    let screen_rect = normalized_rect_to_screen(rect, canvas_origin, canvas_size);
+                    let btn = Button::new(screen_rect, &button.text)
                         .blocked(!enabled);
 
                     if btn.show(ctx) {
@@ -255,5 +269,37 @@ impl MenuManager {
     /// Closes any active menu and resumes the game.
     pub fn close(&mut self) {
         self.close_all();
+    }
+
+    /// Loads all .ron menu templates from the menus folder and registers them.
+    pub fn load_templates_from_disk(&mut self) {
+        let dir = menus_folder();
+        if !dir.exists() {
+            return;
+        }
+
+        let Ok(entries) = fs::read_dir(&dir) else {
+            return;
+        };
+
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.extension().map_or(true, |ext| ext != "ron") {
+                continue;
+            }
+
+            let ron_str = match fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    onscreen_error!("Failed to read menu file {:?}: {}", path, e);
+                    continue;
+                }
+            };
+
+            match ron::de::from_str::<MenuTemplate>(&ron_str) {
+                Ok(template) => self.register_template(template),
+                Err(e) => onscreen_error!("Failed to parse menu file {:?}: {}", path, e),
+            }
+        }
     }
 }
