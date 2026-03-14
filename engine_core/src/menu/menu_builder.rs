@@ -19,77 +19,15 @@ pub enum MenuAction {
     Custom(String),
 }
 
-/// Legacy menu item type for backward compatibility.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MenuItem {
-    /// Static text label.
-    Label { text: String, rect: Rect },
-    /// Clickable button.
-    Button { text: String, rect: Rect, action: MenuAction },
-    /// Vertical spacing.
-    Spacer { height: f32 },
-}
-
-/// Legacy menu type for backward compatibility.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Menu {
-    pub items: Vec<MenuItem>,
-    pub background: MenuBackground,
-}
-
-impl Menu {
-    /// Renders the menu background.
-    pub fn render_background<C: BishopContext>(&self, ctx: &mut C) {
-        let w = ctx.screen_width();
-        let h = ctx.screen_height();
-
-        match self.background {
-            MenuBackground::None => {}
-            MenuBackground::SolidColor(color) => {
-                ctx.draw_rectangle(0.0, 0.0, w, h, color);
-            }
-            MenuBackground::Dimmed(alpha) => {
-                ctx.draw_rectangle(0.0, 0.0, w, h, Color::new(0.0, 0.0, 0.0, alpha));
-            }
-        }
-    }
-
-    /// Renders menu labels.
-    pub fn render_labels<C: BishopContext>(&self, ctx: &mut C) {
-        for item in &self.items {
-            if let MenuItem::Label { text, rect } = item {
-                let txt_dims = ctx.measure_text(text, 24.0);
-                let txt_x = rect.x + (rect.w - txt_dims.width) / 2.0;
-                let txt_y = rect.y + rect.h * 0.7;
-                ctx.draw_text(text, txt_x, txt_y, 24.0, Color::WHITE);
-            }
-        }
-    }
-
-    /// Returns an iterator over button items.
-    pub fn buttons(&self) -> impl Iterator<Item = (&str, Rect, &MenuAction)> {
-        self.items.iter().filter_map(|item| {
-            if let MenuItem::Button { text, rect, action } = item {
-                Some((text.as_str(), *rect, action))
-            } else {
-                None
-            }
-        })
-    }
-}
-
 /// Builder for composing menus with flexible layouts.
 #[derive(Debug, Clone)]
 pub struct MenuBuilder {
     id: String,
     elements: Vec<MenuElement>,
     background: MenuBackground,
-    layout: LayoutConfig,
     mode: MenuMode,
     screen_width: f32,
     screen_height: f32,
-    y_cursor: f32,
-    x_cursor: f32,
 }
 
 impl MenuBuilder {
@@ -99,36 +37,9 @@ impl MenuBuilder {
             id: id.to_string(),
             elements: Vec::new(),
             background: MenuBackground::default(),
-            layout: LayoutConfig::default(),
             mode: MenuMode::Paused,
             screen_width: 800.0,
             screen_height: 600.0,
-            y_cursor: 0.0,
-            x_cursor: 0.0,
-        }
-    }
-
-    /// Creates a new menu builder for legacy compatibility.
-    pub fn new_legacy(screen_width: f32, screen_height: f32) -> Self {
-        let item_width = 200.0;
-        let center_x = (screen_width - item_width) / 2.0;
-        let y_cursor = screen_height / 3.0;
-
-        Self {
-            id: "legacy".to_string(),
-            elements: Vec::new(),
-            background: MenuBackground::default(),
-            layout: LayoutConfig {
-                item_width,
-                item_height: 40.0,
-                spacing: 16.0,
-                ..Default::default()
-            },
-            mode: MenuMode::Paused,
-            screen_width,
-            screen_height,
-            y_cursor,
-            x_cursor: center_x,
         }
     }
 
@@ -151,57 +62,21 @@ impl MenuBuilder {
         self
     }
 
-    /// Sets vertical layout direction.
-    pub fn vertical(mut self) -> Self {
-        self.layout.direction = LayoutDirection::Vertical;
+    /// Adds a pre-built element directly.
+    pub fn element(mut self, element: MenuElement) -> Self {
+        self.elements.push(element);
         self
     }
 
-    /// Sets horizontal layout direction.
-    pub fn horizontal(mut self) -> Self {
-        self.layout.direction = LayoutDirection::Horizontal;
-        self
-    }
-
-    /// Sets grid layout direction with specified columns.
-    pub fn grid(mut self, columns: u32) -> Self {
-        self.layout.direction = LayoutDirection::Grid { columns };
-        self
-    }
-
-    /// Sets the layout configuration.
-    pub fn with_layout(mut self, layout: LayoutConfig) -> Self {
-        self.layout = layout;
-        self
-    }
-
-    /// Adds a text label.
-    pub fn label(mut self, text: &str) -> Self {
-        let rect = self.compute_next_rect();
-        self.elements.push(MenuElement::label(text.to_string(), rect));
-        self.advance_cursor();
-        self
-    }
-
-    /// Adds a clickable button.
-    pub fn button(mut self, text: &str, action: MenuAction) -> Self {
-        let rect = self.compute_next_rect();
-        self.elements.push(MenuElement::button(text.to_string(), action, rect));
-        self.advance_cursor();
-        self
-    }
-
-    /// Adds a nested panel with its own layout.
-    pub fn panel<F>(mut self, build_fn: F) -> Self
+    /// Adds a layout group element with the given config and children built via closure.
+    pub fn layout_group<F>(mut self, rect: Rect, layout: LayoutConfig, build_fn: F) -> Self
     where
-        F: FnOnce(MenuBuilder) -> MenuBuilder,
+        F: FnOnce(LayoutGroupBuilder) -> LayoutGroupBuilder,
     {
-        let panel_builder = MenuBuilder::new("panel").screen_size(self.screen_width, self.screen_height);
-        let panel_builder = build_fn(panel_builder);
-
-        let rect = self.compute_next_rect();
-        self.elements.push(MenuElement::panel(panel_builder.elements, rect));
-        self.advance_cursor();
+        let builder = LayoutGroupBuilder::new(layout);
+        let builder = build_fn(builder);
+        let group = builder.build();
+        self.elements.push(MenuElement::layout_group(group, rect));
         self
     }
 
@@ -209,77 +84,60 @@ impl MenuBuilder {
     pub fn build(self) -> MenuTemplate {
         MenuTemplate {
             id: self.id,
-            layout: self.layout,
             background: self.background,
             elements: self.elements,
             mode: self.mode,
         }
     }
+}
 
-    /// Legacy build method that returns Menu for backward compatibility.
-    pub fn build_legacy(self) -> Menu {
-        let items = self.elements.into_iter().map(|element| {
-            match element.kind {
-                MenuElementKind::Label(label) => MenuItem::Label {
-                    text: label.text,
-                    rect: element.rect,
-                },
-                MenuElementKind::Button(button) => MenuItem::Button {
-                    text: button.text,
-                    rect: element.rect,
-                    action: button.action,
-                },
-                MenuElementKind::Panel(_) => MenuItem::Spacer { height: 0.0 },
-            }
-        }).collect();
+/// Builder for constructing layout group children.
+#[derive(Debug, Clone)]
+pub struct LayoutGroupBuilder {
+    layout: LayoutConfig,
+    children: Vec<LayoutChild>,
+}
 
-        Menu {
-            items,
-            background: self.background,
+impl LayoutGroupBuilder {
+    /// Creates a new layout group builder.
+    pub fn new(layout: LayoutConfig) -> Self {
+        Self {
+            layout,
+            children: Vec::new(),
         }
     }
 
-    fn compute_next_rect(&self) -> Rect {
-        let (x, y, w, h) = match self.layout.direction {
-            LayoutDirection::Vertical => {
-                let x = self.x_cursor.max((self.screen_width - self.layout.item_width) / 2.0);
-                (x, self.y_cursor, self.layout.item_width, self.layout.item_height)
-            }
-            LayoutDirection::Horizontal => {
-                (self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
-            }
-            LayoutDirection::Grid { .. } => {
-                (self.x_cursor, self.y_cursor, self.layout.item_width, self.layout.item_height)
-            }
-        };
-        self.normalize_rect(x, y, w, h)
+    /// Adds a managed label child.
+    pub fn label(mut self, text: &str) -> Self {
+        let element = MenuElement::label(text.to_string(), Rect::new(0.0, 0.0, 0.0, 0.0));
+        self.children.push(LayoutChild {
+            element,
+            managed: true,
+        });
+        self
     }
 
-    fn normalize_rect(&self, x: f32, y: f32, w: f32, h: f32) -> Rect {
-        Rect::new(
-            x / self.screen_width,
-            y / self.screen_height,
-            w / self.screen_width,
-            h / self.screen_height,
-        )
+    /// Adds a managed button child.
+    pub fn button(mut self, text: &str, action: MenuAction) -> Self {
+        let element = MenuElement::button(text.to_string(), action, Rect::new(0.0, 0.0, 0.0, 0.0));
+        self.children.push(LayoutChild {
+            element,
+            managed: true,
+        });
+        self
     }
 
-    fn advance_cursor(&mut self) {
-        match self.layout.direction {
-            LayoutDirection::Vertical => {
-                self.y_cursor += self.layout.item_height + self.layout.spacing;
-            }
-            LayoutDirection::Horizontal => {
-                self.x_cursor += self.layout.item_width + self.layout.spacing;
-            }
-            LayoutDirection::Grid { columns } => {
-                self.x_cursor += self.layout.item_width + self.layout.spacing;
-                let current_col = (self.elements.len() as u32) % columns;
-                if current_col == 0 {
-                    self.x_cursor = 0.0;
-                    self.y_cursor += self.layout.item_height + self.layout.spacing;
-                }
-            }
+    /// Adds a child element with explicit managed flag.
+    pub fn child(mut self, element: MenuElement, managed: bool) -> Self {
+        self.children.push(LayoutChild { element, managed });
+        self
+    }
+
+    /// Builds the layout group element.
+    pub fn build(self) -> LayoutGroupElement {
+        LayoutGroupElement {
+            layout: self.layout,
+            children: self.children,
         }
     }
 }

@@ -14,10 +14,12 @@ pub struct Button<'a> {
     rect: Rect,
     label: &'a str,
     style: ButtonStyle,
+    font_size: f32,
     text_color: Color,
     hover_color: Color,
     text_offset: Vec2,
     blocked: bool,
+    mouse_position: Option<Vec2>,
 }
 
 impl<'a> Button<'a> {
@@ -27,10 +29,12 @@ impl<'a> Button<'a> {
             rect: rect.into(),
             label,
             style: ButtonStyle::Default,
+            font_size: FIELD_TEXT_SIZE_16,
             text_color: FIELD_TEXT_COLOR,
             hover_color: HOVER_COLOR,
             text_offset: Vec2::ZERO,
             blocked: false,
+            mouse_position: None,
         }
     }
 
@@ -59,19 +63,31 @@ impl<'a> Button<'a> {
         self
     }
 
+    /// Sets the font size for the button label.
+    pub fn font_size(mut self, size: f32) -> Self {
+        self.font_size = size;
+        self
+    }
+
     /// Sets whether the button is blocked from interaction.
     pub fn blocked(mut self, blocked: bool) -> Self {
         self.blocked = blocked;
         self
     }
 
+    /// Overrides the mouse position used for hover detection (e.g. world-space coords when a camera is active).
+    pub fn mouse_position(mut self, pos: Vec2) -> Self {
+        self.mouse_position = Some(pos);
+        self
+    }
+
     /// Draws the button and returns true if clicked.
     pub fn show<C: BishopContext>(self, ctx: &mut C) -> bool {
-        let mouse = ctx.mouse_position();
-        let hovered = self.rect.contains(Vec2::new(mouse.0, mouse.1));
+        let mouse = self.mouse_position.unwrap_or_else(|| ctx.mouse_position().into());
+        let hovered = self.rect.contains(mouse);
 
-        let txt_dims = measure_text_ui(ctx, self.label, FIELD_TEXT_SIZE_16);
-        let txt_y = self.rect.y + self.rect.h * 0.7;
+        let txt_dims = measure_text_ui(ctx, self.label, self.font_size);
+        let txt_y = self.rect.y + (self.rect.h - txt_dims.height) / 2.0 + txt_dims.offset_y;
         let txt_x = self.rect.x + (self.rect.w - txt_dims.width) / 2.;
 
         match self.style {
@@ -97,7 +113,7 @@ impl<'a> Button<'a> {
             }
         }
 
-        draw_text_ui(ctx, self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, FIELD_TEXT_SIZE_16, self.text_color);
+        draw_text_ui(ctx, self.label, txt_x + self.text_offset.x, txt_y + self.text_offset.y, self.font_size, self.text_color);
 
         let clicked = ctx.is_mouse_button_pressed(MouseButton::Left)
             && hovered

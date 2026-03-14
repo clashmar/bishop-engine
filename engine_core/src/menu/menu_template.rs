@@ -6,7 +6,6 @@ use bishop::prelude::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MenuTemplate {
     pub id: String,
-    pub layout: LayoutConfig,
     pub background: MenuBackground,
     pub elements: Vec<MenuElement>,
     pub mode: MenuMode,
@@ -17,7 +16,6 @@ impl MenuTemplate {
     pub fn new(id: String) -> Self {
         Self {
             id,
-            layout: LayoutConfig::default(),
             background: MenuBackground::default(),
             elements: Vec::new(),
             mode: MenuMode::Paused,
@@ -40,42 +38,97 @@ impl MenuTemplate {
         }
     }
 
+    /// Returns element indices sorted by z_order (stable, ascending).
+    pub fn sorted_element_indices(&self) -> Vec<usize> {
+        let mut indices: Vec<usize> = (0..self.elements.len()).collect();
+        indices.sort_by_key(|&i| self.elements[i].z_order);
+        indices
+    }
+
     /// Renders menu labels.
     pub fn render_labels<C: BishopContext>(&self, ctx: &mut C) {
-        for element in &self.elements {
+        for i in self.sorted_element_indices() {
+            let element = &self.elements[i];
             if !element.visible {
                 continue;
             }
-            if let MenuElementKind::Label(label) = &element.kind {
-                self.render_label(ctx, label, element.rect);
+            match &element.kind {
+                MenuElementKind::Label(label) => {
+                    Self::render_label(ctx, label, element.rect);
+                }
+                MenuElementKind::LayoutGroup(group) => {
+                    let resolved = resolve_layout(group, element.rect);
+                    for (child, rect) in group.children.iter().zip(resolved.iter()) {
+                        if !child.element.visible {
+                            continue;
+                        }
+                        if let MenuElementKind::Label(label) = &child.element.kind {
+                            Self::render_label(ctx, label, *rect);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
 
-    fn render_label<C: BishopContext>(&self, ctx: &mut C, label: &LabelElement, rect: Rect) {
+    fn render_label<C: BishopContext>(ctx: &mut C, label: &LabelElement, rect: Rect) {
         let txt_dims = ctx.measure_text(&label.text, label.font_size);
         let txt_x = rect.x + (rect.w - txt_dims.width) / 2.0;
-        let txt_y = rect.y + rect.h * 0.7;
+        let txt_y = rect.y + (rect.h - txt_dims.height) / 2.0 + txt_dims.offset_y;
         ctx.draw_text(&label.text, txt_x, txt_y, label.font_size, label.color);
     }
 
-    /// Returns an iterator over button elements with their data.
-    pub fn buttons(&self) -> impl Iterator<Item = (&ButtonElement, Rect, bool)> {
-        self.elements.iter().filter_map(|element| {
-            if let MenuElementKind::Button(button) = &element.kind {
-                Some((button, element.rect, element.enabled))
-            } else {
-                None
+    /// Returns button elements in z_order with their data.
+    pub fn buttons(&self) -> Vec<(&ButtonElement, Rect, bool)> {
+        let mut result = Vec::new();
+        for i in self.sorted_element_indices() {
+            let element = &self.elements[i];
+            match &element.kind {
+                MenuElementKind::Button(button) => {
+                    result.push((button, element.rect, element.enabled));
+                }
+                MenuElementKind::LayoutGroup(group) => {
+                    let resolved = resolve_layout(group, element.rect);
+                    for (child, rect) in group.children.iter().zip(resolved.iter()) {
+                        if let MenuElementKind::Button(button) = &child.element.kind {
+                            result.push((button, *rect, child.element.enabled));
+                        }
+                    }
+                }
+                _ => {}
             }
-        })
+        }
+        result
     }
 
     /// Returns the number of focusable elements.
     pub fn focusable_count(&self) -> usize {
-        self.elements
-            .iter()
-            .filter(|e| matches!(e.kind, MenuElementKind::Button(_)) && e.enabled && e.visible)
-            .count()
+        self.count_focusable_in(&self.elements)
+    }
+
+    fn count_focusable_in(&self, elements: &[MenuElement]) -> usize {
+        let mut count = 0;
+        for element in elements {
+            if !element.enabled || !element.visible {
+                continue;
+            }
+            match &element.kind {
+                MenuElementKind::Button(_) => count += 1,
+                MenuElementKind::LayoutGroup(group) => {
+                    for child in &group.children {
+                        if matches!(child.element.kind, MenuElementKind::Button(_))
+                            && child.element.enabled
+                            && child.element.visible
+                        {
+                            count += 1;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        count
     }
 
     /// Gets the button at the given focus index.
@@ -87,6 +140,19 @@ impl MenuTemplate {
                     return Some(element);
                 }
                 current_index += 1;
+            }
+            if let MenuElementKind::LayoutGroup(group) = &element.kind {
+                for child in &group.children {
+                    if matches!(child.element.kind, MenuElementKind::Button(_))
+                        && child.element.enabled
+                        && child.element.visible
+                    {
+                        if current_index == focus_index {
+                            return Some(&child.element);
+                        }
+                        current_index += 1;
+                    }
+                }
             }
         }
         None

@@ -1,6 +1,7 @@
 use bishop::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::menu::menu_builder::MenuAction;
+use super::layout_group::LayoutGroupElement;
 
 /// Different kinds of menu elements.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -8,6 +9,7 @@ pub enum MenuElementKind {
     Label(LabelElement),
     Button(ButtonElement),
     Panel(PanelElement),
+    LayoutGroup(LayoutGroupElement),
 }
 
 /// Label element displaying static text.
@@ -77,6 +79,7 @@ pub struct MenuElement {
     pub rect: Rect,
     pub enabled: bool,
     pub visible: bool,
+    pub z_order: i32,
 }
 
 impl MenuElement {
@@ -87,6 +90,7 @@ impl MenuElement {
             rect,
             enabled: true,
             visible: true,
+            z_order: 0,
         }
     }
 
@@ -122,5 +126,10 @@ impl MenuElement {
             }),
             rect,
         )
+    }
+
+    /// Creates a layout group element.
+    pub fn layout_group(group: LayoutGroupElement, rect: Rect) -> Self {
+        Self::new(MenuElementKind::LayoutGroup(group), rect)
     }
 }
