@@ -108,6 +108,7 @@ impl Draw for WgpuContext {
         self.clear_color = Some(color);
     }
 
+
     fn draw_texture(&mut self, texture: &Texture2D, x: f32, y: f32, color: Color) {
         self.texture_renderer.draw_texture(texture.inner(), x, y, color);
     }

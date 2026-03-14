@@ -22,18 +22,15 @@ impl MenuTemplate {
         }
     }
 
-    /// Renders the menu background.
-    pub fn render_background<C: BishopContext>(&self, ctx: &mut C) {
-        let w = ctx.screen_width();
-        let h = ctx.screen_height();
-
+    /// Renders the menu background over the given viewport rect.
+    pub fn render_background<C: BishopContext>(&self, ctx: &mut C, viewport: Rect) {
         match self.background {
             MenuBackground::None => {}
             MenuBackground::SolidColor(color) => {
-                ctx.draw_rectangle(0.0, 0.0, w, h, color);
+                ctx.draw_rectangle(viewport.x, viewport.y, viewport.w, viewport.h, color);
             }
             MenuBackground::Dimmed(alpha) => {
-                ctx.draw_rectangle(0.0, 0.0, w, h, Color::new(0.0, 0.0, 0.0, alpha));
+                ctx.draw_rectangle(viewport.x, viewport.y, viewport.w, viewport.h, Color::new(0.0, 0.0, 0.0, alpha));
             }
         }
     }
@@ -45,8 +42,8 @@ impl MenuTemplate {
         indices
     }
 
-    /// Renders menu labels.
-    pub fn render_labels<C: BishopContext>(&self, ctx: &mut C) {
+    /// Renders menu labels transformed from normalized to screen-space using canvas origin/size.
+    pub fn render_labels<C: BishopContext>(&self, ctx: &mut C, canvas_origin: Vec2, canvas_size: Vec2) {
         for i in self.sorted_element_indices() {
             let element = &self.elements[i];
             if !element.visible {
@@ -54,7 +51,8 @@ impl MenuTemplate {
             }
             match &element.kind {
                 MenuElementKind::Label(label) => {
-                    Self::render_label(ctx, label, element.rect);
+                    let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
+                    Self::render_label(ctx, label, screen_rect);
                 }
                 MenuElementKind::LayoutGroup(group) => {
                     let resolved = resolve_layout(group, element.rect);
@@ -63,7 +61,8 @@ impl MenuTemplate {
                             continue;
                         }
                         if let MenuElementKind::Label(label) = &child.element.kind {
-                            Self::render_label(ctx, label, *rect);
+                            let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
+                            Self::render_label(ctx, label, screen_rect);
                         }
                     }
                 }

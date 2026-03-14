@@ -1,5 +1,7 @@
 # Overview
 - Continue to improve menu/ui editor
+- A menu can be a basic pause/settings/dialogue branching etc
+- Canvas represents the screen
 - Composable menus for the game that reuse existing widgets (dogfooding with the editor)
 - Changes to widgets are allowed but ask first
 - Some of the menu code is unused/unsuitable. Ask questions if you aren't sure what is essential
@@ -18,4 +20,3 @@
 - Elements should be navigable with a gamepad 
 - Widgets will eventually have more customization (e.g. button styling)
 - Elements such as panels or the background could have a plain color/sprite/animation/shaders
-- We will need to define how element layouts work (spacing, tabs etc)

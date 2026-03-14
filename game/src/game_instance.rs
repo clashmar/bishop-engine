@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use mlua::Lua;
+use mlua::Variadic;
 
 /// Top level orchestrator of the game and systems.
 pub struct GameInstance {
@@ -97,6 +98,17 @@ impl GameInstance {
         Self {
             game,
             prev_positions: HashMap::new(),
+        }
+    }
+
+    /// Drains pending menu action events and emits them to the Lua event bus.
+    pub fn emit_menu_events(&self) {
+        let events = drain_menu_events();
+        for action in events {
+            self.game.script_manager.event_bus.emit(
+                format!("menu:{}", action),
+                Variadic::new(),
+            );
         }
     }
 

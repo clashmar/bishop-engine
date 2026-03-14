@@ -15,7 +15,6 @@ pub struct MenuEditor {
     pub templates: Vec<MenuTemplate>,
     pub current_template_index: Option<usize>,
     pub selected_element_index: Option<usize>,
-    /// When set, indicates the selected child within the selected layout group.
     pub selected_child_index: Option<usize>,
     pub pending_element_type: Option<MenuElementKind>,
     pub(crate) active_rects: Vec<Rect>,

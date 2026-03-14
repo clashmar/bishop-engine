@@ -9,6 +9,7 @@ pub struct TextInput<'a> {
     blocked: bool,
     start_focused: bool,
     max_len: Option<usize>,
+    char_filter: Option<fn(char) -> Option<char>>,
 }
 
 impl<'a> TextInput<'a> {
@@ -21,6 +22,7 @@ impl<'a> TextInput<'a> {
             blocked: false,
             start_focused: false,
             max_len: None,
+            char_filter: None,
         }
     }
 
@@ -39,6 +41,13 @@ impl<'a> TextInput<'a> {
     /// Sets the maximum character length for the input.
     pub fn max_len(mut self, max_len: usize) -> Self {
         self.max_len = Some(max_len);
+        self
+    }
+
+    /// Sets a character filter that transforms or rejects input characters.
+    /// Return `Some(char)` to accept (possibly transformed), or `None` to reject.
+    pub fn char_filter(mut self, filter: fn(char) -> Option<char>) -> Self {
+        self.char_filter = Some(filter);
         self
     }
 
@@ -189,10 +198,11 @@ impl<'a> TextInput<'a> {
                     selection_anchor = None;
                 }
 
-                let filtered: String = clipboard_text
-                    .chars()
-                    .filter(|c| c.is_ascii_graphic() || *c == ' ')
-                    .collect();
+                let filtered: String = if let Some(filter) = self.char_filter {
+                    clipboard_text.chars().filter_map(filter).collect()
+                } else {
+                    clipboard_text.chars().filter(|c| c.is_ascii_graphic() || *c == ' ').collect()
+                };
 
                 let cur_len = text.chars().count();
                 let available = self.max_len.map_or(usize::MAX, |limit| limit.saturating_sub(cur_len));
@@ -334,7 +344,15 @@ impl<'a> TextInput<'a> {
             }
 
             for chr in ctx.chars_pressed() {
-                if chr.is_ascii_graphic() || chr == ' ' {
+                let accepted = if let Some(filter) = self.char_filter {
+                    filter(chr)
+                } else if chr.is_ascii_graphic() || chr == ' ' {
+                    Some(chr)
+                } else {
+                    None
+                };
+
+                if let Some(ch) = accepted {
                     if selection_anchor.is_some() {
                         cursor_char = delete_selection(&mut text, cursor_char, selection_anchor);
                         selection_anchor = None;
@@ -343,7 +361,7 @@ impl<'a> TextInput<'a> {
                     let cur_len = text.chars().count();
                     if self.max_len.is_none_or(|limit| cur_len < limit) {
                         let pos = byte_offset(&text, cursor_char);
-                        text.insert(pos, chr);
+                        text.insert(pos, ch);
                         cursor_char += 1;
                     }
                 }

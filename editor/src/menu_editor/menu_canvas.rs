@@ -249,6 +249,20 @@ impl MenuEditor {
         }
 
         if let Some(template) = self.current_template() {
+            // Render background preview
+            match template.background {
+                MenuBackground::SolidColor(color) => {
+                    ctx.draw_rectangle(rect.x, rect.y, rect.w, rect.h, color);
+                }
+                MenuBackground::Dimmed(alpha) => {
+                    ctx.draw_rectangle(
+                        rect.x, rect.y, rect.w, rect.h,
+                        Color::new(0.0, 0.0, 0.0, alpha),
+                    );
+                }
+                MenuBackground::None => {}
+            }
+
             let raw_mouse: Vec2 = ctx.mouse_position().into();
             let world_mouse = camera.screen_to_world(raw_mouse, ctx.screen_width(), ctx.screen_height());
             let sorted = template.sorted_element_indices();
