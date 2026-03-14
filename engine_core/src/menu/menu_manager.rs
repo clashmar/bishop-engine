@@ -230,33 +230,26 @@ impl MenuManager {
     }
 
     fn register_default_menus(&mut self) {
+        let layout = LayoutConfig::vertical()
+            .with_item_size(200.0, 40.0)
+            .with_spacing(16.0)
+            .with_padding(Padding::uniform(32.0))
+            .with_alignment(Alignment::center());
+
         let pause_menu = MenuBuilder::new("pause")
-            .screen_size(800.0, 600.0)
             .background(MenuBackground::Dimmed(0.7))
-            .vertical()
-            .label("PAUSED")
-            .button("Resume", MenuAction::Resume)
+            .layout_group(
+                Rect::new(0.0, 0.0, 1.0, 1.0),
+                layout,
+                |group| {
+                    group
+                        .label("PAUSED")
+                        .button("Resume", MenuAction::Resume)
+                },
+            )
             .build();
 
         self.register_template(pause_menu);
-    }
-}
-
-/// Legacy support functions.
-impl MenuManager {
-    /// Opens the pause menu using legacy method.
-    pub fn open_pause_menu<C: BishopContext>(&mut self, ctx: &mut C) {
-        let w = ctx.screen_width();
-        let h = ctx.screen_height();
-        let pause_template = MenuBuilder::new("pause")
-            .screen_size(w, h)
-            .background(MenuBackground::Dimmed(0.7))
-            .vertical()
-            .label("PAUSED")
-            .button("Resume", MenuAction::Resume)
-            .build();
-        self.register_template(pause_template);
-        self.open_menu("pause");
     }
 
     /// Closes any active menu and resumes the game.

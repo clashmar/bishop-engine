@@ -36,6 +36,10 @@ impl ElementPalette {
 
         let mut clicked_kind = None;
 
+        if self.draw_palette_item(ctx, rect, &mut y, "Layout Group", blocked).is_some() {
+            clicked_kind = Some(MenuElementKind::LayoutGroup(LayoutGroupElement::default()));
+        }
+
         if self.draw_palette_item(ctx, rect, &mut y, "Label", blocked).is_some() {
             clicked_kind = Some(MenuElementKind::Label(LabelElement {
                 text: "Label".to_string(),

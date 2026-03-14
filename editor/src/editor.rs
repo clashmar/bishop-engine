@@ -90,13 +90,19 @@ impl Editor {
             }
         }
 
-        if !self.room_editor.view_preview && !self.room_editor.is_mouse_over_ui(ctx) {
+        let ui_blocked = match self.mode {
+            EditorMode::Menu => self.menu_editor.is_mouse_over_ui(ctx),
+            EditorMode::Room(_) => self.room_editor.is_mouse_over_ui(ctx),
+            _ => false,
+        };
+        
+        if !self.room_editor.view_preview && !ui_blocked {
             EditorCameraController::update(ctx, &mut self.camera);
         }
 
         match self.mode {
             EditorMode::Menu => {
-                self.menu_editor.update(ctx);
+                self.menu_editor.update(ctx, &self.camera);
             }
             EditorMode::Game => {
                 // Returns the id of the world that was clicked on or None

@@ -4,6 +4,7 @@ pub mod element_palette;
 pub mod menu_properties_panel;
 pub mod menu_canvas;
 pub mod menu_list_panel;
+pub mod resize_handle;
 pub mod ui;
 
 pub use menu_editor::*;

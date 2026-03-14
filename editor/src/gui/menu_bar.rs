@@ -543,7 +543,8 @@ pub fn menu_button(
     is_dropdown_open: bool,
 ) -> bool {
     // Text layout
-    let txt_y = rect.y + rect.h * 0.7;
+    let txt_dims = ctx.measure_text(label, HEADER_FONT_SIZE_20);
+    let txt_y = rect.y + (rect.h - txt_dims.height) / 2.0 + txt_dims.offset_y;
     let txt_x = rect.x + PADDING / 2.0;
 
     let mouse = ctx.mouse_position();
