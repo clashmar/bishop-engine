@@ -1,0 +1,105 @@
+(
+    id: "start",
+    background: Dimmed(0.9594323),
+    elements: [
+        /*[0]*/ (
+            name: "Main Layout",
+            kind: LayoutGroup((
+                layout: (
+                    direction: Vertical,
+                    spacing: 16.0,
+                    padding: (
+                        top: 32.0,
+                        right: 32.0,
+                        bottom: 32.0,
+                        left: 32.0,
+                    ),
+                    alignment: (
+                        horizontal: Center,
+                        vertical: Middle,
+                    ),
+                    item_width: 200.0,
+                    item_height: 40.0,
+                ),
+                children: [
+                    /*[0]*/ (
+                        element: (
+                            name: "",
+                            kind: Button((
+                                text: "Button",
+                                action: CloseMenu,
+                                font_size: 20.0,
+                                nav_up: None,
+                                nav_down: None,
+                                nav_left: None,
+                                nav_right: None,
+                            )),
+                            rect: (
+                                x: 0.06155759,
+                                y: 0.09476015,
+                                w: 0.1,
+                                h: 0.037,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
+                ],
+                nav_up: None,
+                nav_down: None,
+                nav_left: None,
+                nav_right: None,
+            )),
+            rect: (
+                x: 0.4539789,
+                y: 0.35724324,
+                w: 0.25,
+                h: 0.3,
+            ),
+            enabled: true,
+            visible: true,
+            z_order: 1,
+        ),
+        /*[1]*/ (
+            name: "Back Panel",
+            kind: Panel((
+                elements: [],
+                background_color: None,
+            )),
+            rect: (
+                x: 0.27380514,
+                y: 0.23918551,
+                w: 0.54827225,
+                h: 0.53546906,
+            ),
+            enabled: true,
+            visible: true,
+            z_order: 0,
+        ),
+        /*[2]*/ (
+            name: "",
+            kind: Label((
+                text: "Start",
+                font_size: 24.0,
+                color: (
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                ),
+            )),
+            rect: (
+                x: 0.55051684,
+                y: 0.28326347,
+                w: 0.1,
+                h: 0.03,
+            ),
+            enabled: true,
+            visible: true,
+            z_order: 0,
+        ),
+    ],
+    mode: Paused,
+)

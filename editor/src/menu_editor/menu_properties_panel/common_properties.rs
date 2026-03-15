@@ -13,25 +13,55 @@ impl MenuEditor {
         _w: f32,
         blocked: bool,
     ) {
-        let (rect_val, enabled, visible, z_order) = {
+        let (current_name, rect_val, enabled, visible, z_order, type_label) = {
             let Some(element) = self.selected_element() else { return };
-            (element.rect, element.enabled, element.visible, element.z_order)
+            let type_label = match &element.kind {
+                MenuElementKind::Label(_) => "Label",
+                MenuElementKind::Button(_) => "Button",
+                MenuElementKind::Panel(_) => "Panel",
+                MenuElementKind::LayoutGroup(_) => "Layout Group",
+            };
+            (element.name.clone(), element.rect, element.enabled, element.visible, element.z_order, type_label)
         };
         let child_is_managed = self.is_selected_child_managed();
 
-        // Z Order
-        ctx.draw_text("Z Order:", x, *y + 16.0, 12.0, Color::WHITE);
-        let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
-        let new_z = NumberInput::new(self.properties_panel.widget_ids.z_order_id, field_rect, z_order as f32)
-            .blocked(blocked)
-            .show(ctx);
-        let new_z = new_z as i32;
-        if new_z != z_order {
+        // Type (read-only)
+        ctx.draw_text("Type:", x, *y + 16.0, 12.0, Color::WHITE);
+        ctx.draw_text(type_label, x + LABEL_WIDTH, *y + 16.0, 12.0, Color::new(0.7, 0.7, 0.7, 1.0));
+        *y += ROW_HEIGHT;
+
+        // Name field
+        ctx.draw_text("Name:", x, *y + 16.0, 12.0, Color::WHITE);
+        let field_rect = Rect::new(x + LABEL_WIDTH, *y, _w - LABEL_WIDTH, FIELD_HEIGHT);
+        let (new_name, _) = TextInput::new(
+            self.properties_panel.widget_ids.name_id,
+            field_rect,
+            &current_name,
+        )
+        .blocked(blocked)
+        .show(ctx);
+        if new_name != current_name {
             if let Some(element) = self.selected_element_mut() {
-                element.z_order = new_z;
+                element.name = new_name;
             }
         }
         *y += ROW_HEIGHT;
+
+        // Z Order (only for top-level elements, children inherit from parent)
+        if self.selected_child_index.is_none() {
+            ctx.draw_text("Z Order:", x, *y + 16.0, 12.0, Color::WHITE);
+            let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
+            let new_z = NumberInput::new(self.properties_panel.widget_ids.z_order_id, field_rect, z_order as f32)
+                .blocked(blocked)
+                .show(ctx);
+            let new_z = new_z as i32;
+            if new_z != z_order {
+                if let Some(element) = self.selected_element_mut() {
+                    element.z_order = new_z;
+                }
+            }
+            *y += ROW_HEIGHT;
+        }
 
         if !child_is_managed {
             ctx.draw_text("Position (normalized)", x, *y + 14.0, 12.0, Color::GREY);

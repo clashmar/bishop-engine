@@ -1,0 +1,75 @@
+{ "frames": {
+   "Fidget 0.aseprite": {
+    "frame": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 1.aseprite": {
+    "frame": { "x": 6, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 2.aseprite": {
+    "frame": { "x": 12, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 3.aseprite": {
+    "frame": { "x": 18, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 4.aseprite": {
+    "frame": { "x": 24, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 5.aseprite": {
+    "frame": { "x": 30, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 6.aseprite": {
+    "frame": { "x": 36, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   },
+   "Fidget 7.aseprite": {
+    "frame": { "x": 42, "y": 0, "w": 6, "h": 15 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 15 },
+    "sourceSize": { "w": 6, "h": 15 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.25",
+  "image": "Fidget.png",
+  "format": "RGBA8888",
+  "size": { "w": 48, "h": 15 },
+  "scale": "1"
+ }
+}

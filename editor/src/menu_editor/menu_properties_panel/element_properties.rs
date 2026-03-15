@@ -202,16 +202,18 @@ impl MenuEditor {
             *y += ROW_HEIGHT;
         }
 
-        // Navigation section
-        *y += 8.0;
-        ctx.draw_text("Navigation", x, *y + 14.0, 12.0, Color::GREY);
-        *y += 20.0;
+        // Navigation section (only for top-level buttons, not children of layout groups)
+        if self.selected_child_index.is_none() {
+            *y += 8.0;
+            ctx.draw_text("Navigation", x, *y + 14.0, 12.0, Color::GREY);
+            *y += 20.0;
 
-        let focusable_elements = self.get_focusable_element_names();
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.nav_up_id, nav_up, &focusable_elements, blocked, |btn, idx| btn.nav_up = idx);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.nav_down_id, nav_down, &focusable_elements, blocked, |btn, idx| btn.nav_down = idx);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.nav_left_id, nav_left, &focusable_elements, blocked, |btn, idx| btn.nav_left = idx);
-        self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.nav_right_id, nav_right, &focusable_elements, blocked, |btn, idx| btn.nav_right = idx);
+            let focusable_elements = self.get_focusable_element_names();
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.nav_up_id, nav_up, &focusable_elements, blocked, |btn, idx| btn.nav_up = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.nav_down_id, nav_down, &focusable_elements, blocked, |btn, idx| btn.nav_down = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.nav_left_id, nav_left, &focusable_elements, blocked, |btn, idx| btn.nav_left = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.nav_right_id, nav_right, &focusable_elements, blocked, |btn, idx| btn.nav_right = idx);
+        }
     }
 
     fn draw_nav_dropdown<F>(
@@ -265,7 +267,7 @@ impl MenuEditor {
         *y += ROW_HEIGHT;
     }
 
-    fn get_focusable_element_names(&self) -> Vec<(usize, String)> {
+    pub(super) fn get_focusable_element_names(&self) -> Vec<(usize, String)> {
         let Some(template) = self.current_template() else {
             return Vec::new();
         };
@@ -275,10 +277,25 @@ impl MenuEditor {
             .iter()
             .enumerate()
             .filter_map(|(idx, element)| {
-                if let MenuElementKind::Button(button) = &element.kind {
-                    Some((idx, format!("{}: {}", idx, button.text)))
+                let name = if !element.name.is_empty() {
+                    element.name.clone()
                 } else {
-                    None
+                    match &element.kind {
+                        MenuElementKind::Button(button) => button.text.clone(),
+                        MenuElementKind::LayoutGroup(group) => {
+                            let button_count = group.children.iter()
+                                .filter(|c| matches!(c.element.kind, MenuElementKind::Button(_)))
+                                .count();
+                            format!("Layout Group ({} buttons)", button_count)
+                        }
+                        _ => return None,
+                    }
+                };
+                match &element.kind {
+                    MenuElementKind::Button(_) | MenuElementKind::LayoutGroup(_) => {
+                        Some((idx, format!("{}: {}", idx, name)))
+                    }
+                    _ => None,
                 }
             })
             .collect()
@@ -286,14 +303,11 @@ impl MenuEditor {
 
     pub(super) fn draw_panel_properties(
         &mut self,
-        ctx: &mut WgpuContext,
-        y: &mut f32,
-        x: f32,
+        _ctx: &mut WgpuContext,
+        _y: &mut f32,
+        _x: f32,
         _w: f32,
         _blocked: bool,
     ) {
-        ctx.draw_text("Type:", x, *y + 16.0, 12.0, Color::WHITE);
-        ctx.draw_text("Panel", x + LABEL_WIDTH, *y + 16.0, 12.0, Color::new(0.7, 0.7, 0.7, 1.0));
-        *y += ROW_HEIGHT;
     }
 }

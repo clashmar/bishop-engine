@@ -13,7 +13,7 @@ impl MenuEditor {
         w: f32,
         blocked: bool,
     ) {
-        let (direction, grid_cols, spacing, padding, h_align, v_align, item_w, item_h, child_count) = {
+        let (direction, grid_cols, spacing, padding, h_align, v_align, item_w, item_h, child_count, nav_up, nav_down, nav_left, nav_right) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::LayoutGroup(group) = &element.kind else { return };
             let cols = match group.layout.direction {
@@ -30,12 +30,12 @@ impl MenuEditor {
                 group.layout.item_width,
                 group.layout.item_height,
                 group.children.len(),
+                group.nav_up,
+                group.nav_down,
+                group.nav_left,
+                group.nav_right,
             )
         };
-
-        ctx.draw_text("Type:", x, *y + 16.0, 12.0, Color::WHITE);
-        ctx.draw_text("Layout Group", x + LABEL_WIDTH, *y + 16.0, 12.0, Color::new(0.7, 0.7, 0.7, 1.0));
-        *y += ROW_HEIGHT;
 
         // Direction dropdown
         ctx.draw_text("Direction:", x, *y + 16.0, 12.0, Color::WHITE);
@@ -274,17 +274,21 @@ impl MenuEditor {
         );
         *y += 20.0;
 
-        // Show children with managed toggle
+        // Managed toggle
         for i in 0..child_count {
             let (child_label, managed) = {
                 let Some(element) = self.selected_element() else { break };
                 let MenuElementKind::LayoutGroup(group) = &element.kind else { break };
                 let child = &group.children[i];
-                let label = match &child.element.kind {
-                    MenuElementKind::Label(l) => format!("Label: {}", l.text),
-                    MenuElementKind::Button(b) => format!("Button: {}", b.text),
-                    MenuElementKind::Panel(_) => "Panel".to_string(),
-                    MenuElementKind::LayoutGroup(_) => "Layout Group".to_string(),
+                let label = if !child.element.name.is_empty() {
+                    child.element.name.clone()
+                } else {
+                    match &child.element.kind {
+                        MenuElementKind::Label(l) => format!("Label: {}", l.text),
+                        MenuElementKind::Button(b) => format!("Button: {}", b.text),
+                        MenuElementKind::Panel(_) => "Panel".to_string(),
+                        MenuElementKind::LayoutGroup(_) => "Layout Group".to_string(),
+                    }
                 };
                 (label, child.managed)
             };
@@ -304,5 +308,67 @@ impl MenuEditor {
             }
             *y += ROW_HEIGHT;
         }
+
+        // Navigation section
+        *y += 8.0;
+        ctx.draw_text("Navigation", x, *y + 14.0, 12.0, Color::GREY);
+        *y += 20.0;
+
+        let focusable_elements = self.get_focusable_element_names();
+        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.layout_nav_up_id, nav_up, &focusable_elements, blocked, |group, idx| group.nav_up = idx);
+        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.layout_nav_down_id, nav_down, &focusable_elements, blocked, |group, idx| group.nav_down = idx);
+        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.layout_nav_left_id, nav_left, &focusable_elements, blocked, |group, idx| group.nav_left = idx);
+        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.layout_nav_right_id, nav_right, &focusable_elements, blocked, |group, idx| group.nav_right = idx);
+    }
+
+    fn draw_layout_nav_dropdown<F>(
+        &mut self,
+        ctx: &mut WgpuContext,
+        y: &mut f32,
+        x: f32,
+        w: f32,
+        label: &str,
+        id: WidgetId,
+        current: Option<usize>,
+        options: &[(usize, String)],
+        blocked: bool,
+        mut setter: F,
+    ) where
+        F: FnMut(&mut LayoutGroupElement, Option<usize>),
+    {
+        ctx.draw_text(label, x, *y + 16.0, 12.0, Color::WHITE);
+
+        let current_label = current
+            .and_then(|idx| options.iter().find(|(i, _)| *i == idx))
+            .map(|(_, name)| name.as_str())
+            .unwrap_or("None");
+
+        let mut nav_options: Vec<String> = vec!["None".to_string()];
+        nav_options.extend(options.iter().map(|(_, name)| name.clone()));
+
+        let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+        if let Some(selected) = Dropdown::new(
+            id,
+            dropdown_rect,
+            current_label,
+            &nav_options,
+            |s| s.clone(),
+        )
+        .blocked(blocked)
+        .show(ctx)
+        {
+            let new_nav = if selected == "None" {
+                None
+            } else {
+                options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
+            };
+
+            if let Some(element) = self.selected_element_mut() {
+                if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                    setter(group, new_nav);
+                }
+            }
+        }
+        *y += ROW_HEIGHT;
     }
 }

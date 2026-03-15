@@ -1,0 +1,31 @@
+[greeting]
+selection = "random"
+variants = [
+    "Hello {{player_name}}!",
+]
+
+[farewell]
+selection = "sequential"
+exhausted = "..."
+variants = [
+    "Goodbye!",
+    "See you soon!",
+    "Take care out there!",
+    "Until we meet again!",
+]
+
+[busy]
+selection = "once"
+exhausted = "I really must get back to work..."
+variants = [
+    "I'm a bit busy right now."
+]
+
+[tips]
+selection = "shuffle"
+variants = [
+    "The forest to the east has many secrets.",
+    "Watch out for traps in the dungeon!",
+    "The blacksmith sells the best weapons.",
+    "Have you tried jumping on the platforms?",
+]

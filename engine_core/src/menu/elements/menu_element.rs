@@ -75,6 +75,7 @@ impl Default for PanelElement {
 /// Menu element variants with positional data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MenuElement {
+    pub name: String,
     pub kind: MenuElementKind,
     pub rect: Rect,
     pub enabled: bool,
@@ -86,6 +87,7 @@ impl MenuElement {
     /// Creates a new menu element.
     pub fn new(kind: MenuElementKind, rect: Rect) -> Self {
         Self {
+            name: String::new(),
             kind,
             rect,
             enabled: true,

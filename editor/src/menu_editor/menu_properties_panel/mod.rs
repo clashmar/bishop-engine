@@ -15,6 +15,7 @@ pub(crate) const FIELD_HEIGHT: f32 = 24.0;
 /// Widget IDs for the properties module.
 #[derive(Default)]
 pub struct PropertiesWidgetIds {
+    pub(crate) name_id: WidgetId,
     pub(crate) text_id: WidgetId,
     pub(crate) font_size_id: WidgetId,
     pub(crate) action_id: WidgetId,
@@ -39,6 +40,10 @@ pub struct PropertiesWidgetIds {
     pub(crate) layout_v_align_id: WidgetId,
     pub(crate) layout_item_w_id: WidgetId,
     pub(crate) layout_item_h_id: WidgetId,
+    pub(crate) layout_nav_up_id: WidgetId,
+    pub(crate) layout_nav_down_id: WidgetId,
+    pub(crate) layout_nav_left_id: WidgetId,
+    pub(crate) layout_nav_right_id: WidgetId,
     pub(crate) bg_type_id: WidgetId,
     pub(crate) bg_color_id: WidgetId,
     pub(crate) bg_alpha_id: WidgetId,
@@ -106,6 +111,9 @@ impl MenuEditor {
 
         let Some(kind) = element_kind else { return };
 
+        self.draw_common_properties(ctx, &mut y, content_x, content_w, blocked);
+        y += 8.0;
+
         match kind {
             MenuElementKind::Label(_) => {
                 self.draw_label_properties(ctx, &mut y, content_x, content_w, blocked);
@@ -120,9 +128,6 @@ impl MenuEditor {
                 self.draw_layout_group_properties(ctx, &mut y, content_x, content_w, blocked);
             }
         }
-
-        y += 8.0;
-        self.draw_common_properties(ctx, &mut y, content_x, content_w, blocked);
     }
 
     fn calculate_properties_height(&self) -> f32 {
@@ -136,21 +141,28 @@ impl MenuEditor {
                 } else {
                     0.0
                 };
-                ROW_HEIGHT * 3.0 + param_row + 28.0 + ROW_HEIGHT * 4.0
+                let nav_height = if self.selected_child_index.is_none() {
+                    28.0 + ROW_HEIGHT * 4.0
+                } else {
+                    0.0
+                };
+                ROW_HEIGHT * 3.0 + param_row + nav_height
             }
-            Some(MenuElementKind::Panel(_)) => ROW_HEIGHT,
+            Some(MenuElementKind::Panel(_)) => 0.0,
             Some(MenuElementKind::LayoutGroup(group)) => {
                 let grid_row = if matches!(group.layout.direction, LayoutDirection::Grid { .. }) {
                     ROW_HEIGHT
                 } else {
                     0.0
                 };
-                ROW_HEIGHT * (1.0 + 1.0 + 1.0 + 4.0 + 2.0 + 2.0)
+                ROW_HEIGHT * (1.0 + 1.0 + 4.0 + 2.0 + 2.0)
                     + grid_row
                     + 20.0 * 3.0 // section headers
                     + 4.0 * 3.0  // section gaps
                     + 20.0 // children header
                     + ROW_HEIGHT * group.children.len() as f32
+                    + 8.0 + 20.0 // navigation section header
+                    + ROW_HEIGHT * 4.0 // nav dropdowns
             }
             None => {
                 let mut h = 20.0 + ROW_HEIGHT + 4.0 + 20.0 + ROW_HEIGHT;
@@ -169,7 +181,8 @@ impl MenuEditor {
             ROW_HEIGHT * 2.0 + 20.0 + 8.0
         };
 
-        let common_height = ROW_HEIGHT * 3.0 + pos_size_height + 8.0;
+        let z_order_height = if self.selected_child_index.is_none() { ROW_HEIGHT } else { 0.0 };
+        let common_height = ROW_HEIGHT * 2.0 + z_order_height + ROW_HEIGHT * 2.0 + pos_size_height + 8.0;
 
         base_height + element_height + common_height
     }

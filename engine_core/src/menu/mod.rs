@@ -1,5 +1,6 @@
 mod menu_builder;
 mod menu_coordinates;
+mod menu_focus;
 mod menu_manager;
 mod input_binding;
 mod menu_navigation;
@@ -11,6 +12,7 @@ pub mod layout;
 pub use bishop::input::*;
 pub use menu_builder::*;
 pub use menu_coordinates::*;
+pub use menu_focus::*;
 pub use menu_manager::*;
 pub use input_binding::*;
 pub use menu_navigation::*;
