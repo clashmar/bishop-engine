@@ -6,7 +6,7 @@
 - Changes to widgets are allowed but ask first
 - Keep decoupled from ECS
 - Menu behaviour ought to be configuarable in lua
-- Menu manager can build default menus as placeholders
+- Menu manager just builds default menus as placeholders
 
 # Relevant files/folders
 - engine_core/src/menu
@@ -18,4 +18,4 @@
 - Menus will have relationships e.g. start menu => settings and back
 - Elements should be navigable with a gamepad 
 - Widgets will eventually have more customization (e.g. button styling)
-- Elements such as panels or the background could have a plain color/sprite/animation/shaders
+- Elements such as panels or the background will have sprite/animation/shaders in future

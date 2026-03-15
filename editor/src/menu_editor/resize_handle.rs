@@ -128,6 +128,30 @@ pub fn apply_resize(original: Rect, handle: HandlePosition, delta: Vec2) -> Rect
     Rect::new(x, y, w, h)
 }
 
+/// Applies a resize while keeping the element's center fixed on unaffected axes.
+///
+/// Edge handles (Top, Bottom, Left, Right) only re-center the axis being resized.
+/// Corner handles re-center both axes.
+pub fn apply_resize_centered(original: Rect, handle: HandlePosition, delta: Vec2) -> Rect {
+    let resized = apply_resize(original, handle, delta);
+    let cx = original.x + original.w / 2.0;
+    let cy = original.y + original.h / 2.0;
+
+    let (x, y) = match handle {
+        HandlePosition::Top | HandlePosition::Bottom => {
+            (resized.x, cy - resized.h / 2.0)
+        }
+        HandlePosition::Left | HandlePosition::Right => {
+            (cx - resized.w / 2.0, resized.y)
+        }
+        _ => {
+            (cx - resized.w / 2.0, cy - resized.h / 2.0)
+        }
+    };
+
+    Rect::new(x, y, resized.w, resized.h)
+}
+
 /// Draws the 8 resize handles around `rect` in screen space.
 pub fn draw_resize_handles(ctx: &mut WgpuContext, rect: Rect) {
     let centers = handle_centers(rect);

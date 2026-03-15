@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use super::menu_element::MenuElement;
+use super::menu_panel::PanelBackground;
 use crate::menu::layout::LayoutConfig;
 
 /// Element that arranges its children using layout rules.
@@ -7,6 +8,9 @@ use crate::menu::layout::LayoutConfig;
 pub struct LayoutGroupElement {
     pub layout: LayoutConfig,
     pub children: Vec<LayoutChild>,
+    /// Optional panel background rendered behind the children.
+    #[serde(default)]
+    pub background: Option<PanelBackground>,
     /// Navigation target when leaving upward.
     pub nav_up: Option<usize>,
     /// Navigation target when leaving downward.
@@ -22,6 +26,7 @@ impl Default for LayoutGroupElement {
         Self {
             layout: LayoutConfig::default(),
             children: Vec::new(),
+            background: None,
             nav_up: None,
             nav_down: None,
             nav_left: None,

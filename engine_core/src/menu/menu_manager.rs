@@ -88,6 +88,12 @@ impl MenuManager {
     /// Closes the current menu and returns to previous menu if any.
     pub fn close_menu(&mut self) {
         self.menu_stack.pop();
+        if let Some(parent_id) = self.menu_stack.last() {
+            if let Some(template) = self.templates.get(parent_id) {
+                self.focus.reset(template);
+                return;
+            }
+        }
         self.focus = MenuFocus::new(0);
     }
 
@@ -215,7 +221,27 @@ impl MenuManager {
                                 triggered_action = Some(button.action.clone());
                             }
                         }
+                        MenuElementKind::Panel(panel) => {
+                            let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
+                            ctx.draw_rectangle(
+                                screen_rect.x,
+                                screen_rect.y,
+                                screen_rect.w,
+                                screen_rect.h,
+                                panel.background.render_color(),
+                            );
+                        }
                         MenuElementKind::LayoutGroup(group) => {
+                            if let Some(bg) = &group.background {
+                                let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
+                                ctx.draw_rectangle(
+                                    screen_rect.x,
+                                    screen_rect.y,
+                                    screen_rect.w,
+                                    screen_rect.h,
+                                    bg.render_color(),
+                                );
+                            }
                             let resolved = resolve_layout(group, element.rect);
                             let mut focusable_idx = 0;
                             for (child, rect) in group.children.iter().zip(resolved.iter()) {

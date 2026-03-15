@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::menu::menu_builder::MenuAction;
 use crate::menu::layout::HorizontalAlign;
 use super::layout_group::LayoutGroupElement;
+use super::menu_panel::PanelBackground;
 
 /// Different kinds of menu elements.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,18 +63,16 @@ impl Default for ButtonElement {
     }
 }
 
-/// Panel element containing nested elements with its own layout.
+/// Decorative panel element that renders a background fill.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PanelElement {
-    pub elements: Vec<MenuElement>,
-    pub background_color: Option<Color>,
+    pub background: PanelBackground,
 }
 
 impl Default for PanelElement {
     fn default() -> Self {
         Self {
-            elements: Vec::new(),
-            background_color: None,
+            background: PanelBackground::default(),
         }
     }
 }
@@ -126,12 +125,9 @@ impl MenuElement {
     }
 
     /// Creates a panel element.
-    pub fn panel(elements: Vec<MenuElement>, rect: Rect) -> Self {
+    pub fn panel(background: PanelBackground, rect: Rect) -> Self {
         Self::new(
-            MenuElementKind::Panel(PanelElement {
-                elements,
-                background_color: None,
-            }),
+            MenuElementKind::Panel(PanelElement { background }),
             rect,
         )
     }

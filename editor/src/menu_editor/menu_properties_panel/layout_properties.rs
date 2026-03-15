@@ -14,14 +14,26 @@ impl MenuEditor {
         blocked: bool,
         clip: &Rect,
     ) {
-        let (direction, grid_cols, spacing, padding, h_align, v_align, item_w, item_h, child_count, nav_up, nav_down, nav_left, nav_right) = {
+        let (has_bg, bg_color, bg_opacity, direction, grid_cols, spacing, padding, h_align, v_align, item_w, item_h, child_count, nav_up, nav_down, nav_left, nav_right) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::LayoutGroup(group) = &element.kind else { return };
             let cols = match group.layout.direction {
                 LayoutDirection::Grid { columns } => columns,
                 _ => 2,
             };
+            let (has_bg, bg_color, bg_opacity) = match &group.background {
+                Some(bg) => {
+                    let color = match bg.fill {
+                        PanelFill::SolidColor(c) => c,
+                    };
+                    (true, color, bg.opacity)
+                }
+                None => (false, Color::new(0.3, 0.3, 0.35, 1.0), 1.0),
+            };
             (
+                has_bg,
+                bg_color,
+                bg_opacity,
                 group.layout.direction,
                 cols,
                 group.layout.spacing,
@@ -37,6 +49,79 @@ impl MenuEditor {
                 group.nav_right,
             )
         };
+
+        // Background section
+        if row_visible(*y, 20.0, clip) {
+            ctx.draw_text("Background", x, *y + 14.0, 12.0, Color::GREY);
+        }
+        *y += 20.0;
+
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Enabled:", x, *y + 16.0, 12.0, Color::WHITE);
+            let checkbox_rect = Rect::new(x + LABEL_WIDTH, *y + 4.0, 16.0, 16.0);
+            let mut enabled = has_bg;
+            if gui_checkbox(ctx, checkbox_rect, &mut enabled) {
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                        group.background = if enabled {
+                            Some(PanelBackground::default())
+                        } else {
+                            None
+                        };
+                    }
+                }
+            }
+        }
+        *y += ROW_HEIGHT;
+
+        if has_bg {
+            if row_visible(*y, ROW_HEIGHT, clip) {
+                ctx.draw_text("Color:", x, *y + 16.0, 12.0, Color::WHITE);
+                let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+                let new_color = ColorInput::new(
+                    self.properties_panel.widget_ids.layout_bg_color_id,
+                    field_rect,
+                    bg_color,
+                )
+                .blocked(blocked)
+                .show(ctx);
+                if new_color != bg_color {
+                    if let Some(element) = self.selected_element_mut() {
+                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                            if let Some(bg) = &mut group.background {
+                                bg.fill = PanelFill::SolidColor(new_color);
+                            }
+                        }
+                    }
+                }
+            }
+            *y += ROW_HEIGHT;
+
+            if row_visible(*y, ROW_HEIGHT, clip) {
+                ctx.draw_text("Opacity:", x, *y + 16.0, 12.0, Color::WHITE);
+                let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+                let (new_opacity, changed) = gui_slider(
+                    ctx,
+                    self.properties_panel.widget_ids.layout_bg_opacity_id,
+                    field_rect,
+                    0.0,
+                    1.0,
+                    bg_opacity,
+                );
+                if changed {
+                    if let Some(element) = self.selected_element_mut() {
+                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                            if let Some(bg) = &mut group.background {
+                                bg.opacity = new_opacity;
+                            }
+                        }
+                    }
+                }
+            }
+            *y += ROW_HEIGHT;
+        }
+
+        *y += 4.0;
 
         // Direction dropdown
         if row_visible(*y, ROW_HEIGHT, clip) {
@@ -56,6 +141,7 @@ impl MenuEditor {
                 |s| s.to_string(),
             )
             .blocked(blocked)
+            .fixed_width()
             .show(ctx)
             {
                 let new_dir = match selected {
@@ -185,6 +271,7 @@ impl MenuEditor {
                 |s| s.to_string(),
             )
             .blocked(blocked)
+            .fixed_width()
             .show(ctx)
             {
                 let new_align = match selected {
@@ -220,6 +307,7 @@ impl MenuEditor {
                 |s| s.to_string(),
             )
             .blocked(blocked)
+            .fixed_width()
             .show(ctx)
             {
                 let new_align = match selected {
@@ -386,6 +474,7 @@ impl MenuEditor {
                 |s| s.clone(),
             )
             .blocked(blocked)
+            .fixed_width()
             .show(ctx)
             {
                 let new_nav = if selected == "None" {

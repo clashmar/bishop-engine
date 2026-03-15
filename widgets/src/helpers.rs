@@ -1,5 +1,24 @@
 use crate::*;
 
+/// Truncates text to fit within a given pixel width, appending "…" if needed.
+pub fn truncate_to_width<C: BishopContext>(ctx: &mut C, text: &str, max_width: f32, font_size: f32) -> String {
+    if measure_text_ui(ctx, text, font_size).width <= max_width {
+        return text.to_string();
+    }
+    let ellipsis = "…";
+    let ellipsis_w = measure_text_ui(ctx, ellipsis, font_size).width;
+    let target = max_width - ellipsis_w;
+    let mut end_byte = 0;
+    for (byte_idx, ch) in text.char_indices() {
+        let w = measure_text_ui(ctx, &text[..byte_idx + ch.len_utf8()], font_size).width;
+        if w > target {
+            break;
+        }
+        end_byte = byte_idx + ch.len_utf8();
+    }
+    format!("{}{}", &text[..end_byte], ellipsis)
+}
+
 pub fn byte_offset(s: &str, char_idx: usize) -> usize {
     s.char_indices()
         .nth(char_idx)

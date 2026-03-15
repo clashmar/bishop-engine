@@ -100,7 +100,7 @@ impl<'a> Button<'a> {
 
         match self.style {
             ButtonStyle::Default => {
-                let highlight = (hovered || self.focused) && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left);
+                let highlight = (hovered || self.focused) && !is_dropdown_open() && !self.blocked && !(hovered && ctx.is_mouse_button_down(MouseButton::Left));
                 let background = if highlight {
                     self.hover_color
                 } else {
@@ -110,7 +110,7 @@ impl<'a> Button<'a> {
                 ctx.draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
             }
             ButtonStyle::Plain => {
-                let highlight = (hovered || self.focused) && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left);
+                let highlight = (hovered || self.focused) && !is_dropdown_open() && !self.blocked && !(hovered && ctx.is_mouse_button_down(MouseButton::Left));
                 if highlight {
                     ctx.draw_rectangle(
                         self.rect.x,

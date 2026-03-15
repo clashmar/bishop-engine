@@ -73,7 +73,7 @@ impl<'a> TextInput<'a> {
                 let mut map = s.borrow_mut();
 
                 if let Some(state) = map.get(&self.id) {
-                    let should_focus = self.start_focused || pending_focus;
+                    let should_focus = pending_focus;
                     let f = if should_focus { true } else { state.focused };
                     just_gained_focus = should_focus && !state.focused;
                     let cc = if should_focus && just_gained_focus { state.text.chars().count() } else { state.cursor_char };
@@ -146,6 +146,9 @@ impl<'a> TextInput<'a> {
             }
 
             if focused && mouse_over {
+                if just_gained_focus {
+                    clear_all_input_focus();
+                }
                 let click_pos = char_index_from_x(ctx, &text, mouse.0, self.rect.x, DEFAULT_FONT_SIZE_16, scroll_offset_x);
                 cursor_char = click_pos;
                 selection_anchor = Some(click_pos);
@@ -179,7 +182,8 @@ impl<'a> TextInput<'a> {
             INPUT_FOCUSED.with(|f| *f.borrow_mut() = true);
             let now = ctx.get_time();
             let shift_held = ctx.is_key_down(KeyCode::LeftShift) || ctx.is_key_down(KeyCode::RightShift);
-            let ctrl_held = ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::RightControl);
+            let ctrl_held = ctx.is_key_down(KeyCode::LeftControl) || ctx.is_key_down(KeyCode::RightControl)
+                || ctx.is_key_down(KeyCode::LeftSuper) || ctx.is_key_down(KeyCode::RightSuper);
 
             if ctrl_held && ctx.is_key_pressed(KeyCode::A) {
                 selection_anchor = Some(0);
@@ -344,6 +348,9 @@ impl<'a> TextInput<'a> {
             }
 
             for chr in ctx.chars_pressed() {
+                if ctrl_held {
+                    continue;
+                }
                 let accepted = if let Some(filter) = self.char_filter {
                     filter(chr)
                 } else if chr.is_ascii_graphic() || chr == ' ' {

@@ -31,6 +31,22 @@ pub fn normalized_to_screen(norm_pos: Vec2, canvas_origin: Vec2, canvas_size: Ve
     norm_pos * canvas_size + canvas_origin
 }
 
+/// Computes a letterboxed 16:9 rect that fills the entire window for preview mode.
+pub fn compute_preview_rect(screen_width: f32, screen_height: f32) -> Rect {
+    let aspect = DESIGN_RESOLUTION_WIDTH / DESIGN_RESOLUTION_HEIGHT;
+    let (w, h) = if screen_width / screen_height > aspect {
+        (screen_height * aspect, screen_height)
+    } else {
+        (screen_width, screen_width / aspect)
+    };
+    Rect::new(
+        (screen_width - w) / 2.0,
+        (screen_height - h) / 2.0,
+        w,
+        h,
+    )
+}
+
 /// Converts a normalized rect to a screen-space rect.
 pub fn normalized_rect_to_screen(rect: Rect, canvas_origin: Vec2, canvas_size: Vec2) -> Rect {
     Rect::new(
