@@ -9,7 +9,6 @@ impl MenuEditor{
         const LEFT_COLUMN_WIDTH: f32 = 200.0;
         const PROPERTIES_WIDTH: f32 = 250.0;
         const SPACING: f32 = 8.0;
-        const MENU_LIST_HEIGHT: f32 = 180.0;
 
         let blocked = false;
 
@@ -26,18 +25,20 @@ impl MenuEditor{
             ctx.screen_height() - menu_panel.h,
         );
 
+        let half_height = (screen_rect.h - SPACING * 3.0) / 2.0;
+
         let menu_list_rect = self.register_rect(Rect::new(
             screen_rect.x + SPACING,
             screen_rect.y + SPACING,
             LEFT_COLUMN_WIDTH,
-            MENU_LIST_HEIGHT,
+            half_height,
         ));
 
         let palette_rect = self.register_rect(Rect::new(
             screen_rect.x + SPACING,
             menu_list_rect.bottom() + SPACING,
             LEFT_COLUMN_WIDTH,
-            screen_rect.h - MENU_LIST_HEIGHT - SPACING * 3.0,
+            half_height,
         ));
 
         let properties_rect = self.register_rect(Rect::new(

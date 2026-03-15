@@ -4,6 +4,7 @@ use crate::gui::modal::is_modal_open;
 use crate::menu_editor::*;
 use crate::menu_editor::resize_handle::ResizeHandleState;
 use crate::storage::editor_storage::delete_menu;
+use std::collections::HashSet;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -27,15 +28,20 @@ pub struct MenuEditor {
     pub(crate) properties_panel: MenuPropertiesPanel,
     pub templates: Vec<MenuTemplate>,
     pub current_template_index: Option<usize>,
-    pub selected_element_index: Option<usize>,
+    pub selected_element_indices: HashSet<usize>,
     pub selected_child_index: Option<usize>,
     pub pending_element_type: Option<MenuElementKind>,
     pub(crate) active_rects: Vec<Rect>,
     pub(crate) dragging_element: Option<usize>,
     pub(crate) drag_offset: Vec2,
+    pub(crate) drag_start_rects: Vec<(usize, Vec2)>,
     pub(crate) resizing_handle: Option<ResizeHandleState>,
     pub(crate) reorder_drag: Option<ReorderDragState>,
     pub(crate) snap_lines: Vec<SnapLine>,
+    pub(crate) box_select_start: Option<Vec2>,
+    pub(crate) box_select_active: bool,
+    pub(crate) last_norm_mouse: Option<Vec2>,
+    pub(crate) view_preview: bool,
 }
 
 impl MenuEditor {
@@ -47,15 +53,29 @@ impl MenuEditor {
             properties_panel: MenuPropertiesPanel::new(),
             templates: Vec::new(),
             current_template_index: None,
-            selected_element_index: None,
+            selected_element_indices: HashSet::new(),
             selected_child_index: None,
             pending_element_type: None,
             active_rects: Vec::new(),
             dragging_element: None,
             drag_offset: Vec2::ZERO,
+            drag_start_rects: Vec::new(),
             resizing_handle: None,
             reorder_drag: None,
             snap_lines: Vec::new(),
+            box_select_start: None,
+            box_select_active: false,
+            last_norm_mouse: None,
+            view_preview: false,
+        }
+    }
+
+    /// Returns `Some(i)` when exactly one element is selected.
+    pub fn primary_selected_index(&self) -> Option<usize> {
+        if self.selected_element_indices.len() == 1 {
+            self.selected_element_indices.iter().next().copied()
+        } else {
+            None
         }
     }
 
@@ -65,11 +85,29 @@ impl MenuEditor {
         ctx: &mut WgpuContext,
         camera: &Camera2D,
     ) {
+        if self.view_preview {
+            if Controls::v(ctx) || Controls::escape(ctx) {
+                self.view_preview = false;
+            }
+            return;
+        }
+
         let canvas_rect = compute_canvas_rect(ctx.screen_width(), ctx.screen_height());
 
         let blocked = self.is_mouse_over_ui(ctx);
 
         self.update_canvas(ctx, camera, canvas_rect, blocked);
+
+        if !input_is_focused() && Controls::v(ctx) && self.current_template_index.is_some() {
+            self.view_preview = true;
+            self.dragging_element = None;
+            self.resizing_handle = None;
+            self.reorder_drag = None;
+            self.pending_element_type = None;
+            self.snap_lines.clear();
+            self.box_select_start = None;
+            self.box_select_active = false;
+        }
     }
 
     pub fn draw(
@@ -80,6 +118,12 @@ impl MenuEditor {
     ) {
         ctx.set_camera(camera);
         ctx.clear_background(Color::BLACK);
+
+        if self.view_preview {
+            let preview_rect = compute_preview_rect(ctx.screen_width(), ctx.screen_height());
+            self.draw_preview_canvas(ctx, camera, preview_rect);
+            return;
+        }
 
         let canvas_rect = compute_canvas_rect(ctx.screen_width(), ctx.screen_height());
 
@@ -110,7 +154,7 @@ impl MenuEditor {
         } else {
             Some(0)
         };
-        self.selected_element_index = None;
+        self.selected_element_indices.clear();
         self.selected_child_index = None;
     }
 
@@ -118,7 +162,7 @@ impl MenuEditor {
     pub fn select_template(&mut self, index: usize) {
         if index < self.templates.len() {
             self.current_template_index = Some(index);
-            self.selected_element_index = None;
+            self.selected_element_indices.clear();
             self.selected_child_index = None;
         }
     }
@@ -128,7 +172,7 @@ impl MenuEditor {
         let template = MenuTemplate::new(id);
         self.templates.push(template);
         self.current_template_index = Some(self.templates.len() - 1);
-        self.selected_element_index = None;
+        self.selected_element_indices.clear();
         self.selected_child_index = None;
     }
 
@@ -154,7 +198,7 @@ impl MenuEditor {
                 self.current_template_index = Some(current - 1);
             }
         }
-        self.selected_element_index = None;
+        self.selected_element_indices.clear();
         self.selected_child_index = None;
     }
 
@@ -173,9 +217,10 @@ impl MenuEditor {
             MenuElementKind::LayoutGroup(_) => Vec2::new(0.25, 0.30),
         };
 
+        let selected_idx = self.primary_selected_index();
         let template = &mut self.templates[template_idx];
 
-        if let Some(selected_idx) = self.selected_element_index {
+        if let Some(selected_idx) = selected_idx {
             if let Some(selected) = template.elements.get_mut(selected_idx) {
                 if let MenuElementKind::LayoutGroup(group) = &mut selected.kind {
                     // Store position relative to the group origin so unmanaged children
@@ -194,16 +239,18 @@ impl MenuEditor {
         let element = MenuElement::new(kind, rect);
 
         template.elements.push(element);
-        self.selected_element_index = Some(template.elements.len() - 1);
+        self.selected_element_indices.clear();
+        self.selected_element_indices.insert(template.elements.len() - 1);
     }
 
-    /// Deletes the currently selected element or child.
+    /// Deletes the currently selected element(s) or child.
     pub fn delete_selected_element(&mut self) {
-        let Some(index) = self.selected_element_index else {
+        if self.selected_element_indices.is_empty() {
             return;
-        };
+        }
 
-        if let Some(child_idx) = self.selected_child_index {
+        // Single parent with child selected: delete the child only
+        if let (Some(index), Some(child_idx)) = (self.primary_selected_index(), self.selected_child_index) {
             let template_idx = match self.current_template_index {
                 Some(i) if i < self.templates.len() => i,
                 _ => return,
@@ -235,27 +282,29 @@ impl MenuEditor {
             return;
         }
 
+        // Multi-delete: collect indices, sort descending, remove each
+        let mut indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
+        indices.sort_unstable_by(|a, b| b.cmp(a));
+
         let Some(template) = self.current_template_mut() else {
             return;
         };
 
-        if index >= template.elements.len() {
-            return;
+        for index in indices {
+            if index < template.elements.len() {
+                template.elements.remove(index);
+            }
         }
 
-        template.elements.remove(index);
-
-        if template.elements.is_empty() {
-            self.selected_element_index = None;
-        } else if index >= template.elements.len() {
-            self.selected_element_index = Some(template.elements.len() - 1);
-        }
+        self.selected_element_indices.clear();
+        self.selected_child_index = None;
     }
 
     /// Returns a reference to the selected element or child element when a child is selected.
+    /// Returns `None` when multiple elements are selected.
     pub fn selected_element(&self) -> Option<&MenuElement> {
         let template = self.current_template()?;
-        let index = self.selected_element_index?;
+        let index = self.primary_selected_index()?;
         let element = template.elements.get(index)?;
         if let Some(child_idx) = self.selected_child_index {
             if let MenuElementKind::LayoutGroup(group) = &element.kind {
@@ -266,13 +315,12 @@ impl MenuEditor {
     }
 
     /// Returns a mutable reference to the selected element or child element when a child is selected.
+    /// Returns `None` when multiple elements are selected.
     pub fn selected_element_mut(&mut self) -> Option<&mut MenuElement> {
-        let index = self.selected_element_index?;
+        let index = self.primary_selected_index()?;
         let template_idx = self.current_template_index?;
 
         if let Some(ci) = self.selected_child_index {
-            // Always return here — the `if let` branch never falls through,
-            // so the borrow from `self.templates` below is a separate code path.
             return self.templates.get_mut(template_idx)
                 .and_then(|t| t.elements.get_mut(index))
                 .and_then(|e| {
@@ -290,7 +338,7 @@ impl MenuEditor {
     /// Returns true when a managed child element is currently selected.
     pub fn is_selected_child_managed(&self) -> bool {
         let Some(child_idx) = self.selected_child_index else { return false };
-        let Some(parent_idx) = self.selected_element_index else { return false };
+        let Some(parent_idx) = self.primary_selected_index() else { return false };
         let Some(template) = self.current_template() else { return false };
         let Some(element) = template.elements.get(parent_idx) else { return false };
         let MenuElementKind::LayoutGroup(group) = &element.kind else { return false };
@@ -314,6 +362,9 @@ impl MenuEditor {
     }
 
     pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {
+        if self.view_preview {
+            return true;
+        }
         let mouse_screen: Vec2 = ctx.mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
             || is_dropdown_open()

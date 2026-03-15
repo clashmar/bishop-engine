@@ -54,6 +54,7 @@ pub struct Dropdown<'a, T> {
     text_color: Color,
     y_offset: f32,
     blocked: bool,
+    fixed_width: bool,
 }
 
 impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
@@ -75,6 +76,7 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             text_color: Color::WHITE,
             y_offset: 0.0,
             blocked: false,
+            fixed_width: false,
         }
     }
 
@@ -102,6 +104,12 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         self
     }
 
+    /// Clamps the dropdown list width to match the parent button.
+    pub fn fixed_width(mut self) -> Self {
+        self.fixed_width = true;
+        self
+    }
+
     /// Draws the dropdown and returns the selected option if one was clicked.
     pub fn show<C: BishopContext>(self, ctx: &mut C) -> Option<T> {
         const MAX_VISIBLE_ROWS: usize = 8;
@@ -116,12 +124,20 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         dropdown_state::set(self.id, state);
         update_global_dropdown_flag();
 
+        let truncated;
+        let display_label = if self.fixed_width {
+            truncated = truncate_to_width(ctx, self.label, self.rect.w - WIDGET_PADDING, DEFAULT_FONT_SIZE_16);
+            &truncated
+        } else {
+            self.label
+        };
+
         let button_clicked = match self.style {
             DropDownStyle::Default => {
-                Button::new(self.rect, self.label).blocked(self.blocked).show(ctx) && !self.blocked
+                Button::new(self.rect, display_label).blocked(self.blocked).show(ctx) && !self.blocked
             }
             DropDownStyle::Plain => {
-                Button::new(self.rect, self.label)
+                Button::new(self.rect, display_label)
                     .plain()
                     .text_color(self.text_color)
                     .blocked(self.blocked)
@@ -154,15 +170,23 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             }
         }
 
-        let list_width = self.rect.w.max(max_opt_width + 2.0 * W_PADDING + SCROLLBAR_WIDTH);
+        let list_width = if self.fixed_width {
+            self.rect.w
+        } else {
+            self.rect.w.max(max_opt_width + 2.0 * W_PADDING + SCROLLBAR_WIDTH)
+        };
 
         let visible_rows = MAX_VISIBLE_ROWS.min(self.options.len());
-        let list_rect = Rect::new(
-            self.rect.x,
-            self.rect.y + self.rect.h + self.y_offset,
-            list_width,
-            self.rect.h * visible_rows as f32,
-        );
+        let list_h = self.rect.h * visible_rows as f32;
+        let drop_down_y = self.rect.y + self.rect.h + self.y_offset;
+        let drop_up_y = self.rect.y - list_h - self.y_offset;
+        let drops_below_screen = drop_down_y + list_h > ctx.screen_height();
+        let list_y = if drops_below_screen && drop_up_y >= 0.0 {
+            drop_up_y
+        } else {
+            drop_down_y
+        };
+        let list_rect = Rect::new(self.rect.x, list_y, list_width, list_h);
 
         if list_is_open {
             state.rect = list_rect;
@@ -285,11 +309,14 @@ fn render_dropdown_list<C: BishopContext>(
             );
         }
 
-        draw_text_ui(
+        draw_text_clipped(
             ctx,
             label,
-            entry_rect.x + 5.,
-            entry_rect.y + entry_rect.h * 0.7,
+            entry_rect.x,
+            entry_rect.y,
+            entry_rect.w,
+            entry_rect.h,
+            0.0,
             DEFAULT_FONT_SIZE_16,
             FIELD_TEXT_COLOR,
         );

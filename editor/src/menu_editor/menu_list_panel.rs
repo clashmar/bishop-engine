@@ -88,8 +88,10 @@ impl MenuEditor {
                 let ok_rect = Rect::new(content_x + content_w - 50.0, y, 50.0, 24.0);
                 let ok_clicked = Button::new(ok_rect, "OK").blocked(blocked).show(ctx);
 
-                if (ok_clicked || ctx.is_key_pressed(KeyCode::Enter)) && !self.menu_list_panel.new_menu_name.trim().is_empty() {
-                    let name = self.menu_list_panel.new_menu_name.trim().to_string();
+                let name_trimmed = self.menu_list_panel.new_menu_name.trim();
+                let duplicate = self.templates.iter().any(|t| t.id == name_trimmed);
+                if (ok_clicked || ctx.is_key_pressed(KeyCode::Enter)) && !name_trimmed.is_empty() && !duplicate {
+                    let name = name_trimmed.to_string();
                     self.create_new_template(name);
                     self.menu_list_panel.pending_new_menu = false;
                     self.menu_list_panel.new_menu_name.clear();

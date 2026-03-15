@@ -2,6 +2,7 @@
 use crate::ecs::component_registry::ComponentRegistry;
 use crate::room::room_editor::*;
 use crate::room::selection::*;
+use crate::shared::selection::*;
 use crate::commands::room::*;
 use crate::editor_global::*;
 use crate::world::coord;
@@ -543,16 +544,3 @@ impl RoomEditor {
     }
 }
 
-/// Creates a Rect from two corner points, handling any orientation.
-pub fn rect_from_two_points(a: Vec2, b: Vec2) -> Rect {
-    let min_x = a.x.min(b.x);
-    let min_y = a.y.min(b.y);
-    let max_x = a.x.max(b.x);
-    let max_y = a.y.max(b.y);
-    Rect::new(min_x, min_y, max_x - min_x, max_y - min_y)
-}
-
-/// Returns true if two rectangles intersect.
-pub fn rects_intersect(a: Rect, b: Rect) -> bool {
-    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
-}

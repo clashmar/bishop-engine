@@ -536,20 +536,6 @@ pub fn draw_adjacent_exit_arrow(ctx: &mut WgpuContext, position: Vec2, direction
     draw_exit_arrow_colored(ctx, position, direction, grid_size, Color::YELLOW);
 }
 
-/// Draw a selection box rectangle in world space.
-pub fn draw_selection_box(ctx: &mut WgpuContext, start: Vec2, end: Vec2) {
-    let min_x = start.x.min(end.x);
-    let min_y = start.y.min(end.y);
-    let max_x = start.x.max(end.x);
-    let max_y = start.y.max(end.y);
-    let width = max_x - min_x;
-    let height = max_y - min_y;
-
-    // Semi-transparent fill
-    ctx.draw_rectangle(min_x, min_y, width, height, Color::new(1.0, 1.0, 0.0, 0.1));
-    // Yellow outline
-    ctx.draw_rectangle_lines(min_x, min_y, width, height, 1.0, Color::YELLOW);
-}
 
 /// Draw an exit arrow with a specified color.
 fn draw_exit_arrow_colored(

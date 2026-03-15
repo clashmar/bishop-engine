@@ -15,6 +15,7 @@ impl MenuEditor {
         clip: &Rect,
     ) {
         let Some(template) = self.current_template() else { return };
+        let current_name = template.id.clone();
         let current_mode = template.mode;
         let current_bg = template.background;
 
@@ -23,6 +24,29 @@ impl MenuEditor {
         }
         *y += 20.0;
 
+        // Name field
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Name:", x, *y + 16.0, 12.0, Color::WHITE);
+            let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+            let (new_name, _) = TextInput::new(
+                self.properties_panel.widget_ids.menu_name_id,
+                field_rect,
+                &current_name,
+            )
+            .blocked(blocked)
+            .show(ctx);
+
+            if new_name != current_name && !new_name.is_empty() {
+                let is_duplicate = self.templates.iter().any(|t| t.id == new_name);
+                if !is_duplicate {
+                    if let Some(template) = self.current_template_mut() {
+                        template.id = new_name;
+                    }
+                }
+            }
+        }
+        *y += ROW_HEIGHT;
+
         // Mode dropdown
         if row_visible(*y, ROW_HEIGHT, clip) {
             ctx.draw_text("Mode:", x, *y + 16.0, 12.0, Color::WHITE);
@@ -30,7 +54,6 @@ impl MenuEditor {
             let current_mode_str = match current_mode {
                 MenuMode::Paused => "Paused",
                 MenuMode::Overlay => "Overlay",
-                _ => "Paused",
             };
             let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
             if let Some(selected) = Dropdown::new(
@@ -41,6 +64,7 @@ impl MenuEditor {
                 |s| s.to_string(),
             )
             .blocked(blocked)
+            .fixed_width()
             .show(ctx)
             {
                 let new_mode = match selected {
@@ -79,6 +103,7 @@ impl MenuEditor {
                 |s| s.to_string(),
             )
             .blocked(blocked)
+            .fixed_width()
             .show(ctx)
             {
                 let new_bg = match selected {

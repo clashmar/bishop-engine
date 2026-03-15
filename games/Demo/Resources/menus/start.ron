@@ -1,9 +1,9 @@
 (
     id: "start",
-    background: Dimmed(0.9594323),
+    background: Dimmed(0.7),
     elements: [
         /*[0]*/ (
-            name: "Main Layout",
+            name: "",
             kind: LayoutGroup((
                 layout: (
                     direction: Vertical,
@@ -26,7 +26,7 @@
                         element: (
                             name: "",
                             kind: Label((
-                                text_key: "Paused",
+                                text_key: "Pause",
                                 font_size: 24.0,
                                 color: (
                                     r: 1.0,
@@ -37,8 +37,8 @@
                                 alignment: Center,
                             )),
                             rect: (
-                                x: 0.11414814,
-                                y: 0.03923762,
+                                x: 0.12533534,
+                                y: 0.0869019,
                                 w: 0.1,
                                 h: 0.03,
                             ),
@@ -49,30 +49,6 @@
                         managed: true,
                     ),
                     /*[1]*/ (
-                        element: (
-                            name: "Main Layout",
-                            kind: Button((
-                                text_key: "Button",
-                                action: CloseMenu,
-                                font_size: 20.0,
-                                nav_up: None,
-                                nav_down: None,
-                                nav_left: None,
-                                nav_right: None,
-                            )),
-                            rect: (
-                                x: 0.117497325,
-                                y: 0.225932,
-                                w: 0.1,
-                                h: 0.037,
-                            ),
-                            enabled: true,
-                            visible: true,
-                            z_order: 0,
-                        ),
-                        managed: true,
-                    ),
-                    /*[2]*/ (
                         element: (
                             name: "",
                             kind: Button((
@@ -85,8 +61,8 @@
                                 nav_right: None,
                             )),
                             rect: (
-                                x: 0.06155759,
-                                y: 0.09476015,
+                                x: 0.097308934,
+                                y: 0.13311833,
                                 w: 0.1,
                                 h: 0.037,
                             ),
@@ -97,21 +73,30 @@
                         managed: true,
                     ),
                 ],
+                background: Some((
+                    fill: SolidColor((
+                        r: 0.3019608,
+                        g: 0.3019608,
+                        b: 0.34901962,
+                        a: 1.0,
+                    )),
+                    opacity: 1.0,
+                )),
                 nav_up: None,
                 nav_down: None,
                 nav_left: None,
                 nav_right: None,
             )),
             rect: (
-                x: 0.29284424,
-                y: 0.31771955,
-                w: 0.41431153,
-                h: 0.3645609,
+                x: 0.43034023,
+                y: 0.41692606,
+                w: 0.13931954,
+                h: 0.16614789,
             ),
             enabled: true,
             visible: true,
-            z_order: 1,
+            z_order: 0,
         ),
     ],
-    mode: Overlay,
+    mode: Paused,
 )

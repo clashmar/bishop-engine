@@ -45,16 +45,22 @@ pub struct PropertiesWidgetIds {
     pub(crate) layout_nav_left_id: WidgetId,
     pub(crate) layout_nav_right_id: WidgetId,
     pub(crate) label_h_align_id: WidgetId,
+    pub(crate) panel_color_id: WidgetId,
+    pub(crate) panel_opacity_id: WidgetId,
+    pub(crate) layout_bg_color_id: WidgetId,
+    pub(crate) layout_bg_opacity_id: WidgetId,
     pub(crate) bg_type_id: WidgetId,
     pub(crate) bg_color_id: WidgetId,
     pub(crate) bg_alpha_id: WidgetId,
     pub(crate) mode_id: WidgetId,
+    pub(crate) menu_name_id: WidgetId,
 }
 
 /// Groups property panel data.
 pub struct MenuPropertiesPanel {
     pub(crate) scroll_state: ScrollState,
     pub(crate) widget_ids: PropertiesWidgetIds,
+    pub(crate) last_content_height: f32,
 }
 
 impl MenuPropertiesPanel {
@@ -63,6 +69,7 @@ impl MenuPropertiesPanel {
         Self {
             scroll_state: ScrollState::new(),
             widget_ids: PropertiesWidgetIds::default(),
+            last_content_height: 0.0,
         }
     }
 }
@@ -81,14 +88,15 @@ impl MenuEditor {
         rect: Rect,
         blocked: bool
     ) {
-        let content_height = self.calculate_properties_height();
+        let content_height = self.properties_panel.last_content_height;
 
         let area = ScrollableArea::new(rect, content_height)
             .scroll_speed(20.0)
             .blocked(blocked)
             .begin(ctx, &mut self.properties_panel.scroll_state);
 
-        let mut y = rect.y + self.properties_panel.scroll_state.scroll_y + 8.0;
+        let start_y = rect.y + self.properties_panel.scroll_state.scroll_y + 8.0;
+        let mut y = start_y;
         let content_x = rect.x + 8.0;
         let content_w = area.content_rect().w - 16.0;
 
@@ -97,8 +105,9 @@ impl MenuEditor {
         }
         y += 24.0;
 
-        if self.selected_element_index.is_none() {
+        if self.primary_selected_index().is_none() {
             self.draw_menu_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
+            self.properties_panel.last_content_height = y - start_y + 16.0;
             area.draw_scrollbar(ctx, self.properties_panel.scroll_state.scroll_y);
             return;
         }
@@ -108,6 +117,7 @@ impl MenuEditor {
             .map(|e| e.kind.clone());
 
         let Some(kind) = element_kind else {
+            self.properties_panel.last_content_height = y - start_y + 16.0;
             area.draw_scrollbar(ctx, self.properties_panel.scroll_state.scroll_y);
             return;
         };
@@ -130,63 +140,7 @@ impl MenuEditor {
             }
         }
 
+        self.properties_panel.last_content_height = y - start_y + 16.0;
         area.draw_scrollbar(ctx, self.properties_panel.scroll_state.scroll_y);
-    }
-
-    fn calculate_properties_height(&self) -> f32 {
-        let base_height = 200.0;
-
-        let element_height = match self.selected_element().map(|e| &e.kind) {
-            Some(MenuElementKind::Label(_)) => ROW_HEIGHT * 2.0,
-            Some(MenuElementKind::Button(btn)) => {
-                let param_row = if matches!(btn.action, MenuAction::OpenMenu(_) | MenuAction::Custom(_)) {
-                    ROW_HEIGHT
-                } else {
-                    0.0
-                };
-                let nav_height = if self.selected_child_index.is_none() {
-                    28.0 + ROW_HEIGHT * 4.0
-                } else {
-                    0.0
-                };
-                ROW_HEIGHT * 3.0 + param_row + nav_height
-            }
-            Some(MenuElementKind::Panel(_)) => 0.0,
-            Some(MenuElementKind::LayoutGroup(group)) => {
-                let grid_row = if matches!(group.layout.direction, LayoutDirection::Grid { .. }) {
-                    ROW_HEIGHT
-                } else {
-                    0.0
-                };
-                ROW_HEIGHT * (1.0 + 1.0 + 4.0 + 2.0 + 2.0)
-                    + grid_row
-                    + 20.0 * 3.0 // section headers
-                    + 4.0 * 3.0  // section gaps
-                    + 20.0 // children header
-                    + ROW_HEIGHT * group.children.len() as f32
-                    + 8.0 + 20.0 // navigation section header
-                    + ROW_HEIGHT * 4.0 // nav dropdowns
-            }
-            None => {
-                let mut h = 20.0 + ROW_HEIGHT + 4.0 + 20.0 + ROW_HEIGHT;
-                if let Some(template) = self.current_template() {
-                    if !matches!(template.background, MenuBackground::None) {
-                        h += ROW_HEIGHT;
-                    }
-                }
-                return base_height + h;
-            }
-        };
-
-        let pos_size_height = if self.is_selected_child_managed() {
-            20.0
-        } else {
-            ROW_HEIGHT * 2.0 + 20.0 + 8.0
-        };
-
-        let z_order_height = if self.selected_child_index.is_none() { ROW_HEIGHT } else { 0.0 };
-        let common_height = ROW_HEIGHT * 2.0 + z_order_height + ROW_HEIGHT * 2.0 + pos_size_height + 8.0;
-
-        base_height + element_height + common_height
     }
 }

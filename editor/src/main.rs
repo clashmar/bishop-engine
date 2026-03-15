@@ -29,6 +29,7 @@ mod game;
 mod editor_assets;
 mod editor_actions;
 mod menu_editor;
+mod shared;
 
 /// Wrapper struct for running the editor via BishopApp.
 struct EditorApp {

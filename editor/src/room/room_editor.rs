@@ -8,6 +8,7 @@ use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::*;
 use crate::commands::room::*;
 use crate::room::drawing::*;
+use crate::shared::selection::draw_selection_box;
 use crate::editor_global::*;
 use crate::canvas::grid;
 use crate::world::coord;

@@ -14,7 +14,7 @@ impl MenuEditor {
         blocked: bool,
         clip: &Rect,
     ) {
-        let (current_name, rect_val, enabled, visible, z_order, type_label) = {
+        let (current_name, rect_val, z_order, type_label) = {
             let Some(element) = self.selected_element() else { return };
             let type_label = match &element.kind {
                 MenuElementKind::Label(_) => "Label",
@@ -22,7 +22,7 @@ impl MenuEditor {
                 MenuElementKind::Panel(_) => "Panel",
                 MenuElementKind::LayoutGroup(_) => "Layout Group",
             };
-            (element.name.clone(), element.rect, element.enabled, element.visible, element.z_order, type_label)
+            (element.name.clone(), element.rect, element.z_order, type_label)
         };
         let child_is_managed = self.is_selected_child_managed();
 
@@ -142,31 +142,6 @@ impl MenuEditor {
             *y += 20.0;
         }
 
-        // Enabled checkbox
-        if row_visible(*y, ROW_HEIGHT, clip) {
-            ctx.draw_text("Enabled:", x, *y + 16.0, 12.0, Color::WHITE);
-            let checkbox_rect = Rect::new(x + LABEL_WIDTH, *y + 4.0, 16.0, 16.0);
-            let mut enabled_val = enabled;
-            if gui_checkbox(ctx, checkbox_rect, &mut enabled_val) {
-                if let Some(element) = self.selected_element_mut() {
-                    element.enabled = enabled_val;
-                }
-            }
-        }
-        *y += ROW_HEIGHT;
-
-        // Visible checkbox
-        if row_visible(*y, ROW_HEIGHT, clip) {
-            ctx.draw_text("Visible:", x, *y + 16.0, 12.0, Color::WHITE);
-            let checkbox_rect = Rect::new(x + LABEL_WIDTH, *y + 4.0, 16.0, 16.0);
-            let mut visible_val = visible;
-            if gui_checkbox(ctx, checkbox_rect, &mut visible_val) {
-                if let Some(element) = self.selected_element_mut() {
-                    element.visible = visible_val;
-                }
-            }
-        }
-        *y += ROW_HEIGHT;
     }
 }
 
