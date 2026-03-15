@@ -1,8 +1,7 @@
 // game/src/scripting/commands/dialogue_commands.rs
 use crate::scripting::commands::lua_command::LuaCommand;
 use crate::engine::Engine;
-use engine_core::dialogue::SpeechBubble;
-use engine_core::ecs::entity::Entity;
+use engine_core::prelude::*;
 
 /// Command to show a speech bubble on an entity.
 pub struct ShowSpeechCmd {
@@ -59,7 +58,7 @@ impl LuaCommand for ClearSpeechCmd {
     fn execute(&mut self, engine: &mut Engine) {
         let mut game_instance = engine.game_instance.borrow_mut();
         let ecs = &mut game_instance.game.ecs;
-        engine_core::dialogue::clear_speech(ecs, self.entity);
+        engine_core::text::clear_speech(ecs, self.entity);
     }
 }
 
@@ -71,6 +70,6 @@ pub struct SetLanguageCmd {
 impl LuaCommand for SetLanguageCmd {
     fn execute(&mut self, engine: &mut Engine) {
         let mut game_instance = engine.game_instance.borrow_mut();
-        game_instance.game.dialogue_manager.set_language(&self.language);
+        game_instance.game.text_manager.set_language(&self.language);
     }
 }

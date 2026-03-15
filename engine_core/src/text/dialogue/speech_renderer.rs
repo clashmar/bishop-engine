@@ -1,4 +1,4 @@
-// engine_core/src/dialogue/speech_renderer.rs
+// engine_core/src/text/dialogue/speech_renderer.rs
 use crate::rendering::render_room::entity_dimensions;
 use crate::rendering::helpers::lerp_rounded;
 use crate::assets::asset_manager::AssetManager;
@@ -8,7 +8,7 @@ use crate::camera::game_camera::*;
 use crate::ecs::entity::Entity;
 use crate::world::room::RoomId;
 use crate::ecs::ecs::Ecs;
-use crate::dialogue::*;
+use crate::text::*;
 use crate::ui::text::*;
 use crate::ecs::Pivot;
 use std::collections::HashMap;
@@ -106,13 +106,13 @@ pub fn render_speech_bubbles<C: BishopContext>(
     for bubble in bubbles {
         render_bubble_screen_space(
             ctx,
-            bubble, 
-            config, 
-            render_cam, 
-            virt_w, 
-            virt_h, 
-            scale, 
-            offset_x, 
+            bubble,
+            config,
+            render_cam,
+            virt_w,
+            virt_h,
+            scale,
+            offset_x,
             offset_y
         );
     }
@@ -198,8 +198,8 @@ fn render_bubble_screen_space<C: BishopContext>(
 /// Wraps text to fit within a maximum width.
 fn wrap_text<C: BishopContext>(
     ctx: &mut C,
-    text: &str, 
-    max_width: f32, 
+    text: &str,
+    max_width: f32,
     font_size: f32
 ) -> Vec<String> {
     let mut lines = Vec::new();

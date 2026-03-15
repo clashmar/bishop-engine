@@ -29,7 +29,7 @@ impl LuaModule for DialogueModule {
         let get_language_fn = lua.create_function(|lua, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_instance = ctx.game_instance.borrow();
-            let lang = game_instance.game.dialogue_manager.get_language().to_string();
+            let lang = game_instance.game.text_manager.get_language().to_string();
             Ok(lang)
         })?;
         dialogue_tbl.set(GET_LANGUAGE, get_language_fn)?;
@@ -39,7 +39,7 @@ impl LuaModule for DialogueModule {
             let game_instance = ctx.game_instance.borrow();
             let langs: Vec<String> = game_instance
                 .game
-                .dialogue_manager
+                .text_manager
                 .get_languages()
                 .to_vec();
             let table = lua.create_table()?;
@@ -53,7 +53,7 @@ impl LuaModule for DialogueModule {
         let get_config_fn = lua.create_function(|lua, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_instance = ctx.game_instance.borrow();
-            let config = &game_instance.game.dialogue_manager.config;
+            let config = &game_instance.game.text_manager.config;
 
             let table = lua.create_table()?;
             table.set("default_duration", config.default_duration)?;

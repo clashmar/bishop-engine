@@ -1,5 +1,5 @@
-// engine_core/src/dialogue/dialogue_manager.rs
-use crate::dialogue::*;
+// engine_core/src/text/text_manager.rs
+use crate::text::*;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use std::cell::RefCell;
@@ -7,40 +7,43 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Manages dialogue loading, caching, and text selection.
-pub struct DialogueManager {
-    /// Base path for dialogue files.
-    dialogue_root: PathBuf,
+/// Manages text loading, caching, and text selection.
+pub struct TextManager {
+    /// Base path for text files.
+    text_root: PathBuf,
     /// Current language code.
     current_language: String,
     /// Available languages from manifest.
     available_languages: Vec<String>,
-    /// Cached dialogue files by dialogue_id.
-    cache: RefCell<HashMap<String, DialogueFile>>,
-    /// State tracking for each (dialogue_id, key) pair.
-    state: RefCell<HashMap<(String, String), DialogueState>>,
+    /// Cached text files by text_id.
+    cache: RefCell<HashMap<String, TextFile>>,
+    /// Cached UI text files by text_id.
+    ui_cache: RefCell<HashMap<String, UiTextFile>>,
+    /// State tracking for each (text_id, key) pair.
+    state: RefCell<HashMap<(String, String), TextState>>,
     /// Global dialogue configuration.
     pub config: DialogueConfig,
 }
 
-impl Default for DialogueManager {
+impl Default for TextManager {
     fn default() -> Self {
         Self {
-            dialogue_root: PathBuf::new(),
+            text_root: PathBuf::new(),
             current_language: "en".to_string(),
             available_languages: vec!["en".to_string()],
             cache: RefCell::new(HashMap::new()),
+            ui_cache: RefCell::new(HashMap::new()),
             state: RefCell::new(HashMap::new()),
             config: DialogueConfig::default(),
         }
     }
 }
 
-impl DialogueManager {
-    /// Creates a new DialogueManager with the given root path.
-    pub fn new(dialogue_root: PathBuf) -> Self {
+impl TextManager {
+    /// Creates a new TextManager with the given root path.
+    pub fn new(text_root: PathBuf) -> Self {
         let mut manager = Self {
-            dialogue_root,
+            text_root,
             ..Default::default()
         };
         manager.load_manifest();
@@ -49,9 +52,9 @@ impl DialogueManager {
 
     /// Loads the manifest file to get available languages.
     fn load_manifest(&mut self) {
-        let manifest_path = self.dialogue_root.join("_manifest.toml");
+        let manifest_path = self.text_root.join("_manifest.toml");
         if let Ok(content) = fs::read_to_string(&manifest_path) {
-            if let Ok(manifest) = toml::from_str::<DialogueManifest>(&content) {
+            if let Ok(manifest) = toml::from_str::<TextManifest>(&content) {
                 self.current_language = manifest.default_language;
                 self.available_languages = manifest.available;
             }
@@ -63,6 +66,7 @@ impl DialogueManager {
         if self.available_languages.contains(&lang.to_string()) {
             self.current_language = lang.to_string();
             self.cache.borrow_mut().clear();
+            self.ui_cache.borrow_mut().clear();
             true
         } else {
             false
@@ -79,15 +83,15 @@ impl DialogueManager {
         &self.available_languages
     }
 
-    /// Loads a dialogue file by ID, supporting subfolders (e.g., "npcs/npc" -> "npcs/npc.toml").
-    fn load_dialogue_file(&self, dialogue_id: &str) -> bool {
-        if self.cache.borrow().contains_key(dialogue_id) {
+    /// Loads a text file by ID, supporting subfolders (e.g., "dialogue/npcs/npc" -> "dialogue/npcs/npc.toml").
+    fn load_text_file(&self, text_id: &str) -> bool {
+        if self.cache.borrow().contains_key(text_id) {
             return true;
         }
 
-        // Build path from dialogue_id, supporting subfolders (e.g., "npcs/npc")
-        let normalized_id = dialogue_id.replace('\\', "/");
-        let mut file_path = self.dialogue_root.join(&self.current_language);
+        // Build path from text_id, supporting subfolders (e.g., "dialogue/npcs/npc")
+        let normalized_id = text_id.replace('\\', "/");
+        let mut file_path = self.text_root.join(&self.current_language);
         for component in normalized_id.split('/') {
             file_path = file_path.join(component);
         }
@@ -95,26 +99,32 @@ impl DialogueManager {
 
         let content = match fs::read_to_string(&file_path) {
             Ok(c) => c,
-            Err(_) => return false,
+            Err(e) => {
+                log::warn!("Failed to load text file '{}': {e}", file_path.display());
+                return false;
+            }
         };
 
-        let dialogue_file: DialogueFile = match toml::from_str(&content) {
+        let text_file: TextFile = match toml::from_str(&content) {
             Ok(f) => f,
-            Err(_) => return false,
+            Err(e) => {
+                log::warn!("Failed to parse text file '{}': {e}", file_path.display());
+                return false;
+            }
         };
 
-        self.cache.borrow_mut().insert(dialogue_id.to_string(), dialogue_file);
+        self.cache.borrow_mut().insert(text_id.to_string(), text_file);
         true
     }
 
-    /// Selects and returns text for the given dialogue_id and key.
-    pub fn select_text(&self, dialogue_id: &str, key: &str) -> Option<String> {
-        if !self.load_dialogue_file(dialogue_id) {
+    /// Selects and returns text for the given text_id and key.
+    pub fn select_text(&self, text_id: &str, key: &str) -> Option<String> {
+        if !self.load_text_file(text_id) {
             return None;
         }
 
         let cache = self.cache.borrow();
-        let file = cache.get(dialogue_id)?;
+        let file = cache.get(text_id)?;
         let entry = file.entries.get(key)?.clone();
         drop(cache);
 
@@ -122,7 +132,7 @@ impl DialogueManager {
             return entry.exhausted.clone();
         }
 
-        let state_key = (dialogue_id.to_string(), key.to_string());
+        let state_key = (text_id.to_string(), key.to_string());
         let mut state_map = self.state.borrow_mut();
         let state = state_map.entry(state_key).or_default();
 
@@ -130,7 +140,7 @@ impl DialogueManager {
     }
 
     /// Selects text from an entry based on its selection mode.
-    fn select_from_entry_static(entry: &DialogueEntry, state: &mut DialogueState) -> Option<String> {
+    fn select_from_entry_static(entry: &TextEntry, state: &mut TextState) -> Option<String> {
         if entry.variants.is_empty() {
             return entry.exhausted.clone();
         }
@@ -200,29 +210,80 @@ impl DialogueManager {
         }
     }
 
-    /// Resets state for a specific dialogue entry.
-    pub fn reset_state(&self, dialogue_id: &str, key: &str) {
-        let state_key = (dialogue_id.to_string(), key.to_string());
+    /// Resets state for a specific text entry.
+    pub fn reset_state(&self, text_id: &str, key: &str) {
+        let state_key = (text_id.to_string(), key.to_string());
         if let Some(state) = self.state.borrow_mut().get_mut(&state_key) {
             state.reset();
         }
     }
 
-    /// Clears all cached dialogue files.
+    /// Clears all cached text files.
     pub fn clear_cache(&self) {
         self.cache.borrow_mut().clear();
+        self.ui_cache.borrow_mut().clear();
     }
 
-    /// Updates the dialogue root path.
-    pub fn set_dialogue_root(&mut self, root: PathBuf) {
-        self.dialogue_root = root;
+    /// Updates the text root path.
+    pub fn set_text_root(&mut self, root: PathBuf) {
+        self.text_root = root;
         self.cache.borrow_mut().clear();
+        self.ui_cache.borrow_mut().clear();
         self.state.borrow_mut().clear();
         self.load_manifest();
     }
 
-    /// Returns the current dialogue root path.
-    pub fn get_dialogue_root(&self) -> &Path {
-        &self.dialogue_root
+    /// Loads a UI text file by ID into the cache.
+    fn load_ui_text_file(&self, text_id: &str) -> bool {
+        if self.ui_cache.borrow().contains_key(text_id) {
+            return true;
+        }
+
+        let normalized_id = text_id.replace('\\', "/");
+        let mut file_path = self.text_root.join(&self.current_language);
+        for component in normalized_id.split('/') {
+            file_path = file_path.join(component);
+        }
+        file_path.set_extension("toml");
+
+        let content = match fs::read_to_string(&file_path) {
+            Ok(c) => c,
+            Err(e) => {
+                log::warn!("Failed to load UI text file '{}': {e}", file_path.display());
+                return false;
+            }
+        };
+
+        let ui_file: UiTextFile = match toml::from_str(&content) {
+            Ok(f) => f,
+            Err(e) => {
+                log::warn!("Failed to parse UI text file '{}': {e}", file_path.display());
+                return false;
+            }
+        };
+
+        self.ui_cache.borrow_mut().insert(text_id.to_string(), ui_file);
+        true
+    }
+
+    /// Returns UI text for the given text_id and key.
+    pub fn get_ui_text(&self, text_id: &str, key: &str) -> Option<String> {
+        if !self.load_ui_text_file(text_id) {
+            return None;
+        }
+
+        let cache = self.ui_cache.borrow();
+        cache.get(text_id)?.get(key).cloned()
+    }
+
+    /// Resolves UI text for the given text_id and key, falling back to the key itself.
+    pub fn resolve_ui_text(&self, text_id: &str, key: &str) -> String {
+        self.get_ui_text(text_id, key)
+            .unwrap_or_else(|| key.to_string())
+    }
+
+    /// Returns the current text root path.
+    pub fn get_text_root(&self) -> &Path {
+        &self.text_root
     }
 }

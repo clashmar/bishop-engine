@@ -1,4 +1,4 @@
-// engine_core/src/dialogue/speech_bubble.rs
+// engine_core/src/text/dialogue/speech_bubble.rs
 use ecs_component::ecs_component;
 use serde::{Deserialize, Serialize};
 

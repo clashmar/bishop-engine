@@ -284,8 +284,8 @@ impl MenuEditor {
                     child.element.name.clone()
                 } else {
                     match &child.element.kind {
-                        MenuElementKind::Label(l) => format!("Label: {}", l.text),
-                        MenuElementKind::Button(b) => format!("Button: {}", b.text),
+                        MenuElementKind::Label(l) => format!("Label: {}", l.text_key),
+                        MenuElementKind::Button(b) => format!("Button: {}", b.text_key),
                         MenuElementKind::Panel(_) => "Panel".to_string(),
                         MenuElementKind::LayoutGroup(_) => "Layout Group".to_string(),
                     }

@@ -45,7 +45,7 @@ pub async fn create_new_game(name: String) -> Game {
         worlds: vec![],
         asset_manager,
         script_manager,
-        dialogue_manager: DialogueManager::default(),
+        text_manager: TextManager::default(),
         current_world_id: WorldId(Uuid::nil()),
         game_map: GameMap::default(),
         next_room_id: 0,
@@ -75,7 +75,7 @@ fn create_game_folders(name: &String) {
         (resources_folder_current(), RESOURCES_FOLDER),
         (assets_folder(), ASSETS_FOLDER),
         (scripts_folder(), SCRIPTS_FOLDER),
-        (dialogue_folder(), DIALOGUE_FOLDER),
+        (text_folder(), TEXT_FOLDER),
         (windows_folder(), WINDOWS_FOLDER),
         (mac_os_folder(), MAC_OS_FOLDER),
     ];
@@ -97,29 +97,34 @@ fn create_game_folders(name: &String) {
         onscreen_error!("Could not create main.lua: {e}");
     }
 
-    // Create default dialogue structure
-    create_default_dialogue_files();
+    // Create default text structure
+    create_default_text_files();
 }
 
-/// Creates the default dialogue manifest and language folder.
-fn create_default_dialogue_files() {
-    let dialogue_root = dialogue_folder();
+/// Creates the default text manifest and language folders.
+fn create_default_text_files() {
+    let text_root = text_folder();
 
     // Create _manifest.toml with default config
-    let manifest_path = dialogue_root.join("_manifest.toml");
+    let manifest_path = text_root.join("_manifest.toml");
     if !manifest_path.exists() {
-        let manifest_content = r#"# Dialogue manifest configuration
+        let manifest_content = r#"# Text manifest configuration
 default_language = "en"
 "#;
         if let Err(e) = fs::write(&manifest_path, manifest_content) {
-            onscreen_error!("Could not create dialogue manifest: {e}");
+            onscreen_error!("Could not create text manifest: {e}");
         }
     }
 
-    // Create default language folder (en)
-    let en_folder = dialogue_root.join("en");
-    if let Err(e) = fs::create_dir_all(&en_folder) {
-        onscreen_error!("Could not create dialogue/en folder: {e}");
+    // Create default language folders
+    let en_dialogue = text_root.join("en").join("dialogue");
+    if let Err(e) = fs::create_dir_all(&en_dialogue) {
+        onscreen_error!("Could not create text/en/dialogue folder: {e}");
+    }
+
+    let en_ui = text_root.join("en").join("ui");
+    if let Err(e) = fs::create_dir_all(&en_ui) {
+        onscreen_error!("Could not create text/en/ui folder: {e}");
     }
 }
 

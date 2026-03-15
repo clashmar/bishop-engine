@@ -1,8 +1,8 @@
-// engine_core/src/dialogue/dialogue_data.rs
+// engine_core/src/text/text_data.rs
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// How dialogue variants are selected when displaying text.
+/// How text variants are selected when displaying text.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum SelectionMode {
@@ -17,9 +17,9 @@ pub enum SelectionMode {
     Shuffle,
 }
 
-/// A single dialogue entry containing variants and selection behavior.
+/// A single text entry containing variants and selection behavior.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DialogueEntry {
+pub struct TextEntry {
     /// How to select which variant to display.
     #[serde(default)]
     pub selection: SelectionMode,
@@ -31,7 +31,7 @@ pub struct DialogueEntry {
     pub variants: Vec<String>,
 }
 
-impl Default for DialogueEntry {
+impl Default for TextEntry {
     fn default() -> Self {
         Self {
             selection: SelectionMode::Random,
@@ -41,24 +41,27 @@ impl Default for DialogueEntry {
     }
 }
 
-/// A dialogue file containing multiple keyed entries.
+/// A text file containing multiple keyed entries.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct DialogueFile {
-    /// Map of entry keys to their dialogue entries.
+pub struct TextFile {
+    /// Map of entry keys to their text entries.
     #[serde(flatten)]
-    pub entries: HashMap<String, DialogueEntry>,
+    pub entries: HashMap<String, TextEntry>,
 }
+
+/// A flat key-value text file for UI elements (menus, buttons, labels).
+pub type UiTextFile = HashMap<String, String>;
 
 /// Language manifest file structure.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DialogueManifest {
+pub struct TextManifest {
     /// Default language code (e.g., "en").
     pub default_language: String,
     /// List of available language codes.
     pub available: Vec<String>,
 }
 
-impl Default for DialogueManifest {
+impl Default for TextManifest {
     fn default() -> Self {
         Self {
             default_language: "en".to_string(),
@@ -69,7 +72,7 @@ impl Default for DialogueManifest {
 
 /// State tracking for sequential and shuffle selection modes.
 #[derive(Debug, Clone, Default)]
-pub struct DialogueState {
+pub struct TextState {
     /// Current index for sequential mode.
     pub index: usize,
     /// Whether all variants have been shown (for "once" mode).
@@ -80,7 +83,7 @@ pub struct DialogueState {
     pub shuffle_index: usize,
 }
 
-impl DialogueState {
+impl TextState {
     /// Resets the state to initial values.
     pub fn reset(&mut self) {
         self.index = 0;

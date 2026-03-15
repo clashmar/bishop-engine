@@ -4,7 +4,7 @@ pub mod camera;
 pub mod constants;
 pub mod controls;
 pub mod diagnostics;
-pub mod dialogue;
+pub mod text;
 pub mod ecs;
 pub mod engine_global;
 pub mod game;
@@ -29,7 +29,7 @@ pub mod prelude {
     pub use crate::constants::*;
     pub use crate::controls::*;
     pub use crate::diagnostics::*;
-    pub use crate::dialogue::*;
+    pub use crate::text::*;
     pub use crate::ecs::*;
     pub use crate::engine_global::*;
     pub use crate::game::*;

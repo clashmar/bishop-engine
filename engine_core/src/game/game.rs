@@ -1,5 +1,5 @@
 // engine_core/src/game/game.rs
-use crate::dialogue::DialogueManager;
+use crate::text::TextManager;
 use crate::scripting::script_manager::ScriptManager;
 use crate::assets::asset_manager::AssetManager;
 use crate::game::game_map::GameMap;
@@ -29,9 +29,9 @@ pub struct Game {
     pub asset_manager: AssetManager,
     /// Script manager for the game.
     pub script_manager: ScriptManager,
-    /// Dialogue manager for the game.
+    /// Text manager for the game.
     #[serde(skip)]
-    pub dialogue_manager: DialogueManager,
+    pub text_manager: TextManager,
     /// Id of the currently active world.
     pub current_world_id: WorldId, // TODO: Change this to an option
     /// Top level map of the whole game.
@@ -145,14 +145,14 @@ impl Game {
         set_game_name(self.name.clone());
         AssetManager::init_manager(self).await;
         ScriptManager::init_manager(self, lua).await;
-        self.init_dialogue_manager();
+        self.init_text_manager();
     }
 
-    /// Initializes the dialogue manager with the correct path.
-    fn init_dialogue_manager(&mut self) {
-        use crate::storage::path_utils::dialogue_folder;
-        let dialogue_root = dialogue_folder();
-        self.dialogue_manager.set_dialogue_root(dialogue_root);
+    /// Initializes the text manager with the correct path.
+    fn init_text_manager(&mut self) {
+        use crate::storage::path_utils::text_folder;
+        let text_root = text_folder();
+        self.text_manager.set_text_root(text_root);
     }
 
     /// Allocates a globally unique room ID.

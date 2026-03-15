@@ -596,7 +596,7 @@ impl LuaMethod<EntityHandle> for SayMethod {
         methods.add_method(SAY, |lua, this, (text, opts): (String, Option<Table>)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_instance = ctx.game_instance.borrow();
-            let config = &game_instance.game.dialogue_manager.config;
+            let config = &game_instance.game.text_manager.config;
 
             let duration = opts
                 .as_ref()
@@ -666,9 +666,9 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
         methods.add_method(SAY_DIALOGUE, |lua, this, (dialogue_id, key, opts): (String, String, Option<Table>)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_instance = ctx.game_instance.borrow();
-            let config = game_instance.game.dialogue_manager.config.clone();
+            let config = game_instance.game.text_manager.config.clone();
 
-            let text = match game_instance.game.dialogue_manager.select_text(&dialogue_id, &key) {
+            let text = match game_instance.game.text_manager.select_text(&dialogue_id, &key) {
                 Some(t) => t,
                 None => {
                     log::warn!("Dialogue not found: {}:{}", dialogue_id, key);

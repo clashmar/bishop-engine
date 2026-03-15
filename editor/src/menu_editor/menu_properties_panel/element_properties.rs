@@ -13,28 +13,28 @@ impl MenuEditor {
         w: f32,
         blocked: bool,
     ) {
-        let (current_text, current_font_size) = {
+        let (current_text_key, current_font_size) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Label(label) = &element.kind else { return };
-            (label.text.clone(), label.font_size)
+            (label.text_key.clone(), label.font_size)
         };
 
-        // Text field
-        ctx.draw_text("Text:", x, *y + 16.0, 12.0, Color::WHITE);
+        // Text key field
+        ctx.draw_text("Text Key:", x, *y + 16.0, 12.0, Color::WHITE);
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
 
-        let (new_text, _) = TextInput::new(
+        let (new_text_key, _) = TextInput::new(
             self.properties_panel.widget_ids.text_id,
             field_rect,
-            &current_text
+            &current_text_key
         )
         .blocked(blocked)
         .show(ctx);
 
-        if new_text != current_text {
+        if new_text_key != current_text_key {
             if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Label(label) = &mut element.kind {
-                    label.text = new_text;
+                    label.text_key = new_text_key;
                 }
             }
         }
@@ -73,11 +73,11 @@ impl MenuEditor {
         w: f32,
         blocked: bool,
     ) {
-        let (current_text, current_font_size, current_action, nav_up, nav_down, nav_left, nav_right) = {
+        let (current_text_key, current_font_size, current_action, nav_up, nav_down, nav_left, nav_right) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Button(button) = &element.kind else { return };
             (
-                button.text.clone(),
+                button.text_key.clone(),
                 button.font_size,
                 button.action.clone(),
                 button.nav_up,
@@ -87,23 +87,23 @@ impl MenuEditor {
             )
         };
 
-        // Text field
-        ctx.draw_text("Text:", x, *y + 16.0, 12.0, Color::WHITE);
+        // Text key field
+        ctx.draw_text("Text Key:", x, *y + 16.0, 12.0, Color::WHITE);
 
         let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
 
-        let (new_text, _) = TextInput::new(
+        let (new_text_key, _) = TextInput::new(
             self.properties_panel.widget_ids.text_id,
             field_rect,
-            &current_text
+            &current_text_key
         )
         .blocked(blocked)
         .show(ctx);
 
-        if new_text != current_text {
+        if new_text_key != current_text_key {
             if let Some(element) = self.selected_element_mut() {
                 if let MenuElementKind::Button(button) = &mut element.kind {
-                    button.text = new_text;
+                    button.text_key = new_text_key;
                 }
             }
         }
@@ -281,7 +281,7 @@ impl MenuEditor {
                     element.name.clone()
                 } else {
                     match &element.kind {
-                        MenuElementKind::Button(button) => button.text.clone(),
+                        MenuElementKind::Button(button) => button.text_key.clone(),
                         MenuElementKind::LayoutGroup(group) => {
                             let button_count = group.children.iter()
                                 .filter(|c| matches!(c.element.kind, MenuElementKind::Button(_)))

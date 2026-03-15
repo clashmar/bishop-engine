@@ -1,5 +1,6 @@
 use crate::menu::*;
 use crate::storage::path_utils::menus_folder;
+use crate::text::TextManager;
 use crate::{onscreen_error, onscreen_log};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -187,7 +188,7 @@ impl MenuManager {
     }
 
     /// Renders the active menu if any.
-    pub fn render<C: BishopContext>(&mut self, ctx: &mut C) {
+    pub fn render<C: BishopContext>(&mut self, ctx: &mut C, text_manager: &TextManager) {
         if !self.has_active_menu() {
             return;
         }
@@ -199,9 +200,10 @@ impl MenuManager {
         let mut triggered_action = None;
 
         if let Some(menu_id) = self.menu_stack.last() {
+            let text_id = format!("ui/{}", menu_id);
             if let Some(template) = self.templates.get(menu_id) {
                 template.render_background(ctx, self.viewport);
-                template.render_labels(ctx, canvas_origin, canvas_size);
+                template.render_labels(ctx, canvas_origin, canvas_size, text_manager, &text_id);
 
                 for i in template.sorted_element_indices() {
                     let element = &template.elements[i];
@@ -210,9 +212,10 @@ impl MenuManager {
                     }
                     match &element.kind {
                         MenuElementKind::Button(button) => {
+                            let display_text = text_manager.resolve_ui_text(&text_id, &button.text_key);
                             let is_focused = self.focus.node == i && self.focus.child.is_none();
                             let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
-                            let btn = Button::new(screen_rect, &button.text)
+                            let btn = Button::new(screen_rect, &display_text)
                                 .blocked(!element.enabled)
                                 .focused(is_focused);
                             if btn.show(ctx) {
@@ -227,10 +230,11 @@ impl MenuManager {
                                     continue;
                                 }
                                 if let MenuElementKind::Button(button) = &child.element.kind {
+                                    let display_text = text_manager.resolve_ui_text(&text_id, &button.text_key);
                                     let is_focused = self.focus.node == i
                                         && self.focus.child == Some(focusable_idx);
                                     let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
-                                    let btn = Button::new(screen_rect, &button.text)
+                                    let btn = Button::new(screen_rect, &display_text)
                                         .blocked(!child.element.enabled)
                                         .focused(is_focused);
                                     if btn.show(ctx) {
@@ -286,8 +290,8 @@ impl MenuManager {
                 layout,
                 |group| {
                     group
-                        .label("PAUSED")
-                        .button("Resume", MenuAction::Resume)
+                        .label("paused_title")
+                        .button("resume_button", MenuAction::Resume)
                 },
             )
             .build();
