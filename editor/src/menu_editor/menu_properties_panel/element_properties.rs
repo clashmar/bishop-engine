@@ -1,6 +1,6 @@
 // editor/src/menu_editor/menu_properties_panel/element_properties.rs
 use crate::menu_editor::MenuEditor;
-use super::{ROW_HEIGHT, LABEL_WIDTH, FIELD_HEIGHT};
+use super::{ROW_HEIGHT, LABEL_WIDTH, FIELD_HEIGHT, common_properties::row_visible};
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -12,53 +12,93 @@ impl MenuEditor {
         x: f32,
         w: f32,
         blocked: bool,
+        clip: &Rect,
     ) {
-        let (current_text_key, current_font_size) = {
+        let (current_text_key, current_font_size, current_alignment) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Label(label) = &element.kind else { return };
-            (label.text_key.clone(), label.font_size)
+            (label.text_key.clone(), label.font_size, label.alignment)
         };
 
         // Text key field
-        ctx.draw_text("Text Key:", x, *y + 16.0, 12.0, Color::WHITE);
-        let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Text Key:", x, *y + 16.0, 12.0, Color::WHITE);
+            let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
 
-        let (new_text_key, _) = TextInput::new(
-            self.properties_panel.widget_ids.text_id,
-            field_rect,
-            &current_text_key
-        )
-        .blocked(blocked)
-        .show(ctx);
+            let (new_text_key, _) = TextInput::new(
+                self.properties_panel.widget_ids.text_id,
+                field_rect,
+                &current_text_key
+            )
+            .blocked(blocked)
+            .show(ctx);
 
-        if new_text_key != current_text_key {
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Label(label) = &mut element.kind {
-                    label.text_key = new_text_key;
+            if new_text_key != current_text_key {
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Label(label) = &mut element.kind {
+                        label.text_key = new_text_key;
+                    }
                 }
             }
         }
         *y += ROW_HEIGHT;
 
         // Font size
-        ctx.draw_text("Font Size:", x, *y + 16.0, 12.0, Color::WHITE);
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Font Size:", x, *y + 16.0, 12.0, Color::WHITE);
 
-        let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
+            let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
 
-        let new_font_size = NumberInput::new(
-            self.properties_panel.widget_ids.font_size_id,
-            field_rect,
-            current_font_size
-        )
-        .blocked(blocked)
-        .min(8.0)
-        .max(72.0)
-        .show(ctx);
+            let new_font_size = NumberInput::new(
+                self.properties_panel.widget_ids.font_size_id,
+                field_rect,
+                current_font_size
+            )
+            .blocked(blocked)
+            .min(8.0)
+            .max(72.0)
+            .show(ctx);
 
-        if (new_font_size - current_font_size).abs() > 0.01 {
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Label(label) = &mut element.kind {
-                    label.font_size = new_font_size;
+            if (new_font_size - current_font_size).abs() > 0.01 {
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Label(label) = &mut element.kind {
+                        label.font_size = new_font_size;
+                    }
+                }
+            }
+        }
+        *y += ROW_HEIGHT;
+
+        // Horizontal alignment
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Align:", x, *y + 16.0, 12.0, Color::WHITE);
+            let h_options = ["Left", "Center", "Right"];
+            let current_h = match current_alignment {
+                HorizontalAlign::Left => "Left",
+                HorizontalAlign::Center => "Center",
+                HorizontalAlign::Right => "Right",
+            };
+            let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+            if let Some(selected) = Dropdown::new(
+                self.properties_panel.widget_ids.label_h_align_id,
+                dropdown_rect,
+                current_h,
+                &h_options,
+                |s| s.to_string(),
+            )
+            .blocked(blocked)
+            .show(ctx)
+            {
+                let new_align = match selected {
+                    "Left" => HorizontalAlign::Left,
+                    "Center" => HorizontalAlign::Center,
+                    "Right" => HorizontalAlign::Right,
+                    _ => current_alignment,
+                };
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Label(label) = &mut element.kind {
+                        label.alignment = new_align;
+                    }
                 }
             }
         }
@@ -72,6 +112,7 @@ impl MenuEditor {
         x: f32,
         w: f32,
         blocked: bool,
+        clip: &Rect,
     ) {
         let (current_text_key, current_font_size, current_action, nav_up, nav_down, nav_left, nav_right) = {
             let Some(element) = self.selected_element() else { return };
@@ -88,87 +129,93 @@ impl MenuEditor {
         };
 
         // Text key field
-        ctx.draw_text("Text Key:", x, *y + 16.0, 12.0, Color::WHITE);
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Text Key:", x, *y + 16.0, 12.0, Color::WHITE);
 
-        let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+            let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
 
-        let (new_text_key, _) = TextInput::new(
-            self.properties_panel.widget_ids.text_id,
-            field_rect,
-            &current_text_key
-        )
-        .blocked(blocked)
-        .show(ctx);
+            let (new_text_key, _) = TextInput::new(
+                self.properties_panel.widget_ids.text_id,
+                field_rect,
+                &current_text_key
+            )
+            .blocked(blocked)
+            .show(ctx);
 
-        if new_text_key != current_text_key {
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Button(button) = &mut element.kind {
-                    button.text_key = new_text_key;
+            if new_text_key != current_text_key {
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Button(button) = &mut element.kind {
+                        button.text_key = new_text_key;
+                    }
                 }
             }
         }
         *y += ROW_HEIGHT;
 
         // Font size
-        ctx.draw_text("Font Size:", x, *y + 16.0, 12.0, Color::WHITE);
-        let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
-        let new_font_size = NumberInput::new(self.properties_panel.widget_ids.font_size_id, field_rect, current_font_size)
-        .blocked(blocked)
-        .min(8.0)
-        .max(72.0)
-        .show(ctx);
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Font Size:", x, *y + 16.0, 12.0, Color::WHITE);
+            let field_rect = Rect::new(x + LABEL_WIDTH, *y, 60.0, FIELD_HEIGHT);
+            let new_font_size = NumberInput::new(self.properties_panel.widget_ids.font_size_id, field_rect, current_font_size)
+            .blocked(blocked)
+            .min(8.0)
+            .max(72.0)
+            .show(ctx);
 
-        if (new_font_size - current_font_size).abs() > 0.01 {
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Button(button) = &mut element.kind {
-                    button.font_size = new_font_size;
+            if (new_font_size - current_font_size).abs() > 0.01 {
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Button(button) = &mut element.kind {
+                        button.font_size = new_font_size;
+                    }
                 }
             }
         }
         *y += ROW_HEIGHT;
 
         // Action dropdown
-        ctx.draw_text("Action:", x, *y + 16.0, 12.0, Color::WHITE);
-        let action_options = [
-            "Resume",
-            "CloseMenu",
-            "QuitToMainMenu",
-            "QuitGame",
-            "OpenMenu",
-            "Custom",
-        ];
-        let current_action_str = match &current_action {
-            MenuAction::Resume => "Resume",
-            MenuAction::CloseMenu => "CloseMenu",
-            MenuAction::QuitToMainMenu => "QuitToMainMenu",
-            MenuAction::QuitGame => "QuitGame",
-            MenuAction::OpenMenu(_) => "OpenMenu",
-            MenuAction::Custom(_) => "Custom",
-        };
-        let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-        if let Some(selected) = Dropdown::new(
-            self.properties_panel.widget_ids.action_id,
-            dropdown_rect,
-            current_action_str,
-            &action_options,
-            |s| s.to_string(),
-        )
-        .blocked(blocked)
-        .show(ctx)
-        {
-            let new_action = match selected {
-                "Resume" => MenuAction::Resume,
-                "CloseMenu" => MenuAction::CloseMenu,
-                "QuitToMainMenu" => MenuAction::QuitToMainMenu,
-                "QuitGame" => MenuAction::QuitGame,
-                "OpenMenu" => MenuAction::OpenMenu(String::new()),
-                "Custom" => MenuAction::Custom(String::new()),
-                _ => current_action.clone(),
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text("Action:", x, *y + 16.0, 12.0, Color::WHITE);
+            let action_options = [
+                "Resume",
+                "CloseMenu",
+                "QuitToMainMenu",
+                "QuitGame",
+                "OpenMenu",
+                "Custom",
+            ];
+            let current_action_str = match &current_action {
+                MenuAction::Resume => "Resume",
+                MenuAction::CloseMenu => "CloseMenu",
+                MenuAction::QuitToMainMenu => "QuitToMainMenu",
+                MenuAction::QuitGame => "QuitGame",
+                MenuAction::OpenMenu(_) => "OpenMenu",
+                MenuAction::Custom(_) => "Custom",
             };
+            let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+            if let Some(selected) = Dropdown::new(
+                self.properties_panel.widget_ids.action_id,
+                dropdown_rect,
+                current_action_str,
+                &action_options,
+                |s| s.to_string(),
+            )
+            .blocked(blocked)
+            .show(ctx)
+            {
+                let new_action = match selected {
+                    "Resume" => MenuAction::Resume,
+                    "CloseMenu" => MenuAction::CloseMenu,
+                    "QuitToMainMenu" => MenuAction::QuitToMainMenu,
+                    "QuitGame" => MenuAction::QuitGame,
+                    "OpenMenu" => MenuAction::OpenMenu(String::new()),
+                    "Custom" => MenuAction::Custom(String::new()),
+                    _ => current_action.clone(),
+                };
 
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Button(button) = &mut element.kind {
-                    button.action = new_action;
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Button(button) = &mut element.kind {
+                        button.action = new_action;
+                    }
                 }
             }
         }
@@ -177,25 +224,27 @@ impl MenuEditor {
         // Action parameter (for OpenMenu/Custom)
         let needs_param = matches!(current_action, MenuAction::OpenMenu(_) | MenuAction::Custom(_));
         if needs_param {
-            let param_value = match &current_action {
-                MenuAction::OpenMenu(s) | MenuAction::Custom(s) => s.clone(),
-                _ => String::new(),
-            };
+            if row_visible(*y, ROW_HEIGHT, clip) {
+                let param_value = match &current_action {
+                    MenuAction::OpenMenu(s) | MenuAction::Custom(s) => s.clone(),
+                    _ => String::new(),
+                };
 
-            ctx.draw_text("Param:", x, *y + 16.0, 12.0, Color::WHITE);
-            let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-            let (new_param, _) = TextInput::new(self.properties_panel.widget_ids.action_param_id, field_rect, &param_value)
-                .blocked(blocked)
-                .show(ctx);
+                ctx.draw_text("Param:", x, *y + 16.0, 12.0, Color::WHITE);
+                let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+                let (new_param, _) = TextInput::new(self.properties_panel.widget_ids.action_param_id, field_rect, &param_value)
+                    .blocked(blocked)
+                    .show(ctx);
 
-            if new_param != param_value {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Button(button) = &mut element.kind {
-                        button.action = match &button.action {
-                            MenuAction::OpenMenu(_) => MenuAction::OpenMenu(new_param),
-                            MenuAction::Custom(_) => MenuAction::Custom(new_param),
-                            other => other.clone(),
-                        };
+                if new_param != param_value {
+                    if let Some(element) = self.selected_element_mut() {
+                        if let MenuElementKind::Button(button) = &mut element.kind {
+                            button.action = match &button.action {
+                                MenuAction::OpenMenu(_) => MenuAction::OpenMenu(new_param),
+                                MenuAction::Custom(_) => MenuAction::Custom(new_param),
+                                other => other.clone(),
+                            };
+                        }
                     }
                 }
             }
@@ -205,14 +254,16 @@ impl MenuEditor {
         // Navigation section (only for top-level buttons, not children of layout groups)
         if self.selected_child_index.is_none() {
             *y += 8.0;
-            ctx.draw_text("Navigation", x, *y + 14.0, 12.0, Color::GREY);
+            if row_visible(*y, 20.0, clip) {
+                ctx.draw_text("Navigation", x, *y + 14.0, 12.0, Color::GREY);
+            }
             *y += 20.0;
 
             let focusable_elements = self.get_focusable_element_names();
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.nav_up_id, nav_up, &focusable_elements, blocked, |btn, idx| btn.nav_up = idx);
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.nav_down_id, nav_down, &focusable_elements, blocked, |btn, idx| btn.nav_down = idx);
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.nav_left_id, nav_left, &focusable_elements, blocked, |btn, idx| btn.nav_left = idx);
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.nav_right_id, nav_right, &focusable_elements, blocked, |btn, idx| btn.nav_right = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.nav_up_id, nav_up, &focusable_elements, blocked, clip, |btn, idx| btn.nav_up = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.nav_down_id, nav_down, &focusable_elements, blocked, clip, |btn, idx| btn.nav_down = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.nav_left_id, nav_left, &focusable_elements, blocked, clip, |btn, idx| btn.nav_left = idx);
+            self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.nav_right_id, nav_right, &focusable_elements, blocked, clip, |btn, idx| btn.nav_right = idx);
         }
     }
 
@@ -227,40 +278,43 @@ impl MenuEditor {
         current: Option<usize>,
         options: &[(usize, String)],
         blocked: bool,
+        clip: &Rect,
         mut setter: F,
     ) where
         F: FnMut(&mut ButtonElement, Option<usize>),
     {
-        ctx.draw_text(label, x, *y + 16.0, 12.0, Color::WHITE);
+        if row_visible(*y, ROW_HEIGHT, clip) {
+            ctx.draw_text(label, x, *y + 16.0, 12.0, Color::WHITE);
 
-        let current_label = current
-            .and_then(|idx| options.iter().find(|(i, _)| *i == idx))
-            .map(|(_, name)| name.as_str())
-            .unwrap_or("None");
+            let current_label = current
+                .and_then(|idx| options.iter().find(|(i, _)| *i == idx))
+                .map(|(_, name)| name.as_str())
+                .unwrap_or("None");
 
-        let mut nav_options: Vec<String> = vec!["None".to_string()];
-        nav_options.extend(options.iter().map(|(_, name)| name.clone()));
+            let mut nav_options: Vec<String> = vec!["None".to_string()];
+            nav_options.extend(options.iter().map(|(_, name)| name.clone()));
 
-        let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-        if let Some(selected) = Dropdown::new(
-            id,
-            dropdown_rect,
-            current_label,
-            &nav_options,
-            |s| s.clone(),
-        )
-        .blocked(blocked)
-        .show(ctx)
-        {
-            let new_nav = if selected == "None" {
-                None
-            } else {
-                options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
-            };
+            let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
+            if let Some(selected) = Dropdown::new(
+                id,
+                dropdown_rect,
+                current_label,
+                &nav_options,
+                |s| s.clone(),
+            )
+            .blocked(blocked)
+            .show(ctx)
+            {
+                let new_nav = if selected == "None" {
+                    None
+                } else {
+                    options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
+                };
 
-            if let Some(element) = self.selected_element_mut() {
-                if let MenuElementKind::Button(button) = &mut element.kind {
-                    setter(button, new_nav);
+                if let Some(element) = self.selected_element_mut() {
+                    if let MenuElementKind::Button(button) = &mut element.kind {
+                        setter(button, new_nav);
+                    }
                 }
             }
         }
@@ -308,6 +362,7 @@ impl MenuEditor {
         _x: f32,
         _w: f32,
         _blocked: bool,
+        _clip: &Rect,
     ) {
     }
 }

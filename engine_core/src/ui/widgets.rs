@@ -26,6 +26,7 @@ pub use widgets::{
     HOLD_INITIAL_DELAY, HOLD_REPEAT_RATE, PLACEHOLDER_TEXT,
     clipboard_get_text, clipboard_set_text,
     TextDimensions,
+    ScrollState, ScrollableArea, ActiveScrollArea,
 };
 
 pub use super::engine_widgets::*;

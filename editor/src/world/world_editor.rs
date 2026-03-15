@@ -528,7 +528,7 @@ impl WorldEditor {
         rect
     }
 
-    fn is_mouse_over_ui(&self, ctx: &WgpuContext) -> bool {
+    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext) -> bool {
         let mouse_screen: Vec2 = ctx.mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
         || is_dropdown_open()

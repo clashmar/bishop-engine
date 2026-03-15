@@ -44,6 +44,7 @@ pub struct PropertiesWidgetIds {
     pub(crate) layout_nav_down_id: WidgetId,
     pub(crate) layout_nav_left_id: WidgetId,
     pub(crate) layout_nav_right_id: WidgetId,
+    pub(crate) label_h_align_id: WidgetId,
     pub(crate) bg_type_id: WidgetId,
     pub(crate) bg_color_id: WidgetId,
     pub(crate) bg_alpha_id: WidgetId,
@@ -52,7 +53,7 @@ pub struct PropertiesWidgetIds {
 
 /// Groups property panel data.
 pub struct MenuPropertiesPanel {
-    pub(crate) scroll_y: f32,
+    pub(crate) scroll_state: ScrollState,
     pub(crate) widget_ids: PropertiesWidgetIds,
 }
 
@@ -60,7 +61,7 @@ impl MenuPropertiesPanel {
     /// Creates a new properties panel.
     pub fn new() -> Self {
         Self {
-            scroll_y: 0.0,
+            scroll_state: ScrollState::new(),
             widget_ids: PropertiesWidgetIds::default(),
         }
     }
@@ -82,26 +83,23 @@ impl MenuEditor {
     ) {
         let content_height = self.calculate_properties_height();
 
-        let properties_panel = &mut self.properties_panel;
-        let mouse: Vec2 = ctx.mouse_position().into();
+        let area = ScrollableArea::new(rect, content_height)
+            .scroll_speed(20.0)
+            .blocked(blocked)
+            .begin(ctx, &mut self.properties_panel.scroll_state);
 
-        if !blocked && rect.contains(mouse) {
-            let (_, wheel_y) = ctx.mouse_wheel();
-            properties_panel.scroll_y += wheel_y * 20.0;
-        }
-
-        let scroll_range = (content_height - rect.h).max(0.0);
-        properties_panel.scroll_y = properties_panel.scroll_y.clamp(-scroll_range, 0.0);
-
-        let mut y = rect.y + properties_panel.scroll_y + 8.0;
+        let mut y = rect.y + self.properties_panel.scroll_state.scroll_y + 8.0;
         let content_x = rect.x + 8.0;
-        let content_w = rect.w - 16.0;
+        let content_w = area.content_rect().w - 16.0;
 
-        ctx.draw_text("Properties", content_x, y + 14.0, 14.0, Color::GREY);
+        if area.is_fully_visible(y, 24.0) {
+            ctx.draw_text("Properties", content_x, y + 14.0, 14.0, Color::GREY);
+        }
         y += 24.0;
 
         if self.selected_element_index.is_none() {
-            self.draw_menu_properties(ctx, &mut y, content_x, content_w, blocked);
+            self.draw_menu_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
+            area.draw_scrollbar(ctx, self.properties_panel.scroll_state.scroll_y);
             return;
         }
 
@@ -109,25 +107,30 @@ impl MenuEditor {
             .selected_element()
             .map(|e| e.kind.clone());
 
-        let Some(kind) = element_kind else { return };
+        let Some(kind) = element_kind else {
+            area.draw_scrollbar(ctx, self.properties_panel.scroll_state.scroll_y);
+            return;
+        };
 
-        self.draw_common_properties(ctx, &mut y, content_x, content_w, blocked);
+        self.draw_common_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
         y += 8.0;
 
         match kind {
             MenuElementKind::Label(_) => {
-                self.draw_label_properties(ctx, &mut y, content_x, content_w, blocked);
+                self.draw_label_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
             }
             MenuElementKind::Button(_) => {
-                self.draw_button_properties(ctx, &mut y, content_x, content_w, blocked);
+                self.draw_button_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
             }
             MenuElementKind::Panel(_) => {
-                self.draw_panel_properties(ctx, &mut y, content_x, content_w, blocked);
+                self.draw_panel_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
             }
             MenuElementKind::LayoutGroup(_) => {
-                self.draw_layout_group_properties(ctx, &mut y, content_x, content_w, blocked);
+                self.draw_layout_group_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
             }
         }
+
+        area.draw_scrollbar(ctx, self.properties_panel.scroll_state.scroll_y);
     }
 
     fn calculate_properties_height(&self) -> f32 {

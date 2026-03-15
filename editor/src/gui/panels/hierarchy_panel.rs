@@ -12,8 +12,6 @@ const ROW_HEIGHT: f32 = 22.0;
 const ROW_SPACING: f32 = 5.0;
 const HEADER_HEIGHT: f32 = 18.0;
 const ADD_BUTTON_HEIGHT: f32 = 26.0;
-const SCROLL_SPEED: f32 = 24.0;
-const SCROLLBAR_W: f32 = 6.0;
 const TOP_PADDING: f32 = 8.0;
 const BOTTOM_PADDING: f32 = 8.0;
 const HEADER_FONT_SIZE: f32 = 15.0;
@@ -22,7 +20,7 @@ pub struct HierarchyPanel {
     expanded: HashSet<Entity>,
     dragging: Option<Entity>,
     drag_offset: Vec2,
-    scroll_y: f32,
+    scroll_state: ScrollState,
 }
 
 impl HierarchyPanel {
@@ -31,7 +29,7 @@ impl HierarchyPanel {
             expanded: HashSet::new(),
             dragging: None,
             drag_offset: Vec2::ZERO,
-            scroll_y: 0.0,
+            scroll_state: ScrollState::new(),
         }
     }
 }
@@ -48,20 +46,12 @@ impl PanelDefinition for HierarchyPanel {
     }
 
     fn draw(
-        &mut self, 
+        &mut self,
         ctx: &mut WgpuContext,
-        rect: Rect, 
-        editor: &mut Editor, 
+        rect: Rect,
+        editor: &mut Editor,
         blocked: bool
     ) {
-        let mouse: Vec2 = ctx.mouse_position().into();
-
-        // Scroll input
-        if !blocked && rect.contains(mouse) {
-            let (_, wheel_y) = ctx.mouse_wheel();
-            self.scroll_y += wheel_y * SCROLL_SPEED;
-        }
-
         let cur_room_id = editor.cur_room_id;
 
         // Get room position before borrowing ecs mutably
@@ -97,12 +87,12 @@ impl PanelDefinition for HierarchyPanel {
             get_root_entities(ecs, &entities)
         };
 
-        // Layout pass 
+        // Layout pass
         let mut layout_y = 0.0;
 
-        layout_y += TOP_PADDING;                                  
-        layout_y += ADD_BUTTON_HEIGHT + ROW_SPACING;             
-        layout_y += HEADER_HEIGHT;      
+        layout_y += TOP_PADDING;
+        layout_y += ADD_BUTTON_HEIGHT + ROW_SPACING;
+        layout_y += HEADER_HEIGHT;
 
         for entity in &global_entities {
             layout_entity_tree(*entity, &mut layout_y, &self.expanded, ecs);
@@ -122,43 +112,36 @@ impl PanelDefinition for HierarchyPanel {
             layout_entity_tree(*entity, &mut layout_y, &self.expanded, ecs);
         }
 
-        layout_y += BOTTOM_PADDING;                             
+        layout_y += BOTTOM_PADDING;
 
         let content_height = layout_y;
-        let scroll_range = (content_height - rect.h).max(0.0);
-        self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
+        let area = ScrollableArea::new(rect, content_height)
+            .blocked(blocked)
+            .begin(ctx, &mut self.scroll_state);
 
-        // Draw pass 
-        let mut y = rect.y + self.scroll_y + TOP_PADDING;
+        // Draw pass
+        let mut y = rect.y + self.scroll_state.scroll_y + TOP_PADDING;
 
         // Add global button
-        let btn_w = inner_width(rect, scroll_range);
-        draw_block(
-            Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
-            rect,
-            || {
-                let clicked = Button::new(
-                    Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
-                    "+ Global",
-                ).blocked(blocked).show(ctx);
-                if !blocked && clicked {
-                    ecs.create_entity()
-                        .with(Global::default())
-                        .with(Name("Global Entity".into()));
-                }
-            },
-        );
+        let btn_w = area.usable_width();
+        if area.is_fully_visible(y, ADD_BUTTON_HEIGHT) {
+            let clicked = Button::new(
+                Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
+                "+ Global",
+            ).blocked(blocked).show(ctx);
+            if !blocked && clicked {
+                ecs.create_entity()
+                    .with(Global::default())
+                    .with(Name("Global Entity".into()));
+            }
+        }
 
         y += ADD_BUTTON_HEIGHT + ROW_SPACING;
 
         // Global header
-        draw_block(
-            Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
-            rect,
-            || {
-                ctx.draw_text("Global", rect.x + 6., y + 14., HEADER_FONT_SIZE, Color::GREY);
-            },
-        );
+        if area.is_visible(y, HEADER_HEIGHT) {
+            ctx.draw_text("Global", rect.x + 6., y + 14., HEADER_FONT_SIZE, Color::GREY);
+        }
         y += HEADER_HEIGHT;
 
         // Global entities use EditorMode::Game for undo scope
@@ -174,7 +157,7 @@ impl PanelDefinition for HierarchyPanel {
                 &mut self.drag_offset,
                 room_editor,
                 ecs,
-                scroll_range,
+                &area,
                 blocked,
                 EditorMode::Game,
             );
@@ -183,13 +166,9 @@ impl PanelDefinition for HierarchyPanel {
         y += ROW_SPACING;
 
         // Room header
-        draw_block(
-            Rect::new(rect.x + 6., y, inner_width(rect, scroll_range), HEADER_HEIGHT),
-            rect,
-            || {
-                ctx.draw_text("Room", rect.x + 6., y + 14., HEADER_FONT_SIZE, Color::GREY);
-            },
-        );
+        if area.is_visible(y, HEADER_HEIGHT) {
+            ctx.draw_text("Room", rect.x + 6., y + 14., HEADER_FONT_SIZE, Color::GREY);
+        }
         y += HEADER_HEIGHT;
 
         // Add proxy button if the room has none already
@@ -197,19 +176,15 @@ impl PanelDefinition for HierarchyPanel {
             let has_spawn = ecs.get_player_proxy(room_id).is_some();
             if !has_spawn {
                 let spawn_pos = room_pos.unwrap_or_default();
-                draw_block(
-                    Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
-                    rect,
-                    || {
-                        let clicked = Button::new(
-                            Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
-                            "+ Player Proxy",
-                        ).blocked(blocked).show(ctx);
-                        if !blocked && clicked {
-                            create_spawn_point(ecs, room_id, spawn_pos);
-                        }
-                    },
-                );
+                if area.is_fully_visible(y, ADD_BUTTON_HEIGHT) {
+                    let clicked = Button::new(
+                        Rect::new(rect.x + 6., y, btn_w, ADD_BUTTON_HEIGHT),
+                        "+ Player Proxy",
+                    ).blocked(blocked).show(ctx);
+                    if !blocked && clicked {
+                        create_spawn_point(ecs, room_id, spawn_pos);
+                    }
+                }
                 y += ADD_BUTTON_HEIGHT + ROW_SPACING;
             }
         }
@@ -228,34 +203,13 @@ impl PanelDefinition for HierarchyPanel {
                 &mut self.drag_offset,
                 room_editor,
                 ecs,
-                scroll_range,
+                &area,
                 blocked,
                 room_mode,
             );
         }
 
-        // Scrollbar
-        if scroll_range > 0.0 {
-            let ratio = rect.h / content_height;
-            let bar_h = rect.h * ratio;
-            let t = (-self.scroll_y) / scroll_range;
-            let bar_x = rect.x + rect.w - SCROLLBAR_W - 2.0;
-            let bar_y = rect.y + t * (rect.h - bar_h);
-            ctx.draw_rectangle(
-                bar_x,
-                rect.y,
-                SCROLLBAR_W,
-                rect.h,
-                Color::new(0.15, 0.15, 0.15, 0.6),
-            );
-            ctx.draw_rectangle(
-                bar_x,
-                bar_y,
-                SCROLLBAR_W,
-                bar_h,
-                Color::new(0.7, 0.7, 0.7, 0.9),
-            );
-        }
+        area.draw_scrollbar(ctx, self.scroll_state.scroll_y);
 
         // Drag ghost
         if let Some(dragged) = self.dragging {
@@ -307,12 +261,11 @@ fn draw_entity_tree(
     drag_offset: &mut Vec2,
     room_editor: &mut RoomEditor,
     ecs: &mut Ecs,
-    scroll_range: f32,
+    area: &ActiveScrollArea,
     blocked: bool,
     mode: EditorMode,
 ) {
-    // Width that respects the scrollbar
-    let usable_w = inner_width(panel_rect, scroll_range);
+    let usable_w = area.usable_width();
     let indent = depth as f32 * 16.0;
     let row_rect = Rect::new(
         panel_rect.x + 6. + indent,
@@ -325,7 +278,7 @@ fn draw_entity_tree(
     let mut pending_set_parent: Option<(Entity, Entity)> = None;
 
     // Check visibility before drawing
-    if row_rect.y >= panel_rect.y && row_rect.y + row_rect.h <= panel_rect.y + panel_rect.h {
+    if area.is_fully_visible(row_rect.y, row_rect.h) {
         let has_children = has_children(ecs, entity);
         let is_expanded = expanded.contains(&entity);
         let mouse: Vec2 = ctx.mouse_position().into();
@@ -441,7 +394,7 @@ fn draw_entity_tree(
                 drag_offset,
                 room_editor,
                 ecs,
-                scroll_range,
+                area,
                 blocked,
                 mode,
             );
@@ -460,20 +413,6 @@ fn draw_entity_tree(
                 }
             }
         }
-    }
-}
-
-fn inner_width(panel: Rect, scroll_range: f32) -> f32 {
-    if scroll_range > 0.0 {
-        panel.w - 12.0 - SCROLLBAR_W 
-    } else {
-        panel.w - 12.0
-    }
-}
-
-fn draw_block<F: FnOnce()>(block: Rect, clip: Rect, f: F) {
-    if block.y >= clip.y && block.y + block.h <= clip.y + clip.h {
-        f();
     }
 }
 

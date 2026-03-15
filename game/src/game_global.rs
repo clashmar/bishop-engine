@@ -3,13 +3,14 @@ use crate::scripting::commands::lua_command_manager::LuaCommandManager;
 use crate::scripting::commands::lua_command::LuaCommand;
 use crate::input::input_snapshot::InputSnapshot;
 use std::vec::IntoIter;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 /// Global services for the `GameState`.
 pub struct GameServices {
     pub command_manager: RefCell<LuaCommandManager>,
     pub input_snapshot: RefCell<InputSnapshot>,
+    pub menu_active: Cell<bool>,
 }
 
 impl GameServices {
@@ -17,6 +18,7 @@ impl GameServices {
         Self {
             command_manager: RefCell::new(LuaCommandManager::default()),
             input_snapshot: RefCell::new(InputSnapshot::default()),
+            menu_active: Cell::new(false),
         }
     }
 }
@@ -42,5 +44,17 @@ pub fn drain_commands() -> IntoIter<Box<dyn LuaCommand>> {
 /// Returns a fresh copy of the current `InputSnapshot`.
 pub fn get_input_snapshot() -> InputSnapshot {
     GAME_SERVICES.with(|services| services.input_snapshot.borrow().clone())
+}
+
+/// Sets whether a menu is currently active.
+pub fn set_menu_active(active: bool) {
+    GAME_SERVICES.with(|services| {
+        services.menu_active.set(active);
+    });
+}
+
+/// Returns true if any menu is currently active.
+pub fn is_menu_active() -> bool {
+    GAME_SERVICES.with(|services| services.menu_active.get())
 }
 

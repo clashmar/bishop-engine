@@ -36,23 +36,14 @@ pub enum MenuMode {
     #[default]
     /// Game paused, visible in background.
     Paused,
-    /// Full black screen, game hidden.
-    BlackScreen,
-    /// Overlay menu, game continues.
+    /// Overlay menu, game continues (except player movement).
     Overlay,
-    /// Menu takes up full dimensions of screen.
-    FullScreen,
 }
 
 impl MenuMode {
     /// Returns true if the game logic should be pause.
     pub fn is_paused(&self) -> bool {
-        matches!(self, MenuMode::Paused | MenuMode::BlackScreen | MenuMode::FullScreen)
-    }
-
-    /// Returns true if the game is hidden by a menu.
-    pub fn is_hiding_game(&self) -> bool {
-        matches!(self, MenuMode::BlackScreen | MenuMode::FullScreen)
+        matches!(self, MenuMode::Paused)
     }
 }
 
@@ -121,9 +112,11 @@ impl MenuManager {
         self.mode().map_or(false, |m| m.is_paused())
     }
 
-    /// Returns true if the menu is hiding the game.
+    /// Returns true if the bottom menu's background fully obscures the game.
     pub fn is_hiding_game(&self) -> bool {
-        self.mode().map_or(false, |m| m.is_hiding_game())
+        self.menu_stack.first()
+            .and_then(|id| self.templates.get(id))
+            .map_or(false, |t| t.background.is_opaque())
     }
 
     /// Returns true if any menu is active.
@@ -290,8 +283,8 @@ impl MenuManager {
                 layout,
                 |group| {
                     group
-                        .label("paused_title")
-                        .button("resume_button", MenuAction::Resume)
+                        .label("Paused")
+                        .button("Resume", MenuAction::Resume)
                 },
             )
             .build();

@@ -16,6 +16,12 @@ local Player = {
     _state = nil,
 
     update = function(self, dt)
+        if engine.menu.is_open() then
+            local cur_vel = self.entity:get(comp.Velocity)
+            self.entity:set_velocity({ x = 0, y = cur_vel.y })
+            return
+        end
+
         local horiz = 0
         if engine.input.is_down(input.Right) then
             horiz = horiz + 1

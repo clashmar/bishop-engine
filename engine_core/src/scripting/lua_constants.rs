@@ -66,6 +66,7 @@ pub const LUA_MENU: &str = "menu";
 pub const MENU_FILE: &str = "menu.lua";
 pub const OPEN_MENU: &str = "open";
 pub const CLOSE_MENU: &str = "close";
+pub const IS_MENU_OPEN: &str = "is_open";
 pub const SET_LANGUAGE: &str = "set_language";
 pub const GET_LANGUAGE: &str = "get_language";
 pub const GET_LANGUAGES: &str = "get_languages";

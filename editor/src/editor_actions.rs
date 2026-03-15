@@ -1,4 +1,5 @@
 // editor/src/editor_actions.rs
+use crate::editor_camera_controller::EditorCameraController;
 use crate::world::world_editor::WorldEditor;
 use crate::game::game_editor::GameEditor;
 use crate::room::room_editor::RoomEditor;
@@ -205,8 +206,16 @@ impl Editor {
                                 self.game.get_world_mut(id),
                             );
                         }
-                        EditorMode::Room(_) => {
-                            // Camera is preserved for Room mode
+                        EditorMode::Room(id) => {
+                            let current_world = self.game.current_world();
+                            if let Some(room) = current_world.get_room(id) {
+                                EditorCameraController::reset_room_editor_camera(
+                                    ctx, 
+                                    &mut self.camera, 
+                                    room, 
+                                    current_world.grid_size
+                                );
+                            }
                         }
                         EditorMode::Menu => {
                             // Should not return to Menu mode
@@ -227,11 +236,11 @@ impl Editor {
         }
 
         if Controls::undo(ctx) {
-            crate::editor_global::request_undo();
+            request_undo();
         }
 
         if Controls::redo(ctx) {
-            crate::editor_global::request_redo();
+            request_redo();
         }
 
         if Controls::c(ctx) && !input_is_focused() {
@@ -247,6 +256,7 @@ impl Editor {
         if let Err(e) = save_game(&self.game) {
             onscreen_error!("Could not save game: {}.", e)
         } else {
+            self.save_menus();
             self.toast = Some(Toast::new("Saved", 2.5));
         }
     }

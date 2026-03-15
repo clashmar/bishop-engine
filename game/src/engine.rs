@@ -185,6 +185,9 @@ impl Engine {
             }
         }
 
+        // Sync menu state for Lua scripts
+        crate::game_global::set_menu_active(self.menu_manager.has_active_menu());
+
         // Run scripts outside borrow_mut scope
         if let Err(e) = ScriptSystem::run_scripts(dt, self) {
             onscreen_error!("Error running scripts: {}", e);

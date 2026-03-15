@@ -6,6 +6,7 @@ mod slider;
 mod dropdown;
 mod stepper;
 mod color_input;
+mod scrollable_area;
 
 pub use text_input::*;
 pub use number_input::*;
@@ -15,3 +16,4 @@ pub use slider::*;
 pub use dropdown::*;
 pub use stepper::*;
 pub use color_input::*;
+pub use scrollable_area::*;

@@ -4,6 +4,7 @@ use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::ecs::transform::Transform;
 use crate::with_lua_async;
+use crate::write_engine_scripts;
 use std::collections::HashSet;
 use engine_core::prelude::*;
 use std::time::SystemTime;
@@ -12,7 +13,6 @@ use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::cell::RefCell;
 use std::sync::Mutex;
-use engine_core::*;
 use std::sync::Arc;
 use std::io::Write;
 use std::io::Error;
@@ -87,7 +87,7 @@ fn create_game_folders(name: &String) {
     }
 
     // Extract embedded _engine scripts
-    if let Err(e) = crate::editor_assets::write_engine_scripts(&scripts_folder()) {
+    if let Err(e) = write_engine_scripts(&scripts_folder()) {
         onscreen_error!("Could not write _engine scripts: {e}");
     }
 

@@ -13,6 +13,7 @@ pub enum PanelMode {
     Room,
     World,
     Game,
+    Menu,
 }
 
 impl PanelMode {
@@ -21,6 +22,7 @@ impl PanelMode {
             (PanelMode::Game, EditorMode::Game) => true,
             (PanelMode::World, EditorMode::World(_)) => true,
             (PanelMode::Room, EditorMode::Room(_)) => true,
+            (PanelMode::Menu, EditorMode::Menu) => true,
             _ => false,
         }
     }
@@ -125,7 +127,7 @@ impl PanelManager {
     pub fn register_all_panels(&mut self, ctx: &WgpuContext) {
         self.register(
             GenericPanel::new(ConsolePanel::new(), ctx),
-            vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
+            vec![PanelMode::Game, PanelMode::World, PanelMode::Room, PanelMode::Menu],
         );
 
         self.register(
@@ -135,7 +137,7 @@ impl PanelManager {
 
         self.register(
             GenericPanel::new(DiagnosticsPanel::new(), ctx),
-            vec![PanelMode::Game, PanelMode::World, PanelMode::Room],
+            vec![PanelMode::Game, PanelMode::World, PanelMode::Room, PanelMode::Menu],
         );
     }
 }
