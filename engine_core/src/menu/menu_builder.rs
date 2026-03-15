@@ -108,8 +108,8 @@ impl LayoutGroupBuilder {
     }
 
     /// Adds a managed label child.
-    pub fn label(mut self, text: &str) -> Self {
-        let element = MenuElement::label(text.to_string(), Rect::new(0.0, 0.0, 0.0, 0.0));
+    pub fn label(mut self, text_key: &str) -> Self {
+        let element = MenuElement::label(text_key.to_string(), Rect::new(0.0, 0.0, 0.0, 0.0));
         self.children.push(LayoutChild {
             element,
             managed: true,
@@ -118,8 +118,8 @@ impl LayoutGroupBuilder {
     }
 
     /// Adds a managed button child.
-    pub fn button(mut self, text: &str, action: MenuAction) -> Self {
-        let element = MenuElement::button(text.to_string(), action, Rect::new(0.0, 0.0, 0.0, 0.0));
+    pub fn button(mut self, text_key: &str, action: MenuAction) -> Self {
+        let element = MenuElement::button(text_key.to_string(), action, Rect::new(0.0, 0.0, 0.0, 0.0));
         self.children.push(LayoutChild {
             element,
             managed: true,

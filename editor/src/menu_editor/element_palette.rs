@@ -42,14 +42,14 @@ impl ElementPalette {
 
         if self.draw_palette_item(ctx, rect, &mut y, "Label", blocked).is_some() {
             clicked_kind = Some(MenuElementKind::Label(LabelElement {
-                text: "Label".to_string(),
+                text_key: "label".to_string(),
                 ..Default::default()
             }));
         }
 
         if self.draw_palette_item(ctx, rect, &mut y, "Button", blocked).is_some() {
             clicked_kind = Some(MenuElementKind::Button(ButtonElement {
-                text: "Button".to_string(),
+                text_key: "button".to_string(),
                 ..Default::default()
             }));
         }

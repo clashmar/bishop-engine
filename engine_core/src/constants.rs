@@ -34,8 +34,8 @@ pub const ASSETS_FOLDER: &str = "assets";
 /// Name of the scripts folder.
 pub const SCRIPTS_FOLDER: &str = "scripts";
 
-/// Name of the dialogue folder.
-pub const DIALOGUE_FOLDER: &str = "dialogue";
+/// Name of the text folder.
+pub const TEXT_FOLDER: &str = "text";
 
 /// Name of the folder that contains menu templates.
 pub const MENUS_FOLDER: &str = "menus";

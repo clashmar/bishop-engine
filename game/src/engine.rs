@@ -199,7 +199,7 @@ impl Engine {
 
         let mut game_instance = self.game_instance.borrow_mut();
         let prev_positions = game_instance.prev_positions.clone();
-        let dialogue_config = game_instance.game.dialogue_manager.config.clone();
+        let text_config = game_instance.game.text_manager.config.clone();
         let game_ctx = game_instance.game.ctx_mut();
 
         let Some(current_room) = game_ctx.cur_world.current_room() else {
@@ -235,7 +235,7 @@ impl Engine {
             ctx,
             game_ctx.ecs,
             game_ctx.asset_manager,
-            &dialogue_config,
+            &text_config,
             &render_cam,
             current_room.id,
             Some(&prev_positions),
@@ -252,6 +252,7 @@ impl Engine {
         ctx.borrow_mut().flush_if_needed();
         let viewport = self.render_system.viewport_rect(&*ctx.borrow());
         self.menu_manager.set_viewport(viewport);
-        self.menu_manager.render(&mut *ctx.borrow_mut());
+        let game_instance = self.game_instance.borrow();
+        self.menu_manager.render(&mut *ctx.borrow_mut(), &game_instance.game.text_manager);
     }
 }

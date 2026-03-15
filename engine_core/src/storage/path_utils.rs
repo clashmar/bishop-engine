@@ -52,9 +52,9 @@ pub fn scripts_folder() -> PathBuf {
     resources_folder_current().join(SCRIPTS_FOLDER)
 }
 
-/// Path to the dialogue folder inside the resources folder (Editor/Game).
-pub fn dialogue_folder() -> PathBuf {
-    resources_folder_current().join(DIALOGUE_FOLDER)
+/// Path to the text folder inside the resources folder (Editor/Game).
+pub fn text_folder() -> PathBuf {
+    resources_folder_current().join(TEXT_FOLDER)
 }
 
 /// Returns the path to the menus folder for the current game.

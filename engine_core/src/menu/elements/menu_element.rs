@@ -12,10 +12,11 @@ pub enum MenuElementKind {
     LayoutGroup(LayoutGroupElement),
 }
 
-/// Label element displaying static text.
+/// Label element displaying text resolved from a text key.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabelElement {
-    pub text: String,
+    #[serde(alias = "text")]
+    pub text_key: String,
     pub font_size: f32,
     pub color: Color,
 }
@@ -23,7 +24,7 @@ pub struct LabelElement {
 impl Default for LabelElement {
     fn default() -> Self {
         Self {
-            text: String::new(),
+            text_key: String::new(),
             font_size: 24.0,
             color: Color::WHITE,
         }
@@ -33,7 +34,8 @@ impl Default for LabelElement {
 /// Button element that triggers an action when clicked.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ButtonElement {
-    pub text: String,
+    #[serde(alias = "text")]
+    pub text_key: String,
     pub action: MenuAction,
     pub font_size: f32,
     pub nav_up: Option<usize>,
@@ -45,7 +47,7 @@ pub struct ButtonElement {
 impl Default for ButtonElement {
     fn default() -> Self {
         Self {
-            text: String::new(),
+            text_key: String::new(),
             action: MenuAction::CloseMenu,
             font_size: 20.0,
             nav_up: None,
@@ -97,10 +99,10 @@ impl MenuElement {
     }
 
     /// Creates a label element.
-    pub fn label(text: String, rect: Rect) -> Self {
+    pub fn label(text_key: String, rect: Rect) -> Self {
         Self::new(
             MenuElementKind::Label(LabelElement {
-                text,
+                text_key,
                 ..Default::default()
             }),
             rect,
@@ -108,10 +110,10 @@ impl MenuElement {
     }
 
     /// Creates a button element.
-    pub fn button(text: String, action: MenuAction, rect: Rect) -> Self {
+    pub fn button(text_key: String, action: MenuAction, rect: Rect) -> Self {
         Self::new(
             MenuElementKind::Button(ButtonElement {
-                text,
+                text_key,
                 action,
                 ..Default::default()
             }),

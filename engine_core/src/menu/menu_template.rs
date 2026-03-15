@@ -1,4 +1,5 @@
 use crate::menu::*;
+use crate::text::TextManager;
 use serde::{Deserialize, Serialize};
 use bishop::prelude::*;
 
@@ -43,7 +44,14 @@ impl MenuTemplate {
     }
 
     /// Renders menu labels transformed from normalized to screen-space using canvas origin/size.
-    pub fn render_labels<C: BishopContext>(&self, ctx: &mut C, canvas_origin: Vec2, canvas_size: Vec2) {
+    pub fn render_labels<C: BishopContext>(
+        &self,
+        ctx: &mut C,
+        canvas_origin: Vec2,
+        canvas_size: Vec2,
+        text_manager: &TextManager,
+        text_id: &str,
+    ) {
         for i in self.sorted_element_indices() {
             let element = &self.elements[i];
             if !element.visible {
@@ -51,8 +59,9 @@ impl MenuTemplate {
             }
             match &element.kind {
                 MenuElementKind::Label(label) => {
+                    let display_text = text_manager.resolve_ui_text(text_id, &label.text_key);
                     let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
-                    Self::render_label(ctx, label, screen_rect);
+                    Self::render_label(ctx, label, screen_rect, &display_text);
                 }
                 MenuElementKind::LayoutGroup(group) => {
                     let resolved = resolve_layout(group, element.rect);
@@ -61,8 +70,10 @@ impl MenuTemplate {
                             continue;
                         }
                         if let MenuElementKind::Label(label) = &child.element.kind {
+                            let display_text = text_manager.get_ui_text(text_id, &label.text_key)
+                                .unwrap_or_else(|| format!("{}", label.text_key));
                             let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
-                            Self::render_label(ctx, label, screen_rect);
+                            Self::render_label(ctx, label, screen_rect, &display_text);
                         }
                     }
                 }
@@ -71,11 +82,11 @@ impl MenuTemplate {
         }
     }
 
-    fn render_label<C: BishopContext>(ctx: &mut C, label: &LabelElement, rect: Rect) {
-        let txt_dims = ctx.measure_text(&label.text, label.font_size);
+    fn render_label<C: BishopContext>(ctx: &mut C, label: &LabelElement, rect: Rect, display_text: &str) {
+        let txt_dims = ctx.measure_text(display_text, label.font_size);
         let txt_x = rect.x + (rect.w - txt_dims.width) / 2.0;
         let txt_y = rect.y + (rect.h - txt_dims.height) / 2.0 + txt_dims.offset_y;
-        ctx.draw_text(&label.text, txt_x, txt_y, label.font_size, label.color);
+        ctx.draw_text(display_text, txt_x, txt_y, label.font_size, label.color);
     }
 
     /// Returns button elements in z_order with their data.

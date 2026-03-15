@@ -309,7 +309,8 @@ impl MenuEditor {
     ) {
         match &element.kind {
             MenuElementKind::Button(button) => {
-                Button::new(element_rect, &button.text)
+                let display_text = format!("{}", button.text_key);
+                Button::new(element_rect, &display_text)
                     .font_size(button.font_size)
                     .mouse_position(world_mouse)
                     .show(ctx);
@@ -404,11 +405,14 @@ impl MenuEditor {
 
                 let panel_label;
                 let text = match &element.kind {
-                    MenuElementKind::Label(label) => label.text.as_str(),
+                    MenuElementKind::Label(label) => {
+                        panel_label = format!("{}", label.text_key);
+                        &panel_label
+                    }
                     MenuElementKind::Button(_) => unreachable!(),
                     MenuElementKind::Panel(_) => {
                         if !element.name.is_empty() {
-                            panel_label = format!("[{}]", element.name);
+                            panel_label = format!("{}", element.name);
                             &panel_label
                         } else {
                             "[Panel]"

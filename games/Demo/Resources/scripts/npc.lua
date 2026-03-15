@@ -3,10 +3,11 @@
 local npc = {
     public = {
         name = "NPC",
-        dialogue_id = "npcs/npc",
+        dialogue_id = "dialogue/npcs/npc",
     },
 
     interact = function(self)
+        engine.log.info("Talking")
         if self.entity:is_speaking() then
             self.entity:say_dialogue(self.public.dialogue_id, "farewell")
         else

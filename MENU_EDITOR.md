@@ -4,10 +4,9 @@
 - Canvas represents the screen
 - Composable menus for the game that reuse existing widgets (dogfooding with the editor)
 - Changes to widgets are allowed but ask first
-- Some of the menu code is unused/unsuitable. Ask questions if you aren't sure what is essential
 - Keep decoupled from ECS
 - Menu behaviour ought to be configuarable in lua
-- Menu manager builds default menus as placeholders for now
+- Menu manager can build default menus as placeholders
 
 # Relevant files/folders
 - engine_core/src/menu
