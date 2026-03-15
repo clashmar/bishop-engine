@@ -7,8 +7,6 @@ use bishop::prelude::*;
 
 const ROW_HEIGHT: f32 = 16.0;
 const SECTION_SPACING: f32 = 8.0;
-const SCROLL_SPEED: f32 = 24.0;
-const SCROLLBAR_W: f32 = 6.0;
 const TOP_PADDING: f32 = 8.0;
 const LEFT_PADDING: f32 = 8.0;
 const FONT_SIZE: f32 = 13.0;
@@ -16,7 +14,7 @@ const HEADER_FONT_SIZE: f32 = 14.0;
 const UPDATE_INTERVAL: f32 = 0.5; // Update every 500ms
 
 pub struct DiagnosticsPanel {
-    scroll_y: f32,
+    scroll_state: ScrollState,
     collector: DiagnosticsCollector,
     last_snapshot: Option<DiagnosticsSnapshot>,
     time_since_update: f32,
@@ -25,7 +23,7 @@ pub struct DiagnosticsPanel {
 impl DiagnosticsPanel {
     pub fn new() -> Self {
         Self {
-            scroll_y: 0.0,
+            scroll_state: ScrollState::new(),
             collector: DiagnosticsCollector::new(),
             last_snapshot: None,
             time_since_update: UPDATE_INTERVAL, // Force immediate update
@@ -81,36 +79,29 @@ impl DiagnosticsPanel {
         }
     }
 
-    /// Returns true if the row is fully visible within the clip rect.
-    fn is_visible(&self, y: f32, clip: &Rect) -> bool {
-        let top = clip.y + 2.0;
-        let bottom = clip.y + clip.h - ROW_HEIGHT;
-        y >= top && y <= bottom
-    }
-
     fn draw_section_header(
-        &self, 
         ctx: &mut WgpuContext,
-        label: &str, 
-        y: f32, 
+        area: &ActiveScrollArea,
+        label: &str,
+        y: f32,
         rect: &Rect
     ) -> f32 {
-        if self.is_visible(y, rect) {
+        if area.is_fully_visible(y, ROW_HEIGHT) {
             ctx.draw_text(label, rect.x + LEFT_PADDING, y + HEADER_FONT_SIZE, HEADER_FONT_SIZE, Color::YELLOW);
         }
         y + ROW_HEIGHT + 4.0
     }
 
     fn draw_row(
-        &self, 
         ctx: &mut WgpuContext,
-        label: &str, 
-        value: &str, 
-        y: f32, 
-        rect: &Rect, 
+        area: &ActiveScrollArea,
+        label: &str,
+        value: &str,
+        y: f32,
+        rect: &Rect,
         color: Color
     ) -> f32 {
-        if self.is_visible(y, rect) {
+        if area.is_fully_visible(y, ROW_HEIGHT) {
             ctx.draw_text(label, rect.x + LEFT_PADDING + 8.0, y + FONT_SIZE, FONT_SIZE, Color::GREY);
             let value_x = rect.x + rect.w * 0.55;
             ctx.draw_text(value, value_x, y + FONT_SIZE, FONT_SIZE, color);
@@ -141,13 +132,12 @@ impl PanelDefinition for DiagnosticsPanel {
     }
 
     fn draw(
-        &mut self, 
+        &mut self,
         ctx: &mut WgpuContext,
-        rect: Rect, 
-        editor: &mut Editor, 
+        rect: Rect,
+        editor: &mut Editor,
         blocked: bool
     ) {
-        let mouse: Vec2 = ctx.mouse_position().into();
         let dt = ctx.get_frame_time();
 
         // Update frame timing continuously
@@ -158,12 +148,6 @@ impl PanelDefinition for DiagnosticsPanel {
         if self.time_since_update >= UPDATE_INTERVAL {
             self.time_since_update = 0.0;
             self.last_snapshot = Some(self.collect_metrics(editor));
-        }
-
-        // Scroll input
-        if !blocked && rect.contains(mouse) {
-            let (_, wheel_y) = ctx.mouse_wheel();
-            self.scroll_y += wheel_y * SCROLL_SPEED;
         }
 
         // Draw content
@@ -199,69 +183,60 @@ impl PanelDefinition for DiagnosticsPanel {
         content_height += 3.0 * ROW_HEIGHT;
         content_height += TOP_PADDING;
 
-        let scroll_range = (content_height - rect.h).max(0.0);
-        self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
+        let area = ScrollableArea::new(rect, content_height)
+            .blocked(blocked)
+            .begin(ctx, &mut self.scroll_state);
 
-        let mut y = rect.y + self.scroll_y + TOP_PADDING;
+        let mut y = rect.y + self.scroll_state.scroll_y + TOP_PADDING;
 
         // Warnings section
-        y = self.draw_section_header(ctx, "Warnings", y, &rect);
+        y = Self::draw_section_header(ctx, &area, "Warnings", y, &rect);
         if warnings.is_empty() {
-            y = self.draw_row(ctx, "Status", "OK", y, &rect, Color::GREEN);
+            y = Self::draw_row(ctx, &area, "Status", "OK", y, &rect, Color::GREEN);
         } else {
             for warning in &warnings {
-                y = self.draw_row(ctx, "!", &warning.description(), y, &rect, Color::RED);
+                y = Self::draw_row(ctx, &area, "!", &warning.description(), y, &rect, Color::RED);
             }
         }
         y += SECTION_SPACING;
 
         // Performance section
-        y = self.draw_section_header(ctx, "Performance", y, &rect);
+        y = Self::draw_section_header(ctx, &area, "Performance", y, &rect);
         let fps = snapshot.frame.fps;
-        y = self.draw_row(ctx, "FPS", &format!("{:.1}", fps), y, &rect, Self::fps_color(fps));
-        y = self.draw_row(ctx, "Avg", &format!("{:.2} ms", snapshot.frame.avg_frame_time_ms), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Min", &format!("{:.2} ms", snapshot.frame.min_frame_time_ms), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Max", &format!("{:.2} ms", snapshot.frame.max_frame_time_ms), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Render", &format!("{:.2} ms", editor.render_system.render_time_ms), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "FPS", &format!("{:.1}", fps), y, &rect, Self::fps_color(fps));
+        y = Self::draw_row(ctx, &area, "Avg", &format!("{:.2} ms", snapshot.frame.avg_frame_time_ms), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Min", &format!("{:.2} ms", snapshot.frame.min_frame_time_ms), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Max", &format!("{:.2} ms", snapshot.frame.max_frame_time_ms), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Render", &format!("{:.2} ms", editor.render_system.render_time_ms), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Assets section
-        y = self.draw_section_header(ctx, "Assets", y, &rect);
-        y = self.draw_row(ctx, "Textures", &snapshot.assets.texture_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Tile Defs", &snapshot.assets.tile_def_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Sprite IDs", &snapshot.assets.sprite_id_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_section_header(ctx, &area, "Assets", y, &rect);
+        y = Self::draw_row(ctx, &area, "Textures", &snapshot.assets.texture_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Tile Defs", &snapshot.assets.tile_def_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Sprite IDs", &snapshot.assets.sprite_id_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Scripts section
-        y = self.draw_section_header(ctx, "Scripts", y, &rect);
-        y = self.draw_row(ctx, "Script IDs", &snapshot.assets.script_id_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Loaded", &snapshot.scripts.loaded_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Instances", &snapshot.scripts.instance_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Listeners", &snapshot.scripts.event_listener_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_section_header(ctx, &area, "Scripts", y, &rect);
+        y = Self::draw_row(ctx, &area, "Script IDs", &snapshot.assets.script_id_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Loaded", &snapshot.scripts.loaded_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Instances", &snapshot.scripts.instance_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Listeners", &snapshot.scripts.event_listener_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // ECS section
-        y = self.draw_section_header(ctx, "ECS", y, &rect);
-        y = self.draw_row(ctx, "Entities", &snapshot.ecs.entity_count.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Component Stores", &snapshot.ecs.component_store_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_section_header(ctx, &area, "ECS", y, &rect);
+        y = Self::draw_row(ctx, &area, "Entities", &snapshot.ecs.entity_count.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Component Stores", &snapshot.ecs.component_store_count.to_string(), y, &rect, Color::WHITE);
         y += SECTION_SPACING;
 
         // Undo/Redo section
-        y = self.draw_section_header(ctx, "Undo/Redo", y, &rect);
-        y = self.draw_row(ctx, "Undo Stack", &snapshot.commands.undo_stack_size.to_string(), y, &rect, Color::WHITE);
-        y = self.draw_row(ctx, "Redo Stack", &snapshot.commands.redo_stack_size.to_string(), y, &rect, Color::WHITE);
-        let _ = self.draw_row(ctx, "Pending", &snapshot.commands.pending_size.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_section_header(ctx, &area, "Undo/Redo", y, &rect);
+        y = Self::draw_row(ctx, &area, "Undo Stack", &snapshot.commands.undo_stack_size.to_string(), y, &rect, Color::WHITE);
+        y = Self::draw_row(ctx, &area, "Redo Stack", &snapshot.commands.redo_stack_size.to_string(), y, &rect, Color::WHITE);
+        let _ = Self::draw_row(ctx, &area, "Pending", &snapshot.commands.pending_size.to_string(), y, &rect, Color::WHITE);
 
-        // Scrollbar
-        if scroll_range > 0.0 {
-            let ratio = rect.h / content_height;
-            let bar_h = rect.h * ratio;
-            let t = (-self.scroll_y) / scroll_range;
-            let bar_x = rect.x + rect.w - SCROLLBAR_W - 2.0;
-            let bar_y = rect.y + t * (rect.h - bar_h);
-
-            ctx.draw_rectangle(bar_x, rect.y, SCROLLBAR_W, rect.h, Color::new(0.15, 0.15, 0.15, 0.6));
-            ctx.draw_rectangle(bar_x, bar_y, SCROLLBAR_W, bar_h, Color::new(0.7, 0.7, 0.7, 0.9));
-        }
+        area.draw_scrollbar(ctx, self.scroll_state.scroll_y);
     }
 }

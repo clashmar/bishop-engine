@@ -1,6 +1,6 @@
 // game/src/scripting/modules/menu_module.rs
 use crate::scripting::commands::menu_commands::{OpenMenuCmd, CloseMenuCmd};
-use crate::game_global::push_command;
+use crate::game_global::{push_command, is_menu_active};
 use engine_core::register_lua_api;
 use engine_core::register_lua_module;
 use engine_core::scripting::modules::lua_module::*;
@@ -31,6 +31,11 @@ impl LuaModule for MenuModule {
         })?;
         menu_tbl.set(CLOSE_MENU, close_fn)?;
 
+        let is_open_fn = lua.create_function(|_lua, ()| {
+            Ok(is_menu_active())
+        })?;
+        menu_tbl.set(IS_MENU_OPEN, is_open_fn)?;
+
         engine_tbl.set(LUA_MENU, menu_tbl)?;
         Ok(())
     }
@@ -52,6 +57,11 @@ impl LuaApi for MenuModule {
 
         out.line("--- Closes the current menu.");
         out.line("function engine.menu.close() end");
+        out.line("");
+
+        out.line("--- Returns true if any menu is currently active.");
+        out.line("---@return boolean");
+        out.line("function engine.menu.is_open() end");
         out.line("");
     }
 }

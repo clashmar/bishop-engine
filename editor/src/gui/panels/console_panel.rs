@@ -5,8 +5,6 @@ use engine_core::prelude::*;
 use bishop::prelude::*;
 
 const ROW_HEIGHT: f32 = 18.0;
-const SCROLL_SPEED: f32 = 24.0;
-const SCROLLBAR_W: f32 = 6.0;
 const TOP_PADDING: f32 = 4.0;
 const BOTTOM_PADDING: f32 = 8.0;
 const CLEAR_BUTTON_HEIGHT: f32 = 20.0;
@@ -20,8 +18,7 @@ struct SelectionPos {
 }
 
 pub struct ConsolePanel {
-    scroll_y: f32,
-    auto_scroll: bool,
+    scroll_state: ScrollState,
     last_total_pushed: usize,
     selection_anchor: Option<SelectionPos>,
     selection_end: Option<SelectionPos>,
@@ -32,8 +29,7 @@ pub struct ConsolePanel {
 impl ConsolePanel {
     pub fn new() -> Self {
         Self {
-            scroll_y: 0.0,
-            auto_scroll: true,
+            scroll_state: ScrollState::with_auto_scroll(),
             last_total_pushed: 0,
             selection_anchor: None,
             selection_end: None,
@@ -272,14 +268,14 @@ impl PanelDefinition for ConsolePanel {
     }
 
     fn default_rect(&self, _ctx: &WgpuContext) -> Rect {
-        Rect::new(20., 460., 520., 200.)
+        Rect::new(20., 460., 550., 250.)
     }
 
     fn draw(
-        &mut self, 
+        &mut self,
         ctx: &mut WgpuContext,
-        rect: Rect, 
-        _editor: &mut Editor, 
+        rect: Rect,
+        _editor: &mut Editor,
         blocked: bool
     ) {
         let mouse: Vec2 = ctx.mouse_position().into();
@@ -299,7 +295,7 @@ impl PanelDefinition for ConsolePanel {
             if let Ok(mut history) = LOG_HISTORY.lock() {
                 history.clear();
             }
-            self.scroll_y = 0.0;
+            self.scroll_state.scroll_y = 0.0;
             self.clear_selection();
             self.cached_wrapped.clear();
         }
@@ -309,16 +305,6 @@ impl PanelDefinition for ConsolePanel {
         let content_h = rect.h - TOP_PADDING - HEADER_ROW_HEIGHT - BOTTOM_PADDING;
         let content_rect = Rect::new(rect.x, content_y, rect.w, content_h.max(0.0));
 
-        // Scroll input
-        if !blocked && content_rect.contains(mouse) {
-            let (_, wheel_y) = ctx.mouse_wheel();
-            if wheel_y.abs() > 0.0 {
-                self.scroll_y += wheel_y * SCROLL_SPEED;
-                self.auto_scroll = false;
-            }
-        }
-
-        let usable_w = content_rect.w - SCROLLBAR_W - 12.0;
         let font_size = 14.0;
 
         // Check if cache needs update using counter
@@ -340,6 +326,9 @@ impl PanelDefinition for ConsolePanel {
                 })
                 .unwrap_or_default();
 
+            // Calculate usable width for wrapping (account for potential scrollbar)
+            let usable_w = content_rect.w - 6.0 - 12.0;
+
             self.cached_wrapped = entries.iter().map(|(level, message)| {
                 let prefix = Self::level_prefix(*level);
                 let full_message = format!("{}{}", prefix, message);
@@ -355,20 +344,16 @@ impl PanelDefinition for ConsolePanel {
         // Calculate total line count for content height
         let total_lines: usize = wrapped_entries.iter().map(|(_, lines)| lines.len()).sum();
         let content_height = total_lines as f32 * ROW_HEIGHT;
-        let scroll_range = (content_height - content_h).max(0.0);
 
         // Auto-scroll when new entries arrive
-        if needs_update && self.auto_scroll {
-            self.scroll_y = -scroll_range;
+        if needs_update && self.scroll_state.auto_scroll {
+            let scroll_range = (content_height - content_h).max(0.0);
+            self.scroll_state.scroll_y = -scroll_range;
         }
 
-        // Re-enable auto-scroll if scrolled to bottom
-        if scroll_range > 0.0 && self.scroll_y <= -scroll_range + 1.0 {
-            self.auto_scroll = true;
-        }
-
-        // Clamp scroll
-        self.scroll_y = self.scroll_y.clamp(-scroll_range, 0.0);
+        let area = ScrollableArea::new(content_rect, content_height)
+            .blocked(blocked)
+            .begin(ctx, &mut self.scroll_state);
 
         // Create flat list of all lines with their colors for selection handling
         let all_lines: Vec<(String, Color)> = wrapped_entries
@@ -384,7 +369,7 @@ impl PanelDefinition for ConsolePanel {
         // Handle mouse selection
         if !blocked && content_rect.contains(mouse) {
             if ctx.is_mouse_button_pressed(MouseButton::Left) {
-                if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
+                if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_state.scroll_y, &all_line_texts, font_size) {
                     self.selection_anchor = Some(pos);
                     self.selection_end = Some(pos);
                     self.dragging = true;
@@ -393,7 +378,7 @@ impl PanelDefinition for ConsolePanel {
         }
 
         if self.dragging && ctx.is_mouse_button_down(MouseButton::Left) {
-            if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_y, &all_line_texts, font_size) {
+            if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_state.scroll_y, &all_line_texts, font_size) {
                 self.selection_end = Some(pos);
             }
         }
@@ -417,10 +402,9 @@ impl PanelDefinition for ConsolePanel {
         let selection = self.ordered_selection();
 
         for (global_line_idx, (line_text, color)) in all_lines.iter().enumerate() {
-            let line_y = content_rect.y + self.scroll_y + global_line_idx as f32 * ROW_HEIGHT;
+            let line_y = content_rect.y + self.scroll_state.scroll_y + global_line_idx as f32 * ROW_HEIGHT;
 
-            // Skip lines outside visible area
-            if line_y + ROW_HEIGHT < content_rect.y || line_y > content_rect.y + content_rect.h {
+            if !area.is_fully_visible(line_y, ROW_HEIGHT) {
                 continue;
             }
 
@@ -458,30 +442,6 @@ impl PanelDefinition for ConsolePanel {
             );
         }
 
-        // Scrollbar
-        if scroll_range > 0.0 {
-            let ratio = content_h / content_height;
-            let bar_h = content_h * ratio;
-            let t = (-self.scroll_y) / scroll_range;
-            let bar_x = content_rect.x + content_rect.w - SCROLLBAR_W - 2.0;
-            let bar_y = content_rect.y + t * (content_h - bar_h);
-
-            // Track
-            ctx.draw_rectangle(
-                bar_x,
-                content_rect.y,
-                SCROLLBAR_W,
-                content_h,
-                Color::new(0.15, 0.15, 0.15, 0.6),
-            );
-            // Thumb
-            ctx.draw_rectangle(
-                bar_x,
-                bar_y,
-                SCROLLBAR_W,
-                bar_h,
-                Color::new(0.7, 0.7, 0.7, 0.9),
-            );
-        }
+        area.draw_scrollbar(ctx, self.scroll_state.scroll_y);
     }
 }

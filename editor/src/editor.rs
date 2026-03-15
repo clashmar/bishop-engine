@@ -92,6 +92,8 @@ impl Editor {
 
         let ui_blocked = match self.mode {
             EditorMode::Menu => self.menu_editor.is_mouse_over_ui(ctx),
+            EditorMode::Game => self.game_editor.is_mouse_over_ui(ctx),
+            EditorMode::World(_) => self.world_editor.is_mouse_over_ui(ctx),
             EditorMode::Room(_) => self.room_editor.is_mouse_over_ui(ctx),
             _ => false,
         };

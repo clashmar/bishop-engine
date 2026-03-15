@@ -7,6 +7,19 @@ use crate::storage::editor_storage::delete_menu;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
+/// Tracks an in-progress drag-to-reorder operation for managed layout children.
+pub(crate) struct ReorderDragState {
+    pub group_index: usize,
+    pub child_index: usize,
+    pub drop_target: Option<usize>,
+}
+
+/// A snap guide line to draw on the canvas.
+pub(crate) enum SnapLine {
+    Horizontal(f32),
+    Vertical(f32),
+}
+
 /// Main menu editor state.
 pub struct MenuEditor {
     pub(crate) menu_list_panel: MenuListPanel,
@@ -21,6 +34,8 @@ pub struct MenuEditor {
     pub(crate) dragging_element: Option<usize>,
     pub(crate) drag_offset: Vec2,
     pub(crate) resizing_handle: Option<ResizeHandleState>,
+    pub(crate) reorder_drag: Option<ReorderDragState>,
+    pub(crate) snap_lines: Vec<SnapLine>,
 }
 
 impl MenuEditor {
@@ -39,6 +54,8 @@ impl MenuEditor {
             dragging_element: None,
             drag_offset: Vec2::ZERO,
             resizing_handle: None,
+            reorder_drag: None,
+            snap_lines: Vec::new(),
         }
     }
 

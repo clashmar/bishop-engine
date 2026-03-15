@@ -1,6 +1,7 @@
 use bishop::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::menu::menu_builder::MenuAction;
+use crate::menu::layout::HorizontalAlign;
 use super::layout_group::LayoutGroupElement;
 
 /// Different kinds of menu elements.
@@ -19,6 +20,8 @@ pub struct LabelElement {
     pub text_key: String,
     pub font_size: f32,
     pub color: Color,
+    #[serde(default)]
+    pub alignment: HorizontalAlign,
 }
 
 impl Default for LabelElement {
@@ -27,6 +30,7 @@ impl Default for LabelElement {
             text_key: String::new(),
             font_size: 24.0,
             color: Color::WHITE,
+            alignment: HorizontalAlign::Center,
         }
     }
 }

@@ -25,8 +25,58 @@
                     /*[0]*/ (
                         element: (
                             name: "",
+                            kind: Label((
+                                text_key: "Paused",
+                                font_size: 24.0,
+                                color: (
+                                    r: 1.0,
+                                    g: 1.0,
+                                    b: 1.0,
+                                    a: 1.0,
+                                ),
+                                alignment: Center,
+                            )),
+                            rect: (
+                                x: 0.11414814,
+                                y: 0.03923762,
+                                w: 0.1,
+                                h: 0.03,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
+                    /*[1]*/ (
+                        element: (
+                            name: "Main Layout",
                             kind: Button((
-                                text_key: "resume",
+                                text_key: "Button",
+                                action: CloseMenu,
+                                font_size: 20.0,
+                                nav_up: None,
+                                nav_down: None,
+                                nav_left: None,
+                                nav_right: None,
+                            )),
+                            rect: (
+                                x: 0.117497325,
+                                y: 0.225932,
+                                w: 0.1,
+                                h: 0.037,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
+                    /*[2]*/ (
+                        element: (
+                            name: "",
+                            kind: Button((
+                                text_key: "Resume",
                                 action: CloseMenu,
                                 font_size: 20.0,
                                 nav_up: None,
@@ -46,31 +96,6 @@
                         ),
                         managed: true,
                     ),
-                    /*[1]*/ (
-                        element: (
-                            name: "",
-                            kind: Label((
-                                text_key: "paused",
-                                font_size: 24.0,
-                                color: (
-                                    r: 1.0,
-                                    g: 1.0,
-                                    b: 1.0,
-                                    a: 1.0,
-                                ),
-                            )),
-                            rect: (
-                                x: 0.11414814,
-                                y: 0.03923762,
-                                w: 0.1,
-                                h: 0.03,
-                            ),
-                            enabled: true,
-                            visible: true,
-                            z_order: 0,
-                        ),
-                        managed: true,
-                    ),
                 ],
                 nav_up: None,
                 nav_down: None,
@@ -78,31 +103,15 @@
                 nav_right: None,
             )),
             rect: (
-                x: 0.4212469,
-                y: 0.35763144,
-                w: 0.25,
-                h: 0.3,
+                x: 0.29284424,
+                y: 0.31771955,
+                w: 0.41431153,
+                h: 0.3645609,
             ),
             enabled: true,
             visible: true,
             z_order: 1,
         ),
-        /*[1]*/ (
-            name: "Back Panel",
-            kind: Panel((
-                elements: [],
-                background_color: None,
-            )),
-            rect: (
-                x: 0.27380514,
-                y: 0.23918551,
-                w: 0.54827225,
-                h: 0.53546906,
-            ),
-            enabled: true,
-            visible: true,
-            z_order: 0,
-        ),
     ],
-    mode: Paused,
+    mode: Overlay,
 )

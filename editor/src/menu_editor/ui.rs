@@ -1,5 +1,5 @@
 // editor/src/menu_editor/ui.rs
-use crate::gui::menu_bar::draw_top_panel_full;
+use crate::gui::menu_bar::{draw_top_panel_full, menu_panel_rect};
 use crate::menu_editor::MenuEditor;
 use bishop::prelude::*;
 
@@ -16,10 +16,8 @@ impl MenuEditor{
         // Reset to static camera
         ctx.set_default_camera();
 
-        // Top menu background
-        let menu_panel = self.register_rect(
-            draw_top_panel_full(ctx)
-        );
+        // Calculate top panel
+        let menu_panel = menu_panel_rect(ctx);
 
         let screen_rect = Rect::new(
             0.0,
@@ -111,5 +109,8 @@ impl MenuEditor{
         );
 
         self.draw_properties_panel(ctx, properties_rect, blocked);
+
+        // Draw top menu
+        self.register_rect(draw_top_panel_full(ctx));
     }
 }

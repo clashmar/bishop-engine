@@ -339,7 +339,7 @@ pub fn draw_top_panel_full(ctx: &mut WgpuContext) -> Rect {
     rect
 }
 
-fn menu_panel_rect(ctx: &mut WgpuContext,) -> Rect {
+pub fn menu_panel_rect(ctx: &mut WgpuContext,) -> Rect {
     Rect::new(0.0, 0.0, ctx.screen_width(), MENU_PANEL_HEIGHT)
 }
 
