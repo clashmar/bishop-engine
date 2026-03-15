@@ -344,8 +344,13 @@ impl MenuEditor {
                 );
 
                 // Label
+                let group_label = if !element.name.is_empty() {
+                    format!("[{}]", element.name)
+                } else {
+                    "[Layout Group]".to_string()
+                };
                 ctx.draw_text(
-                    "[Layout Group]",
+                    &group_label,
                     element_rect.x + 4.0,
                     element_rect.y + 12.0,
                     10.0,
@@ -397,10 +402,18 @@ impl MenuEditor {
                     outline_color,
                 );
 
+                let panel_label;
                 let text = match &element.kind {
                     MenuElementKind::Label(label) => label.text.as_str(),
                     MenuElementKind::Button(_) => unreachable!(),
-                    MenuElementKind::Panel(_) => "[Panel]",
+                    MenuElementKind::Panel(_) => {
+                        if !element.name.is_empty() {
+                            panel_label = format!("[{}]", element.name);
+                            &panel_label
+                        } else {
+                            "[Panel]"
+                        }
+                    }
                     MenuElementKind::LayoutGroup(_) => unreachable!(),
                 };
 

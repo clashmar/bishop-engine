@@ -19,6 +19,7 @@ pub struct Button<'a> {
     hover_color: Color,
     text_offset: Vec2,
     blocked: bool,
+    focused: bool,
     mouse_position: Option<Vec2>,
 }
 
@@ -34,6 +35,7 @@ impl<'a> Button<'a> {
             hover_color: HOVER_COLOR,
             text_offset: Vec2::ZERO,
             blocked: false,
+            focused: false,
             mouse_position: None,
         }
     }
@@ -75,6 +77,12 @@ impl<'a> Button<'a> {
         self
     }
 
+    /// Sets whether the button is visually focused (shows hover highlight without mouse).
+    pub fn focused(mut self, focused: bool) -> Self {
+        self.focused = focused;
+        self
+    }
+
     /// Overrides the mouse position used for hover detection (e.g. world-space coords when a camera is active).
     pub fn mouse_position(mut self, pos: Vec2) -> Self {
         self.mouse_position = Some(pos);
@@ -92,7 +100,8 @@ impl<'a> Button<'a> {
 
         match self.style {
             ButtonStyle::Default => {
-                let background = if hovered && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left) {
+                let highlight = (hovered || self.focused) && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left);
+                let background = if highlight {
                     self.hover_color
                 } else {
                     FIELD_BACKGROUND_COLOR
@@ -101,7 +110,8 @@ impl<'a> Button<'a> {
                 ctx.draw_rectangle_lines(self.rect.x, self.rect.y, self.rect.w, self.rect.h, 2., OUTLINE_COLOR);
             }
             ButtonStyle::Plain => {
-                if hovered && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left) {
+                let highlight = (hovered || self.focused) && !is_dropdown_open() && !self.blocked && !ctx.is_mouse_button_down(MouseButton::Left);
+                if highlight {
                     ctx.draw_rectangle(
                         self.rect.x,
                         self.rect.y,

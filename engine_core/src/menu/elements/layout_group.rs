@@ -7,6 +7,14 @@ use crate::menu::layout::LayoutConfig;
 pub struct LayoutGroupElement {
     pub layout: LayoutConfig,
     pub children: Vec<LayoutChild>,
+    /// Navigation target when leaving upward.
+    pub nav_up: Option<usize>,
+    /// Navigation target when leaving downward.
+    pub nav_down: Option<usize>,
+    /// Navigation target when leaving left.
+    pub nav_left: Option<usize>,
+    /// Navigation target when leaving right.
+    pub nav_right: Option<usize>,
 }
 
 impl Default for LayoutGroupElement {
@@ -14,6 +22,10 @@ impl Default for LayoutGroupElement {
         Self {
             layout: LayoutConfig::default(),
             children: Vec::new(),
+            nav_up: None,
+            nav_down: None,
+            nav_left: None,
+            nav_right: None,
         }
     }
 }

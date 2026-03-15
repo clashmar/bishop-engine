@@ -138,6 +138,10 @@ impl LayoutGroupBuilder {
         LayoutGroupElement {
             layout: self.layout,
             children: self.children,
+            nav_up: None,
+            nav_down: None,
+            nav_left: None,
+            nav_right: None,
         }
     }
 }

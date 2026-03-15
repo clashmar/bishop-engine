@@ -101,59 +101,51 @@ impl MenuTemplate {
         result
     }
 
-    /// Returns the number of focusable elements.
-    pub fn focusable_count(&self) -> usize {
-        self.count_focusable_in(&self.elements)
+    /// Returns the element at the given focus position.
+    pub fn get_element_at_focus(&self, focus: &MenuFocus) -> Option<&MenuElement> {
+        let element = self.elements.get(focus.node)?;
+        match (&element.kind, focus.child) {
+            (MenuElementKind::LayoutGroup(_), Some(child_idx)) => {
+                self.get_focusable_child(focus.node, child_idx)
+            }
+            _ => Some(element),
+        }
     }
 
-    fn count_focusable_in(&self, elements: &[MenuElement]) -> usize {
-        let mut count = 0;
-        for element in elements {
-            if !element.enabled || !element.visible {
-                continue;
-            }
-            match &element.kind {
-                MenuElementKind::Button(_) => count += 1,
-                MenuElementKind::LayoutGroup(group) => {
-                    for child in &group.children {
-                        if matches!(child.element.kind, MenuElementKind::Button(_))
-                            && child.element.enabled
-                            && child.element.visible
-                        {
-                            count += 1;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-        count
+    /// Counts focusable button children in a layout group at the given element index.
+    pub fn focusable_child_count(&self, element_index: usize) -> usize {
+        let Some(element) = self.elements.get(element_index) else {
+            return 0;
+        };
+        let MenuElementKind::LayoutGroup(group) = &element.kind else {
+            return 0;
+        };
+        group
+            .children
+            .iter()
+            .filter(|child| {
+                matches!(child.element.kind, MenuElementKind::Button(_))
+                    && child.element.enabled
+                    && child.element.visible
+            })
+            .count()
     }
 
-    /// Gets the button at the given focus index.
-    pub fn get_focused_button(&self, focus_index: usize) -> Option<&MenuElement> {
-        let mut current_index = 0;
-        for element in &self.elements {
-            if matches!(element.kind, MenuElementKind::Button(_)) && element.enabled && element.visible {
-                if current_index == focus_index {
-                    return Some(element);
-                }
-                current_index += 1;
-            }
-            if let MenuElementKind::LayoutGroup(group) = &element.kind {
-                for child in &group.children {
-                    if matches!(child.element.kind, MenuElementKind::Button(_))
-                        && child.element.enabled
-                        && child.element.visible
-                    {
-                        if current_index == focus_index {
-                            return Some(&child.element);
-                        }
-                        current_index += 1;
-                    }
-                }
-            }
-        }
-        None
+    /// Gets the nth focusable child button in a layout group.
+    pub fn get_focusable_child(&self, element_index: usize, child_index: usize) -> Option<&MenuElement> {
+        let element = self.elements.get(element_index)?;
+        let MenuElementKind::LayoutGroup(group) = &element.kind else {
+            return None;
+        };
+        group
+            .children
+            .iter()
+            .filter(|child| {
+                matches!(child.element.kind, MenuElementKind::Button(_))
+                    && child.element.enabled
+                    && child.element.visible
+            })
+            .nth(child_index)
+            .map(|child| &child.element)
     }
 }

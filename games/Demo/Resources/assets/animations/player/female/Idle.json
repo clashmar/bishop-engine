@@ -1,0 +1,51 @@
+{ "frames": {
+   "Idle 0.aseprite": {
+    "frame": { "x": 0, "y": 0, "w": 6, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 16 },
+    "sourceSize": { "w": 6, "h": 16 },
+    "duration": 200
+   },
+   "Idle 1.aseprite": {
+    "frame": { "x": 6, "y": 0, "w": 6, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 16 },
+    "sourceSize": { "w": 6, "h": 16 },
+    "duration": 200
+   },
+   "Idle 2.aseprite": {
+    "frame": { "x": 12, "y": 0, "w": 6, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 16 },
+    "sourceSize": { "w": 6, "h": 16 },
+    "duration": 200
+   },
+   "Idle 3.aseprite": {
+    "frame": { "x": 18, "y": 0, "w": 6, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 16 },
+    "sourceSize": { "w": 6, "h": 16 },
+    "duration": 200
+   },
+   "Idle 4.aseprite": {
+    "frame": { "x": 24, "y": 0, "w": 6, "h": 16 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 6, "h": 16 },
+    "sourceSize": { "w": 6, "h": 16 },
+    "duration": 200
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.25",
+  "image": "Idle.png",
+  "format": "RGBA8888",
+  "size": { "w": 30, "h": 16 },
+  "scale": "1"
+ }
+}
