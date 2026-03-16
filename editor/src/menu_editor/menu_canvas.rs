@@ -20,7 +20,6 @@ impl MenuEditor {
     ) {
         let raw_mouse: Vec2 = ctx.mouse_position().into();
         let mouse = camera.screen_to_world(raw_mouse, ctx.screen_width(), ctx.screen_height());
-        let mouse_in_canvas = rect.contains(mouse);
         let canvas_origin = Vec2::new(rect.x, rect.y);
         let canvas_size = Vec2::new(rect.w, rect.h);
         let norm_mouse = screen_to_normalized(mouse, canvas_origin, canvas_size);
@@ -75,7 +74,7 @@ impl MenuEditor {
             }
         }
 
-        if blocked || !mouse_in_canvas {
+        if blocked {
             return;
         }
 
@@ -230,6 +229,7 @@ impl MenuEditor {
                     } else {
                         self.dragging_element = Some(idx);
                         self.drag_offset = norm_mouse - Vec2::new(child_rect.x, child_rect.y);
+                        self.drag_start_mouse = norm_mouse;
                     }
                 } else if shift_held {
                     // Shift+click on top-level element: toggle in selection
@@ -244,6 +244,7 @@ impl MenuEditor {
                     self.selected_child_index = None;
                     self.dragging_element = Some(idx);
                     self.drag_offset = norm_mouse - Vec2::new(element_rect.x, element_rect.y);
+                    self.drag_start_mouse = norm_mouse;
                     // Store start positions for multi-drag
                     let indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
                     let start_rects: Vec<(usize, Vec2)> = self.current_template()
@@ -259,6 +260,7 @@ impl MenuEditor {
                     self.selected_child_index = None;
                     self.dragging_element = Some(idx);
                     self.drag_offset = norm_mouse - Vec2::new(element_rect.x, element_rect.y);
+                    self.drag_start_mouse = norm_mouse;
                     self.drag_start_rects.clear();
                 }
             } else {
@@ -350,6 +352,18 @@ impl MenuEditor {
                 let drag_offset = self.drag_offset;
                 let child_idx = self.selected_child_index;
 
+                // Shift-lock: constrain to dominant axis
+                let norm_mouse = if shift_held {
+                    let delta = norm_mouse - self.drag_start_mouse;
+                    if delta.x.abs() > delta.y.abs() {
+                        Vec2::new(norm_mouse.x, self.drag_start_mouse.y)
+                    } else {
+                        Vec2::new(self.drag_start_mouse.x, norm_mouse.y)
+                    }
+                } else {
+                    norm_mouse
+                };
+
                 if let Some(child_idx) = child_idx {
                     // Drag unmanaged child: position is relative to group origin
                     let group_origin = self.current_template()
@@ -382,20 +396,21 @@ impl MenuEditor {
                         let template_idx = self.current_template_index;
                         if let Some(ti) = template_idx {
                             let mut new_snap_lines = Vec::new();
+                            let mut snap_delta = delta;
                             if let Some(template) = self.templates.get_mut(ti) {
+                                if snapping {
+                                    if let Some(anchor_el) = template.elements.get(anchor_index) {
+                                        let anchor_size = Vec2::new(anchor_el.rect.w, anchor_el.rect.h);
+                                        let (snapped, lines) = snap_center_to_fractions(anchor_start + delta, anchor_size);
+                                        snap_delta = snapped - anchor_start;
+                                        new_snap_lines = lines;
+                                    }
+                                }
                                 for &(i, start_pos) in &start_rects {
                                     if let Some(element) = template.elements.get_mut(i) {
-                                        let target = start_pos + delta;
-                                        if snapping && i == anchor_index {
-                                            let size = Vec2::new(element.rect.w, element.rect.h);
-                                            let (snapped, lines) = snap_center_to_fractions(target, size);
-                                            element.rect.x = snapped.x;
-                                            element.rect.y = snapped.y;
-                                            new_snap_lines = lines;
-                                        } else {
-                                            element.rect.x = target.x;
-                                            element.rect.y = target.y;
-                                        }
+                                        let target = start_pos + snap_delta;
+                                        element.rect.x = target.x;
+                                        element.rect.y = target.y;
                                     }
                                 }
                             }

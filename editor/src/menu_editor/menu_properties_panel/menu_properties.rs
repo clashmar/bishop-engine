@@ -162,5 +162,66 @@ impl MenuEditor {
             }
             MenuBackground::None => {}
         }
+
+        // Elements list
+        *y += 8.0;
+        let element_labels: Vec<(usize, String)> = {
+            let Some(template) = self.current_template() else { return };
+            template.elements.iter().enumerate().map(|(i, el)| {
+                let label = if !el.name.is_empty() {
+                    el.name.clone()
+                } else {
+                    match &el.kind {
+                        MenuElementKind::Label(l) => format!("Label: {}", l.text_key),
+                        MenuElementKind::Button(b) => format!("Button: {}", b.text_key),
+                        MenuElementKind::Panel(_) => "Panel".to_string(),
+                        MenuElementKind::LayoutGroup(_) => "Layout Group".to_string(),
+                    }
+                };
+                (i, label)
+            }).collect()
+        };
+
+        if row_visible(*y, 20.0, clip) {
+            ctx.draw_text(
+                &format!("Elements ({})", element_labels.len()),
+                x, *y + 14.0, 12.0, Color::GREY,
+            );
+        }
+        *y += 20.0;
+
+        let mouse: Vec2 = ctx.mouse_position().into();
+        let mut clicked_index = None;
+
+        for (index, label) in &element_labels {
+            if !row_visible(*y, ROW_HEIGHT, clip) {
+                *y += ROW_HEIGHT;
+                continue;
+            }
+
+            let item_rect = Rect::new(x, *y, w, ROW_HEIGHT);
+            let hover = item_rect.contains(mouse) && !blocked;
+
+            let bg_color = if hover {
+                Color::new(0.25, 0.25, 0.3, 1.0)
+            } else {
+                Color::new(0.2, 0.2, 0.25, 1.0)
+            };
+
+            ctx.draw_rectangle(item_rect.x, item_rect.y, item_rect.w, item_rect.h, bg_color);
+            ctx.draw_text(label, item_rect.x + 8.0, item_rect.y + 16.0, 11.0, Color::WHITE);
+
+            if hover && ctx.is_mouse_button_pressed(MouseButton::Left) {
+                clicked_index = Some(*index);
+            }
+
+            *y += ROW_HEIGHT + 4.0;
+        }
+
+        if let Some(index) = clicked_index {
+            self.selected_element_indices.clear();
+            self.selected_element_indices.insert(index);
+            self.selected_child_index = None;
+        }
     }
 }

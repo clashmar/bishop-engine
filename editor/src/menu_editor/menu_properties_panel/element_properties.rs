@@ -176,27 +176,20 @@ impl MenuEditor {
         // Action dropdown
         if row_visible(*y, ROW_HEIGHT, clip) {
             ctx.draw_text("Action:", x, *y + 16.0, 12.0, Color::WHITE);
-            let action_options = [
-                "Resume",
-                "CloseMenu",
-                "QuitToMainMenu",
-                "QuitGame",
-                "OpenMenu",
-                "Custom",
+            let action_variants = [
+                MenuAction::Resume,
+                MenuAction::CloseMenu,
+                MenuAction::QuitToMainMenu,
+                MenuAction::QuitGame,
+                MenuAction::OpenMenu(String::new()),
+                MenuAction::Custom(String::new()),
             ];
-            let current_action_str = match &current_action {
-                MenuAction::Resume => "Resume",
-                MenuAction::CloseMenu => "CloseMenu",
-                MenuAction::QuitToMainMenu => "QuitToMainMenu",
-                MenuAction::QuitGame => "QuitGame",
-                MenuAction::OpenMenu(_) => "OpenMenu",
-                MenuAction::Custom(_) => "Custom",
-            };
+            let action_options: Vec<&str> = action_variants.iter().map(|a| a.ui_label()).collect();
             let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
             if let Some(selected) = Dropdown::new(
                 self.properties_panel.widget_ids.action_id,
                 dropdown_rect,
-                current_action_str,
+                current_action.ui_label(),
                 &action_options,
                 |s| s.to_string(),
             )
@@ -204,19 +197,13 @@ impl MenuEditor {
             .fixed_width()
             .show(ctx)
             {
-                let new_action = match selected {
-                    "Resume" => MenuAction::Resume,
-                    "CloseMenu" => MenuAction::CloseMenu,
-                    "QuitToMainMenu" => MenuAction::QuitToMainMenu,
-                    "QuitGame" => MenuAction::QuitGame,
-                    "OpenMenu" => MenuAction::OpenMenu(String::new()),
-                    "Custom" => MenuAction::Custom(String::new()),
-                    _ => current_action.clone(),
-                };
-
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Button(button) = &mut element.kind {
-                        button.action = new_action;
+                if let Some(new_action) = action_variants.into_iter()
+                    .find(|a| a.ui_label() == selected)
+                {
+                    if let Some(element) = self.selected_element_mut() {
+                        if let MenuElementKind::Button(button) = &mut element.kind {
+                            button.action = new_action;
+                        }
                     }
                 }
             }
