@@ -19,6 +19,20 @@ pub enum MenuAction {
     Custom(String),
 }
 
+impl MenuAction {
+    /// Returns a human-readable label for this action.
+    pub fn ui_label(&self) -> &'static str {
+        match self {
+            MenuAction::Resume => "Resume",
+            MenuAction::OpenMenu(_) => "Open Menu",
+            MenuAction::CloseMenu => "Close Menu",
+            MenuAction::QuitToMainMenu => "Quit To Main Menu",
+            MenuAction::QuitGame => "Quit Game",
+            MenuAction::Custom(_) => "Custom",
+        }
+    }
+}
+
 /// Builder for composing menus with flexible layouts.
 #[derive(Debug, Clone)]
 pub struct MenuBuilder {

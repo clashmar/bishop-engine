@@ -106,10 +106,13 @@ impl MenuEditor {
             y += 32.0;
         }
 
-        // List of menus - collect click info first to avoid borrow issues
+        // List of menus sorted alphabetically - collect click info first to avoid borrow issues
         let mut clicked_index = None;
+        let mut sorted_indices: Vec<usize> = (0..self.templates.len()).collect();
+        sorted_indices.sort_by(|a, b| self.templates[*a].id.to_lowercase().cmp(&self.templates[*b].id.to_lowercase()));
 
-        for (index, template) in self.templates.iter().enumerate() {
+        for index in sorted_indices {
+            let template = &self.templates[index];
             if !area.is_fully_visible(y, MENU_ITEM_HEIGHT) {
                 y += MENU_ITEM_HEIGHT + 4.0;
                 continue;
