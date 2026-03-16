@@ -1,4 +1,6 @@
 // editor/src/menu_editor/menu_list_panel.rs
+use crate::commands::menu::{CreateTemplateCmd, DeleteTemplateCmd};
+use crate::editor_global::push_command;
 use crate::menu_editor::MenuEditor;
 use bishop::prelude::*;
 use engine_core::ui::widgets::*;
@@ -69,7 +71,7 @@ impl MenuEditor {
 
             if delete_clicked {
                 if let Some(index) = self.current_template_index {
-                    self.delete_template(index);
+                    push_command(Box::new(DeleteTemplateCmd::new(index)));
                 }
             }
         }
@@ -92,7 +94,7 @@ impl MenuEditor {
                 let duplicate = self.templates.iter().any(|t| t.id == name_trimmed);
                 if (ok_clicked || ctx.is_key_pressed(KeyCode::Enter)) && !name_trimmed.is_empty() && !duplicate {
                     let name = name_trimmed.to_string();
-                    self.create_new_template(name);
+                    push_command(Box::new(CreateTemplateCmd::new(name)));
                     self.menu_list_panel.pending_new_menu = false;
                     self.menu_list_panel.new_menu_name.clear();
                 }

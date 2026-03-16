@@ -1,8 +1,10 @@
 // editor/src/menu_editor/menu_canvas.rs
-use crate::menu_editor::menu_editor::{ReorderDragState, SnapLine};
 use crate::menu_editor::resize_handle::*;
+use crate::editor_global::push_command;
+use crate::menu_editor::menu_editor::*;
 use crate::menu_editor::MenuEditor;
-use crate::shared::selection::{rect_from_two_points, rects_intersect, draw_selection_box};
+use crate::shared::selection::*;
+use crate::commands::menu::*;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -35,32 +37,47 @@ impl MenuEditor {
         {
             let dir = get_omni_input_pressed(ctx);
             if dir != Vec2::ZERO {
-                let step = Vec2::new(dir.x / 1920.0, dir.y / 1080.0);
+                if let Some(template_idx) = self.current_template_index {
+                    let step = Vec2::new(dir.x / 1920.0, dir.y / 1080.0);
+                    let mut moves = Vec::new();
 
-                if let Some(child_idx) = self.selected_child_index {
-                    // Move child's relative position
-                    if let Some(parent_idx) = self.primary_selected_index() {
-                        if let Some(template) = self.current_template_mut() {
-                            if let Some(element) = template.elements.get_mut(parent_idx) {
-                                if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
-                                    if let Some(child) = group.children.get_mut(child_idx) {
-                                        child.element.rect.x += step.x;
-                                        child.element.rect.y += step.y;
-                                    }
+                    if let Some(child_idx) = self.selected_child_index {
+                        if let Some(parent_idx) = self.primary_selected_index() {
+                            let from = self.current_template()
+                                .and_then(|t| t.elements.get(parent_idx))
+                                .and_then(|e| match &e.kind {
+                                    MenuElementKind::LayoutGroup(g) => g.children.get(child_idx),
+                                    _ => None,
+                                })
+                                .map(|child| Vec2::new(child.element.rect.x, child.element.rect.y));
+                            if let Some(from) = from {
+                                moves.push(ElementMove {
+                                    element_index: parent_idx,
+                                    child_index: Some(child_idx),
+                                    from,
+                                    to: from + step,
+                                });
+                            }
+                        }
+                    } else {
+                        let indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
+                        if let Some(template) = self.current_template() {
+                            for &i in &indices {
+                                if let Some(element) = template.elements.get(i) {
+                                    let from = Vec2::new(element.rect.x, element.rect.y);
+                                    moves.push(ElementMove {
+                                        element_index: i,
+                                        child_index: None,
+                                        from,
+                                        to: from + step,
+                                    });
                                 }
                             }
                         }
                     }
-                } else {
-                    // Move all selected top-level elements
-                    let indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
-                    if let Some(template) = self.current_template_mut() {
-                        for &i in &indices {
-                            if let Some(element) = template.elements.get_mut(i) {
-                                element.rect.x += step.x;
-                                element.rect.y += step.y;
-                            }
-                        }
+
+                    if !moves.is_empty() {
+                        push_command(Box::new(MoveElementCmd::new(template_idx, moves)));
                     }
                 }
             }
@@ -69,7 +86,13 @@ impl MenuEditor {
         // Handle Delete key to remove selected element(s)
         if !blocked && ctx.is_key_pressed(KeyCode::Delete) || ctx.is_key_pressed(KeyCode::Backspace) {
             if !input_is_focused() && !self.selected_element_indices.is_empty() {
-                self.delete_selected_element();
+                if let Some(template_idx) = self.current_template_index {
+                    push_command(Box::new(DeleteElementCmd::new(
+                        template_idx,
+                        self.selected_element_indices.clone(),
+                        self.selected_child_index,
+                    )));
+                }
                 return;
             }
         }
@@ -83,7 +106,37 @@ impl MenuEditor {
             if ctx.is_key_pressed(KeyCode::Escape) {
                 return;
             } else if ctx.is_mouse_button_pressed(MouseButton::Left) {
-                self.add_element(kind, norm_mouse);
+                if let Some(template_idx) = self.current_template_index {
+                    let default_size = match &kind {
+                        MenuElementKind::Label(_) => Vec2::new(0.10, 0.03),
+                        MenuElementKind::Button(_) => Vec2::new(0.10, 0.037),
+                        MenuElementKind::Panel(_) => Vec2::new(0.16, 0.185),
+                        MenuElementKind::LayoutGroup(_) => Vec2::new(0.25, 0.30),
+                    };
+
+                    // Check if a layout group is selected to add as child
+                    let parent_index = self.primary_selected_index().filter(|&idx| {
+                        self.current_template()
+                            .and_then(|t| t.elements.get(idx))
+                            .map(|e| matches!(e.kind, MenuElementKind::LayoutGroup(_)))
+                            .unwrap_or(false)
+                    });
+
+                    let position = if let Some(parent_idx) = parent_index {
+                        // Relative to the group origin
+                        let group_origin = self.current_template()
+                            .and_then(|t| t.elements.get(parent_idx))
+                            .map(|e| Vec2::new(e.rect.x, e.rect.y))
+                            .unwrap_or(Vec2::ZERO);
+                        norm_mouse - group_origin
+                    } else {
+                        norm_mouse
+                    };
+
+                    let rect = Rect::new(position.x, position.y, default_size.x, default_size.y);
+                    let element = MenuElement::new(kind, rect);
+                    push_command(Box::new(AddElementCmd::new(template_idx, element, parent_index)));
+                }
                 return;
             } else {
                 self.pending_element_type = Some(kind);
@@ -111,17 +164,17 @@ impl MenuEditor {
                         .and_then(|t| t.elements.get(index))
                         .map(|e| Vec2::new(e.rect.x, e.rect.y));
                     if let Some(origin) = group_origin {
-                        if let Some(template) = self.current_template_mut() {
-                            if let Some(element) = template.elements.get_mut(index) {
-                                if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
-                                    if let Some(child) = group.children.get_mut(child_idx) {
-                                        child.element.rect.x = new_rect.x - origin.x;
-                                        child.element.rect.y = new_rect.y - origin.y;
-                                        child.element.rect.w = new_rect.w;
-                                        child.element.rect.h = new_rect.h;
-                                    }
-                                }
-                            }
+                        let child = self.current_template_mut()
+                            .and_then(|t| t.elements.get_mut(index))
+                            .and_then(|e| match &mut e.kind {
+                                MenuElementKind::LayoutGroup(g) => g.children.get_mut(child_idx),
+                                _ => None,
+                            });
+                        if let Some(child) = child {
+                            child.element.rect.x = new_rect.x - origin.x;
+                            child.element.rect.y = new_rect.y - origin.y;
+                            child.element.rect.w = new_rect.w;
+                            child.element.rect.h = new_rect.h;
                         }
                     }
                 } else if let Some(template) = self.current_template_mut() {
@@ -130,139 +183,50 @@ impl MenuEditor {
                     }
                 }
             } else {
-                self.resizing_handle = None;
+                // Resize ended — push undo-able command
+                if let Some(state) = self.resizing_handle.take() {
+                    if let Some(template_idx) = self.current_template_index {
+                        let new_rect = if let Some(child_idx) = state.child_index {
+                            self.current_template()
+                                .and_then(|t| t.elements.get(state.element_index))
+                                .and_then(|e| match &e.kind {
+                                    MenuElementKind::LayoutGroup(g) => g.children.get(child_idx),
+                                    _ => None,
+                                })
+                                .map(|c| c.element.rect)
+                        } else {
+                            self.current_template()
+                                .and_then(|t| t.elements.get(state.element_index))
+                                .map(|e| e.rect)
+                        };
+                        if let Some(new_rect) = new_rect {
+                            if new_rect != state.original_rect {
+                                push_command(Box::new(ResizeElementCmd::new(
+                                    template_idx,
+                                    state.element_index,
+                                    state.child_index,
+                                    state.original_rect,
+                                    new_rect,
+                                )));
+                            }
+                        }
+                    }
+                }
             }
             return;
         }
 
         // Detect resize handle click on the selected element or selected child (single selection only)
-        if ctx.is_mouse_button_pressed(MouseButton::Left) {
-            if let Some(selected_index) = self.primary_selected_index() {
-                if let Some(child_idx) = self.selected_child_index {
-                    let child_info = self.current_template().and_then(|t| {
-                        let element = t.elements.get(selected_index)?;
-                        if let MenuElementKind::LayoutGroup(group) = &element.kind {
-                            let child = group.children.get(child_idx)?;
-                            if !child.managed {
-                                let resolved = resolve_layout(group, element.rect);
-                                let child_norm_rect = resolved.get(child_idx).copied()?;
-                                return Some(child_norm_rect);
-                            }
-                        }
-                        None
-                    });
-                    if let Some(child_norm_rect) = child_info {
-                        let child_screen_rect = normalized_rect_to_screen(child_norm_rect, canvas_origin, canvas_size);
-                        if let Some(handle) = hit_test_handles(mouse, child_screen_rect) {
-                            self.resizing_handle = Some(ResizeHandleState {
-                                element_index: selected_index,
-                                child_index: Some(child_idx),
-                                handle,
-                                original_rect: child_norm_rect,
-                                start_mouse: norm_mouse,
-                            });
-                            return;
-                        }
-                    }
-                } else {
-                    if let Some(element_rect) = self
-                        .current_template()
-                        .and_then(|t| t.elements.get(selected_index))
-                        .map(|e| e.rect)
-                    {
-                        let screen_rect = normalized_rect_to_screen(element_rect, canvas_origin, canvas_size);
-                        if let Some(handle) = hit_test_handles(mouse, screen_rect) {
-                            self.resizing_handle = Some(ResizeHandleState {
-                                element_index: selected_index,
-                                child_index: None,
-                                handle,
-                                original_rect: element_rect,
-                                start_mouse: norm_mouse,
-                            });
-                            return;
-                        }
-                    }
-                }
-            }
+        if ctx.is_mouse_button_pressed(MouseButton::Left)
+            && self.try_start_resize(mouse, norm_mouse, canvas_origin, canvas_size)
+        {
+            return;
         }
 
         // Handle element selection with shift+click and box select
         if ctx.is_mouse_button_pressed(MouseButton::Left) {
-            let clicked = self.current_template().and_then(|template| {
-                let sorted = template.sorted_element_indices();
-                for &i in sorted.iter().rev() {
-                    let element = &template.elements[i];
-                    if let MenuElementKind::LayoutGroup(group) = &element.kind {
-                        let resolved = resolve_layout(group, element.rect);
-                        for (child_idx, resolved_rect) in resolved.iter().enumerate().rev() {
-                            if resolved_rect.contains(norm_mouse) {
-                                let is_managed = group.children.get(child_idx)
-                                    .map(|c| c.managed)
-                                    .unwrap_or(true);
-                                return Some((i, element.rect, Some((child_idx, *resolved_rect, is_managed))));
-                            }
-                        }
-                        if element.rect.contains(norm_mouse) {
-                            return Some((i, element.rect, None));
-                        }
-                        continue;
-                    }
-                    if element.rect.contains(norm_mouse) {
-                        return Some((i, element.rect, None));
-                    }
-                }
-                None
-            });
-
-            if let Some((idx, element_rect, child_hit)) = clicked {
-                if let Some((child_idx, child_rect, is_managed)) = child_hit {
-                    // Child click: always single parent+child selection
-                    self.selected_element_indices.clear();
-                    self.selected_element_indices.insert(idx);
-                    self.selected_child_index = Some(child_idx);
-                    if is_managed {
-                        self.reorder_drag = Some(ReorderDragState {
-                            group_index: idx,
-                            child_index: child_idx,
-                            drop_target: None,
-                        });
-                    } else {
-                        self.dragging_element = Some(idx);
-                        self.drag_offset = norm_mouse - Vec2::new(child_rect.x, child_rect.y);
-                        self.drag_start_mouse = norm_mouse;
-                    }
-                } else if shift_held {
-                    // Shift+click on top-level element: toggle in selection
-                    self.selected_child_index = None;
-                    if self.selected_element_indices.contains(&idx) {
-                        self.selected_element_indices.remove(&idx);
-                    } else {
-                        self.selected_element_indices.insert(idx);
-                    }
-                } else if self.selected_element_indices.contains(&idx) {
-                    // Click on already-selected element: keep selection, start drag
-                    self.selected_child_index = None;
-                    self.dragging_element = Some(idx);
-                    self.drag_offset = norm_mouse - Vec2::new(element_rect.x, element_rect.y);
-                    self.drag_start_mouse = norm_mouse;
-                    // Store start positions for multi-drag
-                    let indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
-                    let start_rects: Vec<(usize, Vec2)> = self.current_template()
-                        .map(|t| indices.into_iter()
-                            .filter_map(|si| t.elements.get(si).map(|el| (si, Vec2::new(el.rect.x, el.rect.y))))
-                            .collect())
-                        .unwrap_or_default();
-                    self.drag_start_rects = start_rects;
-                } else {
-                    // Click on unselected element without shift: single select + start drag
-                    self.selected_element_indices.clear();
-                    self.selected_element_indices.insert(idx);
-                    self.selected_child_index = None;
-                    self.dragging_element = Some(idx);
-                    self.drag_offset = norm_mouse - Vec2::new(element_rect.x, element_rect.y);
-                    self.drag_start_mouse = norm_mouse;
-                    self.drag_start_rects.clear();
-                }
+            if let Some((idx, element_rect, child_hit)) = self.hit_test_click(norm_mouse) {
+                self.handle_element_click(idx, element_rect, child_hit, norm_mouse, shift_held);
             } else {
                 // Clicked on empty space
                 if !shift_held {
@@ -322,25 +286,11 @@ impl MenuEditor {
                 let drop_target = reorder.drop_target;
                 self.reorder_drag = None;
 
-                if let Some(target) = drop_target {
-                    if target != child_index {
-                        if let Some(template) = self.current_template_mut() {
-                            if let Some(element) = template.elements.get_mut(group_index) {
-                                if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
-                                    if child_index < group.children.len() && target <= group.children.len() {
-                                        let child = group.children.remove(child_index);
-                                        let effective = if target > child_index {
-                                            target - 1
-                                        } else {
-                                            target
-                                        };
-                                        let insert_at = effective.min(group.children.len());
-                                        group.children.insert(insert_at, child);
-                                        self.selected_child_index = Some(insert_at);
-                                    }
-                                }
-                            }
-                        }
+                if let Some(target) = drop_target.filter(|&t| t != child_index) {
+                    if let Some(template_idx) = self.current_template_index {
+                        push_command(Box::new(ReorderChildCmd::new(
+                            template_idx, group_index, child_index, target,
+                        )));
                     }
                 }
             }
@@ -371,15 +321,15 @@ impl MenuEditor {
                         .map(|e| Vec2::new(e.rect.x, e.rect.y));
                     if let Some(origin) = group_origin {
                         let new_abs = norm_mouse - drag_offset;
-                        if let Some(template) = self.current_template_mut() {
-                            if let Some(element) = template.elements.get_mut(anchor_index) {
-                                if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
-                                    if let Some(child) = group.children.get_mut(child_idx) {
-                                        child.element.rect.x = new_abs.x - origin.x;
-                                        child.element.rect.y = new_abs.y - origin.y;
-                                    }
-                                }
-                            }
+                        let child = self.current_template_mut()
+                            .and_then(|t| t.elements.get_mut(anchor_index))
+                            .and_then(|e| match &mut e.kind {
+                                MenuElementKind::LayoutGroup(g) => g.children.get_mut(child_idx),
+                                _ => None,
+                            });
+                        if let Some(child) = child {
+                            child.element.rect.x = new_abs.x - origin.x;
+                            child.element.rect.y = new_abs.y - origin.y;
                         }
                     }
                 } else if self.selected_element_indices.len() > 1 && !self.drag_start_rects.is_empty() {
@@ -441,6 +391,55 @@ impl MenuEditor {
                     }
                 }
             } else {
+                // Drag ended — push move command for undo support
+                if let Some(template_idx) = self.current_template_index {
+                    let child_idx = self.selected_child_index;
+                    let mut moves = Vec::new();
+
+                    if let Some(template) = self.current_template() {
+                        if let Some(ci) = child_idx {
+                            // Unmanaged child drag: single element
+                            if let Some((_, start_pos)) = self.drag_start_rects.first() {
+                                let to = template.elements.get(anchor_index)
+                                    .and_then(|e| match &e.kind {
+                                        MenuElementKind::LayoutGroup(g) => g.children.get(ci),
+                                        _ => None,
+                                    })
+                                    .map(|child| Vec2::new(child.element.rect.x, child.element.rect.y));
+                                if let Some(to) = to {
+                                    if to != *start_pos {
+                                        moves.push(ElementMove {
+                                            element_index: anchor_index,
+                                            child_index: child_idx,
+                                            from: *start_pos,
+                                            to,
+                                        });
+                                    }
+                                }
+                            }
+                        } else {
+                            // Top-level drag (single or multi)
+                            for &(i, start_pos) in &self.drag_start_rects {
+                                if let Some(element) = template.elements.get(i) {
+                                    let to = Vec2::new(element.rect.x, element.rect.y);
+                                    if to != start_pos {
+                                        moves.push(ElementMove {
+                                            element_index: i,
+                                            child_index: None,
+                                            from: start_pos,
+                                            to,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !moves.is_empty() {
+                        push_command(Box::new(MoveElementCmd::new(template_idx, moves)));
+                    }
+                }
+
                 self.dragging_element = None;
                 self.drag_start_rects.clear();
                 self.snap_lines.clear();
@@ -777,6 +776,155 @@ impl MenuEditor {
             draw_resize_handles(ctx, element_rect);
         }
     }
+
+    /// Checks if a resize handle was clicked and starts resizing if so.
+    fn try_start_resize(
+        &mut self,
+        mouse: Vec2,
+        norm_mouse: Vec2,
+        canvas_origin: Vec2,
+        canvas_size: Vec2,
+    ) -> bool {
+        let Some(selected_index) = self.primary_selected_index() else { return false; };
+
+        if let Some(child_idx) = self.selected_child_index {
+            let child_norm_rect = self.current_template().and_then(|t| {
+                let element = t.elements.get(selected_index)?;
+                let MenuElementKind::LayoutGroup(group) = &element.kind else { return None; };
+                let child = group.children.get(child_idx)?;
+                if child.managed { return None; }
+                resolve_layout(group, element.rect).get(child_idx).copied()
+            });
+            let Some(child_norm_rect) = child_norm_rect else { return false; };
+            let child_screen_rect = normalized_rect_to_screen(child_norm_rect, canvas_origin, canvas_size);
+            let Some(handle) = hit_test_handles(mouse, child_screen_rect) else { return false; };
+            self.resizing_handle = Some(ResizeHandleState {
+                element_index: selected_index,
+                child_index: Some(child_idx),
+                handle,
+                original_rect: child_norm_rect,
+                start_mouse: norm_mouse,
+            });
+            true
+        } else {
+            let Some(element_rect) = self.current_template()
+                .and_then(|t| t.elements.get(selected_index))
+                .map(|e| e.rect) else { return false; };
+            let screen_rect = normalized_rect_to_screen(element_rect, canvas_origin, canvas_size);
+            let Some(handle) = hit_test_handles(mouse, screen_rect) else { return false; };
+            self.resizing_handle = Some(ResizeHandleState {
+                element_index: selected_index,
+                child_index: None,
+                handle,
+                original_rect: element_rect,
+                start_mouse: norm_mouse,
+            });
+            true
+        }
+    }
+
+    /// Hit-tests elements at a normalized mouse position.
+    fn hit_test_click(
+        &self,
+        norm_mouse: Vec2,
+    ) -> Option<(usize, Rect, Option<(usize, Rect, bool)>)> {
+        let template = self.current_template()?;
+        let sorted = template.sorted_element_indices();
+        for &i in sorted.iter().rev() {
+            let element = &template.elements[i];
+            if let MenuElementKind::LayoutGroup(group) = &element.kind {
+                let resolved = resolve_layout(group, element.rect);
+                for (child_idx, resolved_rect) in resolved.iter().enumerate().rev() {
+                    if resolved_rect.contains(norm_mouse) {
+                        let is_managed = group.children.get(child_idx)
+                            .map(|c| c.managed)
+                            .unwrap_or(true);
+                        return Some((i, element.rect, Some((child_idx, *resolved_rect, is_managed))));
+                    }
+                }
+                if element.rect.contains(norm_mouse) {
+                    return Some((i, element.rect, None));
+                }
+                continue;
+            }
+            if element.rect.contains(norm_mouse) {
+                return Some((i, element.rect, None));
+            }
+        }
+        None
+    }
+
+    /// Handles a click on a canvas element, updating selection and drag state.
+    fn handle_element_click(
+        &mut self,
+        idx: usize,
+        element_rect: Rect,
+        child_hit: Option<(usize, Rect, bool)>,
+        norm_mouse: Vec2,
+        shift_held: bool,
+    ) {
+        if let Some((child_idx, child_rect, is_managed)) = child_hit {
+            // Child click: always single parent+child selection
+            self.selected_element_indices.clear();
+            self.selected_element_indices.insert(idx);
+            self.selected_child_index = Some(child_idx);
+            if is_managed {
+                self.reorder_drag = Some(ReorderDragState {
+                    group_index: idx,
+                    child_index: child_idx,
+                    drop_target: None,
+                });
+            } else {
+                self.dragging_element = Some(idx);
+                self.drag_offset = norm_mouse - Vec2::new(child_rect.x, child_rect.y);
+                self.drag_start_mouse = norm_mouse;
+                let start = self.current_template()
+                    .and_then(|t| t.elements.get(idx))
+                    .and_then(|e| match &e.kind {
+                        MenuElementKind::LayoutGroup(g) => g.children.get(child_idx),
+                        _ => None,
+                    })
+                    .map(|child| Vec2::new(child.element.rect.x, child.element.rect.y));
+                if let Some(pos) = start {
+                    self.drag_start_rects = vec![(idx, pos)];
+                }
+            }
+            return;
+        }
+
+        if shift_held {
+            // Shift+click on top-level element: toggle in selection
+            self.selected_child_index = None;
+            if self.selected_element_indices.contains(&idx) {
+                self.selected_element_indices.remove(&idx);
+            } else {
+                self.selected_element_indices.insert(idx);
+            }
+        } else if self.selected_element_indices.contains(&idx) {
+            // Click on already-selected element: keep selection, start drag
+            self.selected_child_index = None;
+            self.dragging_element = Some(idx);
+            self.drag_offset = norm_mouse - Vec2::new(element_rect.x, element_rect.y);
+            self.drag_start_mouse = norm_mouse;
+            let indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
+            let start_rects: Vec<(usize, Vec2)> = self.current_template()
+                .map(|t| indices.into_iter()
+                    .filter_map(|si| t.elements.get(si).map(|el| (si, Vec2::new(el.rect.x, el.rect.y))))
+                    .collect())
+                .unwrap_or_default();
+            self.drag_start_rects = start_rects;
+        } else {
+            // Click on unselected element without shift: single select + start drag
+            self.selected_element_indices.clear();
+            self.selected_element_indices.insert(idx);
+            self.selected_child_index = None;
+            self.dragging_element = Some(idx);
+            self.drag_offset = norm_mouse - Vec2::new(element_rect.x, element_rect.y);
+            self.drag_start_mouse = norm_mouse;
+            self.drag_start_rects = vec![(idx, Vec2::new(element_rect.x, element_rect.y))];
+        }
+    }
+
 }
 
 /// Computes the drop target index (in the full children Vec) from mouse position.

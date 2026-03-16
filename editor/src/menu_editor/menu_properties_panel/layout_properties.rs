@@ -61,15 +61,15 @@ impl MenuEditor {
             let checkbox_rect = Rect::new(x + LABEL_WIDTH, *y + 4.0, 16.0, 16.0);
             let mut enabled = has_bg;
             if gui_checkbox(ctx, checkbox_rect, &mut enabled) {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.background = if enabled {
                             Some(PanelBackground::default())
                         } else {
                             None
                         };
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -86,13 +86,13 @@ impl MenuEditor {
                 .blocked(blocked)
                 .show(ctx);
                 if new_color != bg_color {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                             if let Some(bg) = &mut group.background {
                                 bg.fill = PanelFill::SolidColor(new_color);
                             }
                         }
-                    }
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -109,13 +109,13 @@ impl MenuEditor {
                     bg_opacity,
                 );
                 if changed {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                             if let Some(bg) = &mut group.background {
                                 bg.opacity = new_opacity;
                             }
                         }
-                    }
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -150,11 +150,11 @@ impl MenuEditor {
                     "Grid" => LayoutDirection::Grid { columns: grid_cols },
                     _ => direction,
                 };
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.layout.direction = new_dir;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -175,11 +175,11 @@ impl MenuEditor {
                 .show(ctx);
                 let new_cols = new_cols as u32;
                 if new_cols != grid_cols {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                             group.layout.direction = LayoutDirection::Grid { columns: new_cols };
                         }
-                    }
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -198,11 +198,11 @@ impl MenuEditor {
             .min(0.0)
             .show(ctx);
             if (new_spacing - spacing).abs() > 0.01 {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.layout.spacing = new_spacing;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -230,9 +230,10 @@ impl MenuEditor {
                     .min(0.0)
                     .show(ctx);
                 if (new_val - current_val).abs() > 0.01 {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
-                            match label {
+                    let label_str = label.to_string();
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
+                            match label_str.as_str() {
                                 "Top:" => group.layout.padding.top = new_val,
                                 "Right:" => group.layout.padding.right = new_val,
                                 "Bottom:" => group.layout.padding.bottom = new_val,
@@ -240,7 +241,7 @@ impl MenuEditor {
                                 _ => {}
                             }
                         }
-                    }
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -280,11 +281,11 @@ impl MenuEditor {
                     "Right" => HorizontalAlign::Right,
                     _ => h_align,
                 };
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.layout.alignment.horizontal = new_align;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -316,11 +317,11 @@ impl MenuEditor {
                     "Bottom" => VerticalAlign::Bottom,
                     _ => v_align,
                 };
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.layout.alignment.vertical = new_align;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -344,11 +345,11 @@ impl MenuEditor {
             .min(1.0)
             .show(ctx);
             if (new_item_w - item_w).abs() > 0.01 {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.layout.item_width = new_item_w;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -365,11 +366,11 @@ impl MenuEditor {
             .min(1.0)
             .show(ctx);
             if (new_item_h - item_h).abs() > 0.01 {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         group.layout.item_height = new_item_h;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -412,13 +413,13 @@ impl MenuEditor {
                 let checkbox_rect = Rect::new(x, *y + 4.0, 16.0, 16.0);
                 let mut managed_val = managed;
                 if gui_checkbox(ctx, checkbox_rect, &mut managed_val) {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                             if let Some(child) = group.children.get_mut(i) {
                                 child.managed = managed_val;
                             }
                         }
-                    }
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -483,11 +484,11 @@ impl MenuEditor {
                     options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
                 };
 
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
                         setter(group, new_nav);
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;

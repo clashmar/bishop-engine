@@ -45,9 +45,7 @@ impl MenuEditor {
             .blocked(blocked)
             .show(ctx);
             if new_name != current_name {
-                if let Some(element) = self.selected_element_mut() {
-                    element.name = new_name;
-                }
+                self.push_element_update(|el| el.name = new_name);
             }
         }
         *y += ROW_HEIGHT;
@@ -62,9 +60,7 @@ impl MenuEditor {
                     .show(ctx);
                 let new_z = new_z as i32;
                 if new_z != z_order {
-                    if let Some(element) = self.selected_element_mut() {
-                        element.z_order = new_z;
-                    }
+                    self.push_element_update(|el| el.z_order = new_z);
                 }
             }
             *y += ROW_HEIGHT;
@@ -94,10 +90,10 @@ impl MenuEditor {
                     .show(ctx);
 
                 if (new_x - rect_val.x).abs() > 0.001 || (new_y - rect_val.y).abs() > 0.001 {
-                    if let Some(element) = self.selected_element_mut() {
-                        element.rect.x = new_x;
-                        element.rect.y = new_y;
-                    }
+                    self.push_element_update(|el| {
+                        el.rect.x = new_x;
+                        el.rect.y = new_y;
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -122,10 +118,10 @@ impl MenuEditor {
                     .show(ctx);
 
                 if (new_w - rect_val.w).abs() > 0.001 || (new_h - rect_val.h).abs() > 0.001 {
-                    if let Some(element) = self.selected_element_mut() {
-                        element.rect.w = new_w;
-                        element.rect.h = new_h;
-                    }
+                    self.push_element_update(|el| {
+                        el.rect.w = new_w;
+                        el.rect.h = new_h;
+                    });
                 }
             }
             *y += ROW_HEIGHT + 8.0;
