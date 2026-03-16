@@ -28,7 +28,7 @@ pub fn gui_checkbox<C: BishopContext>(ctx: &mut C, rect: impl Into<Rect>, value:
     }
 
     if is_dropdown_open() {
-        return *value
+        return false
     }
 
     let mouse = ctx.mouse_position();

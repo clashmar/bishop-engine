@@ -34,11 +34,11 @@ impl MenuEditor {
             .show(ctx);
 
             if new_text_key != current_text_key {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Label(label) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Label(label) = &mut el.kind {
                         label.text_key = new_text_key;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -60,11 +60,11 @@ impl MenuEditor {
             .show(ctx);
 
             if (new_font_size - current_font_size).abs() > 0.01 {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Label(label) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Label(label) = &mut el.kind {
                         label.font_size = new_font_size;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -96,11 +96,11 @@ impl MenuEditor {
                     "Right" => HorizontalAlign::Right,
                     _ => current_alignment,
                 };
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Label(label) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Label(label) = &mut el.kind {
                         label.alignment = new_align;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -144,11 +144,11 @@ impl MenuEditor {
             .show(ctx);
 
             if new_text_key != current_text_key {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Button(button) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Button(button) = &mut el.kind {
                         button.text_key = new_text_key;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -164,11 +164,11 @@ impl MenuEditor {
             .show(ctx);
 
             if (new_font_size - current_font_size).abs() > 0.01 {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Button(button) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Button(button) = &mut el.kind {
                         button.font_size = new_font_size;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -200,11 +200,11 @@ impl MenuEditor {
                 if let Some(new_action) = action_variants.into_iter()
                     .find(|a| a.ui_label() == selected)
                 {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::Button(button) = &mut element.kind {
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::Button(button) = &mut el.kind {
                             button.action = new_action;
                         }
-                    }
+                    });
                 }
             }
         }
@@ -226,15 +226,15 @@ impl MenuEditor {
                     .show(ctx);
 
                 if new_param != param_value {
-                    if let Some(element) = self.selected_element_mut() {
-                        if let MenuElementKind::Button(button) = &mut element.kind {
+                    self.push_element_update(|el| {
+                        if let MenuElementKind::Button(button) = &mut el.kind {
                             button.action = match &button.action {
                                 MenuAction::OpenMenu(_) => MenuAction::OpenMenu(new_param),
                                 MenuAction::Custom(_) => MenuAction::Custom(new_param),
                                 other => other.clone(),
                             };
                         }
-                    }
+                    });
                 }
             }
             *y += ROW_HEIGHT;
@@ -301,11 +301,11 @@ impl MenuEditor {
                     options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
                 };
 
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Button(button) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Button(button) = &mut el.kind {
                         setter(button, new_nav);
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -382,11 +382,11 @@ impl MenuEditor {
             .blocked(blocked)
             .show(ctx);
             if new_color != current_color {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Panel(panel) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Panel(panel) = &mut el.kind {
                         panel.background.fill = PanelFill::SolidColor(new_color);
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;
@@ -404,11 +404,11 @@ impl MenuEditor {
                 current_opacity,
             );
             if changed {
-                if let Some(element) = self.selected_element_mut() {
-                    if let MenuElementKind::Panel(panel) = &mut element.kind {
+                self.push_element_update(|el| {
+                    if let MenuElementKind::Panel(panel) = &mut el.kind {
                         panel.background.opacity = new_opacity;
                     }
-                }
+                });
             }
         }
         *y += ROW_HEIGHT;

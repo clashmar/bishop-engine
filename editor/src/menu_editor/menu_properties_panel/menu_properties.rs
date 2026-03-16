@@ -1,4 +1,6 @@
 // editor/src/menu_editor/menu_properties_panel/menu_properties.rs
+use crate::commands::menu::{UpdateTemplateCmd, TemplateProperty};
+use crate::editor_global::push_command;
 use crate::menu_editor::MenuEditor;
 use super::{ROW_HEIGHT, LABEL_WIDTH, FIELD_HEIGHT, common_properties::row_visible};
 use engine_core::prelude::*;
@@ -39,8 +41,11 @@ impl MenuEditor {
             if new_name != current_name && !new_name.is_empty() {
                 let is_duplicate = self.templates.iter().any(|t| t.id == new_name);
                 if !is_duplicate {
-                    if let Some(template) = self.current_template_mut() {
-                        template.id = new_name;
+                    if let Some(idx) = self.current_template_index {
+                        push_command(Box::new(UpdateTemplateCmd::new(
+                            idx,
+                            TemplateProperty::Name { old: current_name.clone(), new: new_name },
+                        )));
                     }
                 }
             }
@@ -72,8 +77,13 @@ impl MenuEditor {
                     "Overlay" => MenuMode::Overlay,
                     _ => current_mode,
                 };
-                if let Some(template) = self.current_template_mut() {
-                    template.mode = new_mode;
+                if new_mode != current_mode {
+                    if let Some(idx) = self.current_template_index {
+                        push_command(Box::new(UpdateTemplateCmd::new(
+                            idx,
+                            TemplateProperty::Mode { old: current_mode, new: new_mode },
+                        )));
+                    }
                 }
             }
         }
@@ -112,8 +122,11 @@ impl MenuEditor {
                     "Dimmed" => MenuBackground::Dimmed(0.7),
                     _ => current_bg,
                 };
-                if let Some(template) = self.current_template_mut() {
-                    template.background = new_bg;
+                if let Some(idx) = self.current_template_index {
+                    push_command(Box::new(UpdateTemplateCmd::new(
+                        idx,
+                        TemplateProperty::Background { old: current_bg, new: new_bg },
+                    )));
                 }
             }
         }
@@ -133,8 +146,14 @@ impl MenuEditor {
                     .blocked(blocked)
                     .show(ctx);
                     if new_color != color {
-                        if let Some(template) = self.current_template_mut() {
-                            template.background = MenuBackground::SolidColor(new_color);
+                        if let Some(idx) = self.current_template_index {
+                            push_command(Box::new(UpdateTemplateCmd::new(
+                                idx,
+                                TemplateProperty::Background {
+                                    old: MenuBackground::SolidColor(color),
+                                    new: MenuBackground::SolidColor(new_color),
+                                },
+                            )));
                         }
                     }
                 }
@@ -153,8 +172,14 @@ impl MenuEditor {
                         alpha,
                     );
                     if changed {
-                        if let Some(template) = self.current_template_mut() {
-                            template.background = MenuBackground::Dimmed(new_alpha);
+                        if let Some(idx) = self.current_template_index {
+                            push_command(Box::new(UpdateTemplateCmd::new(
+                                idx,
+                                TemplateProperty::Background {
+                                    old: MenuBackground::Dimmed(alpha),
+                                    new: MenuBackground::Dimmed(new_alpha),
+                                },
+                            )));
                         }
                     }
                 }

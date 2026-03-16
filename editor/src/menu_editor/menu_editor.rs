@@ -337,6 +337,36 @@ impl MenuEditor {
         self.templates.get_mut(template_idx)?.elements.get_mut(index)
     }
 
+    /// Snapshots the selected element, applies `mutate` to produce the new state,
+    /// and pushes an `UpdateElementCmd`. The mutation is applied immediately.
+    pub fn push_element_update<F>(&mut self, mutate: F)
+    where
+        F: FnOnce(&mut MenuElement),
+    {
+        let Some(template_idx) = self.current_template_index else { return };
+        let Some(element_idx) = self.primary_selected_index() else { return };
+        let child_idx = self.selected_child_index;
+
+        let Some(old_element) = self.selected_element().cloned() else { return };
+        let mut new_element = old_element.clone();
+        mutate(&mut new_element);
+
+        // Apply immediately
+        if let Some(target) = self.selected_element_mut() {
+            *target = new_element.clone();
+        }
+
+        crate::editor_global::push_command(Box::new(
+            crate::commands::menu::UpdateElementCmd::new(
+                template_idx,
+                element_idx,
+                child_idx,
+                old_element,
+                new_element,
+            ),
+        ));
+    }
+
     /// Returns true when a managed child element is currently selected.
     pub fn is_selected_child_managed(&self) -> bool {
         let Some(child_idx) = self.selected_child_index else { return false };
