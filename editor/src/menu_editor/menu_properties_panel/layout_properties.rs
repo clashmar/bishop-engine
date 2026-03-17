@@ -100,7 +100,7 @@ impl MenuEditor {
             if row_visible(*y, ROW_HEIGHT, clip) {
                 ctx.draw_text("Opacity:", x, *y + 16.0, 12.0, Color::WHITE);
                 let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-                let (new_opacity, changed) = gui_slider(
+                let (new_opacity, state) = gui_slider(
                     ctx,
                     self.properties_panel.widget_ids.layout_bg_opacity_id,
                     field_rect,
@@ -108,14 +108,27 @@ impl MenuEditor {
                     1.0,
                     bg_opacity,
                 );
-                if changed {
-                    self.push_element_update(|el| {
-                        if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
-                            if let Some(bg) = &mut group.background {
-                                bg.opacity = new_opacity;
+                match state {
+                    SliderState::Previewing => {
+                        self.preview_element_update(|el| {
+                            if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
+                                if let Some(bg) = &mut group.background {
+                                    bg.opacity = new_opacity;
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
+                    SliderState::Committed { .. } => {
+                        self.preview_element_update(|el| {
+                            if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
+                                if let Some(bg) = &mut group.background {
+                                    bg.opacity = new_opacity;
+                                }
+                            }
+                        });
+                        self.commit_element_update();
+                    }
+                    SliderState::Unchanged => {}
                 }
             }
             *y += ROW_HEIGHT;

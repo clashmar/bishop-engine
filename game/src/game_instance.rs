@@ -2,7 +2,6 @@
 use crate::scripting::script_system::ScriptSystem;
 use std::collections::HashMap;
 use engine_core::prelude::*;
-use bishop::prelude::*;
 use mlua::Lua;
 use mlua::Variadic;
 

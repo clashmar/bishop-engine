@@ -1,5 +1,5 @@
-// editor/src/editor_actions.rs
-use crate::editor_camera_controller::EditorCameraController;
+// editor/src/editor/actions.rs
+use crate::app::EditorCameraController;
 use crate::world::world_editor::WorldEditor;
 use crate::game::game_editor::GameEditor;
 use crate::room::room_editor::RoomEditor;
@@ -12,10 +12,10 @@ use crate::commands::game::*;
 use crate::gui::menu_bar::*;
 use crate::editor_global::*;
 use crate::gui::prompts::*;
-use crate::editor::Editor;
+use crate::app::Editor;
 use crate::gui::panels::*;
 use crate::gui::modal::*;
-use crate::editor::*;
+use crate::app::*;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use std::cell::RefCell;

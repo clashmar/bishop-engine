@@ -1,6 +1,12 @@
-// editor/src/editor.rs
+// editor/src/editor/mod.rs
+mod actions;
+pub mod camera_controller;
+pub mod sub_editor;
+
+pub use camera_controller::EditorCameraController;
+pub use sub_editor::SubEditor;
+
 use crate::canvas::grid_shader::GridRenderer;
-use crate::editor_camera_controller::EditorCameraController;
 use crate::playtest::playtest_process::PlaytestProcess;
 use crate::tilemap::tile_palette::TilePalette;
 use crate::world::world_editor::WorldEditor;
@@ -90,14 +96,8 @@ impl Editor {
             }
         }
 
-        let ui_blocked = match self.mode {
-            EditorMode::Menu => self.menu_editor.is_mouse_over_ui(ctx),
-            EditorMode::Game => self.game_editor.is_mouse_over_ui(ctx),
-            EditorMode::World(_) => self.world_editor.is_mouse_over_ui(ctx),
-            EditorMode::Room(_) => self.room_editor.is_mouse_over_ui(ctx),
-            _ => false,
-        };
-        
+        let ui_blocked = self.current_editor().should_block_canvas(ctx);
+
         if !self.room_editor.view_preview && !ui_blocked {
             EditorCameraController::update(ctx, &mut self.camera);
         }
@@ -191,8 +191,8 @@ impl Editor {
                             .find(|m| m.id == room_id) {
                             self.world_editor.center_on_room(
                                 ctx,
-                                &mut self.camera, 
-                                room, 
+                                &mut self.camera,
+                                room,
                                 current_world.grid_size
                             );
                         }
@@ -215,7 +215,7 @@ impl Editor {
                         Ok(p) => p,
                         Err(e) => {
                             onscreen_error!("Could not write playtest payload: {e}");
-                            return;              
+                            return;
                         }
                     };
 
@@ -239,8 +239,8 @@ impl Editor {
                             onscreen_error!("{e}");
                         }
                     }
-                    // Reset the request flag so multiple processes don’t spawn (and really ruin everything)
-                    self.room_editor.request_play = false;      
+                    // Reset the request flag so multiple processes don't spawn (and really ruin everything)
+                    self.room_editor.request_play = false;
                 }
             }
         }
@@ -254,7 +254,6 @@ impl Editor {
                 self.menu_editor.draw(
                     ctx,
                     &self.camera,
-                    &mut self.game,
                 )
             }
             EditorMode::Game => {
@@ -308,21 +307,30 @@ impl Editor {
     async fn draw_ui(&mut self, ctx: &mut WgpuContext) {
         if !self.room_editor.view_preview {
             ctx.set_default_camera();
-    
+
             // Draw all panels
             with_panel_manager(|panel_manager| {
                 panel_manager.update_and_draw(ctx, self.mode, self);
             });
-    
+
             // Global menu options
             self.draw_menu_bar(ctx).await;
-    
+
             // Draws and handles result of modal
             if let Some(_) = self.handle_modal(ctx).await {
                 self.modal.close();
             }
-    
+
             self.draw_toast(ctx);
+        }
+    }
+
+    fn current_editor(&self) -> &dyn SubEditor {
+        match self.mode {
+            EditorMode::Menu => &self.menu_editor,
+            EditorMode::Game => &self.game_editor,
+            EditorMode::World(_) => &self.world_editor,
+            EditorMode::Room(_) => &self.room_editor,
         }
     }
 }

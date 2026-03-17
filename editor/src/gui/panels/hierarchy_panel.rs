@@ -2,7 +2,7 @@ use crate::commands::room::{SetParentCmd, RemoveParentCmd};
 use crate::gui::panels::generic_panel::PanelDefinition;
 use crate::room::room_editor::RoomEditor;
 use crate::editor_global::push_command;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::Editor;
 use std::collections::HashSet;
 use engine_core::prelude::*;

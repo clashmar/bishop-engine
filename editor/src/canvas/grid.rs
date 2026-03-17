@@ -1,7 +1,7 @@
 // editor/src/canvas/grid.rs
 use crate::{
     canvas::grid_shader::{GridParams, GridRenderer},
-    editor_camera_controller::{self, EditorCameraController},
+    app::camera_controller::{self, EditorCameraController},
     world::world_editor::LINE_THICKNESS_MULTIPLIER,
 };
 use bishop::prelude::*;
@@ -17,7 +17,7 @@ pub fn draw_grid(
     grid_size: f32,
 ) {
     let scalar = EditorCameraController::scalar_zoom(ctx, camera);
-    if scalar < editor_camera_controller::MIN_ZOOM * 4.0 {
+    if scalar < camera_controller::MIN_ZOOM * 4.0 {
         return;
     }
 

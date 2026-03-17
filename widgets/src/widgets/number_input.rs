@@ -54,6 +54,7 @@ where
     pub fn show<C: BishopContext>(self, ctx: &mut C) -> T {
         tab_registry_add(self.id, self.rect, false);
 
+        let mut confirmed = false;
         let is_float = T::from_str("0.0").is_ok();
         let allow_negative = T::from_str("-0").is_ok();
 
@@ -340,9 +341,16 @@ where
                 }
             }
 
-            if ctx.is_key_pressed(KeyCode::Escape) || ctx.is_key_pressed(KeyCode::Enter) {
+            if ctx.is_key_pressed(KeyCode::Escape) {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
                 focused = false;
+                selection_anchor = None;
+            }
+
+            if ctx.is_key_pressed(KeyCode::Enter) {
+                INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+                focused = false;
+                confirmed = true;
                 selection_anchor = None;
             }
         }
@@ -393,18 +401,22 @@ where
             });
         });
 
-        let mut result = text.parse::<T>().unwrap_or(self.current);
-        if let Some(min) = self.min {
-            if result < min {
-                result = min;
+        if focused || !confirmed {
+            self.current
+        } else {
+            let mut result = text.parse::<T>().unwrap_or(self.current);
+            if let Some(min) = self.min {
+                if result < min {
+                    result = min;
+                }
             }
-        }
-        if let Some(max) = self.max {
-            if result > max {
-                result = max;
+            if let Some(max) = self.max {
+                if result > max {
+                    result = max;
+                }
             }
+            result
         }
-        result
     }
 }
 

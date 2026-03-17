@@ -56,6 +56,7 @@ impl<'a> TextInput<'a> {
         tab_registry_add(self.id, self.rect, true);
 
         let mut just_gained_focus = false;
+        let mut confirmed = false;
 
         let pending_focus = consume_pending_focus(self.id);
 
@@ -374,9 +375,16 @@ impl<'a> TextInput<'a> {
                 }
             }
 
-            if ctx.is_key_pressed(KeyCode::Escape) || ctx.is_key_down(KeyCode::Enter) {
+            if ctx.is_key_pressed(KeyCode::Escape) {
                 INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
                 focused = false;
+                selection_anchor = None;
+            }
+
+            if ctx.is_key_down(KeyCode::Enter) {
+                INPUT_FOCUSED.with(|f| *f.borrow_mut() = false);
+                focused = false;
+                confirmed = true;
                 selection_anchor = None;
             }
         }
@@ -423,7 +431,11 @@ impl<'a> TextInput<'a> {
             });
         });
 
-        (text, focused)
+        if focused || !confirmed {
+            (self.current.to_string(), focused)
+        } else {
+            (text, focused)
+        }
     }
 }
 

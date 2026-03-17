@@ -1,10 +1,9 @@
 // editor/src/commands/world/change_grid_size_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::transform::Transform;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::with_editor;
 use engine_core::prelude::*;
-use bishop::prelude::*;
 
 /// Undo-able command for changing a world's grid size.
 #[derive(Debug)]

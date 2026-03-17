@@ -1,4 +1,4 @@
-// editor/src/editor_camera_controller.rs
+// editor/src/editor/camera_controller.rs
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -101,9 +101,9 @@ impl EditorCameraController {
 
     /// Reset a `Camera2D` so that the whole room fits the screen.
     pub fn reset_room_editor_camera(
-        ctx: &WgpuContext, 
-        camera: &mut Camera2D, 
-        room: &Room, 
+        ctx: &WgpuContext,
+        camera: &mut Camera2D,
+        room: &Room,
         grid_size: f32
     ) {
         let map_size = vec2(
@@ -114,11 +114,11 @@ impl EditorCameraController {
     }
 
     /// Returns a zoom vector that makes the whole `size` fit the screen,
-    /// respecting the current aspect ratio (higher = more zoom).
+    /// respecting the current aspect ratio (higher = more zoom)
     pub fn zoom_for_size(
-        ctx: &WgpuContext, 
-        size: Vec2, 
-        zoom_factor: f32, 
+        ctx: &WgpuContext,
+        size: Vec2,
+        zoom_factor: f32,
         grid_size: f32
     ) -> Vec2 {
         let max_dim_px = size.max_element() / zoom_factor;
@@ -130,4 +130,3 @@ impl EditorCameraController {
         temp.zoom
     }
 }
-

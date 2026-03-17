@@ -25,6 +25,30 @@
                     /*[0]*/ (
                         element: (
                             name: "",
+                            kind: Button((
+                                text_key: "Resume",
+                                action: CloseMenu,
+                                font_size: 20.0,
+                                nav_up: None,
+                                nav_down: None,
+                                nav_left: None,
+                                nav_right: None,
+                            )),
+                            rect: (
+                                x: 0.097308934,
+                                y: 0.13311833,
+                                w: 0.1,
+                                h: 0.037,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
+                    /*[1]*/ (
+                        element: (
+                            name: "",
                             kind: Label((
                                 text_key: "Pause",
                                 font_size: 24.0,
@@ -48,47 +72,15 @@
                         ),
                         managed: true,
                     ),
-                    /*[1]*/ (
-                        element: (
-                            name: "",
-                            kind: Button((
-                                text_key: "Resume",
-                                action: CloseMenu,
-                                font_size: 20.0,
-                                nav_up: None,
-                                nav_down: None,
-                                nav_left: None,
-                                nav_right: None,
-                            )),
-                            rect: (
-                                x: 0.097308934,
-                                y: 0.13311833,
-                                w: 0.1,
-                                h: 0.037,
-                            ),
-                            enabled: true,
-                            visible: true,
-                            z_order: 0,
-                        ),
-                        managed: true,
-                    ),
                 ],
-                background: Some((
-                    fill: SolidColor((
-                        r: 0.3019608,
-                        g: 0.3019608,
-                        b: 0.34901962,
-                        a: 1.0,
-                    )),
-                    opacity: 1.0,
-                )),
+                background: None,
                 nav_up: None,
                 nav_down: None,
                 nav_left: None,
                 nav_right: None,
             )),
             rect: (
-                x: 0.43034023,
+                x: 0.43058044,
                 y: 0.41692606,
                 w: 0.13931954,
                 h: 0.16614789,

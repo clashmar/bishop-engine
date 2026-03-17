@@ -1,6 +1,6 @@
 // editor/src/commands/menu/create_template_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::with_editor;
 use engine_core::prelude::*;
 

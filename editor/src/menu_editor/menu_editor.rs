@@ -1,9 +1,9 @@
 // editor/src/menu_editor/menu_editor.rs
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use crate::gui::modal::is_modal_open;
-use crate::menu_editor::*;
 use crate::menu_editor::resize_handle::ResizeHandleState;
-use crate::storage::editor_storage::delete_menu;
+use crate::gui::modal::is_modal_open;
+use crate::app::SubEditor;
+use crate::menu_editor::*;
 use std::collections::HashSet;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -43,6 +43,7 @@ pub struct MenuEditor {
     pub(crate) box_select_active: bool,
     pub(crate) last_norm_mouse: Option<Vec2>,
     pub(crate) view_preview: bool,
+    pub(crate) drag_original_element: Option<MenuElement>,
 }
 
 impl MenuEditor {
@@ -69,6 +70,7 @@ impl MenuEditor {
             box_select_active: false,
             last_norm_mouse: None,
             view_preview: false,
+            drag_original_element: None,
         }
     }
 
@@ -96,7 +98,7 @@ impl MenuEditor {
 
         let canvas_rect = compute_canvas_rect(ctx.screen_width(), ctx.screen_height());
 
-        let blocked = self.is_mouse_over_ui(ctx);
+        let blocked = self.should_block_canvas(ctx);
 
         self.update_canvas(ctx, camera, canvas_rect, blocked);
 
@@ -116,7 +118,6 @@ impl MenuEditor {
         &mut self,
         ctx: &mut WgpuContext,
         camera: &Camera2D,
-        game: &mut Game,
     ) {
         ctx.set_camera(camera);
         ctx.clear_background(Color::BLACK);
@@ -167,139 +168,6 @@ impl MenuEditor {
             self.selected_element_indices.clear();
             self.selected_child_index = None;
         }
-    }
-
-    /// Creates a new menu template with the given id.
-    pub fn create_new_template(&mut self, id: String) {
-        let template = MenuTemplate::new(id);
-        self.templates.push(template);
-        self.current_template_index = Some(self.templates.len() - 1);
-        self.selected_element_indices.clear();
-        self.selected_child_index = None;
-    }
-
-    /// Deletes the template at the given index.
-    pub fn delete_template(&mut self, index: usize) {
-        if index >= self.templates.len() {
-            return;
-        }
-
-        if let Err(err) = delete_menu(&self.templates[index].id) {
-            onscreen_error!("Error deleting template: {err}");
-            return;
-        }
-
-        self.templates.remove(index);
-
-        if self.templates.is_empty() {
-            self.current_template_index = None;
-        } else if let Some(current) = self.current_template_index {
-            if current >= self.templates.len() {
-                self.current_template_index = Some(self.templates.len() - 1);
-            } else if current > index {
-                self.current_template_index = Some(current - 1);
-            }
-        }
-        self.selected_element_indices.clear();
-        self.selected_child_index = None;
-    }
-
-    /// Adds an element to the current template at the given position.
-    /// If a layout group is selected, adds as a managed child of that group instead.
-    pub fn add_element(&mut self, kind: MenuElementKind, position: Vec2) {
-        let template_idx = match self.current_template_index {
-            Some(i) if i < self.templates.len() => i,
-            _ => return,
-        };
-
-        let default_size = match &kind {
-            MenuElementKind::Label(_) => Vec2::new(0.10, 0.03),
-            MenuElementKind::Button(_) => Vec2::new(0.10, 0.037),
-            MenuElementKind::Panel(_) => Vec2::new(0.16, 0.185),
-            MenuElementKind::LayoutGroup(_) => Vec2::new(0.25, 0.30),
-        };
-
-        let selected_idx = self.primary_selected_index();
-        let template = &mut self.templates[template_idx];
-
-        if let Some(selected_idx) = selected_idx {
-            if let Some(selected) = template.elements.get_mut(selected_idx) {
-                if let MenuElementKind::LayoutGroup(group) = &mut selected.kind {
-                    // Store position relative to the group origin so unmanaged children
-                    // render at the expected location when toggled from managed.
-                    let group_origin = Vec2::new(selected.rect.x, selected.rect.y);
-                    let rel_pos = position - group_origin;
-                    let rect = Rect::new(rel_pos.x, rel_pos.y, default_size.x, default_size.y);
-                    let element = MenuElement::new(kind, rect);
-                    group.children.push(LayoutChild { element, managed: true });
-                    return;
-                }
-            }
-        }
-
-        let rect = Rect::new(position.x, position.y, default_size.x, default_size.y);
-        let element = MenuElement::new(kind, rect);
-
-        template.elements.push(element);
-        self.selected_element_indices.clear();
-        self.selected_element_indices.insert(template.elements.len() - 1);
-    }
-
-    /// Deletes the currently selected element(s) or child.
-    pub fn delete_selected_element(&mut self) {
-        if self.selected_element_indices.is_empty() {
-            return;
-        }
-
-        // Single parent with child selected: delete the child only
-        if let (Some(index), Some(child_idx)) = (self.primary_selected_index(), self.selected_child_index) {
-            let template_idx = match self.current_template_index {
-                Some(i) if i < self.templates.len() => i,
-                _ => return,
-            };
-            let new_child_idx = {
-                let template = &mut self.templates[template_idx];
-                if let Some(element) = template.elements.get_mut(index) {
-                    if let MenuElementKind::LayoutGroup(group) = &mut element.kind {
-                        if child_idx < group.children.len() {
-                            group.children.remove(child_idx);
-                            if group.children.is_empty() {
-                                None
-                            } else if child_idx >= group.children.len() {
-                                Some(group.children.len() - 1)
-                            } else {
-                                Some(child_idx)
-                            }
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            };
-            self.selected_child_index = new_child_idx;
-            return;
-        }
-
-        // Multi-delete: collect indices, sort descending, remove each
-        let mut indices: Vec<usize> = self.selected_element_indices.iter().copied().collect();
-        indices.sort_unstable_by(|a, b| b.cmp(a));
-
-        let Some(template) = self.current_template_mut() else {
-            return;
-        };
-
-        for index in indices {
-            if index < template.elements.len() {
-                template.elements.remove(index);
-            }
-        }
-
-        self.selected_element_indices.clear();
-        self.selected_child_index = None;
     }
 
     /// Returns a reference to the selected element or child element when a child is selected.
@@ -367,6 +235,40 @@ impl MenuEditor {
         ));
     }
 
+    /// Applies a mutation directly to the selected element for real-time preview.
+    /// Caches the original element state on the first call of a drag sequence.
+    pub fn preview_element_update<F>(&mut self, mutate: F)
+    where
+        F: FnOnce(&mut MenuElement),
+    {
+        if self.drag_original_element.is_none() {
+            self.drag_original_element = self.selected_element().cloned();
+        }
+        if let Some(target) = self.selected_element_mut() {
+            mutate(target);
+        }
+    }
+
+    /// Commits the previewed change as a single undo-able command using the
+    /// cached original element and the current element state.
+    pub fn commit_element_update(&mut self) {
+        let Some(old_element) = self.drag_original_element.take() else { return };
+        let Some(template_idx) = self.current_template_index else { return };
+        let Some(element_idx) = self.primary_selected_index() else { return };
+        let child_idx = self.selected_child_index;
+        let Some(new_element) = self.selected_element().cloned() else { return };
+
+        crate::editor_global::push_command(Box::new(
+            crate::commands::menu::UpdateElementCmd::new(
+                template_idx,
+                element_idx,
+                child_idx,
+                old_element,
+                new_element,
+            ),
+        ));
+    }
+
     /// Returns true when a managed child element is currently selected.
     pub fn is_selected_child_managed(&self) -> bool {
         let Some(child_idx) = self.selected_child_index else { return false };
@@ -393,7 +295,14 @@ impl MenuEditor {
         camera.offset = Vec2::ZERO;
     }
 
-    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {
+}
+
+impl SubEditor for MenuEditor {
+    fn active_rects(&self) -> &[Rect] {
+        &self.active_rects
+    }
+
+    fn should_block_canvas(&self, ctx: &WgpuContext) -> bool {
         if self.view_preview {
             return true;
         }

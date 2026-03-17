@@ -1,6 +1,6 @@
 // editor/src/commands/room/delete_entity_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::with_editor;
 use crate::ecs::ecs::Ecs;
 use engine_core::ecs::entity::Entity;

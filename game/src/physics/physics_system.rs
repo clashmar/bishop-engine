@@ -2,7 +2,6 @@
 use crate::physics::collision::sweep_move;
 use crate::constants::GRAVITY; 
 use engine_core::prelude::*;
-use bishop::prelude::*;
 
 /// Applies physics to all entities with a `PhysicsBody` component.
 pub fn update_physics(

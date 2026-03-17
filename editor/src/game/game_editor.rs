@@ -1,6 +1,4 @@
 // editor/src/game/game_editor.rs
-use crate::editor_camera_controller::EditorCameraController;
-use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::ModeInfo;
@@ -9,6 +7,8 @@ use crate::commands::game::*;
 use crate::gui::menu_bar::*;
 use crate::gui::prompts::*;
 use crate::gui::modal::*;
+use crate::app::SubEditor;
+use crate::app::EditorCameraController;
 use crate::push_command;
 use crate::world::coord;
 use engine_core::ui::widgets::*;
@@ -99,7 +99,7 @@ impl GameEditor {
         match self.mode {
             GameEditorMode::Select => {
                 // Select world
-                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(ctx, camera, world, texture) {
@@ -112,7 +112,7 @@ impl GameEditor {
                 // Edit modal, handles its own UI and closing
                 if self.modal.is_open() {
                     // Do nothing
-                } else if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
+                } else if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &mut game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(ctx, camera, world, texture) {
@@ -147,14 +147,14 @@ impl GameEditor {
                 }
             }
             GameEditorMode::Move => {
-                if !self.is_mouse_over_ui(ctx) {
+                if !self.should_block_canvas(ctx) {
                     // Drag world
                     self.handle_drag(ctx, camera, game);
                 }
             },
             GameEditorMode::Delete => {
                 // Delete world
-                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
                         if self.is_mouse_over_world(ctx, camera, world, texture) {
@@ -200,7 +200,7 @@ impl GameEditor {
 
             // Hover tint
             let tint = if self.is_mouse_over_world(ctx, camera, world, texture) 
-            && !self.is_mouse_over_ui(ctx) && self.dragged_world.is_none() {
+            && !self.should_block_canvas(ctx) && self.dragged_world.is_none() {
                 match self.mode {
                     GameEditorMode::Delete => {
                         Color::RED
@@ -423,16 +423,8 @@ impl GameEditor {
         rect
     }
 
-    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {
-        let mouse_screen: Vec2 = ctx.mouse_position().into();
-        self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || is_dropdown_open()
-        || is_modal_open()
-        || is_mouse_over_panel(ctx)
-    }
-
     fn handle_mouse_cursor(&self, ctx: &mut WgpuContext) {
-        if self.is_mouse_over_ui(ctx) {
+        if self.should_block_canvas(ctx) {
             ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
@@ -529,6 +521,12 @@ impl GameEditor {
         }
 
         (min, max)
+    }
+}
+
+impl SubEditor for GameEditor {
+    fn active_rects(&self) -> &[Rect] {
+        &self.active_rects
     }
 }
 

@@ -5,7 +5,7 @@
 
 use crate::editor_assets::editor_assets::*;
 use crate::editor_global::*;
-use crate::editor::Editor;
+use crate::app::Editor;
 use engine_core::logging::logging::init_file_logger;
 use engine_core::ui::widgets::*;
 use engine_core::*;
@@ -15,19 +15,17 @@ use bishop::prelude::*;
 use bishop::BishopApp;
 
 mod editor_global;
-mod editor;
+mod app;
 mod gui;
 mod room;
 mod storage;
 mod tilemap;
 mod world;
-mod editor_camera_controller;
 mod canvas;
 mod playtest;
 mod commands;
 mod game;
 mod editor_assets;
-mod editor_actions;
 mod menu_editor;
 mod shared;
 

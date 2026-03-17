@@ -1,6 +1,6 @@
 // editor/src/room/drawing.rs
 use crate::tilemap::tilemap_editor::TILEMAP_SUB_MODES;
-use crate::editor_camera_controller::*;
+use crate::app::camera_controller::*;
 use crate::gui::mode_selector::*;
 use crate::gui::gui_constants::*;
 use crate::room::room_editor::*;

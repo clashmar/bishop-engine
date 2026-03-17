@@ -163,7 +163,7 @@ impl MenuEditor {
                 if row_visible(*y, ROW_HEIGHT, clip) {
                     ctx.draw_text("Alpha:", x, *y + 16.0, 12.0, Color::WHITE);
                     let field_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-                    let (new_alpha, changed) = gui_slider(
+                    let (new_alpha, state) = gui_slider(
                         ctx,
                         self.properties_panel.widget_ids.bg_alpha_id,
                         field_rect,
@@ -171,16 +171,29 @@ impl MenuEditor {
                         1.0,
                         alpha,
                     );
-                    if changed {
-                        if let Some(idx) = self.current_template_index {
-                            push_command(Box::new(UpdateTemplateCmd::new(
-                                idx,
-                                TemplateProperty::Background {
-                                    old: MenuBackground::Dimmed(alpha),
-                                    new: MenuBackground::Dimmed(new_alpha),
-                                },
-                            )));
+                    match state {
+                        SliderState::Previewing => {
+                            if let Some(idx) = self.current_template_index {
+                                if let Some(template) = self.templates.get_mut(idx) {
+                                    template.background = MenuBackground::Dimmed(new_alpha);
+                                }
+                            }
                         }
+                        SliderState::Committed { initial_value } => {
+                            if let Some(idx) = self.current_template_index {
+                                if let Some(template) = self.templates.get_mut(idx) {
+                                    template.background = MenuBackground::Dimmed(new_alpha);
+                                }
+                                push_command(Box::new(UpdateTemplateCmd::new(
+                                    idx,
+                                    TemplateProperty::Background {
+                                        old: MenuBackground::Dimmed(initial_value),
+                                        new: MenuBackground::Dimmed(new_alpha),
+                                    },
+                                )));
+                            }
+                        }
+                        SliderState::Unchanged => {}
                     }
                 }
                 *y += ROW_HEIGHT;

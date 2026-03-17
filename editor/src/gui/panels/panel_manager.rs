@@ -4,7 +4,7 @@ use crate::gui::panels::hierarchy_panel::HierarchyPanel;
 use crate::gui::panels::console_panel::ConsolePanel;
 use crate::gui::panels::generic_panel::*;
 use crate::with_panel_manager;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::Editor;
 use std::collections::HashMap;
 use bishop::prelude::*;

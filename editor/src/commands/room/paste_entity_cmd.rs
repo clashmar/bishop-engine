@@ -1,7 +1,7 @@
 // editor/src/commands/room/paste_entity_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::EDITOR_SERVICES;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
