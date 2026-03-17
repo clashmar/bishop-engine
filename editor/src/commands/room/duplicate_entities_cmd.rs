@@ -1,7 +1,7 @@
 // editor/src/commands/room/duplicate_entities_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::ecs::component_registry::ComponentRegistry;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::ecs::entity::*;
 use crate::ecs::ecs::Ecs;
 use crate::with_editor;

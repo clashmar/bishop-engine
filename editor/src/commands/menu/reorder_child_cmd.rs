@@ -1,7 +1,7 @@
 
 // editor/src/commands/menu/reorder_child_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::with_editor;
 use engine_core::menu::MenuElementKind;
 

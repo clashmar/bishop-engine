@@ -1,7 +1,7 @@
 // editor/src/gui/menu_bar.rs
 use crate::gui::modal::is_modal_open;
 use crate::gui::gui_constants::*;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use engine_core::prelude::*;
 use std::fmt::{self, Display};
 use strum_macros::EnumIter;
@@ -147,20 +147,27 @@ impl MenuBar {
             HEIGHT,
         );
 
-        let title_actions: Vec<EditorAction> = vec![
-            EditorAction::Rename,
-        ];
-
-        if let Some(selected) = menu_dropdown(
-            ctx,
-            self.title_id,
-            title_rect,
-            title,
-            &title_actions,
-            |a| a.ui_label(),
-            |a| a.shortcut(),
-        ) {
-            self.pending = Some(selected);
+        match editor_mode {
+            EditorMode::Game | EditorMode::World(_) | EditorMode::Room(_) => {
+                let title_actions = vec![EditorAction::Rename];
+            if let Some(selected) = menu_dropdown(
+                ctx,
+                self.title_id,
+                title_rect,
+                title,
+                &title_actions,
+                |a| a.ui_label(),
+                |a| a.shortcut(),
+            ) {
+                self.pending = Some(selected);
+            }
+            }
+            _ => {
+                let txt_dims = ctx.measure_text(title, HEADER_FONT_SIZE_20);
+                let txt_x = title_rect.x + PADDING / 2.0;
+                let txt_y = title_rect.y + (title_rect.h - txt_dims.height) / 2.0 + txt_dims.offset_y;
+                ctx.draw_text(title, txt_x, txt_y, HEADER_FONT_SIZE_20, Color::BLACK);
+            }
         }
 
         x += title_rect.w + SPACING;
@@ -215,7 +222,7 @@ impl MenuBar {
 
         if let Some(selected) = menu_dropdown(
             ctx,
-            self.view_id,
+            self.edit_id,
             edit_rect,
             edit_label,
             &edit_actions,
@@ -254,7 +261,7 @@ impl MenuBar {
 
         if let Some(selected) = menu_dropdown(
             ctx,
-            self.edit_id,
+            self.view_id,
             view_rect,
             view_label,
             &view_actions,

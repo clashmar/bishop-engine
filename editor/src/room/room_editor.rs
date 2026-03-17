@@ -1,14 +1,17 @@
 // editor/src/room/room_editor.rs
-use crate::canvas::grid_shader::GridRenderer;
-use crate::tilemap::tilemap_editor::{TileMapEditor, TilemapEditorMode};
-use crate::editor_camera_controller::EditorCameraController;
+use crate::app::EditorCameraController;
+use crate::app::SubEditor;
+use crate::gui::panels::panel_manager::is_mouse_over_panel;
+use crate::shared::selection::draw_selection_box;
 use crate::gui::inspector::inspector::Inspector;
 use crate::room::selection::PreCopyDragState;
+use crate::canvas::grid_shader::GridRenderer;
 use crate::editor_assets::editor_assets::*;
+use crate::tilemap::tilemap_editor::*;
+use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::commands::room::*;
 use crate::room::drawing::*;
-use crate::shared::selection::draw_selection_box;
 use crate::editor_global::*;
 use crate::canvas::grid;
 use crate::world::coord;
@@ -156,7 +159,7 @@ impl RoomEditor {
             .find(|r| r.id == room_id)
             .expect("Could not find room in world.");
 
-        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
             clear_all_input_focus();
         }
 
@@ -420,6 +423,22 @@ impl RoomEditor {
     /// Takes any pending toast message from the room/tilemap editor.
     pub fn take_pending_toast(&mut self) -> Option<&'static str> {
         self.tilemap_editor.take_pending_toast()
+    }
+}
+
+impl SubEditor for RoomEditor {
+    fn active_rects(&self) -> &[Rect] {
+        &self.active_rects
+    }
+
+    fn should_block_canvas(&self, ctx: &WgpuContext) -> bool {
+        let mouse_screen: Vec2 = ctx.mouse_position().into();
+        self.active_rects.iter().any(|r| r.contains(mouse_screen))
+            || self.sub_mode_rect.map_or(false, |r| r.contains(mouse_screen))
+            || self.inspector.is_mouse_over(ctx)
+            || is_dropdown_open()
+            || is_modal_open()
+            || is_mouse_over_panel(ctx)
     }
 }
 

@@ -1,5 +1,5 @@
 // editor/src/room/shortcuts.rs
-use crate::editor_camera_controller::EditorCameraController;
+use crate::app::EditorCameraController;
 use crate::gui::panels::hierarchy_panel::HIERARCHY_PANEL;
 use crate::editor_global::with_panel_manager;
 use crate::gui::mode_selector::ModeInfo;

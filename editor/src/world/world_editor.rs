@@ -1,9 +1,8 @@
 // editor/src/world/world_editor.rs
+use crate::app::SubEditor;
+use crate::app::EditorCameraController;
 use crate::canvas::grid_shader::GridRenderer;
-use crate::editor_camera_controller::EditorCameraController;
-use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::editor_assets::editor_assets::*;
-use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
 use crate::gui::menu_bar::*;
 use crate::world::coord::*;
@@ -103,7 +102,7 @@ impl WorldEditor {
         camera: &Camera2D,
         world: &mut World,
     ) -> Option<RoomId> {
-        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
             let world_mouse = mouse_world_pos(ctx, camera);
             for room in &world.rooms {
                 let rect = scaled_room_rect(room, world.grid_size);
@@ -121,7 +120,7 @@ impl WorldEditor {
         camera: &Camera2D,
         game: &mut Game,
     ) -> Option<RoomId> {
-        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui(ctx) {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
             let world_mouse = mouse_world_pos(ctx, camera);
             let cur_world = game.current_world();
             for room in &cur_world.rooms {
@@ -143,7 +142,7 @@ impl WorldEditor {
         camera: &Camera2D,
         game: &mut Game,
     ) -> Option<RoomId> {
-        if self.is_mouse_over_ui(ctx) {
+        if self.should_block_canvas(ctx) {
             return None;
         }
 
@@ -218,19 +217,15 @@ impl WorldEditor {
         self.draw_rooms(ctx, camera, rooms, world.grid_size);
         self.draw_exits(ctx, rooms, world.grid_size);
 
-        match self.mode {
-            WorldEditorMode::SelectRoom => {
-                if !self.is_mouse_over_ui(ctx) {
+        if !self.should_block_canvas(ctx) {
+            match self.mode {
+                WorldEditorMode::SelectRoom => {
                     self.draw_hovered_room(ctx, camera, rooms, world.grid_size);
                 }
-            }
-            WorldEditorMode::DeleteRoom => {
-                if !self.is_mouse_over_ui(ctx) {
+                WorldEditorMode::DeleteRoom => {
                     self.draw_hovered_room(ctx, camera, rooms, world.grid_size);
                 }
-            }
-            WorldEditorMode::NewRoom => {
-                if !self.is_mouse_over_ui(ctx) {
+                WorldEditorMode::NewRoom => {
                     self.draw_placing_preview(ctx, camera, rooms, world.grid_size);
                 }
             }
@@ -528,16 +523,8 @@ impl WorldEditor {
         rect
     }
 
-    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext) -> bool {
-        let mouse_screen: Vec2 = ctx.mouse_position().into();
-        self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || is_dropdown_open()
-        || is_modal_open()
-        || is_mouse_over_panel(ctx)
-    }
-
     fn handle_mouse_cursor(&self, ctx: &mut WgpuContext) {
-        if self.is_mouse_over_ui(ctx) {
+        if self.should_block_canvas(ctx) {
             ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
@@ -561,6 +548,12 @@ impl WorldEditor {
         self.placing_end = None;
         self.active_rects.clear();
         self.show_grid = true;
+    }
+}
+
+impl SubEditor for WorldEditor {
+    fn active_rects(&self) -> &[Rect] {
+        &self.active_rects
     }
 }
 

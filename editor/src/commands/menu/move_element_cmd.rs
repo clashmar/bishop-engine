@@ -1,6 +1,6 @@
 // editor/src/commands/menu/move_element_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::with_editor;
 use bishop::prelude::*;
 use engine_core::prelude::*;

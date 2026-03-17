@@ -202,7 +202,7 @@ impl RoomCameraModule {
             .show(ctx);
 
         // Slider
-        let (slider_val, slider_changed) = gui_slider(
+        let (slider_val, slider_state) = gui_slider(
             ctx,
             self.slider_id,
             slider_rect,
@@ -216,7 +216,7 @@ impl RoomCameraModule {
         if (typed - scalar).abs() > f32::EPSILON {
             new_scalar = round_to_dp(typed, 2).clamp(MIN, MAX);
         }
-        if slider_changed {
+        if !matches!(slider_state, SliderState::Unchanged) {
             new_scalar = round_to_dp(slider_val, 2).clamp(MIN, MAX);
         }
 

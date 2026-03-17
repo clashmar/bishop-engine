@@ -314,17 +314,16 @@ impl Inspector {
                 BTN_HEIGHT,
             ));
 
-            let (new_val, changed) = gui_slider(
+            let (new_val, state) = gui_slider(
                 ctx,
                 self.widget_ids.darkness_slider_id,
                 slider_rect,
                 0.0,
                 1.0,
-                cur_room.darkness,                      
+                cur_room.darkness,
             );
 
-            if changed {
-                // Clamp just in case and write back to the room
+            if !matches!(state, SliderState::Unchanged) {
                 cur_room.darkness = new_val.clamp(0.0, 1.0);
             }
 

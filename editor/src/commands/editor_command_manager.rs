@@ -1,6 +1,6 @@
 // editor/src/controls/editor_command_manager.rs
 use crate::editor_global::with_editor;
-use crate::editor::EditorMode; 
+use crate::app::EditorMode; 
 use std::fmt::Debug;
 
 /// Trait for every undoable command.

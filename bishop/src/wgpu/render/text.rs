@@ -236,24 +236,29 @@ impl FontAtlas {
     /// Measures text without drawing it.
     pub fn measure_text(&mut self, text: &str, font_size: f32) -> TextDimensions {
         let mut width = 0.0f32;
-        let mut max_ascent = 0.0f32;
-        let mut max_descent = 0.0f32;
 
         for ch in text.chars() {
             if let Some(info) = self.get_glyph(ch, font_size) {
                 width += info.advance_width;
-                let ascent = info.height as f32 + info.offset_y;
-                let descent = -info.offset_y;
-                max_ascent = max_ascent.max(ascent);
-                max_descent = max_descent.max(descent);
             }
         }
 
+        let line_metrics = self.font.horizontal_line_metrics(font_size);
+        let (ascent, descent) = match line_metrics {
+            Some(m) => (m.ascent, -m.descent),
+            None => (font_size, 0.0),
+        };
+
         TextDimensions {
             width,
-            height: max_ascent + max_descent,
-            offset_y: max_ascent,
+            height: ascent + descent,
+            offset_y: ascent,
         }
+    }
+
+    /// Returns the font's global line metrics for the given pixel size.
+    pub fn font_line_metrics(&self, font_size: f32) -> Option<fontdue::LineMetrics> {
+        self.font.horizontal_line_metrics(font_size)
     }
 
     /// Pre-caches common characters at multiple sizes.
@@ -450,9 +455,6 @@ impl TextRenderer {
     ) -> TextDimensions {
         let c: [f32; 4] = color.into();
         let mut cursor_x = x;
-        let mut max_ascent = 0.0f32;
-        let mut max_descent = 0.0f32;
-
         let baseline_y = y;
 
         for ch in text.chars() {
@@ -479,17 +481,19 @@ impl TextRenderer {
                 }
 
                 cursor_x += info.advance_width;
-                let ascent = info.height as f32 + info.offset_y;
-                let descent = -info.offset_y;
-                max_ascent = max_ascent.max(ascent);
-                max_descent = max_descent.max(descent);
             }
         }
 
+        let line_metrics = self.font_atlas.font_line_metrics(font_size);
+        let (ascent, descent) = match line_metrics {
+            Some(m) => (m.ascent, -m.descent),
+            None => (font_size, 0.0),
+        };
+
         TextDimensions {
             width: cursor_x - x,
-            height: max_ascent + max_descent,
-            offset_y: max_ascent,
+            height: ascent + descent,
+            offset_y: ascent,
         }
     }
 
@@ -532,8 +536,6 @@ impl TextRenderer {
         let sin_r = params.rotation.sin();
 
         let mut cursor_x = 0.0f32;
-        let mut max_ascent = 0.0f32;
-        let mut max_descent = 0.0f32;
 
         for ch in text.chars() {
             if let Some(info) = self.font_atlas.get_glyph(ch, params.font_size as f32) {
@@ -580,10 +582,6 @@ impl TextRenderer {
                 }
 
                 cursor_x += info.advance_width;
-                let ascent = info.height as f32 + info.offset_y;
-                let descent = -info.offset_y;
-                max_ascent = max_ascent.max(ascent);
-                max_descent = max_descent.max(descent);
             }
         }
 

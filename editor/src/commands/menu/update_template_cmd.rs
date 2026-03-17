@@ -1,6 +1,6 @@
 // editor/src/commands/menu/update_template_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
-use crate::editor::EditorMode;
+use crate::app::EditorMode;
 use crate::with_editor;
 use engine_core::prelude::*;
 
@@ -29,7 +29,7 @@ impl UpdateTemplateCmd {
 }
 
 impl UpdateTemplateCmd {
-    fn apply(&self, editor: &mut crate::editor::Editor, use_new: bool) {
+    fn apply(&self, editor: &mut crate::app::Editor, use_new: bool) {
         let Some(template) = editor.menu_editor.templates.get_mut(self.template_index) else {
             return;
         };

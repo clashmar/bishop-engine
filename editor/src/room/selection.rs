@@ -1,6 +1,5 @@
 // editor/src/room/selection.rs
-use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use crate::gui::modal::is_modal_open;
+use crate::app::SubEditor;
 use crate::room::room_editor::*;
 use crate::world::coord;
 use std::collections::HashSet;
@@ -76,22 +75,12 @@ impl RoomEditor {
         rect
     }
 
-    pub fn is_mouse_over_ui(&self, ctx: &WgpuContext,) -> bool {
-        let mouse_screen: Vec2 = ctx.mouse_position().into();
-        self.active_rects.iter().any(|r| r.contains(mouse_screen))
-            || self.sub_mode_rect.map_or(false, |r| r.contains(mouse_screen))
-            || self.inspector.is_mouse_over(ctx)
-            || is_dropdown_open()
-            || is_modal_open()
-            || is_mouse_over_panel(ctx)
-    }
-
     pub(crate) fn ui_was_clicked(&self, ctx: &mut WgpuContext,) -> bool {
-        ctx.is_mouse_button_pressed(MouseButton::Left) && self.is_mouse_over_ui(ctx)
+        ctx.is_mouse_button_pressed(MouseButton::Left) && self.should_block_canvas(ctx)
     }
 
     pub(crate) fn handle_mouse_cursor(&self, ctx: &mut WgpuContext,) {
-        if self.is_mouse_over_ui(ctx) {
+        if self.should_block_canvas(ctx) {
             ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {

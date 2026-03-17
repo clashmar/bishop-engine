@@ -3,7 +3,6 @@
 
 use crate::game_instance::GameInstance;
 use engine_core::prelude::*;
-use bishop::prelude::*;
 
 /// Detail level for the diagnostics overlay.
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
