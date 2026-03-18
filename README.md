@@ -16,11 +16,9 @@ Please note that the current feature set is minimal and not yet suitable for pro
 
 ## Upcoming Features
 
-- **Lua Scripting Bridge** – Expose engine APIs to Lua with controller input mappings, scriptable objects and dynamic fields.
 - **Audio Engine** – Sound effects, music, spatial audio.    
 - **Improved Level Editor** – Multi-dimensions and perspectives, complex tile-palette, parallax & animated backgrounds.  
 - **Dialogue Branch Designer** – Visual node editor for NPC conversations.  
-- **Localization Management** – TOML-based language files.
 
 ## License
 
