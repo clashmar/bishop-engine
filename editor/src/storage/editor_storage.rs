@@ -1,26 +1,25 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
-use engine_core::storage::editor_config::app_dir;
+use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
-use std::io::Write;
+use crate::ecs::transform::Transform;
+use crate::with_lua_async;
+use crate::write_engine_scripts;
+use std::collections::HashSet;
+use engine_core::prelude::*;
 use std::time::SystemTime;
+use bishop::prelude::*;
+use std::io::ErrorKind;
+use std::path::PathBuf;
+use std::cell::RefCell;
+use std::sync::Mutex;
+use std::sync::Arc;
+use std::io::Write;
+use std::io::Error;
+use std::rc::Rc;
+use uuid::Uuid;
 use std::io;
 use std::fs;
-use std::path::PathBuf;
-use engine_core::*;
-use engine_core::world::room::Room;
-use engine_core::ecs::component::*;
-use engine_core::ecs::world_ecs::*;
-use engine_core::world::world::*;
-use engine_core::game::game_map::GameMap;
-use engine_core::constants::*;
-use engine_core::assets::asset_manager::*;
-use engine_core::storage::path_utils::*;
-use engine_core::game::game::*;
-use macroquad::prelude::*;
-use uuid::Uuid;
-use std::io::Error;
-use std::io::ErrorKind;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
@@ -28,46 +27,104 @@ use std::os::unix::fs::PermissionsExt;
 pub async fn create_new_game(name: String) -> Game {
     onscreen_debug!("Creating new game.");
 
+    // Set game name globally
+    set_game_name(&name);
+
     // Ensure the folder structure exists.
     create_game_folders(&name);
 
-    // Build the game
-    let world = create_new_world();
-    let current_id = world.id;
+    let asset_manager = AssetManager::new().await;
+    let script_manager = ScriptManager::new().await;
 
-    let asset_manager = AssetManager::new(name.clone()).await;
-
-    let game = Game {
+    // Build the game first so we can allocate room IDs globally
+    let mut game = Game {
         save_version: 1,
         id: Uuid::new_v4(),
         name,
-        worlds: vec![world],
+        ecs: Ecs::default(),
+        worlds: vec![],
         asset_manager,
-        current_world_id: current_id,
-        tile_size: DEFAULT_TILE_SIZE,
+        script_manager,
+        text_manager: TextManager::default(),
+        current_world_id: WorldId(Uuid::nil()),
         game_map: GameMap::default(),
+        next_room_id: 0,
     };
+
+    let world = create_new_world(&mut game);
+    game.current_world_id = world.id;
+    game.worlds.push(world);
+
+    // Create the global Player entity
+    game.ecs.create_entity()
+        .with(Player)
+        .with(Global {})
+        .with(PhysicsBody)
+        .with(Name("Player".to_string()));
 
     // Save the game.
     if let Err(e) = save_game(&game) {
-        eprintln!("Could not save the new game: {e}");
+        onscreen_error!("Could not save the new game: {e}");
     }
 
     game
 }
 
 fn create_game_folders(name: &String) {
-    let folders: [(PathBuf, &str); 4] = [
-        (assets_folder(&name), RESOURCES_FOLDER),
-        (assets_folder(&name), ASSETS_FOLDER),
-        (windows_folder(&name), WINDOWS_FOLDER),
-        (mac_os_folder(&name), MAC_OS_FOLDER),
+    let folders: [(PathBuf, &str); 6] = [
+        (resources_folder_current(), RESOURCES_FOLDER),
+        (assets_folder(), ASSETS_FOLDER),
+        (scripts_folder(), SCRIPTS_FOLDER),
+        (text_folder(), TEXT_FOLDER),
+        (windows_folder(), WINDOWS_FOLDER),
+        (mac_os_folder(), MAC_OS_FOLDER),
     ];
 
     for (path, folder) in folders {
         if let Err(e) = fs::create_dir_all(&path) {
             onscreen_error!("Could not create {folder} folder '{}': {e}", path.display());
         }
+    }
+
+    // Extract embedded _engine scripts
+    if let Err(e) = write_engine_scripts(&scripts_folder()) {
+        onscreen_error!("Could not write _engine scripts: {e}");
+    }
+
+    // Create an empty main.lua for the user
+    let main_lua = scripts_folder().join("main.lua");
+    if let Err(e) = fs::write(&main_lua, "") {
+        onscreen_error!("Could not create main.lua: {e}");
+    }
+
+    // Create default text structure
+    create_default_text_files();
+}
+
+/// Creates the default text manifest and language folders.
+fn create_default_text_files() {
+    let text_root = text_folder();
+
+    // Create _manifest.toml with default config
+    let manifest_path = text_root.join("_manifest.toml");
+    if !manifest_path.exists() {
+        let manifest_content = r#"# Text manifest configuration
+default_language = "en"
+"#;
+        if let Err(e) = fs::write(&manifest_path, manifest_content) {
+            onscreen_error!("Could not create text manifest: {e}");
+        }
+    }
+
+    // Create default language folders
+    let en_dialogue = text_root.join("en").join("dialogue");
+    if let Err(e) = fs::create_dir_all(&en_dialogue) {
+        onscreen_error!("Could not create text/en/dialogue folder: {e}");
+    }
+
+    let en_ui = text_root.join("en").join("ui");
+    if let Err(e) = fs::create_dir_all(&en_ui) {
+        onscreen_error!("Could not create text/en/ui folder: {e}");
     }
 }
 
@@ -76,16 +133,38 @@ pub fn save_game(game: &Game) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
         .separate_tuple_members(true)
         .enumerate_arrays(true);
-    
+
     let ron_string = ron::ser::to_string_pretty(game, pretty)
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
-    let resources_folder = resources_folder(&game.name);
+    let resources_folder = resources_folder_current();
     let file_path = resources_folder.join(GAME_RON);
-    
+
     fs::create_dir_all(&resources_folder)?;
-    onscreen_info!("{}", file_path.display());
+
+    // Regenerate animations.lua with custom clips
+    let custom_clips = collect_custom_clip_names(&game.ecs);
+    if let Err(e) = crate::editor_assets::write_animations_lua(&scripts_folder(), &custom_clips) {
+        onscreen_error!("Could not write animations.lua: {e}");
+    }
+
+    onscreen_info!("Game saved to: {}", file_path.display());
     fs::write(file_path, ron_string)
+}
+
+/// Collects all custom clip names from the ECS.
+pub fn collect_custom_clip_names(ecs: &Ecs) -> Vec<String> {
+    let mut names = HashSet::new();
+
+    for animation in ecs.get_store::<Animation>().data.values() {
+        for clip_id in animation.clips.keys() {
+            if let ClipId::Custom(name) = clip_id {
+                names.insert(name.clone());
+            }
+        }
+    }
+
+    names.into_iter().collect()
 }
 
 /// Load a `Game` from the folder that matches the supplied name.
@@ -105,14 +184,12 @@ pub async fn load_game_by_name(name: &str) -> io::Result<Game> {
     };
 
     // Parse the RON
-    match ron::from_str::<Game>(&ron_string) {
-        Ok(mut game) => {
-            game.initialize().await;
-            Ok(game)
-        },
-        // Corrupt file
-        Err(_) => Ok(create_new_game(name.to_string()).await),
-    }
+    let mut game = match ron::from_str::<Game>(&ron_string) {
+        Ok(game) => game,
+        Err(_) => return Ok(create_new_game(name.to_string()).await),
+    };
+
+    Ok(game)
 }
 
 /// Return the name of the most recently modified game folder.
@@ -158,29 +235,30 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
 }
 
 /// Create a fresh world with a single default room.
-pub fn create_new_world() -> World {
+pub fn create_new_world(game: &mut Game) -> World {
     let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
-    let mut world_ecs = WorldEcs::default();
-    let first_room = Room::default(&mut world_ecs);
-    let room_id = first_room.id;
-    let starting_position = vec2(1.0, 1.0);
+    let room_id = game.allocate_room_id();
+    let first_room = Room::default(&mut game.ecs, room_id, DEFAULT_GRID_SIZE);
+    let room_origin = first_room.position;
 
-    let mut world = World {
+    let world = World {
         id,
         name: name.clone(),
-        world_ecs,
         rooms: vec![first_room],
+        current_room_id: None,
         starting_room_id: Some(room_id),
-        starting_position: Some(starting_position),
-        meta: WorldMeta::default()
+        starting_position: Some(room_origin.into()),
+        meta: WorldMeta::default(),
+        grid_size: DEFAULT_GRID_SIZE,
     };
 
-    let _player = world.world_ecs
+    let _spawn_point = game.ecs
         .create_entity()
-        .with(Player)
-        .with(Position { position: starting_position })
+        .with(PlayerProxy)
+        .with(Transform { position: room_origin, ..Default::default() })
         .with(CurrentRoom(room_id))
+        .with(Name("Player Proxy".to_string()))
         .finish();
 
     world
@@ -195,10 +273,8 @@ pub fn rename_game(
     let old_game_dir = game_folder(&game.name);
     let new_game_dir = game_folder(new_name);
     fs::rename(&old_game_dir, &new_game_dir)?;
-
-    // Asset manager uses the game name to find the assets folder
-    game.asset_manager.game_name = new_name.to_owned();
     game.name = new_name.to_owned();
+    set_game_name(new_name);
     Ok(())
 }
 
@@ -211,24 +287,21 @@ pub fn save_as(
     // Determine paths
     let old_game_dir = game_folder(&game.name);
     let new_game_dir = game_folder(new_name);
-    let old_assets_dir = assets_folder(&game.name);
-    let new_assets_dir = assets_folder(new_name);
 
     // Guard against overwriting an existing game
-    if new_game_dir.exists() || new_assets_dir.exists() {
+    if new_game_dir.exists() {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,
             format!("A game called \"{new_name}\" already exists"),
         ));
     }
 
-    // Copy the game and assets folder
+    // Copy the game folder
     copy_dir_recursive(&old_game_dir, &new_game_dir)?;
-    copy_dir_recursive(&old_assets_dir, &new_assets_dir)?;
 
-    // Update the game and assets manager
+    // Update the game and global
     game.name = new_name.to_owned();
-    game.asset_manager.game_name = new_name.to_owned();
+    set_game_name(new_name);
 
     Ok(())
 }
@@ -303,4 +376,52 @@ pub fn list_game_names() -> Vec<String> {
         .filter(|e| e.path().is_dir())
         .filter_map(|e| e.file_name().into_string().ok())
         .collect()
+}
+
+/// Saves a menu template to disk.
+pub fn save_menu(template: &MenuTemplate) -> io::Result<()> {
+    let dir = menus_folder();
+    fs::create_dir_all(&dir)?;
+
+    let path = dir.join(format!("{}.ron", template.id));
+    let pretty = ron::ser::PrettyConfig::new()
+        .separate_tuple_members(true)
+        .enumerate_arrays(true);
+
+    let ron = ron::ser::to_string_pretty(template, pretty)
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+    fs::write(path, ron)
+}
+
+/// Loads all menu templates from disk.
+pub fn load_menus() -> Vec<MenuTemplate> {
+    let dir = menus_folder();
+    if !dir.exists() {
+        return Vec::new();
+    }
+
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+
+    entries
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| {
+            entry.path().extension().map_or(false, |ext| ext == "ron")
+        })
+        .filter_map(|entry| {
+            let ron = fs::read_to_string(entry.path()).ok()?;
+            ron::de::from_str(&ron).ok()
+        })
+        .collect()
+}
+
+/// Deletes a menu template from disk.
+pub fn delete_menu(id: &str) -> io::Result<()> {
+    let path = menus_folder().join(format!("{}.ron", id));
+    if path.exists() {
+        fs::remove_file(path)?;
+    }
+    Ok(())
 }

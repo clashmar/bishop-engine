@@ -1,23 +1,79 @@
 // engine_core/src/logging/logging.rs
-use std::io::*;
+use crate::storage::editor_config::app_dir;
+use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use flexi_logger::*;
 use log::Record;
-use once_cell::sync::Lazy;
-use crate::storage::editor_config::app_dir;
+use std::io::*;
 
-// Global mutable buffer that stores the most recent message.
+const MAX_LOG_ENTRIES: usize = 500;
+
+#[derive(Clone)]
+pub struct LogEntry {
+    pub level: log::Level,
+    pub message: String,
+}
+
+/// Stores log entries with a monotonically increasing counter for change detection.
+pub struct LogHistory {
+    entries: Vec<LogEntry>,
+    total_pushed: usize,
+}
+
+impl LogHistory {
+    pub fn new() -> Self {
+        Self {
+            entries: Vec::new(),
+            total_pushed: 0,
+        }
+    }
+
+    pub fn push(&mut self, level: log::Level, message: String) {
+        if self.entries.len() >= MAX_LOG_ENTRIES {
+            self.entries.remove(0);
+        }
+        self.entries.push(LogEntry { level, message });
+        self.total_pushed += 1;
+    }
+
+    pub fn entries(&self) -> &[LogEntry] {
+        &self.entries
+    }
+
+    pub fn last(&self) -> Option<&LogEntry> {
+        self.entries.last()
+    }
+
+    /// Returns the total number of entries ever pushed, even after cycling.
+    pub fn total_pushed(&self) -> usize {
+        self.total_pushed
+    }
+
+    /// Clears all entries but preserves total_pushed for change detection.
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
+}
+
+pub static LOG_HISTORY: Lazy<Mutex<LogHistory>> = Lazy::new(|| Mutex::new(LogHistory::new()));
+
+// Global mutable buffer that stores the most recent message (kept for backwards compatibility).
 pub static LAST_LOG: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
 
-/// Helper macro that allow logs to be displayed by 
+/// Helper macro that allow logs to be displayed by
 /// the program and printed to the console.
 #[macro_export]
 macro_rules! onscreen_log {
     ($lvl:expr, $($arg:tt)*) => {{
         println!($($arg)*);
         log::log!($lvl, $($arg)*);
+        let msg = format!($($arg)*);
+        {
+            let mut history = $crate::logging::logging::LOG_HISTORY.lock().unwrap();
+            history.push($lvl, msg.clone());
+        }
         let mut buf = $crate::logging::logging::LAST_LOG.lock().unwrap();
-        *buf = format!($($arg)*);
+        *buf = msg;
     }};
 }
 

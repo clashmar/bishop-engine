@@ -1,14 +1,11 @@
 // engine_core/src/tiles/tilemap.rs
-use std::collections::HashMap;
-use serde_with::{serde_as, FromInto};
-use crate::assets::asset_manager::{AssetManager};
-use crate::ecs::world_ecs::WorldEcs;
-use crate::global::tile_size;
+use crate::assets::asset_manager::AssetManager;
 use crate::tiles::tile::TileDefId;
-use crate::world::room::{Exit, ExitDirection};
 use crate::world::world::GridPos;
-use macroquad::prelude::*;
+use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use bishop::prelude::*;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -27,86 +24,46 @@ impl TileMap {
             width,
             height,
             tiles: HashMap::new(),
-            background: LIGHTGRAY,
+            background: Color::LIGHTGREY,
         }
     }
 
-    pub fn draw(
+    /// Draw the tilemap.
+    pub fn draw<C: BishopContext>(
         &self,
-        exits: &Vec<Exit>,
-        world_ecs: &WorldEcs,
+        ctx: &mut C,
         asset_manager: &mut AssetManager,
         room_position: Vec2,
+        grid_size: f32,
     ) {
-        clear_background(RED);
+        ctx.clear_background(Color::RED);
 
         // Background
-        draw_rectangle(
+        ctx.draw_rectangle(
             room_position.x,
             room_position.y,
-            self.width as f32 * tile_size(),
-            self.height as f32 * tile_size(),
-            self.background,
+            self.width as f32 * grid_size,
+            self.height as f32 * grid_size,
+            self.background.into(),
         );
 
         for ((x, y), tile_def_id) in &self.tiles {
-            let tile_pos = vec2(*x as f32 * tile_size(), *y as f32 * tile_size()) + room_position;
+            let tile_pos = Vec2::new(*x as f32 * grid_size, *y as f32 * grid_size) + room_position;
 
-            if let Some(tile_def) = world_ecs.tile_defs
-                .get(tile_def_id)                    
-            {
+            if let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) {
                 let tex = asset_manager.get_texture_from_id(tile_def.sprite_id);
-                draw_texture_ex(
+                ctx.draw_texture_ex(
                     tex,
                     tile_pos.x,
                     tile_pos.y,
-                    WHITE,
+                    Color::WHITE,
                     DrawTextureParams {
-                        dest_size: Some(vec2(tile_size(), tile_size())),
+                        dest_size: Some(Vec2::new(grid_size, grid_size).into()),
                         ..Default::default()
                     },
                 );
             }
         }
-        self.draw_exits(exits, room_position);
-    }
-
-    fn draw_exits(&self, exits: &Vec<Exit>, room_position: Vec2) {
-        for exit in exits {
-            let position = exit.position * tile_size() + room_position;
-            self.draw_exit(position, exit.direction);
-        }
-    }
-
-    /// Draw a yellow exit overlay/arrow at the given position
-    pub fn draw_exit(
-        &self, 
-        position: Vec2, 
-        direction: ExitDirection,
-    ) {
-        // Position in world coordinates, including outer tiles
-        let x = position.x;
-        let y = position.y;
-
-        // Draw semi-transparent rectangle
-        draw_rectangle(x, y, tile_size(), tile_size(), LIGHTGRAY);
-
-        let arrow_center = vec2(x + tile_size() / 2.0, y + tile_size() / 2.0);
-        let arrow_color = Color::new(1.0, 1.0, 0.0, 1.0);
-
-        let offsets = match direction {
-            ExitDirection::Up => [vec2(0.0, -1.0), vec2(-1.0, 1.0), vec2(1.0, 1.0)],
-            ExitDirection::Down => [vec2(0.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0)],
-            ExitDirection::Left => [vec2(-1.0, 0.0), vec2(1.0, -1.0), vec2(1.0, 1.0)],
-            ExitDirection::Right => [vec2(1.0, 0.0), vec2(-1.0, -1.0), vec2(-1.0, 1.0)],
-        };
-
-        draw_triangle(
-            arrow_center + offsets[0] * tile_size() / 4.0,
-            arrow_center + offsets[1] * tile_size() / 4.0,
-            arrow_center + offsets[2] * tile_size() / 4.0,
-            arrow_color
-        );
     }
 
     /// Insert a tile at a grid coordinate.
@@ -120,8 +77,9 @@ impl TileMap {
         self.tiles.get(&(x, y))
     }
 
-    pub fn pixel_to_grid(pixel: f32) -> i32 {
-        (pixel / tile_size()).floor() as i32
+    /// Convert a pixel coordinate to a grid coordinate.
+    pub fn pixel_to_grid(pixel: f32, grid_size: f32) -> i32 {
+        (pixel / grid_size).floor() as i32
     }
 
     pub fn any_tiles_in_range<F>(
@@ -151,11 +109,10 @@ impl TileMap {
         false
     }
 
-    /// Remove a tile from the map and ECS.
+    /// Remove a tile from the map.
     pub fn remove_tile(
         &mut self,
         grid_position: (usize, usize),
-        world_ecs: &mut WorldEcs,
     ) {
         if let Some(_tile_def_id) = self.tiles.remove(&grid_position) {
             // TODO: Handle sprite and ecs
@@ -163,10 +120,11 @@ impl TileMap {
     }
 }
 
-pub fn tile_to_world(grid_position: GridPos) -> Vec2 {
+/// Convert a grid position to world coordinates.
+pub fn tile_to_world(grid_position: GridPos, grid_size: f32) -> Vec2 {
     Vec2::new(
-        grid_position.x() as f32 * tile_size(),
-        grid_position.y() as f32 * tile_size(),
+        grid_position.x() as f32 * grid_size,
+        grid_position.y() as f32 * grid_size,
     )
 }
 

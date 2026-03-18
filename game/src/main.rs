@@ -1,27 +1,105 @@
 // game/src/main.rs
+use game_lib::scripting::lua_ctx::register_lua_contexts;
+use game_lib::game_instance::GameInstance;
+use game_lib::engine::Engine;
+use engine_core::prelude::*;
+use bishop::prelude::*;
+use std::cell::RefCell;
+use bishop::BishopApp;
+use std::rc::Rc;
+use mlua::Lua;
 use std::env;
 use std::fs;
-use engine_core::assets::core_assets::load_rgba_resized;
-use engine_core::*;
-use engine_core::storage::path_utils::resources_dir_from_exe;
-use macroquad::miniquad::conf::Icon;
-use macroquad::prelude::*;
-use game_lib::game::GameState;
 
-fn window_conf() -> Conf {
-    // Start with the default miniquad icon
-    let mut icon = Some(Icon::miniquad_logo());
+/// Wrapper struct for running the game via BishopApp.
+struct GameApp {
+    engine: Option<Engine>,
+    ctx: Option<PlatformContext>,
+}
 
-    if let Some(resources_dir) = resources_dir_from_exe() {
-        let icon_path = resources_dir.join("Icon.png");
-
-        // Read the file and make the icon
-        if let Ok(png_bytes) = fs::read(&icon_path) {
-            icon = Some(load_icon(&png_bytes));
-        } else {
-            onscreen_warn!("Could not read icon.")
+impl GameApp {
+    fn new() -> Self {
+        Self {
+            engine: None,
+            ctx: None,
         }
     }
+}
+
+impl BishopApp for GameApp {
+    async fn init(&mut self, ctx: PlatformContext) {
+        onscreen_info!("Initializing game.");
+
+        // Store the context for later use
+        self.ctx = Some(ctx.clone());
+
+        let lua = Lua::new();
+        let mut camera_manager = CameraManager::default();
+
+        let game_instance = {
+            let mut ctx_ref = ctx.borrow_mut();
+            Rc::new(RefCell::new(GameInstance::new(
+                &mut *ctx_ref, 
+                &lua, 
+                &mut camera_manager
+            ).await))
+        };
+        let grid_size = game_instance.borrow().game.current_world().grid_size;
+
+        if let Err(e) = register_lua_contexts(
+            &lua, 
+            game_instance.clone(), 
+            ctx.clone()
+        ) {
+            onscreen_error!("Could not register lua contexts: {}", e)
+        }
+
+        self.engine = Some(Engine::new(
+            game_instance.clone(),
+            ctx.clone(),
+            lua,
+            camera_manager,
+            grid_size,
+            false,
+        ));
+    }
+
+    async fn frame(&mut self, ctx: PlatformContext) {
+        if let Some(engine) = &mut self.engine {
+            engine.frame(ctx).await;
+        }
+    }
+}
+
+/// Helper that returns the icon from PNG bytes.
+fn load_icon_from_png(png_bytes: &[u8]) -> WindowIcon {
+    WindowIcon::Rgba {
+        small: Some(IconData::new(
+            load_rgba_resized::<{ 16 * 16 * 4 }>(png_bytes, 16).to_vec(),
+            16,
+            16,
+        )),
+        medium: Some(IconData::new(
+            load_rgba_resized::<{ 32 * 32 * 4 }>(png_bytes, 32).to_vec(),
+            32,
+            32,
+        )),
+        large: Some(IconData::new(
+            load_rgba_resized::<{ 64 * 64 * 4 }>(png_bytes, 64).to_vec(),
+            64,
+            64,
+        )),
+    }
+}
+
+fn main() -> Result<(), RunError> {
+    // Load icon from resources directory if available
+    let icon = resources_dir_from_exe()
+        .and_then(|resources_dir| {
+            let icon_path = resources_dir.join("Icon.png");
+            fs::read(&icon_path).ok()
+        })
+        .map(|png_bytes| load_icon_from_png(&png_bytes));
 
     // Use the exe as the window title
     let window_title = env::current_exe()
@@ -29,26 +107,14 @@ fn window_conf() -> Conf {
         .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().into_owned()))
         .unwrap_or_else(|| "Game".to_string());
 
-    Conf {
-        window_title,
-        fullscreen: true,
-        window_resizable: true,
-        icon,
-        ..Default::default()
-    }
-}
+    let mut config = WindowConfig::new(window_title)
+        .with_fullscreen(true)
+        .with_resizable(true);
 
-/// Helper that returns the icon.
-fn load_icon(png_bytes: &[u8]) -> Icon {
-    Icon {
-        small: load_rgba_resized::<{ 16 * 16 * 4 }>(png_bytes, 16),
-        medium: load_rgba_resized::<{ 32 * 32 * 4 }>(png_bytes, 32),
-        big: load_rgba_resized::<{ 64 * 64 * 4 }>(png_bytes, 64),
+    if let Some(icon) = icon {
+        config = config.with_icon(icon);
     }
-}
 
-#[macroquad::main(window_conf)]
-async fn main() {
-    let mut game = GameState::new().await;
-    game.run_game_loop().await;
+    let app = GameApp::new();
+    run_backend(config, app)
 }

@@ -1,12 +1,12 @@
 // editor/src/storage/editor_config.rs
+use ron::ser::{PrettyConfig, to_string_pretty};
+use serde::{Deserialize, Serialize};
+use directories_next::ProjectDirs;
+use once_cell::sync::Lazy;
+use std::path::PathBuf;
 use std::error::Error;
 use std::sync::RwLock;
 use ron::from_str;
-use ron::ser::{PrettyConfig, to_string_pretty};
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use directories_next::ProjectDirs;
-use once_cell::sync::Lazy;
 use std::fs;
 use crate::*;
 

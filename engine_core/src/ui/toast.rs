@@ -1,8 +1,8 @@
 // engine_core/src/ui/toast.rs
+use crate::ui::widgets::*;
+use crate::ui::text::*;
+use bishop::prelude::*;
 use std::time::Instant;
-use macroquad::prelude::*;
-
-use crate::ui::{text::{draw_text_ui, measure_text_ui}, widgets::DEFAULT_FONT_SIZE_16};
 
 const PADDING: f32 = 20.0;
 
@@ -30,7 +30,7 @@ impl Toast {
     }
 
     /// Call each frame. Draws the toast if it is still alive.
-    pub fn update(&mut self) {
+    pub fn update(&mut self, ctx: &mut WgpuContext) {
         if !self.active {
             return;
         }
@@ -39,19 +39,19 @@ impl Toast {
             self.active = false;
             return;
         }
-        
-        let txt = measure_text_ui(&self.msg, DEFAULT_FONT_SIZE_16, 1.0);
 
-        // Top left
+        let txt = measure_text(ctx, &self.msg, DEFAULT_FONT_SIZE_16);
+
+        // Bottom left
         let bg_rect = Rect::new(
-            PADDING,                                          
-            screen_height() - PADDING - (txt.height + PADDING),
+            PADDING,
+            ctx.screen_height() - PADDING - (txt.height + PADDING),
             txt.width + PADDING * 2.0,
             txt.height + PADDING,
         );
 
         // Background
-        draw_rectangle(
+        ctx.draw_rectangle(
             bg_rect.x,
             bg_rect.y,
             bg_rect.w,
@@ -61,11 +61,12 @@ impl Toast {
 
         // Text
         draw_text_ui(
+            ctx,
             &self.msg,
             bg_rect.x + PADDING,
             bg_rect.y + txt.height + PADDING / 2.0,
             DEFAULT_FONT_SIZE_16,
-            WHITE,
+            Color::WHITE,
         );
     }
 }

@@ -1,9 +1,9 @@
 // engine_core/src/camera/camera_manager.rs
-use crate::ecs::entity::Entity;
-use crate::world::room::RoomId;
-use crate::{camera::game_camera::*, ecs::world_ecs::WorldEcs, world::room::Room};
-use macroquad::prelude::*;
+use crate::camera::game_camera::*;
+use crate::prelude::*;
+use bishop::prelude::*;
 
+#[derive(Default)]
 pub struct CameraManager {
     /// The game camera that is fed to the renderer.
     pub active: GameCamera,
@@ -16,13 +16,20 @@ pub struct CameraManager {
 }
 
 impl CameraManager {
-    /// Initialise with the player’s starting room.
-    pub fn new(world_ecs: &WorldEcs, room_id: RoomId, player_pos: Vec2) -> Self {
-        let room_cameras = get_room_cameras(world_ecs, room_id);
-        let (active_camera, _) = Self::find_best_camera_for_room(world_ecs, &room_cameras, player_pos)
-            .expect("room must contain at least one camera");
+    /// Initialise with the player's starting room.
+    pub fn new<C: BishopContext>(
+        ctx: &mut C,
+        ecs: &Ecs, 
+        room_id: RoomId, 
+        player_pos: Vec2, 
+        grid_size: f32
+    ) -> Self {
+        let room_cameras = get_room_cameras(&ecs, room_id);
+        let (active_camera, _) =
+            Self::find_best_camera_for_room(ctx, &ecs, &room_cameras, player_pos, grid_size)
+                .expect("Room must contain at least one camera.");
 
-        Self { 
+        Self {
             active: active_camera,
             room_cameras,
             current_room: Some(room_id),
@@ -30,23 +37,31 @@ impl CameraManager {
         }
     }
 
-    /// Picks the best camera and updates it if necessary.
-    pub fn update_active(
+    /// Picks the best camera and update it if necessary.
+    pub fn update_active<C: BishopContext>(
         &mut self, 
-        world_ecs: &WorldEcs, 
-        room: &Room,
-        player_pos: Vec2) 
-        {
+        ctx: &mut C,
+        ecs: &Ecs, 
+        room: &Room, 
+        grid_size: f32
+    ) {
         // If the player moved to another room get the new cameras
         if self.current_room != Some(room.id) {
             self.current_room = Some(room.id);
-            self.room_cameras = get_room_cameras(world_ecs, self.current_room.unwrap());
+            self.room_cameras = get_room_cameras(ecs, self.current_room.unwrap());
         }
 
         // Pick the best camera
+        let player_pos = ecs.get_player_transform()
+            .map(|t| t.position)
+            .unwrap_or_default();
+
         if let Some((best_cam, mode)) = Self::find_best_camera_for_room(
-            world_ecs, 
-            &self.room_cameras, player_pos
+            ctx,
+            ecs,
+            &self.room_cameras,
+            player_pos,
+            grid_size,
         ) {
             // Prevent interpolation with the previous camera
             if best_cam.id != self.active.id {
@@ -62,16 +77,18 @@ impl CameraManager {
     }
 
     /// Finds the most suitable camera for a given room and player position.
-    pub fn find_best_camera_for_room(
-        world_ecs: &WorldEcs,
+    pub fn find_best_camera_for_room<C: BishopContext>(
+        ctx: &mut C,
+        ecs: &Ecs,
         room_cameras: &[(Entity, RoomCamera)],
         player_pos: Vec2,
+        grid_size: f32,
     ) -> Option<(GameCamera, CameraMode)> {
         // Keep track of the camera with the smallest distance to the player
         let mut closest: Option<(f32, GameCamera, CameraMode)> = None;
 
         for &(entity, ref cam) in room_cameras.iter() {
-            let game_cam = room_to_game_camera(world_ecs, &entity, cam, player_pos);
+            let game_cam = room_to_game_camera(ctx, ecs, &entity, cam, player_pos, grid_size);
             match cam.camera_mode {
                 CameraMode::Fixed => {
                     if Self::point_in_camera_view(&game_cam, player_pos) {
@@ -115,11 +132,17 @@ impl CameraManager {
                 self.active.camera.target = player_pos;
             }
             FollowRestriction::ClampX => {
-                self.active.camera.target.x = player_pos.x;
-            }
-            FollowRestriction::ClampY => {
                 self.active.camera.target.y = player_pos.y;
             }
+            FollowRestriction::ClampY => {
+                self.active.camera.target.x = player_pos.x;
+            }
         }
+    }
+
+    /// Returns the interpolated camera target for rendering.
+    pub fn interpolated_target(&self, alpha: f32) -> Vec2 {
+        let prev = self.previous_position.unwrap_or(self.active.camera.target);
+        lerp_rounded(prev, self.active.camera.target, alpha)
     }
 }

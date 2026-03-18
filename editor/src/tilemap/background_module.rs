@@ -1,9 +1,6 @@
 // editor/src/tilemap/background_module.rs
-use engine_core::{
-    tiles::tilemap::TileMap, 
-    ui::{text::*, widgets::*}
-};
-use macroquad::prelude::*;
+use engine_core::prelude::*;
+use bishop::prelude::*;
 
 // TODO: Add more complex backgrounds
 /// Responsible for editing the background of a tilemap. 
@@ -24,9 +21,15 @@ impl BackgroundModule {
         }
     }
 
-    pub fn draw(&mut self, rect: Rect, map: &mut TileMap) {
+    pub fn draw(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        rect: Rect, 
+        map: &mut TileMap, 
+        blocked: bool
+    ) {
         // Title
-        draw_text_ui("Background", rect.x, rect.y + 18.0, DEFAULT_FONT_SIZE_16, WHITE);
+        ctx.draw_text("Background", rect.x, rect.y + 18.0, DEFAULT_FONT_SIZE_16, Color::WHITE);
 
         let mut r = map.background.r * 255.0;
         let mut g = map.background.g * 255.0;
@@ -36,7 +39,7 @@ impl BackgroundModule {
         // Determine the width of a three‑digit number.
         // 255 is the widest possible value for an 8‑bit channel
         let sample = "255";
-        let num_width = measure_text_ui(sample, DEFAULT_FONT_SIZE_16, 1.0).width;
+        let num_width = measure_text(ctx, sample, DEFAULT_FONT_SIZE_16).width;
 
         // Add padding so the cursor isn’t glued to the edge.
         let field_w = num_width + 13.0;
@@ -47,13 +50,13 @@ impl BackgroundModule {
         let mut x = rect.x + 10.0;
         let y = rect.y + 30.0;
 
-        r = gui_input_number_f32(self.r_id, Rect::new(x, y, field_w, field_h), r);
+        r = NumberInput::new(self.r_id, Rect::new(x, y, field_w, field_h), r).blocked(blocked).show(ctx);
         x += field_w + spacing;
-        g = gui_input_number_f32(self.g_id,Rect::new(x, y, field_w, field_h), g);
+        g = NumberInput::new(self.g_id, Rect::new(x, y, field_w, field_h), g).blocked(blocked).show(ctx);
         x += field_w + spacing;
-        b = gui_input_number_f32(self.b_id,Rect::new(x, y, field_w, field_h), b);
+        b = NumberInput::new(self.b_id, Rect::new(x, y, field_w, field_h), b).blocked(blocked).show(ctx);
         x += field_w + spacing;
-        a = gui_input_number_f32(self.a_id,Rect::new(x, y, field_w, field_h), a);
+        a = NumberInput::new(self.a_id, Rect::new(x, y, field_w, field_h), a).blocked(blocked).show(ctx);
         x += field_w + spacing;
 
         // Clamp to a valid range (0‑255) and push the colour back
@@ -67,14 +70,14 @@ impl BackgroundModule {
             g / 255.0,
             b / 255.0,
             a / 255.0,
-        );
+        ).into();
 
-        map.background = Color::new(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+        map.background = Color::new(r / 255.0, g / 255.0, b / 255.0, a / 255.0).into();
 
         // Preview square
         let preview_sz = field_h; // same height as the input fields
         let preview_rect = Rect::new(x, y, preview_sz, preview_sz);
-        draw_rectangle(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, map.background);
-        draw_rectangle_lines(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, 2.0, WHITE);
+        ctx.draw_rectangle(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, map.background.into());
+        ctx.draw_rectangle_lines(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, 2.0, Color::WHITE);
     }
 }

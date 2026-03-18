@@ -1,41 +1,53 @@
 // engine_core/src/assets/asset_manager.rs
-use crate::{assets::sprite::Sprite, game::game::Game, lighting::glow::Glow};
-use std::{collections::HashSet, path::{Path, PathBuf}, sync::LazyLock};
-use futures::executor::block_on;
-use macroquad::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use crate::animation::animation_clip::Animation;
-use crate::assets::sprite::SpriteId;
 use crate::storage::path_utils::assets_folder;
+use crate::assets::sprite::*;
+use crate::game::game::Game;
+use crate::tiles::tile::*;
+use crate::*;
+use serde::{Deserialize, Serialize};
+use futures::executor::block_on;
+use std::collections::HashSet;
+use std::collections::HashMap;
+use bishop::prelude::*;
+use log::info;
+use std::sync::LazyLock;
+use std::path::PathBuf;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct AssetManager {
     #[serde(skip)]
     textures: HashMap<SpriteId, Texture2D>,
-    /// Persistent map of all sprite is to their paths.
+    /// Persistent map of all sprite ids to their paths.
     pub sprite_id_to_path: HashMap<SpriteId, PathBuf>,
     #[serde(skip)]
     pub path_to_sprite_id: HashMap<PathBuf, SpriteId>,
     #[serde(skip)]
     /// Counter for sprite ids. Starts from 1.
     next_sprite_id: usize,
-    /// Name of the game for the file system to use.
-    pub game_name: String,
+    /// Maps `TileDefIds` to `TileDef`.
+    pub tile_defs: HashMap<TileDefId, TileDef>,
+    /// Counter for tile def ids. Starts from 1.
+    next_tile_def_id: usize,
+    /// Reference counts for sprite ids.
+    ref_counts: HashMap<SpriteId, usize>,
 }
 
 /// Empty guard texture.
-static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(|| Texture2D::empty());
+static EMPTY_TEXTURE: LazyLock<Texture2D> = LazyLock::new(empty_texture);
 
 impl AssetManager {
     /// Initializes a new asset manager.
-    pub async fn new(game_name: String) -> Self {
+    pub async fn new() -> Self {
         Self {
             textures: HashMap::new(),
             path_to_sprite_id: HashMap::new(),
             sprite_id_to_path: HashMap::new(),
             next_sprite_id: 1,
-            game_name,
+            tile_defs: HashMap::new(),
+            next_tile_def_id: 1,
+            ref_counts: HashMap::new(),
         }
     }
 
@@ -45,28 +57,38 @@ impl AssetManager {
         let path = rel_path.as_ref().to_path_buf();
 
         if path.to_string_lossy().trim().is_empty() {
-            // Guard against path being empty
+            onscreen_info!("init_texture: empty path, returning error");
             return Err("Empty texture path".into());
         }
 
         // Already loaded, reuse the same id
         if let Some(&id) = self.path_to_sprite_id.get(&path) {
+            onscreen_info!("init_texture: {:?} already loaded as {:?}", path, id);
             return Ok(id);
         }
 
         // Load the texture from the assets folder.
-        let texture = self.load_texture_from_game(&path).await?;
+        let texture = match self.load_texture_from_game(&path).await {
+            Ok(t) => t,
+            Err(e) => {
+                return Err(e);
+            }
+        };
 
-        // Set and calculate the next texture id
+        // Assign the next texture id
         let id = SpriteId(self.next_sprite_id);
-        self.restore_next_id();
 
         // Store everything
         self.textures.insert(id, texture);
         self.path_to_sprite_id.insert(path.clone(), id);
-        self.sprite_id_to_path.insert(id, path);
+        self.sprite_id_to_path.insert(id, path.clone());
 
-        return Ok(id);
+        // Calculate next available id AFTER inserting
+        self.restore_next_sprite_id();
+
+        info!("init_texture: loaded {:?} as {:?}, next_sprite_id now {}", path, id, self.next_sprite_id);
+
+        Ok(id)
     }
 
     /// Reloads a texture from its `SpriteId` and updates `path_to_sprite_id`.
@@ -119,7 +141,7 @@ impl AssetManager {
         match block_on(self.init_texture(p)) {
             Ok(id) => Some(id),
             Err(err) => {
-                info!("{}", err);
+                onscreen_error!("{}", err);
                 None
             }
         }
@@ -140,9 +162,14 @@ impl AssetManager {
     /// Initialize all assets for the game.
     pub async fn init_manager(game: &mut Game) {
         // Calculate the next id from the existing map
-        game.asset_manager.restore_next_id();
+        game.asset_manager.restore_next_sprite_id();
 
-        let _purged = Self::purge_unused_assets(game);
+        // Restore next tile def id
+        if let Some(max_id) = game.asset_manager.tile_defs.keys().map(|id| id.0).max() {
+            game.asset_manager.next_tile_def_id = max_id + 1;
+        } else {
+            game.asset_manager.next_tile_def_id = 1;
+        }
 
         let sprites: Vec<(SpriteId, PathBuf)> = game.asset_manager
             .sprite_id_to_path
@@ -150,25 +177,21 @@ impl AssetManager {
             .map(|(id, path)| (*id, path.clone()))
             .collect();
 
-        // Reload all textures
+        // Reload all textures first
         for (id, path) in sprites {
             let _ = game.asset_manager.reload_texture(&id, &path).await;
         }
 
-        for world in &mut game.worlds {
-            let world_ecs = &mut world.world_ecs;
-
-            // Load and initialize all animations
-            for animation in world_ecs.get_store_mut::<Animation>().data.values_mut() {
-                animation.refresh_sprite_cache(&mut game.asset_manager).await;
-                animation.init_runtime();
-            }
+        // Load and initialize all animations
+        for animation in game.ecs.get_store_mut::<Animation>().data.values_mut() {
+            animation.refresh_sprite_cache(&mut game.asset_manager).await;
+            animation.init_runtime();
         }
     }
 
     /// Returns a path normalized relative to the game's assets folder.
     pub fn normalize_path(&self, path: PathBuf) -> PathBuf {
-        let assets_dir = assets_folder(&self.game_name);
+        let assets_dir = assets_folder();
         path.strip_prefix(&assets_dir)
             .unwrap_or_else(|_| &path)
             .to_path_buf()
@@ -186,20 +209,85 @@ impl AssetManager {
         self.textures.get(&id).map(|tex| (tex.width(), tex.height()))
     }
 
+    /// Returns the number of loaded textures.
+    pub fn texture_count(&self) -> usize {
+        self.textures.len()
+    }
+
+    /// Returns the number of tile definitions.
+    pub fn tile_def_count(&self) -> usize {
+        self.tile_defs.len()
+    }
+
+    /// Increment reference count for a sprite.
+    pub fn increment_ref(&mut self, sprite_id: SpriteId) {
+        if sprite_id.0 == 0 {
+            return;
+        }
+        *self.ref_counts.entry(sprite_id).or_insert(0) += 1;
+    }
+
+    /// Decrement reference count for a sprite, cleaning up all structures when count reaches zero.
+    pub fn decrement_ref(&mut self, sprite_id: SpriteId) {
+        if sprite_id.0 == 0 {
+            return;
+        }
+
+        if let Some(count) = self.ref_counts.get_mut(&sprite_id) {
+            *count = count.saturating_sub(1);
+
+            if *count == 0 {
+                self.ref_counts.remove(&sprite_id);
+                self.textures.remove(&sprite_id);
+                if let Some(path) = self.sprite_id_to_path.remove(&sprite_id) {
+                    self.path_to_sprite_id.remove(&path);
+                }
+            }
+        }
+    }
+
+    /// Returns the reference count for a sprite.
+    pub fn get_ref_count(&self, sprite_id: SpriteId) -> usize {
+        self.ref_counts.get(&sprite_id).copied().unwrap_or(0)
+    }
+
+    /// Changes a sprite reference, handling decrement of old and increment of new.
+    pub fn change_sprite(&mut self, old_id: &mut SpriteId, new_id: SpriteId) {
+        if *old_id == new_id {
+            return;
+        }
+
+        self.decrement_ref(*old_id);
+        *old_id = new_id;
+        self.increment_ref(new_id);
+    }
+
+    /// Changes an optional sprite reference, handling decrement of old and increment of new.
+    pub fn change_sprite_option(&mut self, old_id: &mut Option<SpriteId>, new_id: Option<SpriteId>) {
+        if *old_id == new_id {
+            return;
+        }
+
+        if let Some(old) = *old_id {
+            self.decrement_ref(old);
+        }
+
+        if let Some(new) = new_id {
+            self.increment_ref(new);
+        }
+
+        *old_id = new_id;
+    }
+
     /// Loads a texture from the assets folder.
     async fn load_texture_from_game<P: AsRef<Path> + Copy>(
         &self,
         rel_path: P,
     ) -> Result<Texture2D, String> {
-        let full_path = assets_folder(&self.game_name).join(rel_path);
+        let full_path = assets_folder().join(rel_path);
 
         load_texture(full_path.to_string_lossy().as_ref())
             .await
-            .map(|texture| {
-                // Disable smoothing (needed for pixel art)
-                texture.set_filter(FilterMode::Nearest);
-                texture
-            })
             .map_err(|e| {
                 format!(
                     "Failed to load texture '{}': {}",
@@ -209,11 +297,20 @@ impl AssetManager {
             })
     }
 
-    /// Calculates the next sprite id 
-    pub fn restore_next_id(&mut self) {
-        let used: HashSet<_> = self.sprite_id_to_path
+    /// Calculates the next sprite id.
+    pub fn restore_next_sprite_id(&mut self) {
+        let used: HashSet<_> = self
+            .sprite_id_to_path
             .keys()
-            .map(|sid| sid.0)
+            .filter_map(|sid| {
+                let id = sid.0;
+                if id == 0 {
+                    // Skip sentinel value 0
+                    None
+                } else {
+                    Some(id)
+                }
+            })
             .collect();
 
         let mut candidate = 1usize;
@@ -226,73 +323,35 @@ impl AssetManager {
         self.next_sprite_id = candidate;
     }
 
-    /// Removes all sprite ids that are no longer referenced by any loaded world.
-    /// Returns the number of ids that were purged. 
-    /// Only call this on program init/close to protect the undo/redo stack.
-    pub fn purge_unused_assets(game: &mut Game) -> usize {
-        // Collect every SpriteId that is still in use
-        let mut used_ids: HashSet<SpriteId> = HashSet::new();
+    /// Inserts a TileDef and returns its id, incrementing sprite ref count.
+    pub fn insert_tile_def(&mut self, def: TileDef) -> TileDefId {
+        let id = TileDefId(self.next_tile_def_id);
+        self.next_tile_def_id += 1;
+        self.increment_ref(def.sprite_id);
+        self.tile_defs.insert(id, def);
+        id
+    }
 
-        // TODO purge all other assets from the game when they exist
+    /// Deletes a TileDef by id, decrementing sprite ref count.
+    pub fn delete_tile_def(&mut self, id: TileDefId) {
+        if let Some(def) = self.tile_defs.remove(&id) {
+            self.decrement_ref(def.sprite_id);
+        }
+    }
 
-        for world in &game.worlds {
-            if let Some(id) = world.meta.sprite_id {
-                used_ids.insert(id);
-            }
+    /// Updates a TileDef's sprite, handling ref counting for the change.
+    pub fn update_tile_def_sprite(&mut self, id: TileDefId, new_sprite_id: SpriteId) {
+        // Get the old sprite id first to avoid borrow issues
+        let old_sprite_id = self.tile_defs.get(&id).map(|def| def.sprite_id);
 
-            // Tiles
-            for tile_def in world.world_ecs.tile_defs.values() {
-                if tile_def.sprite_id.0 != 0 {
-                    used_ids.insert(tile_def.sprite_id);
-                }
-            }
-
-            // Sprite components
-            let sprite_store = world.world_ecs.get_store::<Sprite>();
-            for sprite in sprite_store.data.values() {
-                if sprite.sprite.0 != 0 {
-                    used_ids.insert(sprite.sprite);
-                }
-            }
-
-            // Glow components
-            let glow_store = world.world_ecs.get_store::<Glow>();
-            for glow in glow_store.data.values() {
-                if glow.sprite_id.0 != 0 {
-                    used_ids.insert(glow.sprite_id);
-                }
-            }
-
-            // Animation component caches (should be full after initialization)
-            let anim_store = world.world_ecs.get_store::<Animation>();
-            for anim in anim_store.data.values() {
-                for &id in anim.sprite_cache.values() {
-                    if id.0 != 0 {
-                        used_ids.insert(id);
-                    }
+        if let Some(old_id) = old_sprite_id {
+            if old_id != new_sprite_id {
+                self.decrement_ref(old_id);
+                self.increment_ref(new_sprite_id);
+                if let Some(def) = self.tile_defs.get_mut(&id) {
+                    def.sprite_id = new_sprite_id;
                 }
             }
         }
-
-        // Capture the current number of sprite ids
-        let previous = game.asset_manager.sprite_id_to_path.len();
-
-        // Closure which keeps entries that are still in use
-        let keep = |id: &SpriteId| used_ids.contains(id);
-
-        // Remove stale textures
-        game.asset_manager.textures.retain(|id, _| keep(id));
-
-        // Remove stale paths
-        game.asset_manager.path_to_sprite_id.retain(|_, id| keep(id));
-
-        // Remove stale ids
-        game.asset_manager.sprite_id_to_path.retain(|id, _| keep(id));
-
-        // Calculate the next free id
-        game.asset_manager.restore_next_id();
-
-        // Return the number of purged ids
-        previous - game.asset_manager.sprite_id_to_path.len()
     }
 }

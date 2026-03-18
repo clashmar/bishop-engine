@@ -1,0 +1,12 @@
+[package]
+name = "widgets"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["wgpu"]
+wgpu = ["bishop/wgpu"]
+
+[dependencies]
+bishop = { path = "../bishop", default-features = false }
+arboard = "3"

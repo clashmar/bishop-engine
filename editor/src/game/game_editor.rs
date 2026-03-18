@@ -1,32 +1,24 @@
 // editor/src/game/game_editor.rs
-use crate::push_command;
-use crate::commands::game_editor_commands::*;
-use std::cell::RefCell;
-use engine_core::assets::sprite::SpriteId;
-use engine_core::assets::asset_manager::AssetManager;
-use engine_core::ui::colors::HIGHLIGHT_GREEN;
-use engine_core::ui::prompt::*;
-use engine_core::ui::text::*;
-use engine_core::world::world::World;
-use crate::editor_camera_controller::EditorCameraController;
-use crate::gui::gui_constants::*;
-use crate::gui::inspector::modal::*;
-use crate::miniquad::CursorIcon;
-use crate::world::coord;
-use macroquad::miniquad::window::set_mouse_cursor;
-use once_cell::sync::Lazy;
-use engine_core::controls::controls::Controls;
-use crate::gui::menu_bar::*;
 use crate::gui::mode_selector::ModeSelector;
 use crate::editor_assets::editor_assets::*;
 use crate::gui::mode_selector::ModeInfo;
+use crate::gui::gui_constants::*;
+use crate::commands::game::*;
+use crate::gui::menu_bar::*;
+use crate::gui::prompts::*;
+use crate::gui::modal::*;
+use crate::app::SubEditor;
+use crate::app::EditorCameraController;
+use crate::push_command;
+use crate::world::coord;
 use engine_core::ui::widgets::*;
+use std::collections::HashMap;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use std::collections::HashMap;
-use macroquad::prelude::*;
-use engine_core::world::world::WorldId;
-use engine_core::game::game::Game;
+use once_cell::sync::Lazy;
+use bishop::prelude::*;
+use std::cell::RefCell;
 
 #[derive(Copy, Clone, PartialEq, EnumIter)]
 pub enum GameEditorMode {
@@ -53,7 +45,7 @@ impl ModeInfo for GameEditorMode {
             GameEditorMode::Delete => &DELETE_ICON,
         }
     }
-    fn shortcut(self) -> Option<fn() -> bool> {
+    fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
         match self {
             GameEditorMode::Select => Some(Controls::s),
             GameEditorMode::Edit => Some(Controls::e),
@@ -92,24 +84,25 @@ impl GameEditor {
             drag_start_position: None,
             world_widget_ids: HashMap::new(),
             selected_world_id: None,
-            modal: Modal::new(340.0, 140.0),
+            modal: Modal::default(),
         }
     }
 
     pub async fn update(
-        &mut self, 
+        &mut self,
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         game: &mut Game
     ) -> Option<WorldId> {
-        self.handle_mouse_cursor();
+        self.handle_mouse_cursor(ctx);
 
         match self.mode {
             GameEditorMode::Select => {
                 // Select world
-                if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
-                        if self.is_mouse_over_world(camera, world, texture) {
+                        if self.is_mouse_over_world(ctx, camera, world, texture) {
                             return Some(world.id);
                         }
                     }
@@ -119,17 +112,17 @@ impl GameEditor {
                 // Edit modal, handles its own UI and closing
                 if self.modal.is_open() {
                     // Do nothing
-                } else if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+                } else if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &mut game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
-                        if self.is_mouse_over_world(camera, world, texture) {
+                        if self.is_mouse_over_world(ctx, camera, world, texture) {
                             // Capture the world data
                             let world_id = world.id;
                             let current_name = world.name.clone();  
                             let current_sprite = world.meta.sprite_id.unwrap_or(SpriteId(0));
                             let widget_id = self.widget_id_for_world(world_id);
 
-                            self.modal = Modal::new(400.0, 300.0);
+                            self.modal = Modal::new(ctx, 400.0, 300.0);
                             
                             let mut prompt = WorldEditPrompt::new(
                                 world_id,
@@ -140,8 +133,8 @@ impl GameEditor {
                             );
 
                             let widgets: Vec<BoxedWidget> = vec![
-                                Box::new(move |asset_manager| {
-                                    if let Some(result) = prompt.draw(asset_manager) {
+                                Box::new(move |ctx, asset_manager| {
+                                    if let Some(result) = prompt.draw(ctx, asset_manager) {
                                         EDIT_WORLD_RESULT.with(|c| *c.borrow_mut() = Some(result));
                                     }
                                 })
@@ -154,49 +147,50 @@ impl GameEditor {
                 }
             }
             GameEditorMode::Move => {
-                if !self.is_mouse_over_ui() {
+                if !self.should_block_canvas(ctx) {
                     // Drag world
-                    self.handle_drag(camera, game);
+                    self.handle_drag(ctx, camera, game);
                 }
             },
             GameEditorMode::Delete => {
                 // Delete world
-                if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
+                if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &game.worlds {
                         let texture = self.resolve_world_texture(world, &mut game.asset_manager);
-                        if self.is_mouse_over_world(camera, world, texture) {
+                        if self.is_mouse_over_world(ctx, camera, world, texture) {
                             self.selected_world_id = Some(world.id);
-                            self.modal = Modal::open_confirm_modal(&DELETE_WORLD_RESULT);
+                            self.modal = Modal::open_confirm_modal(ctx, &DELETE_WORLD_RESULT);
                         }
                     }
                 }
             }
         }
 
-        self.handle_shortcuts();
+        self.handle_shortcuts(ctx);
 
         None
     }
 
     pub fn draw(
-        &mut self, 
-        camera: &mut Camera2D, 
+        &mut self,
+        ctx: &mut WgpuContext,
+        camera: &mut Camera2D,
         game: &mut Game,
-
     ) {
-        set_camera(camera);
-        clear_background(BLACK);
+        ctx.set_camera(camera);
+        ctx.clear_background(Color::BLACK);
 
         if self.modal.is_open() {
             self.active_rects.push(self.modal.rect)
         }
 
-        self.draw_worlds(camera, game);
-        self.draw_ui(camera, game);
+        self.draw_worlds(ctx, camera, game);
+        self.draw_ui(ctx, camera, game);
     }
 
     fn draw_worlds(
         &mut self, 
+        ctx: &mut WgpuContext,
         camera: &Camera2D,
         game: &mut Game,
     ) {
@@ -205,11 +199,11 @@ impl GameEditor {
             let texture = self.resolve_world_texture(world, &mut game.asset_manager);
 
             // Hover tint
-            let tint = if self.is_mouse_over_world(camera, world, texture) 
-            && !self.is_mouse_over_ui() && self.dragged_world.is_none() {
+            let tint = if self.is_mouse_over_world(ctx, camera, world, texture) 
+            && !self.should_block_canvas(ctx) && self.dragged_world.is_none() {
                 match self.mode {
                     GameEditorMode::Delete => {
-                        RED
+                        Color::RED
                     }
                     _ => {
                         HIGHLIGHT_GREEN
@@ -217,11 +211,11 @@ impl GameEditor {
                 }
                 
             } else {
-                WHITE
+                Color::WHITE
             }; 
 
             // Default is a circle
-            draw_texture(
+            ctx.draw_texture(
                 texture,
                 world.meta.position.x,
                 world.meta.position.y,
@@ -231,7 +225,7 @@ impl GameEditor {
             // Display name
             const NAME_HEIGHT: f32 = 24.0;
             let center = world.meta.position.x + (texture.width() / 2.);
-            let (x, width) = center_text_field(center, &world.name);
+            let (x, width) = center_text_field(ctx, center, &world.name);
 
             let name_rect = Rect::new(
                 x,
@@ -240,22 +234,28 @@ impl GameEditor {
                 NAME_HEIGHT,
             );
 
-            draw_input_field_text(&world.name, name_rect);
+            draw_input_field_text(ctx, &world.name, name_rect);
         }
     }
 
-    fn handle_drag(&mut self, camera: &Camera2D, game: &mut Game) {
+    fn handle_drag(
+        &mut self, 
+        ctx: &WgpuContext,
+        camera: &Camera2D, 
+        game: &mut Game
+    ) {
         // Start dragging
-        if !self.dragging && is_mouse_button_pressed(MouseButton::Left) {
+        if !self.dragging && ctx.is_mouse_button_pressed(MouseButton::Left) {
             for world in &game.worlds {
                 let texture = self.resolve_world_texture(world, &mut game.asset_manager);
-                if self.is_mouse_over_world(camera, world, texture) {
+                if self.is_mouse_over_world(ctx, camera, world, texture) {
                     self.dragging = true;
                     self.dragged_world = Some(world.id);
 
-                    let mouse_world = coord::mouse_world_pos(camera);
-                    self.drag_offset = world.meta.position - mouse_world;
-                    self.drag_start_position = Some(world.meta.position);
+                    let mouse_world = coord::mouse_world_pos(ctx, camera);
+                    let world_pos = world.meta.position.into();
+                    self.drag_offset = world_pos - mouse_world;
+                    self.drag_start_position = Some(world_pos);
                     break;
                 }
             }
@@ -264,16 +264,16 @@ impl GameEditor {
         // While dragging
         if self.dragging {
             if let Some(id) = self.dragged_world {
-                if is_mouse_button_down(MouseButton::Left) {
-                    let mouse_world = coord::mouse_world_pos(camera);
+                if ctx.is_mouse_button_down(MouseButton::Left) {
+                    let mouse_world = coord::mouse_world_pos(ctx, camera);
 
                     if let Some(world) = game.worlds.iter_mut().find(|w| w.id == id) {
-                        world.meta.position = mouse_world + self.drag_offset;
+                        world.meta.position = (mouse_world + self.drag_offset).into();
                     }
                 }
 
                 // Finish on release
-                if is_mouse_button_released(MouseButton::Left) {
+                if ctx.is_mouse_button_released(MouseButton::Left) {
                     if let (Some(start_pos), Some(id)) =
                         (self.drag_start_position.take(), self.dragged_world.take())
                     {
@@ -297,22 +297,28 @@ impl GameEditor {
         }
     }
 
-    fn draw_ui(&mut self, camera: &mut Camera2D, game: &mut Game) {
-        set_default_camera();
+    fn draw_ui(
+        &mut self, 
+        ctx: &mut WgpuContext, 
+        camera: &mut Camera2D, 
+        game: &mut Game
+    ) {
+        ctx.set_default_camera();
 
         self.active_rects.clear();
-        self.register_rect(draw_top_panel_full());
+        self.register_rect(draw_top_panel_full(ctx));
 
-        if self.mode_selector.draw().1 {
+        if self.mode_selector.draw(ctx).1 {
             self.mode = self.mode_selector.current;
         }
+        self.mode_selector.draw_tooltips(ctx);
 
-        self.draw_menu_buttons(camera, game);
+        self.draw_menu_buttons(ctx, camera, game);
 
         // Draw modal last
         if self.modal.is_open() {
             // Pass the asset manager so any widget that needs assets can use it
-            let clicked_outside = self.modal.draw(&mut game.asset_manager);
+            let clicked_outside = self.modal.draw(ctx, &mut game.asset_manager);
             if clicked_outside {
                 self.modal.close();
             }
@@ -372,28 +378,33 @@ impl GameEditor {
         }
     }
 
-    fn draw_menu_buttons(&mut self, camera: &mut Camera2D, game: &mut Game, ) {
+    fn draw_menu_buttons(
+        &mut self, 
+        ctx: &mut WgpuContext,
+        camera: &mut Camera2D, 
+        game: &mut Game
+    ) {
         const BTN_MARGIN: f32 = 10.0;
 
         let create_label = "New World";
-        let txt_create = measure_text_ui(create_label, HEADER_FONT_SIZE_20, 1.0);
+        let txt_create = measure_text(ctx, create_label, HEADER_FONT_SIZE_20);
         let create_btn = Rect::new(
-            screen_width() - txt_create.width - BTN_MARGIN - PADDING,
+            ctx.screen_width() - txt_create.width - BTN_MARGIN - PADDING,
             BTN_MARGIN,
             txt_create.width + PADDING,
             BTN_HEIGHT,
         );
 
-        if menu_button(create_btn, create_label, false) {
+        if menu_button(ctx, create_btn, create_label, false) {
             push_command(Box::new(CreateWorldCmd::new()));
-            self.init_camera(camera, game);
+            self.init_camera(ctx, camera, game);
         }
     }
 
-    fn handle_shortcuts(&mut self) {
+    fn handle_shortcuts(&mut self, ctx: &WgpuContext,) {
         for mode in GameEditorMode::iter() {
-            if let Some(is_pressed) = mode.shortcut() {
-                if is_pressed() && !input_is_focused() {
+            if let Some(shortcut) = mode.shortcut() {
+                if shortcut(ctx) && !input_is_focused() {
                     self.mode = mode;
                     self.mode_selector.current = mode;
                     break;
@@ -412,29 +423,22 @@ impl GameEditor {
         rect
     }
 
-    fn is_mouse_over_ui(&self) -> bool {
-        let mouse_screen: Vec2 = mouse_position().into();
-        self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || is_dropdown_open()
-        || is_modal_open()
-    }
-
-    fn handle_mouse_cursor(&self) {
-        if self.is_mouse_over_ui() {
-            set_mouse_cursor(CursorIcon::Default);
+    fn handle_mouse_cursor(&self, ctx: &mut WgpuContext) {
+        if self.should_block_canvas(ctx) {
+            ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
                 GameEditorMode::Select => {
-                    set_mouse_cursor(CursorIcon::Pointer);
+                    ctx.set_cursor_icon(CursorIcon::Pointer);
                 }
                 GameEditorMode::Edit => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
                 GameEditorMode::Move => {
-                    set_mouse_cursor(CursorIcon::Move);
+                    ctx.set_cursor_icon(CursorIcon::Move);
                 }
                 GameEditorMode::Delete => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
         }
@@ -442,11 +446,12 @@ impl GameEditor {
 
     fn is_mouse_over_world(
         &self,
+        ctx: &WgpuContext,
         camera: &Camera2D,
         world: &World, 
         world_texture: &Texture2D
     ) -> bool {
-        let world_mouse = coord::mouse_world_pos(camera);
+        let world_mouse = coord::mouse_world_pos(ctx, camera);
         self.world_texture_bounds(world, world_texture).contains(world_mouse)
     }
 
@@ -473,13 +478,21 @@ impl GameEditor {
     }
 
     /// Sets the default camera for the game editor.
-    pub fn init_camera(&self, camera: &mut Camera2D, game: &mut Game) {
+    pub fn init_camera(
+        &self, 
+        ctx: &WgpuContext,
+        camera: &mut Camera2D, game: &mut Game) {
         let (min, max) = self.world_bounds(game);
         let center = (min + max) * 0.5;
         let size = max - min;
 
-        // Get the zoom for the whole area 
-        let zoom = EditorCameraController::zoom_for_size(size, 2.0);
+        // Get the zoom for the whole area
+        let zoom = EditorCameraController::zoom_for_size(
+            ctx,
+            size, 
+            2.0, 
+            game.current_world().grid_size
+        );
 
         // Apply the results
         camera.target = center;
@@ -508,6 +521,12 @@ impl GameEditor {
         }
 
         (min, max)
+    }
+}
+
+impl SubEditor for GameEditor {
+    fn active_rects(&self) -> &[Rect] {
+        &self.active_rects
     }
 }
 

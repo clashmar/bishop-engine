@@ -1,0 +1,94 @@
+(
+    id: "start",
+    background: Dimmed(0.7),
+    elements: [
+        /*[0]*/ (
+            name: "",
+            kind: LayoutGroup((
+                layout: (
+                    direction: Vertical,
+                    spacing: 16.0,
+                    padding: (
+                        top: 32.0,
+                        right: 32.0,
+                        bottom: 32.0,
+                        left: 32.0,
+                    ),
+                    alignment: (
+                        horizontal: Center,
+                        vertical: Middle,
+                    ),
+                    item_width: 200.0,
+                    item_height: 40.0,
+                ),
+                children: [
+                    /*[0]*/ (
+                        element: (
+                            name: "",
+                            kind: Button((
+                                text_key: "Resume",
+                                action: CloseMenu,
+                                font_size: 20.0,
+                                nav_up: None,
+                                nav_down: None,
+                                nav_left: None,
+                                nav_right: None,
+                            )),
+                            rect: (
+                                x: 0.097308934,
+                                y: 0.13311833,
+                                w: 0.1,
+                                h: 0.037,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
+                    /*[1]*/ (
+                        element: (
+                            name: "",
+                            kind: Label((
+                                text_key: "Pause",
+                                font_size: 24.0,
+                                color: (
+                                    r: 1.0,
+                                    g: 1.0,
+                                    b: 1.0,
+                                    a: 1.0,
+                                ),
+                                alignment: Center,
+                            )),
+                            rect: (
+                                x: 0.12533534,
+                                y: 0.0869019,
+                                w: 0.1,
+                                h: 0.03,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
+                ],
+                background: None,
+                nav_up: None,
+                nav_down: None,
+                nav_left: None,
+                nav_right: None,
+            )),
+            rect: (
+                x: 0.43058044,
+                y: 0.41692606,
+                w: 0.13931954,
+                h: 0.16614789,
+            ),
+            enabled: true,
+            visible: true,
+            z_order: 0,
+        ),
+    ],
+    mode: Paused,
+)

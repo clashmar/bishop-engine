@@ -1,27 +1,22 @@
 // engine_core/src/physics/collider_system.rs
-use crate::{
-    animation::animation_system::CurrentFrame, 
-    assets::{
-        asset_manager::AssetManager, 
-        sprite::{Sprite, SpriteId
-        }
-    }, 
-    ecs::{
-        component::{Collider, ComponentStore}, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }
-};
+use crate::animation::animation_system::CurrentFrame;
+use crate::assets::asset_manager::AssetManager;
+use crate::ecs::component::ComponentStore;
+use crate::ecs::component::Collider;
+use crate::assets::sprite::SpriteId;
+use crate::assets::sprite::Sprite;
+use crate::ecs::entity::Entity;
+use crate::ecs::ecs::Ecs;
 
 /// Set the collider for every entity that has a sprite and an unset collider
-pub fn update_colliders_from_sprites(world_ecs: &mut WorldEcs, assets: &mut AssetManager) {
+pub fn update_colliders_from_sprites(ecs: &mut Ecs, assets: &mut AssetManager) {
     let mut pending: Vec<(Entity, Collider)> = Vec::new();
 
     {
         // Immutable access to the two stores.
-        let sprite_store = world_ecs.get_store::<Sprite>();
-        let current_frame_store = world_ecs.get_store::<CurrentFrame>();
-        let collider_store = world_ecs.get_store::<Collider>();
+        let sprite_store = ecs.get_store::<Sprite>();
+        let current_frame_store = ecs.get_store::<CurrentFrame>();
+        let collider_store = ecs.get_store::<Collider>();
 
         // Only update entities with colliders
         for (entity, collider) in collider_store.data.iter() {
@@ -53,7 +48,7 @@ pub fn update_colliders_from_sprites(world_ecs: &mut WorldEcs, assets: &mut Asse
         return;
     }
 
-    let collider_store = world_ecs.get_store_mut::<Collider>();
+    let collider_store = ecs.get_store_mut::<Collider>();
 
     for (entity, col) in pending {
         if let Some(collider) = collider_store.get_mut(entity) {

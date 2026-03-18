@@ -1,3 +1,5 @@
 pub mod world;
 pub mod room;
-pub mod transition_manager;
+
+pub use world::*;
+pub use room::*;
