@@ -1,14 +1,14 @@
 // editor/src/playtest/room_playtest.rs
 use crate::editor_assets::editor_assets::*;
 use crate::storage::editor_storage::*;
-use std::io::{Error, ErrorKind};
-use std::io;
-use std::process::Command;
 use std::{env, fs, io::Write, path::PathBuf};
 use engine_core::game::game::Game;
 use engine_core::world::room::Room;
+use std::io::{Error, ErrorKind};
 use ron::ser::to_string_pretty;
 use ron::ser::PrettyConfig;
+use std::process::Command;
+use std::io;
 
 /// Serialise everything the play‑test binary needs and return the
 /// path to the temporary file.
@@ -16,14 +16,24 @@ pub fn write_playtest_payload(
     room: &Room,
     game: &Game,
 ) -> io::Result<PathBuf> {
+    // Clone game via serialization
+    let game_ron = ron::to_string(game)
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not serialize game: {e}")))?;
+
+    let mut game_copy: Game = ron::from_str(&game_ron)
+        .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not deserialize game: {e}")))?;
+
+    // Set player spawn position from proxy before purging
+    game_copy.ecs.set_player_spawn_from_proxy(room.id);
+    game_copy.ecs.purge_proxies();
 
     #[derive(serde::Serialize)]
     struct Payload<'a> {
         room: &'a Room,
         game: &'a Game,
     }
-    
-    let payload = Payload { room, game };
+
+    let payload = Payload { room, game: &game_copy };
 
     let ron = to_string_pretty(&payload, PrettyConfig::default())
         .map_err(|e| io::Error::new(ErrorKind::Other, format!("Could not serialize payload: {e}")))?;
@@ -60,20 +70,21 @@ pub async fn resolve_playtest_binary() -> io::Result<PathBuf> {
         }
     }
 
-    // Dev mode
+    // Dev mode - build in release for consistent timing
     let mut exe_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     exe_path.pop();
     exe_path.push("target");
-    exe_path.push("debug");
+    exe_path.push("release");
     exe_path.push(exe_name);
 
-    // Run `cargo build -p game-playtest`
+    // Run `cargo build -p game-playtest --release`
     let mut cmd = Command::new("cargo");
     cmd.arg("build")
         .arg("-p")
         .arg("game")
         .arg("--bin")
-        .arg("game-playtest");
+        .arg("game-playtest")
+        .arg("--release");
 
     // Wait for the build to complete
     let status = cmd.status()?;

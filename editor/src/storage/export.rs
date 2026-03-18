@@ -1,22 +1,20 @@
 // editor\src\storage\export.rs
 #![allow(unused)]
-use crate::editor_assets::editor_assets::GAME_BIN;
-use engine_core::constants::CONTENTS_FOLDER;
-use engine_core::constants::RESOURCES_FOLDER;
-use engine_core::*;
-use std::io::Write;
-use std::path::PathBuf;
-use winres_edit::Id;
-use winres_edit::Resources;
-use winres_edit::resource_type;
-use std::io::Error;
-use std::io::ErrorKind;
+use crate::editor_assets::editor_assets::*;
 use engine_core::storage::path_utils::*;
 use engine_core::game::game::*;
-use macroquad::prelude::*;
+use winres_edit::resource_type;
+use engine_core::constants::*;
+use winres_edit::Resources;
+use bishop::prelude::*;
+use std::path::PathBuf;
+use std::io::ErrorKind;
+use winres_edit::Id;
+use engine_core::*;
+use std::io::Write;
+use std::io::Error;
 use std::io;
 use std::fs;
-use crate::editor_assets::editor_assets::GAME_EXE;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
@@ -98,12 +96,33 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     }
 
     // Everything else goes in /Resources to mirror macOS structure
-    let src_resources = resources_folder(&game.name);
+    // Skip source files that aren't needed for the final game
+    let src_resources = resources_folder_current();
     let target_resources = target_package.join(RESOURCES_FOLDER);
-    copy_dir_recursive(&src_resources, &target_resources)?;
+    let skip_extensions = &["json", "aseprite", "ase"];
+    copy_dir_filtered(&src_resources, &target_resources, skip_extensions)?;
+
+    // Overwrite game.ron purging player proxies
+    let game_ron = ron::to_string(game)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    let mut game_copy: Game = ron::from_str(&game_ron)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+
+    // Set player spawn position from proxy before purging
+    if let Some(start_room_id) = game_copy.current_world().starting_room_id {
+        game_copy.ecs.set_player_spawn_from_proxy(start_room_id);
+    }
+    game_copy.ecs.purge_proxies();
+
+    let pretty = ron::ser::PrettyConfig::new()
+        .separate_tuple_members(true)
+        .enumerate_arrays(true);
+    let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    fs::write(target_resources.join(GAME_RON), ron_string)?;
 
     // TODO: Write manifest for game
-    
+
     // Tell the guard to keep the folder
     guard.success();
     Ok(target_package)
@@ -139,24 +158,45 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
     permissions.set_mode(0o755);
     fs::set_permissions(&bin_path, permissions)?;
 
-    // Copy /Resources
+    // Copy /Resources, skipping source files not needed for the final game
     onscreen_debug!("Copying /Resources.");
-    let src_resources = resources_folder(&game.name);
+    let src_resources = resources_folder_current();
     let target_resources = bundle_path
         .join(CONTENTS_FOLDER)
         .join(RESOURCES_FOLDER);
 
-    copy_dir_recursive(&src_resources, &target_resources)?;
+    let skip_extensions = &["json", "aseprite", "ase"];
+    copy_dir_filtered(&src_resources, &target_resources, skip_extensions)?;
+
+    // Overwrite game.ron purging player proxies
+    let game_ron = ron::to_string(game)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    let mut game_copy: Game = ron::from_str(&game_ron)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+
+    // Set player spawn position from proxy before purging
+    if let Some(start_room_id) = game_copy.current_world().starting_room_id {
+        game_copy.ecs.set_player_spawn_from_proxy(start_room_id);
+    }
+    game_copy.ecs.purge_proxies();
+
+    let pretty = ron::ser::PrettyConfig::new()
+        .separate_tuple_members(true)
+        .enumerate_arrays(true);
+    let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
+        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+    fs::write(target_resources.join(GAME_RON), ron_string)?;
 
     // Copy Icon.icns
     onscreen_debug!("Copying Icon.icns.");
-    let src_icns = mac_os_folder(&game.name)
-        .join("Icon.icns");
+    let src_icns = mac_os_folder().join("Icon.icns");
+    let target_icns = target_resources.join("Icon.icns");
 
-    let target_icns = target_resources
-        .join("Icon.icns");
-
-    fs::copy(src_icns, target_icns)?;
+    if src_icns.exists() {
+        fs::copy(&src_icns, &target_icns)?;
+    } else {
+        onscreen_debug!("Icon.icns not found, skipping.");
+    }
 
     // Copy Info.plist
     if let Some(bundle_assets) = bundle_assets_folder() {
@@ -178,7 +218,7 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 fn update_exe(exe_path: &PathBuf, game: &Game) -> Result<(), winres_edit::Error> {
     let resources = Resources::new(&exe_path);
 
-    let icon_path = windows_folder(&game.name).join("Icon.ico");
+    let icon_path = windows_folder().join("Icon.ico");
 
     // TODO: Maybe 1 PNG which the program can handle 
     // all together using Image or .ico crate and icns

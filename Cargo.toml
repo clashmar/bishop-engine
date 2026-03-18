@@ -1,8 +1,12 @@
 [workspace]
 resolver = "3"
 members = [
+    "bishop",
     "engine_core",
     "game",
     "editor",
     "reflect_derive",
+    "lua_api_gen",
+    "ecs_component",
+    "widgets",
     ]

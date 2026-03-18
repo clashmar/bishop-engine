@@ -1,18 +1,7 @@
 // editor/src/gui/inspector/camera_module.rs
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
-use engine_core::{camera::game_camera::*, ui::text::*};
-use engine_core::ecs::module::CollapsibleModule;
-use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use macroquad::prelude::*;
-use engine_core::ui::widgets::*;
-use engine_core::{
-    assets::asset_manager::AssetManager, 
-    ecs::{
-        entity::Entity, 
-        module::InspectorModule, 
-        world_ecs::WorldEcs
-    }
-};
+use bishop::prelude::*;
 
 pub const ROOM_CAMERA_MODULE_TITLE: &str = "Room Camera";
 
@@ -25,18 +14,25 @@ pub struct RoomCameraModule {
 }
 
 impl InspectorModule for RoomCameraModule {
-    fn visible(&self, world_ecs: &WorldEcs, entity: Entity) -> bool {
-        world_ecs.get::<RoomCamera>(entity).is_some()
+    fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
+        ecs.get::<RoomCamera>(entity).is_some()
     }
 
     fn draw(
         &mut self,
+        ctx: &mut WgpuContext,
+        blocked: bool,
         rect: Rect,
-        _asset_manager: &mut AssetManager,
-        world_ecs: &mut WorldEcs,
+        game_ctx: &mut GameCtxMut,
         entity: Entity,
     ) {
-        let cam = world_ecs
+        let grid_size = game_ctx.cur_world.grid_size;
+        let ecs = &mut game_ctx.ecs;
+
+        // Track pivot change to apply after cam borrow ends
+        let mut new_pivot: Option<Pivot> = None;
+
+        let cam = ecs
             .get_mut::<RoomCamera>(entity)
             .expect("Camera must exist");
 
@@ -44,8 +40,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Layout dropdown now but draw at the end
         let mode_label = "Zoom Mode: ";
-        let label_width = measure_text_ui(mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
-        draw_text_ui(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
+        let label_width = measure_text(ctx, mode_label, FIELD_TEXT_SIZE_16).width;
+        ctx.draw_text(mode_label, rect.x, y + 20.0, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
         let mode_rect = Rect::new(rect.x + label_width + WIDGET_SPACING, y, rect.w - label_width - WIDGET_SPACING, 30.0);
         let current_mode = cam.zoom_mode;
@@ -56,25 +52,26 @@ impl InspectorModule for RoomCameraModule {
         // Advance y for the next position
         y += mode_rect.h + mode_rect.h + WIDGET_SPACING;
 
-        match cam.zoom_mode   {
+        match cam.zoom_mode {
             ZoomMode::Step => {
                 // Fields to change the global virtual screen dimensions
                 let scale_rect = Rect::new(
                     rect.x,
                     y,
                     rect.w,
-                    40.0,               
+                    40.0,
                 );
 
-                const STEPS: &[f32; 4] = &[0.5_f32, 1.0, 2.0, 3.0];
-                
-                let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width());
-                let new_scalar = gui_stepper(scale_rect, "Scale", STEPS, current_scalar);
+                const STEPS: &[f32; 5] = &[0.5_f32, 1.0, 2.0, 3.0, 4.0];
 
-                if (new_scalar - current_scalar).abs() > f32::EPSILON {
-                    let width = world_virtual_width() * new_scalar;
-                    let height = world_virtual_height() * new_scalar;
+                let current_scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
+                let new_scalar = gui_stepper(ctx, scale_rect, "Scale", STEPS, current_scalar, blocked);
+
+                if !blocked && (new_scalar - current_scalar).abs() > f32::EPSILON {
+                    let width = world_virtual_width(grid_size) * new_scalar;
+                    let height = world_virtual_height(grid_size) * new_scalar;
                     cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
+                    new_pivot = Some(pivot_for_zoom_scalar(new_scalar));
                 }
             }
             ZoomMode::Free => {
@@ -87,8 +84,11 @@ impl InspectorModule for RoomCameraModule {
                 );
 
                 self.draw_freeform_mode(
+                    ctx,
                     zoom_rect,
                     cam,
+                    blocked,
+                    grid_size,
                 );
             }
         }
@@ -98,8 +98,8 @@ impl InspectorModule for RoomCameraModule {
 
         // Camera mode
         let cam_mode_label = "Camera Mode: ";
-        let cam_label_width = measure_text_ui(cam_mode_label, FIELD_TEXT_SIZE_16, 1.0).width;
-        draw_text_ui(
+        let cam_label_width = measure_text(ctx, cam_mode_label, FIELD_TEXT_SIZE_16).width;
+        ctx.draw_text(
             cam_mode_label,
             rect.x,
             y + 20.0,
@@ -124,56 +124,63 @@ impl InspectorModule for RoomCameraModule {
             CameraMode::Follow(FollowRestriction::ClampX),
         ];
 
-        // Advance y for the next position
-        // y += cam_mode_rect.h + SPACING;
-
         // Render the dropdowns in reverse order
-        if let Some(new_cam_mode) = gui_dropdown(
+        if let Some(new_cam_mode) = Dropdown::new(
             self.cam_mode_id,
             cam_mode_rect,
             &current_cam_label,
             &cam_mode_options,
             |mode| mode.ui_label(),
-        ) {
+        ).blocked(blocked).show(ctx) {
             if new_cam_mode != current_cam_mode {
                 cam.camera_mode = new_cam_mode;
             }
         }
-        
-        if let Some(new_mode) = gui_dropdown(
-            self.mode_id, 
-            mode_rect, 
-            &current_label, 
+
+        if let Some(new_mode) = Dropdown::new(
+            self.mode_id,
+            mode_rect,
+            &current_label,
             &zoom_options,
             |mode| mode.ui_label(),
-        ) {
+        ).blocked(blocked).show(ctx) {
             if new_mode != current_mode {
                 cam.zoom_mode = new_mode;
+            }
+        }
+
+        // Apply deferred pivot change
+        if let Some(pivot) = new_pivot {
+            if let Some(transform) = ecs.get_mut::<Transform>(entity) {
+                transform.pivot = pivot;
             }
         }
     }
 }
 
 impl RoomCameraModule {
-    // Draw a single numeric field that edits the scalar zoom.
+    /// Draw a single numeric field that edits the scalar zoom.
     fn draw_freeform_mode(
         &self,
+        ctx: &mut WgpuContext,
         rect: Rect,
         cam: &mut RoomCamera,
+        blocked: bool,
+        grid_size: f32,
     ) {
-        let scalar = 2.0 / (cam.zoom.x * world_virtual_width());
+        let scalar = 2.0 / (cam.zoom.x * world_virtual_width(grid_size));
 
         const MIN: f32 = 0.5;
-        const MAX: f32 = 3.0;
+        const MAX: f32 = 4.0;
         let scalar = scalar.clamp(MIN, MAX);
 
         // Label
         let label = "Scale: ";
-        let label_width = measure_text_ui(label, FIELD_TEXT_SIZE_16, 1.0).width + 1.0;
-        let num_width = measure_text_ui("0.00", FIELD_TEXT_SIZE_16, 1.0).width;
-        draw_text_ui(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
+        let label_width = measure_text(ctx, label, FIELD_TEXT_SIZE_16).width + 1.0;
+        let num_width = measure_text(ctx, "0.00", FIELD_TEXT_SIZE_16).width;
+        ctx.draw_text(label, rect.x, rect.y, FIELD_TEXT_SIZE_16, FIELD_TEXT_COLOR);
 
-        // Numeric field 
+        // Numeric field
         let num_rect = Rect::new(
             rect.x + label_width,
             rect.y - FIELD_TEXT_SIZE_16,
@@ -190,34 +197,33 @@ impl RoomCameraModule {
         );
 
         // Numeric field
-        let typed = gui_input_number_f32(
-            self.zoom_id,
-            num_rect,
-            round_to_dp(scalar, 2),
-        );
+        let typed = NumberInput::new(self.zoom_id, num_rect, round_to_dp(scalar, 2))
+            .blocked(blocked)
+            .show(ctx);
 
         // Slider
-        let (slider_val, slider_changed) = gui_slider(
+        let (slider_val, slider_state) = gui_slider(
+            ctx,
             self.slider_id,
             slider_rect,
             MIN, // min
             MAX, // max
             round_to_dp(scalar, 2),
-        );      
+        );
 
         // Resolve the new scalar
         let mut new_scalar = scalar;
         if (typed - scalar).abs() > f32::EPSILON {
             new_scalar = round_to_dp(typed, 2).clamp(MIN, MAX);
         }
-        if slider_changed {
+        if !matches!(slider_state, SliderState::Unchanged) {
             new_scalar = round_to_dp(slider_val, 2).clamp(MIN, MAX);
         }
-        
+
         // Write back if anything changed
         if (new_scalar - scalar).abs() > f32::EPSILON {
-            let width = world_virtual_width() * new_scalar;
-            let height = world_virtual_height() * new_scalar;
+            let width = world_virtual_width(grid_size) * new_scalar;
+            let height = world_virtual_height(grid_size) * new_scalar;
             cam.zoom = vec2(1.0 / width * 2.0, 1.0 / height * 2.0);
         }
     }
@@ -249,4 +255,15 @@ fn round_to_dp(v: f32, dp: u32) -> f32 {
         r = r.round();
     }
     r
+}
+
+/// Returns the optimal pivot for camera placement at a given zoom scalar.
+fn pivot_for_zoom_scalar(scalar: f32) -> Pivot {
+    if scalar < 1.0 {
+        Pivot::Center
+    } else if scalar.round() % 2.0 == 0.0 {
+        Pivot::TopLeft
+    } else {
+        Pivot::CenterLeft
+    }
 }

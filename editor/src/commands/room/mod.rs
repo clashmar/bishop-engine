@@ -1,0 +1,24 @@
+// editor/src/commands/room/mod.rs
+mod alt_drag_copy_cmd;
+mod batch_delete_entities_cmd;
+mod batch_move_entities_cmd;
+mod delete_entity_cmd;
+mod duplicate_entities_cmd;
+mod paste_entity_cmd;
+mod move_entity_cmd;
+mod copy_entity;
+mod set_parent_cmd;
+mod remove_parent_cmd;
+mod resize_tilemap_cmd;
+
+pub use alt_drag_copy_cmd::*;
+pub use batch_delete_entities_cmd::*;
+pub use batch_move_entities_cmd::*;
+pub use delete_entity_cmd::*;
+pub use duplicate_entities_cmd::*;
+pub use paste_entity_cmd::*;
+pub use move_entity_cmd::*;
+pub use copy_entity::*;
+pub use set_parent_cmd::*;
+pub use remove_parent_cmd::*;
+pub use resize_tilemap_cmd::*;

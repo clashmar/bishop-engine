@@ -1,33 +1,28 @@
-use crate::gui::inspector::modal::is_modal_open;
 // editor/src/world/world_editor.rs
-use crate::miniquad::CursorIcon;
-use macroquad::miniquad::window::set_mouse_cursor;
-use crate::gui::menu_bar::*;
-use crate::gui::mode_selector::*;
-use engine_core::controls::controls::Controls;
+use crate::app::SubEditor;
+use crate::app::EditorCameraController;
+use crate::canvas::grid_shader::GridRenderer;
 use crate::editor_assets::editor_assets::*;
-use crate::{editor_camera_controller::{EditorCameraController}, canvas::grid};
-use crate::world::coord;
-use once_cell::sync::Lazy;
-use engine_core::game::game::Game;
-use engine_core::world::world::*;
-use engine_core::global::{self, *};
-use engine_core::world::room::*;
-use engine_core::ui::widgets::*;
-use macroquad::prelude::*;
+use crate::gui::mode_selector::*;
+use crate::gui::menu_bar::*;
+use crate::world::coord::*;
+use crate::canvas::grid;
+use engine_core::prelude::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use once_cell::sync::Lazy;
+use bishop::prelude::*;
 
-pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.01;
+pub const LINE_THICKNESS_MULTIPLIER: f32 = 0.005;
 const HIGHLIGHT_COLOR: Color = Color::new(0.0, 1.0, 0.0, 0.5);
 const HIGHLIGHT_ERROR_COLOR: Color = Color::new(1.0, 0.0, 0.0, 0.5);
-const ROOM_LINE_INSET: f32 = 0.5;
-const HOVER_LINE_THICKNESS: f32 = 0.02;
+const ROOM_LINE_INSET: f32 = 1.0;
+const HOVER_LINE_THICKNESS: f32 = 0.01;
 
 #[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum WorldEditorMode {
     SelectRoom,
-    CreateRoom,
+    NewRoom,
     DeleteRoom,
 }
 
@@ -35,21 +30,21 @@ impl ModeInfo for WorldEditorMode {
     fn label(&self) -> &'static str {
         match self {
             WorldEditorMode::SelectRoom => "Select: S",
-            WorldEditorMode::CreateRoom => "Create Room: C",
+            WorldEditorMode::NewRoom => "New Room: N",
             WorldEditorMode::DeleteRoom => "Delete Room: D",
         }
     }
     fn icon(&self) -> &'static Texture2D {
         match self {
             WorldEditorMode::SelectRoom => &SELECT_ICON,
-            WorldEditorMode::CreateRoom => &CREATE_ICON,
+            WorldEditorMode::NewRoom => &CREATE_ICON,
             WorldEditorMode::DeleteRoom => &DELETE_ICON,
         }
     }
-    fn shortcut(self) -> Option<fn() -> bool> {
+    fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
         match self {
             WorldEditorMode::SelectRoom => Some(Controls::s),
-            WorldEditorMode::CreateRoom => Some(Controls::c),
+            WorldEditorMode::NewRoom => Some(Controls::n),
             WorldEditorMode::DeleteRoom => Some(Controls::d),
         }
     }
@@ -61,8 +56,7 @@ pub struct WorldEditor {
     active_rects: Vec<Rect>,
     show_grid: bool,
     placing_start: Option<Vec2>,
-    placing_end: Option<Vec2>, 
-    tile_size_id: WidgetId,
+    placing_end: Option<Vec2>,
 }
 
 impl WorldEditor {
@@ -70,7 +64,7 @@ impl WorldEditor {
         let active_rects: Vec<Rect> = Vec::new();
         let mode = WorldEditorMode::SelectRoom;
 
-        Self { 
+        Self {
             mode,
             mode_selector: ModeSelector {
                 current: mode,
@@ -80,29 +74,38 @@ impl WorldEditor {
             show_grid: true,
             placing_start: None,
             placing_end: None,
-            tile_size_id: WidgetId::default(),
         }
     }
 
     /// Returns `Some(room_id)` if a room is clicked on.
-    pub async fn update(&mut self, camera: &mut Camera2D, world: &mut World) -> Option<RoomId> {
-        world.link_all_exits();
+    pub async fn update(
+        &mut self,
+        ctx: &mut WgpuContext,
+        camera: &mut Camera2D,
+        game: &mut Game,
+    ) -> Option<RoomId> {
+        game.current_world_mut().link_all_exits();
 
-        self.handle_mouse_cursor();
-        self.handle_shortcuts();
+        self.handle_mouse_cursor(ctx);
+        self.handle_shortcuts(ctx);
 
         match self.mode {
-            WorldEditorMode::SelectRoom => self.update_selecting_mode(camera, world),
-            WorldEditorMode::CreateRoom => self.update_placing_mode(camera, world),
-            WorldEditorMode::DeleteRoom => self.update_deleting_mode(camera, world),
+            WorldEditorMode::SelectRoom => self.update_selecting_mode(ctx, camera, game.current_world_mut()),
+            WorldEditorMode::NewRoom => self.update_placing_mode(ctx, camera, game),
+            WorldEditorMode::DeleteRoom => self.update_deleting_mode(ctx, camera, game),
         }
     }
 
-    fn update_selecting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
-        if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
-            let world_mouse = coord::mouse_world_pos(camera);
+    fn update_selecting_mode(
+        &mut self, 
+        ctx: &WgpuContext,
+        camera: &Camera2D,
+        world: &mut World,
+    ) -> Option<RoomId> {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
+            let world_mouse = mouse_world_pos(ctx, camera);
             for room in &world.rooms {
-                let rect = scaled_room_rect(room);
+                let rect = scaled_room_rect(room, world.grid_size);
                 if rect.contains(world_mouse) {
                     return Some(room.id);
                 }
@@ -111,13 +114,21 @@ impl WorldEditor {
         None
     }
 
-    fn update_deleting_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
-        if is_mouse_button_pressed(MouseButton::Left) && !self.is_mouse_over_ui() {
-            let world_mouse = coord::mouse_world_pos(camera);
-            for room in &world.rooms {
-                let rect = scaled_room_rect(room);
+    fn update_deleting_mode(
+        &mut self,
+        ctx: &WgpuContext,
+        camera: &Camera2D,
+        game: &mut Game,
+    ) -> Option<RoomId> {
+        if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
+            let world_mouse = mouse_world_pos(ctx, camera);
+            let cur_world = game.current_world();
+            for room in &cur_world.rooms {
+                let rect = scaled_room_rect(room, cur_world.grid_size);
                 if rect.contains(world_mouse) {
-                    self.delete_room(world, room.id);
+                    let room_id = room.id;
+                    let mut game_ctx = game.ctx_mut();
+                    self.delete_room(&mut game_ctx, room_id);
                     return None;
                 }
             }
@@ -125,30 +136,39 @@ impl WorldEditor {
         None
     }
 
-    fn update_placing_mode(&mut self, camera: &Camera2D, world: &mut World) -> Option<RoomId> {
-        if self.is_mouse_over_ui() {
+    fn update_placing_mode(
+        &mut self,
+        ctx: &WgpuContext,
+        camera: &Camera2D,
+        game: &mut Game,
+    ) -> Option<RoomId> {
+        if self.should_block_canvas(ctx) {
             return None;
         }
-        
-        let mouse_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
 
-        if is_mouse_button_pressed(MouseButton::Left) {
+        let grid_size = game.current_world().grid_size;
+        let mouse_tile = snap_to_grid(mouse_world_grid(ctx, camera, grid_size));
+
+        if ctx.is_mouse_button_pressed(MouseButton::Left) {
             self.placing_start = Some(mouse_tile);
             self.placing_end = Some(mouse_tile);
         }
 
-        if is_mouse_button_down(MouseButton::Left) {
+        if ctx.is_mouse_button_down(MouseButton::Left) {
             self.placing_end = Some(mouse_tile);
         }
 
-        if is_mouse_button_released(MouseButton::Left) {
+        if ctx.is_mouse_button_released(MouseButton::Left) {
             if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
                 let (top_left, size) = rect_from_points(start, end);
-                if !self.intersects_existing_room(&world.rooms, top_left, size) {
+                let rooms = &game.current_world().rooms;
+                let should_create = !self.intersects_existing_room(rooms, top_left, size, grid_size);
+
+                if should_create {
                     // Create the room and get its id back.
-                    let new_id = self.place_room_from_drag(world, top_left, size);
+                    let new_id = self.place_room_from_drag(game, top_left, size, grid_size);
                     self.reset_placing();
-                    self.mode = WorldEditorMode::SelectRoom;
+                    self.reset();
                     return Some(new_id);
                 }
                 // Overlap – just abort placement.
@@ -163,13 +183,14 @@ impl WorldEditor {
         rooms: &Vec<Room>,
         top_left: Vec2,
         size: Vec2,
+        grid_size: f32,
     ) -> bool {
         let bounds: Vec<(Vec2, Vec2)> = rooms
             .iter()
             .map(|rm| (rm.position, rm.size))
             .collect();
 
-        coord::overlaps_existing_rooms(top_left * tile_size(), size * tile_size(), &bounds)
+        overlaps_existing_rooms(top_left, size, &bounds, grid_size)
     }
 
     fn reset_placing(&mut self) {
@@ -178,123 +199,151 @@ impl WorldEditor {
     }
 
     pub fn draw(
-        &mut self, 
+        &mut self,
+        ctx: &mut WgpuContext,
         world_id: WorldId,
-        camera: &Camera2D, 
-        game: &mut Game
+        camera: &Camera2D,
+        game: &mut Game,
+        grid_renderer: &GridRenderer,
     ) {
-        set_camera(camera);
-        clear_background(LIGHTGRAY);
+        ctx.set_camera(camera);
+        ctx.clear_background(Color::LIGHTGREY);
 
         let world = game.get_world_mut(world_id);
         let rooms = &world.rooms;
 
-        grid::draw_grid(camera);
+        grid::draw_grid(ctx, grid_renderer, camera, world.grid_size);
 
-        self.draw_rooms(camera, rooms);
-        self.draw_exits(rooms);
+        self.draw_rooms(ctx, camera, rooms, world.grid_size);
+        self.draw_exits(ctx, rooms, world.grid_size);
 
-        match self.mode {
-            WorldEditorMode::SelectRoom => {
-                if !self.is_mouse_over_ui() {
-                    self.draw_hovered_room(camera, rooms);
+        if !self.should_block_canvas(ctx) {
+            match self.mode {
+                WorldEditorMode::SelectRoom => {
+                    self.draw_hovered_room(ctx, camera, rooms, world.grid_size);
                 }
-            }
-            WorldEditorMode::DeleteRoom => {
-                if !self.is_mouse_over_ui() {
-                    self.draw_hovered_room(camera, rooms);
+                WorldEditorMode::DeleteRoom => {
+                    self.draw_hovered_room(ctx, camera, rooms, world.grid_size);
                 }
-            }
-            WorldEditorMode::CreateRoom => {
-                if !self.is_mouse_over_ui() {
-                    self.draw_placing_preview(camera, rooms);
+                WorldEditorMode::NewRoom => {
+                    self.draw_placing_preview(ctx, camera, rooms, world.grid_size);
                 }
             }
         }
 
-        self.draw_room_names(camera, rooms); 
-        self.draw_ui(camera, game);
+        self.draw_room_names(ctx, camera, rooms, world.grid_size); 
+        self.draw_ui(ctx, camera);
         
         // Static UI camera
-        set_default_camera();
-        self.draw_coordinates(camera);
+        ctx.set_default_camera();
+        self.draw_coordinates(ctx, camera, world.grid_size);
     }
 
-    pub fn draw_rooms(&self, camera: &Camera2D, rooms: &Vec<Room>) {
+    pub fn draw_rooms(
+        &self, 
+        ctx: &mut WgpuContext,
+        camera: &Camera2D, 
+        rooms: &Vec<Room>, 
+        grid_size: f32
+    ) {
         for room in rooms {
-            let rect = scaled_room_rect(room);
-            let inset = ROOM_LINE_INSET * tile_size();
+            let rect = scaled_room_rect(room, grid_size);
+            let inset = ROOM_LINE_INSET * grid_size;
 
             // Draw the room outline
-            draw_rectangle_lines(
+            ctx.draw_rectangle_lines(
                 rect.x + inset / 2.0,
                 rect.y + inset / 2.0,
                 rect.w - inset,
                 rect.h - inset,
                 LINE_THICKNESS_MULTIPLIER / camera.zoom.x,
-                BLUE,
+                Color::BLUE,
             );
         }
     }
 
-    fn draw_exits(&self, rooms: &Vec<Room>) {
+    fn draw_exits(
+        &self, 
+        ctx: &mut WgpuContext,
+        rooms: &Vec<Room>, 
+        grid_size: f32
+    ) {
         for room in rooms {
             for exit in &room.exits {
-                let exit_world_coord = (room.position / tile_size()) + exit.position;
+                let exit_world_coord = (room.position / grid_size) + exit.position;
                 // Decide color based on whether it's linked
                 let color = if exit.target_room_id.is_some() {
-                    GREEN
+                    Color::GREEN
                 } else {
-                    RED
+                    Color::RED
                 };
-                self.draw_exit_marker(exit_world_coord, exit.direction, color);
+                self.draw_exit_marker(
+                    ctx, 
+                    exit_world_coord, 
+                    exit.direction, 
+                    color, 
+                    grid_size
+                );
             }
         }
     }
 
-    fn draw_exit_marker(&self, exit_world_coord: Vec2, dir: ExitDirection, color: Color) {
-        let thickness = 4.0;
-        let length = tile_size();
+    fn draw_exit_marker(
+        &self, 
+        ctx: &mut WgpuContext,
+        exit_world_coord: Vec2, 
+        dir: ExitDirection, 
+        color: Color, 
+        grid_size: f32
+    ) {
+        const THICKNESS: f32 = 2.0;
+        let length = grid_size;
         let offset = 1.0; 
 
         match dir {
-            ExitDirection::Up => draw_rectangle(
-                exit_world_coord.x * tile_size(),
-                exit_world_coord.y * tile_size() + tile_size(),
+            ExitDirection::Up => ctx.draw_rectangle(
+                exit_world_coord.x * grid_size,
+                exit_world_coord.y * grid_size + grid_size,
                 length,
-                thickness,
+                THICKNESS,
                 color,
             ),
-            ExitDirection::Down => draw_rectangle(
-                exit_world_coord.x * tile_size(),
-                exit_world_coord.y * tile_size() - thickness + offset,
+            ExitDirection::Down => ctx.draw_rectangle(
+                exit_world_coord.x * grid_size,
+                exit_world_coord.y * grid_size - THICKNESS + offset,
                 length,
-                thickness,
+                THICKNESS,
                 color,
             ),
-            ExitDirection::Left => draw_rectangle(
-                (exit_world_coord.x + 1.0) * tile_size() - offset,
-                exit_world_coord.y * tile_size(),
-                thickness,
+            ExitDirection::Left => ctx.draw_rectangle(
+                (exit_world_coord.x + 1.0) * grid_size - offset,
+                exit_world_coord.y * grid_size,
+                THICKNESS,
                 length,
                 color,
             ),
-            ExitDirection::Right => draw_rectangle(
-                (exit_world_coord.x - 1.0) * tile_size() + tile_size() - thickness + offset,
-                exit_world_coord.y * tile_size(),
-                thickness,
+            ExitDirection::Right => ctx.draw_rectangle(
+                (exit_world_coord.x - 1.0) * grid_size + grid_size - THICKNESS + offset,
+                exit_world_coord.y * grid_size,
+                THICKNESS,
                 length,
                 color,
             ),
         }
     }
 
-    fn draw_hovered_room(&self, camera: &Camera2D, rooms: &Vec<Room>) {
-        let world_mouse = coord::mouse_world_pos(camera);
+    fn draw_hovered_room(
+        &self, 
+        ctx: &mut WgpuContext,
+        camera: &Camera2D, 
+        rooms: &Vec<Room>, 
+        grid_size: f32
+    ) {
+        let world_mouse = mouse_world_pos(ctx, camera);
         for room in rooms {
-            let rect = scaled_room_rect(room);
+            let rect = scaled_room_rect(room, grid_size);
             if rect.contains(world_mouse) {
-                let inset = ROOM_LINE_INSET * tile_size();
+                let inset = ROOM_LINE_INSET * grid_size;
 
                 // Choose highlight color based on mode
                 let color = match self.mode {
@@ -302,7 +351,7 @@ impl WorldEditor {
                     _ => HIGHLIGHT_COLOR,
                 };
 
-                draw_rectangle(
+                ctx.draw_rectangle(
                     rect.x + inset / 2.0,
                     rect.y + inset / 2.0,
                     rect.w - inset,
@@ -315,16 +364,24 @@ impl WorldEditor {
         }
     }
 
-    fn draw_room_names(&self, camera: &Camera2D, rooms: &Vec<Room>) {
-        set_default_camera(); // draw in screen space
+    fn draw_room_names(
+        &self,
+        ctx: &mut WgpuContext, 
+        camera: &Camera2D, 
+        rooms: &Vec<Room>, 
+        grid_size: f32
+    ) {
+        ctx.set_default_camera(); // draw in screen space
 
         for room in rooms {
-            let rect = scaled_room_rect(room);
+            let rect = scaled_room_rect(room, grid_size);
 
             // Screen coordinates of room center
-            let screen_pos = camera.world_to_screen(rect.point() + rect.size() / 2.0);
-
-            let text_len = room.name.len() as f32;
+            let screen_pos = camera.world_to_screen(
+                rect.top_left() + rect.size() / 2.0,
+                ctx.screen_width(),
+                ctx.screen_height(),
+            );
 
             // Base text size
             let base_font_size: f32 = 40.0;
@@ -337,116 +394,121 @@ impl WorldEditor {
             // Rotation: vertical if tall
             let rotation = if rect.h > rect.w { std::f32::consts::FRAC_PI_2 } else { 0.0 };
 
-            // Approximate text half-size
-            let half_width = font_size * text_len * 0.25; 
-            let half_height = font_size * 1.5;           
+            // Measure text to center it properly
+            let dims = ctx.measure_text(&room.name, font_size);
 
-            // Offset along rotated axes
-            let offset = if rotation != 0.0 {
-                vec2(half_height * 0.1, -half_width * 0.85) 
-            } else {
-                vec2(half_width * 0.875, half_height * 0.1)
-            };
+            // Center text at room center (x - half_width, y + ascent - half_height)
+            let x = screen_pos.x - dims.width / 2.0;
+            let y = screen_pos.y + dims.offset_y - dims.height / 2.0;
 
-            // Draw
-            draw_text_ex(
+            ctx.draw_text_ex(
                 &room.name,
-                screen_pos.x - offset.x,
-                screen_pos.y + offset.y,
+                x,
+                y,
                 TextParams {
                     font_size: font_size as u16,
-                    color: BLACK,
+                    color: Color::BLACK,
                     rotation,
                     ..Default::default()
                 });
             }
-        set_camera(camera); // back to world camera
+            
+        ctx.set_camera(camera); // back to world camera
     }
 
-    fn draw_placing_preview(&self, camera: &Camera2D, rooms: &Vec<Room>) {
+    fn draw_placing_preview(
+        &self, 
+        ctx: &mut WgpuContext,
+        camera: &Camera2D, 
+        rooms: &Vec<Room>, 
+        grid_size: f32
+    ) {
         if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {
             let (top_left, size) = rect_from_points(start, end);
-            let color = if self.intersects_existing_room(rooms, top_left, size) { HIGHLIGHT_ERROR_COLOR } else { HIGHLIGHT_COLOR };
-            let inset = ROOM_LINE_INSET * tile_size();
-            draw_rectangle_lines(
-                top_left.x * tile_size() + inset / 2.0,
-                top_left.y * tile_size() + inset / 2.0,
-                size.x * tile_size() - inset,
-                size.y * tile_size() - inset,
+            let color = if self.intersects_existing_room(rooms, top_left, size, grid_size) { HIGHLIGHT_ERROR_COLOR } else { HIGHLIGHT_COLOR };
+            let inset = ROOM_LINE_INSET * grid_size;
+            ctx.draw_rectangle_lines(
+                top_left.x * grid_size + inset / 2.0,
+                top_left.y * grid_size + inset / 2.0,
+                size.x * grid_size - inset,
+                size.y * grid_size - inset,
                 HOVER_LINE_THICKNESS / camera.zoom.x,
                 color,
             );
         } else {
-            let hover_tile = coord::snap_to_grid(coord::mouse_world_grid(camera));
-            let color = if self.intersects_existing_room(rooms, hover_tile, vec2(1.0, 1.0)) {
+            let hover_tile = snap_to_grid(mouse_world_grid(ctx, camera, grid_size));
+            let color = if self.intersects_existing_room(rooms, hover_tile, vec2(1.0, 1.0), grid_size) {
                 HIGHLIGHT_ERROR_COLOR
             } else {
                 HIGHLIGHT_COLOR
             };
-            draw_rectangle(
-                hover_tile.x * tile_size(),
-                hover_tile.y * tile_size(),
-                tile_size(),
-                tile_size(),
+            ctx.draw_rectangle(
+                hover_tile.x * grid_size,
+                hover_tile.y * grid_size,
+                grid_size,
+                grid_size,
                 color,
             );
         }
     }
 
-    fn draw_ui(&mut self, camera: &Camera2D, game: &mut Game) {
+    fn draw_ui(&mut self, ctx: &mut WgpuContext, camera: &Camera2D) {
         self.active_rects.clear();
 
         // Static camera
-        set_default_camera();
+        ctx.set_default_camera();
 
         // Top menu panel
-        self.register_rect(draw_top_panel_full());
+        self.register_rect(draw_top_panel_full(ctx));
 
         // Mode selector
-        if self.mode_selector.draw().1 {
+        if self.mode_selector.draw(ctx).1 {
             self.mode = self.mode_selector.current;
         }
+        self.mode_selector.draw_tooltips(ctx);
 
-        // Tile size field
-        let tile_size_rect = Rect::new(
-            screen_width() - 50.0,
-            10.0,                  
-            40.0,                 
-            30.0,                 
-        );
-        
-        let new_size = gui_input_number_f32(self.tile_size_id, tile_size_rect, game.tile_size);
-        if new_size != game.tile_size {
-            let old_size = game.tile_size;
-            global::update_tile_size(game, old_size, new_size);
-        }
-
-        set_camera(camera); // Back to world camera
+        ctx.set_camera(camera); // Back to world camera
     }
 
-    pub fn init_camera(&mut self, camera: &mut Camera2D, world: &World) {
+    pub fn init_camera(
+        &mut self, 
+        ctx: &WgpuContext, 
+        camera: &mut Camera2D, 
+        world: &World
+    ) {
         let target_room = world
             .starting_room_id
             .and_then(|id| world.get_room(id))
             .or_else(|| world.rooms.first());
 
         if let Some(room) = target_room {
-            self.center_on_room(camera, room);
+            self.center_on_room(ctx, camera, room, world.grid_size);
         }
     }
 
-    pub fn center_on_room(&mut self, camera: &mut Camera2D, room: &Room) {
-        *camera = EditorCameraController::camera_for_room(room.size, room.position);
+    pub fn center_on_room(
+        &mut self, 
+        ctx: &WgpuContext, 
+        camera: &mut Camera2D, 
+        room: &Room, 
+        grid_size: f32
+    ) {
+        *camera = EditorCameraController::camera_for_room(
+            ctx, 
+            room.size, 
+            room.position, 
+            grid_size
+        );
     }
 
-    fn handle_shortcuts(&mut self) {
-        if Controls::g() {
+    fn handle_shortcuts(&mut self, ctx: &WgpuContext) {
+        if Controls::g(ctx) {
             self.show_grid = !self.show_grid;
         }
 
         for mode in WorldEditorMode::iter() {
-            if let Some(is_pressed) = mode.shortcut() {
-                if is_pressed() && !input_is_focused() {
+            if let Some(shortcut) = mode.shortcut() {
+                if shortcut(ctx) && !input_is_focused() {
                     self.mode = mode;
                     self.mode_selector.current = mode;
                     break;
@@ -461,26 +523,19 @@ impl WorldEditor {
         rect
     }
 
-    fn is_mouse_over_ui(&self) -> bool {
-        let mouse_screen: Vec2 = mouse_position().into();
-        self.active_rects.iter().any(|r| r.contains(mouse_screen))
-        || is_dropdown_open()
-        || is_modal_open()
-    }
-
-    fn handle_mouse_cursor(&self) {
-        if self.is_mouse_over_ui() {
-            set_mouse_cursor(CursorIcon::Default);
+    fn handle_mouse_cursor(&self, ctx: &mut WgpuContext) {
+        if self.should_block_canvas(ctx) {
+            ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
                 WorldEditorMode::SelectRoom => {
-                    set_mouse_cursor(CursorIcon::Pointer);
+                    ctx.set_cursor_icon(CursorIcon::Pointer);
                 }
-                WorldEditorMode::CreateRoom => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                WorldEditorMode::NewRoom => {
+                    ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
                 WorldEditorMode::DeleteRoom => {
-                    set_mouse_cursor(CursorIcon::Crosshair);
+                    ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
         }
@@ -488,6 +543,7 @@ impl WorldEditor {
 
     pub fn reset(&mut self) {
         self.mode = WorldEditorMode::SelectRoom;
+        self.mode_selector.current = WorldEditorMode::SelectRoom;
         self.placing_start = None;
         self.placing_end = None;
         self.active_rects.clear();
@@ -495,14 +551,20 @@ impl WorldEditor {
     }
 }
 
+impl SubEditor for WorldEditor {
+    fn active_rects(&self) -> &[Rect] {
+        &self.active_rects
+    }
+}
+
 /// Returns rect scaled for drawing
-fn scaled_room_rect(room: &Room) -> Rect {
+fn scaled_room_rect(room: &Room, grid_size: f32) -> Rect {
     let size = room.size;
     Rect::new(
         room.position.x,
         room.position.y,
-        size.x * tile_size(),
-        size.y * tile_size(),
+        size.x * grid_size,
+        size.y * grid_size,
     )
 }
 

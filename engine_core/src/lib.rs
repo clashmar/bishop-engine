@@ -1,23 +1,48 @@
 pub mod animation;
 pub mod assets;
-pub mod ecs;
 pub mod camera;
 pub mod constants;
-pub mod input;
-pub mod logging;
+pub mod controls;
+pub mod diagnostics;
+pub mod text;
+pub mod ecs;
+pub mod engine_global;
 pub mod game;
-pub mod global;
+pub mod input;
 pub mod lighting;
+pub mod logging;
+pub mod menu;
 pub mod physics;
 pub mod rendering;
+pub mod scripting;
 pub mod shaders;
 pub mod storage;
 pub mod tiles;
 pub mod world;
 pub mod ui;
-pub mod controls;
 
-/// Simple helper used only for the demo test.
-pub fn add(a: i32, b: i32) -> i32 {
-    a + b
+/// Prelude module for convenient imports.
+pub mod prelude {
+    pub use crate::animation::*;
+    pub use crate::assets::*;
+    pub use crate::camera::*;
+    pub use crate::constants::*;
+    pub use crate::controls::*;
+    pub use crate::diagnostics::*;
+    pub use crate::text::*;
+    pub use crate::ecs::*;
+    pub use crate::engine_global::*;
+    pub use crate::game::*;
+    pub use crate::input::*;
+    pub use crate::lighting::*;
+    pub use crate::logging::*;
+    pub use crate::menu::*;
+    pub use crate::physics::*;
+    pub use crate::rendering::*;
+    pub use crate::scripting::*;
+    pub use crate::shaders::*;
+    pub use crate::storage::*;
+    pub use crate::tiles::*;
+    pub use crate::world::*;
+    pub use crate::ui::*;
 }

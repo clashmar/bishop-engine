@@ -1,149 +1,150 @@
 // engine_core/src/rendering/render_room.rs
-use crate::{
-    animation::animation_system::CurrentFrame, assets::{
-        asset_manager::AssetManager, 
-        sprite::Sprite
-    }, camera::game_camera::RoomCamera, ecs::{
-        component::*, 
-        entity::Entity, 
-        world_ecs::WorldEcs
-    }, global::tile_size, lighting::{
-        glow::Glow, 
-        light::Light,
-    }, rendering::render_system::RenderSystem, world::room::Room
-};
+// NOTE: Multi-pass rendering temporarily disabled while rewiring codebase.
+
+use crate::prelude::*;
 use std::collections::{BTreeMap, HashMap};
-use macroquad::prelude::*;
+use bishop::prelude::*;
 
 /// Draws everything needed for the given room.
-pub fn render_room(
-    world_ecs: &WorldEcs,
+/// Currently uses simplified single-pass rendering.
+pub fn render_room<C: BishopContext>(
+    ctx: &mut C,
+    ecs: &Ecs,
     room: &Room,
     asset_manager: &mut AssetManager,
     render_system: &mut RenderSystem,
     render_cam: &Camera2D,
     alpha: f32,
-    prev_positions: Option<&HashMap<Entity, Vec2>>, 
+    prev_positions: Option<&HashMap<Entity, Vec2>>,
+    grid_size: f32,
 ) {
+    let render_start = std::time::Instant::now();
+
     // Cache the needed stores
-    let sprite_store = world_ecs.get_store::<Sprite>();
-    let frame_store = world_ecs.get_store::<CurrentFrame>();
+    let sprite_store = ecs.get_store::<Sprite>();
+    let frame_store = ecs.get_store::<CurrentFrame>();
+    let transform_store = ecs.get_store::<Transform>();
 
     // Organize entities by layer
-    let mut layer_map = collect_interpolated_layer_map(world_ecs, room, alpha, prev_positions);
+    let layer_map = collect_interpolated_layer_map(
+        ecs,
+        room,
+        asset_manager,
+        alpha,
+        prev_positions,
+        grid_size,
+    );
 
-    if layer_map.is_empty() {
-        layer_map.insert(0, (Vec::new(), Vec::new()));
-    }
+    // Set up camera and clear background
+    ctx.set_camera(render_cam);
+    ctx.clear_background(Color::BLACK);
 
-    // Clear composite textures before each run
-    RenderSystem::clear_cam(&render_system.scene_comp_rt);
-    RenderSystem::clear_cam(&render_system.final_comp_rt);
+    // Draw tilemap first
+    let tilemap = &room.current_variant().tilemap;
+    tilemap.draw(ctx, asset_manager, room.position.into(), grid_size);
 
-    // Draw each blocking texture in black onto a white background
-    // To be implemented but it needs to happen BEFORE the loop
-    render_system.init_mask_cam();
-
-    // Flag for the tilemap
-    let mut first_pass = true;
-    let tilemap = &room.current_variant().tilemap; 
-
-    for (_z, (entities, glows)) in layer_map {
-        // Scene cam needs to draw to the current render cam
-        render_system.clear_scene_cam(render_cam);
-
-        // Draw the tilemap as the first layer
-        if first_pass {
-            tilemap.draw(&room.exits, world_ecs, asset_manager, room.position);
-            first_pass = false;
-        }
-
-        // Draw all entities
+    // Draw all entities sorted by layer
+    for (_z, (entities, _glows)) in layer_map {
         for (entity, pos) in entities {
             draw_entity(
-            world_ecs,
-            asset_manager,
-            frame_store,
-            sprite_store,
-            entity,
-            pos,
+                ctx,
+                ecs,
+                asset_manager,
+                frame_store,
+                sprite_store,
+                transform_store,
+                entity,
+                pos,
+                grid_size,
             );
         }
 
-        // Render the darkened scene
-        render_system.run_ambient_pass(room.darkness);
-
-        // Render glow per layer
-        render_system.run_glow_pass(
-            render_cam, 
-            glows, 
-            asset_manager,
-        );
-
-        // Render the undarkened room for lighting pass
-        render_system.run_undarkened_pass();
-
-        // Combine scene renders
-        render_system.run_scene_pass();
+        // TODO: Re-enable multi-pass rendering
+        // render_system.run_ambient_pass(ctx, room.darkness);
+        // render_system.run_glow_pass(ctx, render_cam, glows, asset_manager);
+        // render_system.run_undarkened_pass(ctx);
+        // render_system.run_scene_pass(ctx);
     }
 
-    // Lighting pass
-    let lights = collect_lights(world_ecs, room, alpha, prev_positions);
-    render_system.run_spotlight_pass(
-        render_cam, 
-        lights, 
-        room.darkness
-    );
-    
-    // Composite the final render
-    render_system.run_final_pass();
+    // TODO: Re-enable multi-pass rendering
+    // let lights = collect_lights(ecs, room, alpha, prev_positions);
+    // render_system.run_spotlight_pass(ctx, render_cam, lights, room.darkness);
+    // render_system.run_final_pass(ctx);
+
+    render_system.render_time_ms = render_start.elapsed().as_secs_f32() * 1000.0;
 }
 
-fn draw_entity(
-    world_ecs: &WorldEcs,
+fn draw_entity<C: BishopContext>(
+    ctx: &mut C,
+    ecs: &Ecs,
     asset_manager: &mut AssetManager,
     frame_store: &ComponentStore<CurrentFrame>,
     sprite_store: &ComponentStore<Sprite>,
+    transform_store: &ComponentStore<Transform>,
     entity: Entity,
     pos: Vec2,
+    grid_size: f32,
 ) {
-    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
+    // If this is a player proxy, render using Player's visual components
+    let visual_entity = if ecs.has::<PlayerProxy>(entity) {
+        ecs.get_player_entity().unwrap_or(entity)
+    } else {
+        entity
+    };
 
-    // Animate/Draw sprite
-    if let Some(cf) = frame_store.get(entity) && asset_manager.contains(cf.sprite_id) {
-        let src = Rect::new(
-            cf.col as f32 * cf.frame_size.x,
-            cf.row as f32 * cf.frame_size.y,
-            cf.frame_size.x,
-            cf.frame_size.y,
-        );
+    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
+
+    // Get pivot from transform (default to BottomCenter)
+    let pivot = transform_store
+        .get(entity)
+        .map(|t| t.pivot)
+        .unwrap_or(Pivot::BottomCenter);
+
+    // Calculate pivot-adjusted draw position
+    let draw_base = pivot_adjusted_position(pos, Vec2::new(width, height), pivot);
+
+    // Animate/Draw sprite (use visual_entity for sprite lookup)
+    if let Some(cf) = frame_store.get(visual_entity) && asset_manager.contains(cf.sprite_id) {
         let tex = asset_manager.get_texture_from_id(cf.sprite_id);
 
-        // Draws individual entites
-        draw_texture_ex(
+        let frame_w = cf.frame_size.x;
+        let frame_h = cf.frame_size.y;
+
+        let src = Rect::new(
+            cf.col as f32 * frame_w,
+            cf.row as f32 * frame_h,
+            frame_w,
+            frame_h,
+        );
+
+        // Floor to be sure
+        let draw_x = (draw_base.x + cf.offset.x).floor();
+        let draw_y = (draw_base.y + cf.offset.y).floor();
+
+        ctx.draw_texture_ex(
             tex,
-            pos.x + cf.offset.x,
-            pos.y + cf.offset.y,
-            WHITE,
+            draw_x,
+            draw_y,
+            Color::WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(width, height)),
+                dest_size: Some(Vec2::new(frame_w, frame_h)),
                 source: Some(src),
+                flip_x: cf.flip_x,
                 ..Default::default()
             },
         );
         return;
-    } else if let Some(sprite) = sprite_store.get(entity) {
+    } else if let Some(sprite) = sprite_store.get(visual_entity) {
         // No animation
         if asset_manager.contains(sprite.sprite) {
-            
             let tex = asset_manager.get_texture_from_id(sprite.sprite);
-            draw_texture_ex(
+            ctx.draw_texture_ex(
                 tex,
-                pos.x,
-                pos.y,
-                WHITE,
+                draw_base.x,
+                draw_base.y,
+                Color::WHITE,
                 DrawTextureParams {
-                    dest_size: Some(vec2(width, height)),
+                    dest_size: Some(Vec2::new(width, height)),
                     ..Default::default()
                 },
             );
@@ -152,50 +153,34 @@ fn draw_entity(
     }
 
     // Don't draw placeholders for these components
-    if world_ecs.has_any::<(Light, Glow)>(entity) {
+    if ecs.has_any::<(Light, Glow)>(visual_entity) {
         return;
     }
 
     // Fallback placeholder (no sprite or missing texture)
-    draw_entity_placeholder(pos);
+    draw_entity_placeholder(ctx, draw_base, grid_size);
 }
 
-pub fn highlight_selected_entity(
-    world_ecs: &WorldEcs,
-    entity: Entity,
-    asset_manager: &mut AssetManager,
-    color: Color
-) {
-    let pos = match world_ecs.get_store::<Position>().get(entity) {
-        Some(p) => p,
-        None => return,
-    };
-
-    let (width, height) = entity_dimensions(world_ecs, asset_manager, entity);
-
-    draw_rectangle_lines(pos.position.x, pos.position.y, width, height, 2.0, color);
-}
-
+/// Get the dimensions of an entity for rendering.
 pub fn entity_dimensions(
-    world_ecs: &WorldEcs,
+    ecs: &Ecs,
     asset_manager: &AssetManager,
     entity: Entity,
+    grid_size: f32,
 ) -> (f32, f32) {
-    let from_anim = world_ecs
+    let from_anim = ecs
         .get_store::<CurrentFrame>()
         .get(entity)
         .map(|cf| (cf.frame_size.x, cf.frame_size.y));
 
     let from_sprite = || {
-        world_ecs
-            .get_store::<Sprite>()
+        ecs.get_store::<Sprite>()
             .get(entity)
             .and_then(|sprite| asset_manager.texture_size(sprite.sprite))
     };
 
     let from_glow = || {
-        world_ecs
-            .get_store::<Glow>()
+        ecs.get_store::<Glow>()
             .get(entity)
             .and_then(|glow| asset_manager.texture_size(glow.sprite_id))
     };
@@ -203,36 +188,42 @@ pub fn entity_dimensions(
     from_anim
         .or_else(from_sprite)
         .or_else(from_glow)
-        .unwrap_or((tile_size(), tile_size()))
+        .unwrap_or((grid_size, grid_size))
 }
 
-pub fn draw_entity_placeholder(pos: Vec2) {
-    draw_rectangle(
-        pos.x,
-        pos.y,
-        tile_size(),
-        tile_size(),
-        GREEN,
-    );
+/// Draw a placeholder for an entity without a sprite.
+pub fn draw_entity_placeholder<C: BishopContext>(
+    ctx: &mut C,
+    pos: Vec2,
+    grid_size: f32
+) {
+    ctx.draw_rectangle(pos.x, pos.y, grid_size, grid_size, Color::GREEN);
 }
 
-/// Sorts entites by their z-layer, filters out entities that should not be 
+/// Sorts entites by their z-layer, filters out entities that should not be
 /// drawn and interpolates the draw positions. BTreeMap automatically sorts keys.
 fn collect_interpolated_layer_map<'a>(
-    world_ecs: &'a WorldEcs,
+    ecs: &'a Ecs,
     room: &Room,
+    asset_manager: &AssetManager,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
+    grid_size: f32,
 ) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
     let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
 
-    let pos_store = world_ecs.get_store::<Position>();
-    let cam_store = world_ecs.get_store::<RoomCamera>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
-    let layer_store = world_ecs.get_store::<Layer>();
-    let glow_store = world_ecs.get_store::<Glow>();
+    let trans_store = ecs.get_store::<Transform>();
+    let cam_store = ecs.get_store::<RoomCamera>();
+    let room_store = ecs.get_store::<CurrentRoom>();
+    let layer_store = ecs.get_store::<Layer>();
+    let glow_store = ecs.get_store::<Glow>();
 
-    for (entity, pos) in &pos_store.data {
+    for (entity, transform) in &trans_store.data {
+        // Skip invisible entities
+        if !transform.visible {
+            continue;
+        }
+
         // Skip camera
         if cam_store.get(*entity).is_some() {
             continue;
@@ -240,32 +231,32 @@ fn collect_interpolated_layer_map<'a>(
 
         // Filter by current room
         if let Some(cr) = room_store.get(*entity) {
-            if cr.0 != room.id { 
-                continue; 
+            if cr.0 != room.id {
+                continue;
             }
-        } else { 
-            continue; 
+        } else {
+            continue;
         }
 
         // Interpolate the draw position
-        let draw_pos = interpolate_draw_position(
-            *entity, 
-            pos.position, 
-            alpha, 
-            prev_positions
-        );
+        let draw_pos =
+            interpolate_draw_position(*entity, transform.position, alpha, prev_positions);
 
         // Default layer is 0 if missing
-        let z = layer_store
-            .get(*entity)
-            .map_or(0, |l| l.z);
+        let z = layer_store.get(*entity).map_or(0, |l| l.z);
 
         let entry = map.entry(z).or_default();
         entry.0.push((*entity, draw_pos));
 
-        // If the entity also has a Glow component
+        // If the entity also has a Glow component, apply pivot to glow position
         if let Some(glow) = glow_store.get(*entity) {
-            entry.1.push((glow, draw_pos));
+            let glow_size = asset_manager
+                .texture_size(glow.sprite_id)
+                .map(|(w, h)| Vec2::new(w, h))
+                .unwrap_or(Vec2::new(grid_size, grid_size));
+
+            let glow_draw_pos = pivot_adjusted_position(draw_pos, glow_size, transform.pivot);
+            entry.1.push((glow, glow_draw_pos));
         }
     }
 
@@ -277,54 +268,24 @@ fn collect_interpolated_layer_map<'a>(
     map
 }
 
-fn collect_lights(
-    world_ecs: &WorldEcs,
-    room: &Room, 
-    alpha: f32,
-    prev_positions: Option<&HashMap<Entity, Vec2>>,
-) -> Vec<(Vec2, Light)> {
-    let mut lights: Vec<(Vec2, Light)> = Vec::new();
-
-    let light_store = world_ecs.get_store::<Light>();
-    let pos_store = world_ecs.get_store::<Position>();
-    let room_store = world_ecs.get_store::<CurrentRoom>();
-
-    for (entity, light) in &light_store.data {
-        // Filter by current room
-        if let Some(current_room) = room_store.get(*entity) {
-            if current_room.0 != room.id { 
-                continue; 
-            }
-        } else { 
-            continue; 
-        }
-
-        if let Some(pos) = pos_store.get(*entity) {
-            // Interpolate the draw position
-            let draw_pos = interpolate_draw_position(
-                *entity, 
-                pos.position, 
-                alpha, 
-                prev_positions
-            );
-
-            lights.push((draw_pos, *light));
-        }
-    }
-
-    lights
-}
+// TODO: Re-enable for multi-pass rendering
+// fn collect_lights(
+//     ecs: &Ecs,
+//     room: &Room,
+//     alpha: f32,
+//     prev_positions: Option<&HashMap<Entity, Vec2>>,
+// ) -> Vec<(Vec2, Light)> { ... }
 
 /// Returns the interpolated draw position or the current position.
 fn interpolate_draw_position(
     entity: Entity,
-    current_pos: Vec2, 
+    current_pos: Vec2,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> Vec2 {
     if let Some(prev_map) = prev_positions {
         if let Some(prev_pos) = prev_map.get(&entity) {
-            lerp(*prev_pos, current_pos, alpha)
+            lerp_rounded(*prev_pos, current_pos, alpha)
         }
         else {
             current_pos
@@ -334,7 +295,13 @@ fn interpolate_draw_position(
     }
 }
 
+/// Calculates draw position adjusted for pivot.
+/// Returns the top-left corner where the texture should be drawn.
 #[inline]
-pub fn lerp(a: Vec2, b: Vec2, t: f32) -> Vec2 {
-    a + (b - a) * t
+pub fn pivot_adjusted_position(entity_pos: Vec2, texture_size: Vec2, pivot: Pivot) -> Vec2 {
+    let offset = pivot.as_normalized();
+    vec2(
+        entity_pos.x - texture_size.x * offset.x,
+        entity_pos.y - texture_size.y * offset.y,
+    )
 }

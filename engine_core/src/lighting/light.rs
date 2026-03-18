@@ -1,10 +1,12 @@
 // engine_core/src/lighting/light.rs
-use macroquad::prelude::*;
-use reflect_derive::Reflect;
+use crate::inspector_module;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, FromInto};
-use crate::{ecs_component, inspector_module};
+use ecs_component::ecs_component;
+use reflect_derive::Reflect;
+use bishop::prelude::*;
 
+#[ecs_component]
 #[serde_as]
 #[derive(Clone, Copy, Serialize, Deserialize, Reflect)]
 #[serde(default)]
@@ -22,14 +24,13 @@ pub struct Light {
     pub brightness: f32,
 }
 
-ecs_component!(Light);
 inspector_module!(Light);
 
 impl Default for Light {
     fn default() -> Self {
         Light { 
-            pos: vec2(0., 0.), 
-            color: vec3(1., 1., 1.), 
+            pos: Vec2::new(0., 0.), 
+            color: Vec3::new(1., 1., 1.), 
             intensity: 0.5, 
             radius: 50.,
             spread: 50., 
