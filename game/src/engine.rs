@@ -3,8 +3,9 @@ use crate::transitions::transition_manager::TransitionManager;
 use crate::scripting::script_system::ScriptSystem;
 use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
-use crate::physics::physics_system::*;
+use crate::game_global::set_menu_active;
 use crate::game_instance::GameInstance;
+use crate::physics::physics_system::*;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 use bishop::BishopApp;
@@ -185,8 +186,10 @@ impl Engine {
             }
         }
 
-        // Sync menu state for Lua scripts
-        crate::game_global::set_menu_active(self.menu_manager.has_active_menu());
+        // Sync menu state for Lua scripts 
+        // TODO: This should be decoupled from menus (does player movement need to be blocked for other reasons?)
+        // Also reconsider global pattern here.
+        set_menu_active(self.menu_manager.has_active_menu());
 
         // Run scripts outside borrow_mut scope
         if let Err(e) = ScriptSystem::run_scripts(dt, self) {

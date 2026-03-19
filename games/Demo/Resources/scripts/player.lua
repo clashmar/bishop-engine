@@ -16,6 +16,7 @@ local Player = {
     _state = nil,
 
     update = function(self, dt)
+        -- TODO: decouple from menus. Should player movement be blocked for any reason?
         if engine.menu.is_open() then
             local cur_vel = self.entity:get(comp.Velocity)
             self.entity:set_velocity({ x = 0, y = cur_vel.y })

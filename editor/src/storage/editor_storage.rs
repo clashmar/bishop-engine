@@ -38,7 +38,7 @@ pub async fn create_new_game(name: String) -> Game {
 
     // Build the game first so we can allocate room IDs globally
     let mut game = Game {
-        save_version: 1,
+        version: 1,
         id: Uuid::new_v4(),
         name,
         ecs: Ecs::default(),
