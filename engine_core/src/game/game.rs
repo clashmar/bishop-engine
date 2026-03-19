@@ -16,7 +16,7 @@ use mlua::Lua;
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct Game {
-    pub save_version: u32,
+    pub version: u32,
     /// Unique identifier of the game.
     pub id: Uuid,
     /// Human readable name of the game.

@@ -1,5 +1,5 @@
 (
-    save_version: 1,
+    version: 1,
     id: "19909c6c-f4a3-47c0-b60b-c36cea28aa9c",
     name: "Demo",
     ecs: (
