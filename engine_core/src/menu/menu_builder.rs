@@ -153,10 +153,7 @@ impl LayoutGroupBuilder {
             layout: self.layout,
             children: self.children,
             background: None,
-            nav_up: None,
-            nav_down: None,
-            nav_left: None,
-            nav_right: None,
+            nav_targets: NavTargets::default(),
         }
     }
 }

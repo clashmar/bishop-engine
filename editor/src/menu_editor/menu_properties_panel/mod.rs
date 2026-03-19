@@ -3,6 +3,7 @@ mod menu_properties;
 mod element_properties;
 mod layout_properties;
 mod common_properties;
+mod nav_section;
 
 use crate::menu_editor::MenuEditor;
 use engine_core::prelude::*;
@@ -25,10 +26,7 @@ pub struct PropertiesWidgetIds {
     pub(crate) pos_y_id: WidgetId,
     pub(crate) size_w_id: WidgetId,
     pub(crate) size_h_id: WidgetId,
-    pub(crate) nav_up_id: WidgetId,
-    pub(crate) nav_down_id: WidgetId,
-    pub(crate) nav_left_id: WidgetId,
-    pub(crate) nav_right_id: WidgetId,
+    pub(crate) button_nav_ids: NavWidgetIds,
     pub(crate) layout_direction_id: WidgetId,
     pub(crate) layout_grid_cols_id: WidgetId,
     pub(crate) layout_spacing_id: WidgetId,
@@ -40,10 +38,7 @@ pub struct PropertiesWidgetIds {
     pub(crate) layout_v_align_id: WidgetId,
     pub(crate) layout_item_w_id: WidgetId,
     pub(crate) layout_item_h_id: WidgetId,
-    pub(crate) layout_nav_up_id: WidgetId,
-    pub(crate) layout_nav_down_id: WidgetId,
-    pub(crate) layout_nav_left_id: WidgetId,
-    pub(crate) layout_nav_right_id: WidgetId,
+    pub(crate) layout_nav_ids: NavWidgetIds,
     pub(crate) label_h_align_id: WidgetId,
     pub(crate) panel_color_id: WidgetId,
     pub(crate) panel_opacity_id: WidgetId,
@@ -54,6 +49,15 @@ pub struct PropertiesWidgetIds {
     pub(crate) bg_alpha_id: WidgetId,
     pub(crate) mode_id: WidgetId,
     pub(crate) menu_name_id: WidgetId,
+}
+
+/// Widget IDs for nav dropdowns.
+#[derive(Default, Clone, Copy)]
+pub struct NavWidgetIds {
+    pub(crate) up: WidgetId,
+    pub(crate) down: WidgetId,
+    pub(crate) left: WidgetId,
+    pub(crate) right: WidgetId,
 }
 
 /// Groups property panel data.

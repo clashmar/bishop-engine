@@ -84,17 +84,16 @@ impl MenuEditor {
         }
 
         // Handle Delete key to remove selected element(s)
-        if !blocked && ctx.is_key_pressed(KeyCode::Delete) || ctx.is_key_pressed(KeyCode::Backspace) {
-            if !input_is_focused() && !self.selected_element_indices.is_empty() {
-                if let Some(template_idx) = self.current_template_index {
-                    push_command(Box::new(DeleteElementCmd::new(
-                        template_idx,
-                        self.selected_element_indices.clone(),
-                        self.selected_child_index,
-                    )));
-                }
-                return;
+        if !blocked && ctx.is_key_pressed(KeyCode::Delete) || ctx.is_key_pressed(KeyCode::Backspace) 
+            && !input_is_focused() && !self.selected_element_indices.is_empty() {
+            if let Some(template_idx) = self.current_template_index {
+                push_command(Box::new(DeleteElementCmd::new(
+                    template_idx,
+                    self.selected_element_indices.clone(),
+                    self.selected_child_index,
+                )));
             }
+            return;
         }
 
         if blocked {
@@ -144,14 +143,13 @@ impl MenuEditor {
         }
 
         // Handle active resize drag
-        if self.resizing_handle.is_some() {
+        if let Some(resizing_handle) = &self.resizing_handle {
             if ctx.is_mouse_button_down(MouseButton::Left) {
-                let state = self.resizing_handle.as_ref().unwrap();
-                let delta = norm_mouse - state.start_mouse;
-                let original = state.original_rect;
-                let handle = state.handle;
-                let index = state.element_index;
-                let child_index = state.child_index;
+                let delta = norm_mouse - resizing_handle.start_mouse;
+                let original = resizing_handle.original_rect;
+                let handle = resizing_handle.handle;
+                let index = resizing_handle.element_index;
+                let child_index = resizing_handle.child_index;
                 let center_resize = ctx.is_key_down(KeyCode::LeftControl);
                 let new_rect = if center_resize {
                     apply_resize_centered(original, handle, delta)
@@ -183,7 +181,7 @@ impl MenuEditor {
                     }
                 }
             } else {
-                // Resize ended — push undo-able command
+                // Resize ended
                 if let Some(state) = self.resizing_handle.take() {
                     if let Some(template_idx) = self.current_template_index {
                         let new_rect = if let Some(child_idx) = state.child_index {
@@ -242,7 +240,6 @@ impl MenuEditor {
         // Handle box select drag and release
         if self.box_select_active {
             if ctx.is_mouse_button_down(MouseButton::Left) {
-                // Box select is in progress; drawing handled in draw_canvas
                 return;
             } else {
                 // Mouse released: finalize box select
@@ -265,31 +262,39 @@ impl MenuEditor {
         }
 
         // Handle reorder drag for managed children
-        if self.reorder_drag.is_some() {
+        if let Some(mut reorder) = self.reorder_drag.take() {
             if ctx.is_mouse_button_down(MouseButton::Left) {
-                let reorder = self.reorder_drag.as_ref().unwrap();
                 let group_index = reorder.group_index;
                 let child_index = reorder.child_index;
+
                 let drop = self.current_template().and_then(|t| {
                     let element = t.elements.get(group_index)?;
                     if let MenuElementKind::LayoutGroup(group) = &element.kind {
-                        compute_reorder_drop_index(group, element.rect, norm_mouse, child_index)
+                        compute_reorder_drop_index(
+                            group, 
+                            element.rect, 
+                            norm_mouse, 
+                            child_index
+                        )
                     } else {
                         None
                     }
                 });
-                self.reorder_drag.as_mut().unwrap().drop_target = drop;
+
+                reorder.drop_target = drop;
+                self.reorder_drag = Some(reorder);
             } else {
-                let reorder = self.reorder_drag.as_ref().unwrap();
                 let group_index = reorder.group_index;
                 let child_index = reorder.child_index;
                 let drop_target = reorder.drop_target;
-                self.reorder_drag = None;
 
                 if let Some(target) = drop_target.filter(|&t| t != child_index) {
                     if let Some(template_idx) = self.current_template_index {
                         push_command(Box::new(ReorderChildCmd::new(
-                            template_idx, group_index, child_index, target,
+                            template_idx,
+                            group_index,
+                            child_index,
+                            target,
                         )));
                     }
                 }
@@ -302,7 +307,6 @@ impl MenuEditor {
                 let drag_offset = self.drag_offset;
                 let child_idx = self.selected_child_index;
 
-                // Shift-lock: constrain to dominant axis
                 let norm_mouse = if shift_held {
                     let delta = norm_mouse - self.drag_start_mouse;
                     if delta.x.abs() > delta.y.abs() {
@@ -315,7 +319,6 @@ impl MenuEditor {
                 };
 
                 if let Some(child_idx) = child_idx {
-                    // Drag unmanaged child: position is relative to group origin
                     let group_origin = self.current_template()
                         .and_then(|t| t.elements.get(anchor_index))
                         .map(|e| Vec2::new(e.rect.x, e.rect.y));
@@ -333,7 +336,6 @@ impl MenuEditor {
                         }
                     }
                 } else if self.selected_element_indices.len() > 1 && !self.drag_start_rects.is_empty() {
-                    // Multi-drag: compute delta from anchor's start position
                     let anchor_start = self.drag_start_rects.iter()
                         .find(|(i, _)| *i == anchor_index)
                         .map(|(_, pos)| *pos);
@@ -391,14 +393,12 @@ impl MenuEditor {
                     }
                 }
             } else {
-                // Drag ended — push move command for undo support
                 if let Some(template_idx) = self.current_template_index {
                     let child_idx = self.selected_child_index;
                     let mut moves = Vec::new();
 
                     if let Some(template) = self.current_template() {
                         if let Some(ci) = child_idx {
-                            // Unmanaged child drag: single element
                             if let Some((_, start_pos)) = self.drag_start_rects.first() {
                                 let to = template.elements.get(anchor_index)
                                     .and_then(|e| match &e.kind {
@@ -540,19 +540,17 @@ impl MenuEditor {
             }
 
             // Draw placement cursor if pending
-            if self.pending_element_type.is_some() {
-                if rect.contains(world_mouse) {
-                    let size = 32.0;
-                    let half = size / 2.0;
-                    ctx.draw_rectangle_lines(
-                        world_mouse.x - half,
-                        world_mouse.y - half,
-                        size,
-                        size,
-                        2.0,
-                        Color::new(0.5, 0.8, 0.5, 0.8),
-                    );
-                }
+            if self.pending_element_type.is_some() && rect.contains(world_mouse) {
+                let size = 32.0;
+                let half = size / 2.0;
+                ctx.draw_rectangle_lines(
+                    world_mouse.x - half,
+                    world_mouse.y - half,
+                    size,
+                    size,
+                    2.0,
+                    Color::new(0.5, 0.8, 0.5, 0.8),
+                );
             }
         }
 
@@ -586,7 +584,7 @@ impl MenuEditor {
     ) {
         match &element.kind {
             MenuElementKind::Button(button) => {
-                let display_text = format!("{}", button.text_key);
+                let display_text = button.text_key.to_string();
                 Button::new(element_rect, &display_text)
                     .font_size(button.font_size)
                     .mouse_position(world_mouse)
@@ -681,18 +679,12 @@ impl MenuEditor {
                         .map(|(idx, (_, rect))| (idx, *rect))
                         .collect();
 
-                    let indicator_color = Color::new(0.3, 0.7, 1.0, 0.9);
                     let managed_slot = child_index_to_managed_slot(group, target);
-
-                    let spacing_x = group.layout.spacing / 1920.0;
-                    let spacing_y = group.layout.spacing / 1080.0;
 
                     draw_reorder_indicator(
                         ctx, &managed_rects, managed_slot,
-                        &group.layout.direction,
-                        spacing_x, spacing_y,
+                        &group.layout,
                         canvas_origin, canvas_size,
-                        indicator_color,
                     );
                 }
 
@@ -1041,18 +1033,19 @@ fn draw_reorder_indicator(
     ctx: &mut WgpuContext,
     managed_rects: &[(usize, Rect)],
     managed_slot: usize,
-    direction: &LayoutDirection,
-    spacing_x: f32,
-    spacing_y: f32,
+    layout: &LayoutConfig,
     canvas_origin: Vec2,
     canvas_size: Vec2,
-    color: Color,
 ) {
     if managed_rects.is_empty() {
         return;
     }
 
+    let indicator_color = Color::new(0.3, 0.7, 1.0, 0.9);
     let thickness = 2.0;
+    let spacing_x = layout.spacing / 1920.0;
+    let spacing_y = layout.spacing / 1080.0;
+    let direction = layout.direction;
 
     match direction {
         LayoutDirection::Vertical => {
@@ -1072,7 +1065,7 @@ fn draw_reorder_indicator(
                 Rect::new(x, y - 0.001, w, 0.002),
                 canvas_origin, canvas_size,
             );
-            ctx.draw_rectangle(screen.x, screen.y, screen.w, thickness, color);
+            ctx.draw_rectangle(screen.x, screen.y, screen.w, thickness, indicator_color);
         }
         LayoutDirection::Horizontal => {
             let (x, y, h) = if managed_slot == 0 {
@@ -1091,7 +1084,7 @@ fn draw_reorder_indicator(
                 Rect::new(x - 0.001, y, 0.002, h),
                 canvas_origin, canvas_size,
             );
-            ctx.draw_rectangle(screen.x, screen.y, thickness, screen.h, color);
+            ctx.draw_rectangle(screen.x, screen.y, thickness, screen.h, indicator_color);
         }
         LayoutDirection::Grid { .. } => {
             let (y, x, w) = if managed_slot == 0 {
@@ -1110,7 +1103,7 @@ fn draw_reorder_indicator(
                 Rect::new(x, y - 0.001, w, 0.002),
                 canvas_origin, canvas_size,
             );
-            ctx.draw_rectangle(screen.x, screen.y, screen.w, thickness, color);
+            ctx.draw_rectangle(screen.x, screen.y, screen.w, thickness, indicator_color);
         }
     }
 }
@@ -1140,10 +1133,8 @@ fn nearest_snap(value: f32) -> Option<f32> {
     let mut best: Option<(f32, f32)> = None;
     for &frac in &SNAP_FRACTIONS {
         let dist = (value - frac).abs();
-        if dist < SNAP_THRESHOLD {
-            if best.map_or(true, |(_, d)| dist < d) {
-                best = Some((frac, dist));
-            }
+        if dist < SNAP_THRESHOLD && best.is_none_or(|(_, d)| dist < d) {
+            best = Some((frac, dist));
         }
     }
     best.map(|(frac, _)| frac)

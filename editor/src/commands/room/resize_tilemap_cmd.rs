@@ -1,7 +1,6 @@
 // editor/src/commands/room/resize_tilemap_cmd.rs
 use crate::commands::editor_command_manager::EditorCommand;
 use crate::tilemap::resize_handle::HandleSide;
-use crate::tiles::tilemap::shift_tiles;
 use crate::app::EditorMode;
 use crate::with_editor;
 use std::collections::HashMap;

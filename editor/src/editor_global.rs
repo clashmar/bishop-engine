@@ -1,10 +1,10 @@
 // editor/src/editor_global.rs
 use crate::gui::panels::panel_manager::PanelManager;
 use crate::commands::editor_command_manager::*;
-use crate::ecs::entity::Entity;
 use crate::Editor;
-use std::cell::RefCell;
+use engine_core::prelude::*;
 use std::future::Future;
+use std::cell::RefCell;
 use std::cell::Cell;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -17,7 +17,7 @@ pub struct EditorServices {
     pub command_manager: RefCell<EditorCommandManager>,
     pub pending_undo: Cell<bool>,
     pub pending_redo: Cell<bool>,
-    pub entity_clipboard: RefCell<Option<Vec<(Entity, Vec<(String, String)>)>>>,
+    pub entity_clipboard: RefCell<Option<GroupSnapshot>>,
     pub panel_manager: RefCell<PanelManager>,
 }
 

@@ -115,17 +115,13 @@ impl MenuEditor {
         blocked: bool,
         clip: &Rect,
     ) {
-        let (current_text_key, current_font_size, current_action, nav_up, nav_down, nav_left, nav_right) = {
+        let (current_text_key, current_font_size, current_action) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Button(button) = &element.kind else { return };
             (
                 button.text_key.clone(),
                 button.font_size,
                 button.action.clone(),
-                button.nav_up,
-                button.nav_down,
-                button.nav_left,
-                button.nav_right,
             )
         };
 
@@ -248,103 +244,18 @@ impl MenuEditor {
             }
             *y += 20.0;
 
-            let focusable_elements = self.get_focusable_element_names();
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.nav_up_id, nav_up, &focusable_elements, blocked, clip, |btn, idx| btn.nav_up = idx);
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.nav_down_id, nav_down, &focusable_elements, blocked, clip, |btn, idx| btn.nav_down = idx);
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.nav_left_id, nav_left, &focusable_elements, blocked, clip, |btn, idx| btn.nav_left = idx);
-            self.draw_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.nav_right_id, nav_right, &focusable_elements, blocked, clip, |btn, idx| btn.nav_right = idx);
+            let nav_ids = self.properties_panel.widget_ids.button_nav_ids;
+
+            self.draw_nav_section::<ButtonElement>(
+                ctx,
+                y,
+                x,
+                w,
+                blocked,
+                clip,
+                &nav_ids,
+            );
         }
-    }
-
-    fn draw_nav_dropdown<F>(
-        &mut self,
-        ctx: &mut WgpuContext,
-        y: &mut f32,
-        x: f32,
-        w: f32,
-        label: &str,
-        id: WidgetId,
-        current: Option<usize>,
-        options: &[(usize, String)],
-        blocked: bool,
-        clip: &Rect,
-        mut setter: F,
-    ) where
-        F: FnMut(&mut ButtonElement, Option<usize>),
-    {
-        if row_visible(*y, ROW_HEIGHT, clip) {
-            ctx.draw_text(label, x, *y + 16.0, 12.0, Color::WHITE);
-
-            let current_label = current
-                .and_then(|idx| options.iter().find(|(i, _)| *i == idx))
-                .map(|(_, name)| name.as_str())
-                .unwrap_or("None");
-
-            let mut nav_options: Vec<String> = vec!["None".to_string()];
-            nav_options.extend(options.iter().map(|(_, name)| name.clone()));
-
-            let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-            if let Some(selected) = Dropdown::new(
-                id,
-                dropdown_rect,
-                current_label,
-                &nav_options,
-                |s| s.clone(),
-            )
-            .blocked(blocked)
-            .fixed_width()
-            .show(ctx)
-            {
-                let new_nav = if selected == "None" {
-                    None
-                } else {
-                    options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
-                };
-
-                self.push_element_update(|el| {
-                    if let MenuElementKind::Button(button) = &mut el.kind {
-                        setter(button, new_nav);
-                    }
-                });
-            }
-        }
-        *y += ROW_HEIGHT;
-    }
-
-    pub(super) fn get_focusable_element_names(&self) -> Vec<(usize, String)> {
-        let Some(template) = self.current_template() else {
-            return Vec::new();
-        };
-
-        let selected = self.primary_selected_index();
-        template
-            .elements
-            .iter()
-            .enumerate()
-            .filter(|(idx, _)| selected != Some(*idx))
-            .filter_map(|(idx, element)| {
-                let name = if !element.name.is_empty() {
-                    element.name.clone()
-                } else {
-                    match &element.kind {
-                        MenuElementKind::Button(button) => button.text_key.clone(),
-                        MenuElementKind::LayoutGroup(group) => {
-                            let button_count = group.children.iter()
-                                .filter(|c| matches!(c.element.kind, MenuElementKind::Button(_)))
-                                .count();
-                            format!("Layout Group ({} buttons)", button_count)
-                        }
-                        _ => return None,
-                    }
-                };
-                match &element.kind {
-                    MenuElementKind::Button(_) | MenuElementKind::LayoutGroup(_) => {
-                        Some((idx, format!("{}: {}", idx, name)))
-                    }
-                    _ => None,
-                }
-            })
-            .collect()
     }
 
     pub(super) fn draw_panel_properties(
@@ -359,9 +270,7 @@ impl MenuEditor {
         let (current_color, current_opacity) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::Panel(panel) = &element.kind else { return };
-            let color = match panel.background.fill {
-                PanelFill::SolidColor(c) => c,
-            };
+            let PanelFill::SolidColor(color) = panel.background.fill;
             (color, panel.background.opacity)
         };
 

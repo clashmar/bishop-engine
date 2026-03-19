@@ -1,5 +1,4 @@
 // editor/src/room/entity_drag.rs
-use crate::ecs::component_registry::ComponentRegistry;
 use crate::room::room_editor::*;
 use crate::room::selection::*;
 use crate::shared::selection::*;
@@ -454,11 +453,11 @@ impl RoomEditor {
             if ecs.has::<Player>(entity) {
                 continue;
             }
-            let snapshot = capture_subtree(ecs, entity);
-            for (id, _) in &snapshot {
-                entity_order.push(*id);
+            let group_snapshot = capture_subtree(ecs, entity);
+            for snapshot in &group_snapshot {
+                entity_order.push(snapshot.entity);
             }
-            all_snapshots.extend(snapshot);
+            all_snapshots.extend(group_snapshot);
         }
 
         if all_snapshots.is_empty() {
@@ -466,13 +465,13 @@ impl RoomEditor {
         }
 
         // Find root entities (entities without parents in the snapshot)
-        let snapshot_ids: HashSet<Entity> = all_snapshots.iter().map(|(id, _)| *id).collect();
+        let snapshot_ids: HashSet<Entity> = all_snapshots.iter().map(|s| s.entity).collect();
         let mut root_old_ids = Vec::new();
 
-        for (old_id, bag) in all_snapshots.iter() {
-            let has_parent_in_snapshot = bag.iter().any(|(type_name, ron)| {
-                if type_name == comp_type_name::<Parent>() {
-                    if let Ok(parent) = ron::from_str::<Parent>(ron) {
+        for snapshot in all_snapshots.iter() {
+            let has_parent_in_snapshot = snapshot.components.iter().any(|comp| {
+                if comp.type_name == comp_type_name::<Parent>() {
+                    if let Ok(parent) = ron::from_str::<Parent>(&comp.ron) {
                         return snapshot_ids.contains(&parent.0);
                     }
                 }
@@ -480,33 +479,33 @@ impl RoomEditor {
             });
 
             if !has_parent_in_snapshot {
-                root_old_ids.push(*old_id);
+                root_old_ids.push(snapshot.entity);
             }
         }
 
         // Create new entities for each snapshot entry
         let mut id_map = HashMap::new();
-        for (old_id, _) in all_snapshots.iter() {
+        for snapshot in all_snapshots.iter() {
             let new_id = ecs.create_entity().finish();
-            id_map.insert(*old_id, new_id);
+            id_map.insert(snapshot.entity, new_id);
         }
 
         // Restore components to the new entities
-        for (old_id, bag) in all_snapshots.iter() {
-            let new_id = id_map[old_id];
+        for snapshot in all_snapshots.iter() {
+            let new_id = id_map[&snapshot.entity];
 
-            for (type_name, ron) in bag.iter() {
+            for comp in snapshot.components.iter() {
                 let component_reg = match inventory::iter::<ComponentRegistry>()
-                    .find(|r| r.type_name == type_name)
+                    .find(|r| r.type_name == comp.type_name)
                 {
                     Some(reg) => reg,
                     None => continue,
                 };
 
-                let mut boxed = (component_reg.from_ron_component)(ron.clone());
+                let mut boxed = (component_reg.from_ron_component)(comp.ron.clone());
 
                 // Remap parent references
-                if type_name == comp_type_name::<Parent>() {
+                if comp.type_name == comp_type_name::<Parent>() {
                     if let Some(parent) = boxed.as_mut().downcast_mut::<Parent>() {
                         if let Some(&new_parent) = id_map.get(&parent.0) {
                             parent.0 = new_parent;
@@ -515,7 +514,7 @@ impl RoomEditor {
                 }
 
                 // Remap children references
-                if type_name == comp_type_name::<Children>() {
+                if comp.type_name == comp_type_name::<Children>() {
                     if let Some(children) = boxed.as_mut().downcast_mut::<Children>() {
                         for child in &mut children.entities {
                             if let Some(&new_child) = id_map.get(child) {
@@ -526,7 +525,7 @@ impl RoomEditor {
                 }
 
                 // Initialize Animation runtime state so it renders during drag
-                if type_name == comp_type_name::<Animation>() {
+                if comp.type_name == comp_type_name::<Animation>() {
                     if let Some(anim) = boxed.as_mut().downcast_mut::<Animation>() {
                         anim.init_runtime();
                     }

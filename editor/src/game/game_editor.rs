@@ -1,6 +1,6 @@
 // editor/src/game/game_editor.rs
 use crate::gui::mode_selector::ModeSelector;
-use crate::editor_assets::editor_assets::*;
+use crate::editor_assets::assets::*;
 use crate::gui::mode_selector::ModeInfo;
 use crate::gui::gui_constants::*;
 use crate::commands::game::*;
@@ -253,7 +253,7 @@ impl GameEditor {
                     self.dragged_world = Some(world.id);
 
                     let mouse_world = coord::mouse_world_pos(ctx, camera);
-                    let world_pos = world.meta.position.into();
+                    let world_pos = world.meta.position;
                     self.drag_offset = world_pos - mouse_world;
                     self.drag_start_position = Some(world_pos);
                     break;
@@ -268,7 +268,7 @@ impl GameEditor {
                     let mouse_world = coord::mouse_world_pos(ctx, camera);
 
                     if let Some(world) = game.worlds.iter_mut().find(|w| w.id == id) {
-                        world.meta.position = (mouse_world + self.drag_offset).into();
+                        world.meta.position = mouse_world + self.drag_offset;
                     }
                 }
 
@@ -414,7 +414,7 @@ impl GameEditor {
     }
 
     fn widget_id_for_world(&mut self, world_id: WorldId) -> WidgetId {
-        *self.world_widget_ids.entry(world_id).or_insert_with(WidgetId::default)
+        *self.world_widget_ids.entry(world_id).or_default()
     }
 
     #[inline]
@@ -507,8 +507,8 @@ impl GameEditor {
 
         for world in &game.worlds {
             let tex = self.resolve_world_texture(world, &mut game.asset_manager);
-            let w = tex.width() as f32;
-            let h = tex.height() as f32;
+            let w = tex.width();
+            let h = tex.height();
 
             let pos = world.meta.position;
             let right = pos.x + w;
@@ -538,9 +538,6 @@ static ALL_MODES: Lazy<&'static [GameEditorMode]> = Lazy::new(|| {
 });
 
 thread_local! {
-    pub static EDIT_WORLD_RESULT: RefCell<Option<WorldEditResult>> = RefCell::new(None);
-}
-
-thread_local! {
-    pub static DELETE_WORLD_RESULT: RefCell<Option<ConfirmPromptResult>> = RefCell::new(None);
+    pub static EDIT_WORLD_RESULT: RefCell<Option<WorldEditResult>> = const { RefCell::new(None) };
+    pub static DELETE_WORLD_RESULT: RefCell<Option<ConfirmPromptResult>> = const { RefCell::new(None) };
 }

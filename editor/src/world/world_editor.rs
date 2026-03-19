@@ -2,7 +2,7 @@
 use crate::app::SubEditor;
 use crate::app::EditorCameraController;
 use crate::canvas::grid_shader::GridRenderer;
-use crate::editor_assets::editor_assets::*;
+use crate::editor_assets::assets::*;
 use crate::gui::mode_selector::*;
 use crate::gui::menu_bar::*;
 use crate::world::coord::*;
@@ -21,31 +21,31 @@ const HOVER_LINE_THICKNESS: f32 = 0.01;
 
 #[derive(Clone, Copy, PartialEq, EnumIter)]
 pub enum WorldEditorMode {
-    SelectRoom,
-    NewRoom,
-    DeleteRoom,
+    Select,
+    New,
+    Delete,
 }
 
 impl ModeInfo for WorldEditorMode {
     fn label(&self) -> &'static str {
         match self {
-            WorldEditorMode::SelectRoom => "Select: S",
-            WorldEditorMode::NewRoom => "New Room: N",
-            WorldEditorMode::DeleteRoom => "Delete Room: D",
+            WorldEditorMode::Select => "Select: S",
+            WorldEditorMode::New => "New Room: N",
+            WorldEditorMode::Delete => "Delete Room: D",
         }
     }
     fn icon(&self) -> &'static Texture2D {
         match self {
-            WorldEditorMode::SelectRoom => &SELECT_ICON,
-            WorldEditorMode::NewRoom => &CREATE_ICON,
-            WorldEditorMode::DeleteRoom => &DELETE_ICON,
+            WorldEditorMode::Select => &SELECT_ICON,
+            WorldEditorMode::New => &CREATE_ICON,
+            WorldEditorMode::Delete => &DELETE_ICON,
         }
     }
     fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
         match self {
-            WorldEditorMode::SelectRoom => Some(Controls::s),
-            WorldEditorMode::NewRoom => Some(Controls::n),
-            WorldEditorMode::DeleteRoom => Some(Controls::d),
+            WorldEditorMode::Select => Some(Controls::s),
+            WorldEditorMode::New => Some(Controls::n),
+            WorldEditorMode::Delete => Some(Controls::d),
         }
     }
 }
@@ -62,7 +62,7 @@ pub struct WorldEditor {
 impl WorldEditor {
     pub fn new() -> Self {
         let active_rects: Vec<Rect> = Vec::new();
-        let mode = WorldEditorMode::SelectRoom;
+        let mode = WorldEditorMode::Select;
 
         Self {
             mode,
@@ -90,9 +90,9 @@ impl WorldEditor {
         self.handle_shortcuts(ctx);
 
         match self.mode {
-            WorldEditorMode::SelectRoom => self.update_selecting_mode(ctx, camera, game.current_world_mut()),
-            WorldEditorMode::NewRoom => self.update_placing_mode(ctx, camera, game),
-            WorldEditorMode::DeleteRoom => self.update_deleting_mode(ctx, camera, game),
+            WorldEditorMode::Select => self.update_selecting_mode(ctx, camera, game.current_world_mut()),
+            WorldEditorMode::New => self.update_placing_mode(ctx, camera, game),
+            WorldEditorMode::Delete => self.update_deleting_mode(ctx, camera, game),
         }
     }
 
@@ -180,7 +180,7 @@ impl WorldEditor {
 
     fn intersects_existing_room(
         &self,
-        rooms: &Vec<Room>,
+        rooms: &[Room],
         top_left: Vec2,
         size: Vec2,
         grid_size: f32,
@@ -219,13 +219,13 @@ impl WorldEditor {
 
         if !self.should_block_canvas(ctx) {
             match self.mode {
-                WorldEditorMode::SelectRoom => {
+                WorldEditorMode::Select => {
                     self.draw_hovered_room(ctx, camera, rooms, world.grid_size);
                 }
-                WorldEditorMode::DeleteRoom => {
+                WorldEditorMode::Delete => {
                     self.draw_hovered_room(ctx, camera, rooms, world.grid_size);
                 }
-                WorldEditorMode::NewRoom => {
+                WorldEditorMode::New => {
                     self.draw_placing_preview(ctx, camera, rooms, world.grid_size);
                 }
             }
@@ -347,7 +347,7 @@ impl WorldEditor {
 
                 // Choose highlight color based on mode
                 let color = match self.mode {
-                    WorldEditorMode::DeleteRoom => HIGHLIGHT_ERROR_COLOR,
+                    WorldEditorMode::Delete => HIGHLIGHT_ERROR_COLOR,
                     _ => HIGHLIGHT_COLOR,
                 };
 
@@ -528,13 +528,13 @@ impl WorldEditor {
             ctx.set_cursor_icon(CursorIcon::Default);
         } else {
             match self.mode {
-                WorldEditorMode::SelectRoom => {
+                WorldEditorMode::Select => {
                     ctx.set_cursor_icon(CursorIcon::Pointer);
                 }
-                WorldEditorMode::NewRoom => {
+                WorldEditorMode::New => {
                     ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
-                WorldEditorMode::DeleteRoom => {
+                WorldEditorMode::Delete => {
                     ctx.set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
@@ -542,8 +542,8 @@ impl WorldEditor {
     }
 
     pub fn reset(&mut self) {
-        self.mode = WorldEditorMode::SelectRoom;
-        self.mode_selector.current = WorldEditorMode::SelectRoom;
+        self.mode = WorldEditorMode::Select;
+        self.mode_selector.current = WorldEditorMode::Select;
         self.placing_start = None;
         self.placing_end = None;
         self.active_rects.clear();
