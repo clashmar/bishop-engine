@@ -27,7 +27,7 @@ impl EditorCommand for RenameGameCmd {
                 }
                 Err(err) => {
                     editor.toast = Some(Toast::new(
-                        &format!("Failed to rename game: {err}"),
+                        format!("Failed to rename game: {err}"),
                         3.0,
                     ));
                 }
@@ -43,7 +43,7 @@ impl EditorCommand for RenameGameCmd {
                 }
                 Err(err) => {
                     editor.toast = Some(Toast::new(
-                        &format!("Failed to rename game: {err}"),
+                        format!("Failed to rename game: {err}"),
                         3.0,
                     ));
                 }

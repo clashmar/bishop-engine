@@ -62,10 +62,10 @@ impl MenuFocus {
         match &element.kind {
             MenuElementKind::Button(button) => {
                 let target = match dir {
-                    NavDirection::Up => button.nav_up,
-                    NavDirection::Down => button.nav_down,
-                    NavDirection::Left => button.nav_left,
-                    NavDirection::Right => button.nav_right,
+                    NavDirection::Up => button.nav_targets.up,
+                    NavDirection::Down => button.nav_targets.down,
+                    NavDirection::Left => button.nav_targets.left,
+                    NavDirection::Right => button.nav_targets.right,
                 };
                 if let Some(target_idx) = target {
                     self.enter_element(target_idx, dir, template);
@@ -99,10 +99,10 @@ impl MenuFocus {
     /// Gets the nav field for a direction from a layout group.
     fn group_nav_field(dir: NavDirection, group: &LayoutGroupElement) -> Option<usize> {
         match dir {
-            NavDirection::Up => group.nav_up,
-            NavDirection::Down => group.nav_down,
-            NavDirection::Left => group.nav_left,
-            NavDirection::Right => group.nav_right,
+            NavDirection::Up => group.nav_targets.up,
+            NavDirection::Down => group.nav_targets.down,
+            NavDirection::Left => group.nav_targets.left,
+            NavDirection::Right => group.nav_targets.right,
         }
     }
 

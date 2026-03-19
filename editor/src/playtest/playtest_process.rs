@@ -25,9 +25,9 @@ impl PlaytestProcess {
             .spawn()?;
 
         let stdout = child.stdout.take()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to capture stdout"))?;
+            .ok_or_else(|| io::Error::other("Failed to capture stdout"))?;
         let stderr = child.stderr.take()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Failed to capture stderr"))?;
+            .ok_or_else(|| io::Error::other("Failed to capture stderr"))?;
 
         let (stdout_tx, stdout_rx) = mpsc::channel();
         let (stderr_tx, stderr_rx) = mpsc::channel();

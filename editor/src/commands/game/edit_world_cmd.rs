@@ -70,7 +70,7 @@ impl EditorCommand for EditWorldCmd {
                 game,
                 self.world_id,
                 self.new_name.as_deref(),
-                self.new_sprite.clone(),
+                self.new_sprite,
             );
 
             // Persist the change

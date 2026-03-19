@@ -1,8 +1,4 @@
 // editor/src/tilemap/tile_palette.rs
-use crate::assets::asset_manager::AssetManager;
-use crate::assets::sprite::SpriteId;
-use crate::tiles::tile::TileComponent;
-use crate::tiles::tile::TileDef;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use engine_core::prelude::*;
@@ -161,7 +157,7 @@ impl TilePalette {
             let entry = &self.entries[self.ui.edit_index];
             
             let tile_def = asset_manager.tile_defs
-                .get(&entry)
+                .get(entry)
                 .expect("Could not find tile definition.");
 
             self.ui.sprite_id = tile_def.sprite_id;
@@ -293,7 +289,7 @@ impl TilePalette {
 
         // Grow the UI grid
         let needed = self.entries.len();
-        self.rows = (needed + self.columns - 1) / self.columns; // ceil‑div
+        self.rows = needed.div_ceil(self.columns)
     }
 
     pub async fn edit_tile(
@@ -333,7 +329,7 @@ impl TilePalette {
         self.selected_index = self.entries.len().saturating_sub(1);
 
         // Re-compute rows
-        self.rows = (self.entries.len() + self.columns - 1) / self.columns;
+        self.rows = self.entries.len().div_ceil(self.columns);
     }
 
     /// The current height of the palette.
@@ -346,7 +342,7 @@ impl TilePalette {
         self.rows = if self.columns == 0 {
             0
         } else {
-            (self.entries.len() + self.columns - 1) / self.columns
+            self.entries.len().div_ceil(self.columns)
         };
     }
 

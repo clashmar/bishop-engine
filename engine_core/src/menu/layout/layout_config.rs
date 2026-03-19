@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use super::{Alignment, LayoutDirection, Padding};
 
 /// Configuration for menu element layout.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct LayoutConfig {
     pub direction: LayoutDirection,
     pub spacing: f32,

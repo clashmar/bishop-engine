@@ -1,6 +1,6 @@
 // editor/src/menu_editor/menu_properties_panel/layout_properties.rs
-use crate::menu_editor::MenuEditor;
 use super::{ROW_HEIGHT, LABEL_WIDTH, FIELD_HEIGHT, common_properties::row_visible};
+use crate::menu_editor::MenuEditor;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
@@ -14,7 +14,7 @@ impl MenuEditor {
         blocked: bool,
         clip: &Rect,
     ) {
-        let (has_bg, bg_color, bg_opacity, direction, grid_cols, spacing, padding, h_align, v_align, item_w, item_h, child_count, nav_up, nav_down, nav_left, nav_right) = {
+        let (has_bg, bg_color, bg_opacity, direction, grid_cols, spacing, padding, h_align, v_align, item_w, item_h, child_count) = {
             let Some(element) = self.selected_element() else { return };
             let MenuElementKind::LayoutGroup(group) = &element.kind else { return };
             let cols = match group.layout.direction {
@@ -23,9 +23,7 @@ impl MenuEditor {
             };
             let (has_bg, bg_color, bg_opacity) = match &group.background {
                 Some(bg) => {
-                    let color = match bg.fill {
-                        PanelFill::SolidColor(c) => c,
-                    };
+                    let PanelFill::SolidColor(color) = bg.fill;
                     (true, color, bg.opacity)
                 }
                 None => (false, Color::new(0.3, 0.3, 0.35, 1.0), 1.0),
@@ -43,10 +41,6 @@ impl MenuEditor {
                 group.layout.item_width,
                 group.layout.item_height,
                 group.children.len(),
-                group.nav_up,
-                group.nav_down,
-                group.nav_left,
-                group.nav_right,
             )
         };
 
@@ -445,65 +439,16 @@ impl MenuEditor {
         }
         *y += 20.0;
 
-        let focusable_elements = self.get_focusable_element_names();
-        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Up:", self.properties_panel.widget_ids.layout_nav_up_id, nav_up, &focusable_elements, blocked, clip, |group, idx| group.nav_up = idx);
-        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Down:", self.properties_panel.widget_ids.layout_nav_down_id, nav_down, &focusable_elements, blocked, clip, |group, idx| group.nav_down = idx);
-        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Left:", self.properties_panel.widget_ids.layout_nav_left_id, nav_left, &focusable_elements, blocked, clip, |group, idx| group.nav_left = idx);
-        self.draw_layout_nav_dropdown(ctx, y, x, w, "Nav Right:", self.properties_panel.widget_ids.layout_nav_right_id, nav_right, &focusable_elements, blocked, clip, |group, idx| group.nav_right = idx);
-    }
+        let nav_ids = self.properties_panel.widget_ids.layout_nav_ids;
 
-    fn draw_layout_nav_dropdown<F>(
-        &mut self,
-        ctx: &mut WgpuContext,
-        y: &mut f32,
-        x: f32,
-        w: f32,
-        label: &str,
-        id: WidgetId,
-        current: Option<usize>,
-        options: &[(usize, String)],
-        blocked: bool,
-        clip: &Rect,
-        mut setter: F,
-    ) where
-        F: FnMut(&mut LayoutGroupElement, Option<usize>),
-    {
-        if row_visible(*y, ROW_HEIGHT, clip) {
-            ctx.draw_text(label, x, *y + 16.0, 12.0, Color::WHITE);
-
-            let current_label = current
-                .and_then(|idx| options.iter().find(|(i, _)| *i == idx))
-                .map(|(_, name)| name.as_str())
-                .unwrap_or("None");
-
-            let mut nav_options: Vec<String> = vec!["None".to_string()];
-            nav_options.extend(options.iter().map(|(_, name)| name.clone()));
-
-            let dropdown_rect = Rect::new(x + LABEL_WIDTH, *y, w - LABEL_WIDTH, FIELD_HEIGHT);
-            if let Some(selected) = Dropdown::new(
-                id,
-                dropdown_rect,
-                current_label,
-                &nav_options,
-                |s| s.clone(),
-            )
-            .blocked(blocked)
-            .fixed_width()
-            .show(ctx)
-            {
-                let new_nav = if selected == "None" {
-                    None
-                } else {
-                    options.iter().find(|(_, name)| name == &selected).map(|(idx, _)| *idx)
-                };
-
-                self.push_element_update(|el| {
-                    if let MenuElementKind::LayoutGroup(group) = &mut el.kind {
-                        setter(group, new_nav);
-                    }
-                });
-            }
-        }
-        *y += ROW_HEIGHT;
+        self.draw_nav_section::<LayoutGroupElement>(
+            ctx,
+            y,
+            x,
+            w,
+            blocked,
+            clip,
+            &nav_ids,
+        );
     }
 }

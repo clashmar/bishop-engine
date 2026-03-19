@@ -1,9 +1,10 @@
-use bishop::prelude::*;
-use serde::{Deserialize, Serialize};
+use super::layout_group::LayoutGroupElement;
 use crate::menu::menu_builder::MenuAction;
 use crate::menu::layout::HorizontalAlign;
-use super::layout_group::LayoutGroupElement;
 use super::menu_panel::PanelBackground;
+use crate::menu::{NavTargets, Navigable};
+use serde::{Deserialize, Serialize};
+use bishop::prelude::*;
 
 /// Different kinds of menu elements.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,10 +44,7 @@ pub struct ButtonElement {
     pub text_key: String,
     pub action: MenuAction,
     pub font_size: f32,
-    pub nav_up: Option<usize>,
-    pub nav_down: Option<usize>,
-    pub nav_left: Option<usize>,
-    pub nav_right: Option<usize>,
+    pub nav_targets: NavTargets,
 }
 
 impl Default for ButtonElement {
@@ -55,11 +53,29 @@ impl Default for ButtonElement {
             text_key: String::new(),
             action: MenuAction::CloseMenu,
             font_size: 20.0,
-            nav_up: None,
-            nav_down: None,
-            nav_left: None,
-            nav_right: None,
+            nav_targets: NavTargets::default(),
         }
+    }
+}
+
+impl Navigable for ButtonElement {
+    fn nav_targets(&self) -> &NavTargets { 
+        &self.nav_targets 
+    }
+
+    fn nav_targets_mut(&mut self) -> &mut NavTargets { 
+        &mut self.nav_targets 
+    }
+    
+    fn from_element(el: &MenuElement) -> Option<&Self> {
+        match &el.kind {
+            MenuElementKind::Button(b) => Some(b),
+            _ => None
+        }
+    }
+    
+    fn wrap_into_element(self) -> MenuElementKind {
+        MenuElementKind::Button(self)
     }
 }
 

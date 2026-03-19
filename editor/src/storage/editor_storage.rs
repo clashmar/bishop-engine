@@ -1,8 +1,6 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
-use crate::scripting::script_manager::ScriptManager;
 use crate::tilemap::tile_palette::TilePalette;
-use crate::ecs::transform::Transform;
 use crate::with_lua_async;
 use crate::write_engine_scripts;
 use std::collections::HashSet;
@@ -70,7 +68,7 @@ pub async fn create_new_game(name: String) -> Game {
     game
 }
 
-fn create_game_folders(name: &String) {
+fn create_game_folders(name: &str) {
     let folders: [(PathBuf, &str); 6] = [
         (resources_folder_current(), RESOURCES_FOLDER),
         (assets_folder(), ASSETS_FOLDER),
@@ -135,7 +133,7 @@ pub fn save_game(game: &Game) -> io::Result<()> {
         .enumerate_arrays(true);
 
     let ron_string = ron::ser::to_string_pretty(game, pretty)
-        .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        .map_err(|e| Error::other(e))?;
 
     let resources_folder = resources_folder_current();
     let file_path = resources_folder.join(GAME_RON);
@@ -220,7 +218,7 @@ pub fn save_palette(palette: &TilePalette, game_name: &str) -> io::Result<()> {
     fs::create_dir_all(&dir)?;
     let path = dir.join("palette.ron");
     let ron = ron::ser::to_string(palette)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(|e| io::Error::other(e))?;
     fs::write(path, ron)
 }
 
@@ -231,7 +229,7 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
         return Ok(TilePalette::new());
     }
     let ron = fs::read_to_string(path)?;
-    ron::de::from_str(&ron).map_err(|e| Error::new(ErrorKind::Other, e))
+    ron::de::from_str(&ron).map_err(|e| Error::other(e))
 }
 
 /// Create a fresh world with a single default room.
@@ -248,7 +246,7 @@ pub fn create_new_world(game: &mut Game) -> World {
         rooms: vec![first_room],
         current_room_id: None,
         starting_room_id: Some(room_id),
-        starting_position: Some(room_origin.into()),
+        starting_position: Some(room_origin),
         meta: WorldMeta::default(),
         grid_size: DEFAULT_GRID_SIZE,
     };
@@ -389,7 +387,7 @@ pub fn save_menu(template: &MenuTemplate) -> io::Result<()> {
         .enumerate_arrays(true);
 
     let ron = ron::ser::to_string_pretty(template, pretty)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(|e| io::Error::other(e))?;
 
     fs::write(path, ron)
 }
@@ -408,7 +406,7 @@ pub fn load_menus() -> Vec<MenuTemplate> {
     entries
         .filter_map(|entry| entry.ok())
         .filter(|entry| {
-            entry.path().extension().map_or(false, |ext| ext == "ron")
+            entry.path().extension().is_some_and(|ext| ext == "ron")
         })
         .filter_map(|entry| {
             let ron = fs::read_to_string(entry.path()).ok()?;

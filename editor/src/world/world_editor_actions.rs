@@ -1,7 +1,5 @@
 // editor/src/world/world_editor_actions.rs
-use crate::ui::widgets::DEFAULT_FONT_SIZE_16;
 use crate::world::world_editor::WorldEditor;
-use crate::tiles::tilemap::TileMap;
 use crate::world::coord;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -68,8 +66,7 @@ impl WorldEditor {
         grid_size: f32,
     ) -> RoomId {
         let origin_in_pixels = top_left * grid_size;
-        let new_id = self.create_new_room(game, "untitled", origin_in_pixels, size);
-        new_id
+        self.create_new_room(game, "untitled", origin_in_pixels, size)
     }
 
     /// Create a new room in the current world and return its id.
@@ -101,7 +98,7 @@ impl WorldEditor {
             darkness: 0.
         };
 
-        let _camera = room.create_room_camera(&mut game.ecs, id, grid_size);
+        room.create_room_camera(&mut game.ecs, id, grid_size);
 
         let cur_world = game.current_world_mut();
         cur_world.rooms.push(room);

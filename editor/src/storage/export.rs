@@ -1,6 +1,6 @@
 // editor\src\storage\export.rs
 #![allow(unused)]
-use crate::editor_assets::editor_assets::*;
+use crate::editor_assets::assets::*;
 use engine_core::storage::path_utils::*;
 use engine_core::game::game::*;
 use winres_edit::resource_type;
@@ -49,8 +49,7 @@ pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
         .pick_folder()
         .ok_or_else(|| {
             Error::new(
-                ErrorKind::InvalidInput,  
-                "No destination folder was selected.")
+                ErrorKind::InvalidInput, "No destination folder was selected.")
         })?;
 
     // TODO: This overwrites, check for duplicates
@@ -59,12 +58,12 @@ pub async fn export_game(game: &Game) -> io::Result<PathBuf> {
     {
         onscreen_info!("Exporting for windows");
         let exe_path = export_for_windows(&dest_root, game).await?;
-        return Ok(exe_path);
+        Ok(exe_path)
     }
     #[cfg(target_os = "macos")]
     {
         let bundle_path = export_for_mac(dest_root, game).await?;
-        return Ok(bundle_path);
+        Ok(bundle_path)
     }
 
     // TODO Handle Linux
@@ -89,9 +88,7 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
 
     onscreen_debug!("Updating .exe");
     if let Err(e) = update_exe(&exe_path, game) {
-        return Err(Error::new(
-            ErrorKind::Other,  
-            format!("Could not update .exe: {e}"))
+        return Err(Error::other(format!("Could not update .exe: {e}"))
         );
     }
 
@@ -104,9 +101,9 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
 
     // Overwrite game.ron purging player proxies
     let game_ron = ron::to_string(game)
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     let mut game_copy: Game = ron::from_str(&game_ron)
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
 
     // Set player spawn position from proxy before purging
     if let Some(start_room_id) = game_copy.current_world().starting_room_id {
@@ -118,7 +115,7 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
         .separate_tuple_members(true)
         .enumerate_arrays(true);
     let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     fs::write(target_resources.join(GAME_RON), ron_string)?;
 
     // TODO: Write manifest for game
@@ -143,10 +140,10 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
     // Make sure this file exists
     fs::create_dir_all(&macos_dir)?;
 
-    let bin_path = &macos_dir.join(format!("{}", game.name));
+    let bin_path = &macos_dir.join(game.name.to_string());
 
     onscreen_debug!("Creating new binary at: {}", bin_path.display());
-    let mut bin_file = fs::File::create(&bin_path)?;
+    let mut bin_file = fs::File::create(bin_path)?;
 
     onscreen_debug!("Writing buffer into binary.");
     bin_file.write_all(GAME_BIN)?;
@@ -154,9 +151,9 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 
     // Set executable permissions
     onscreen_debug!("Writing binary permissions.");
-    let mut permissions = fs::metadata(&bin_path)?.permissions();
+    let mut permissions = fs::metadata(bin_path)?.permissions();
     permissions.set_mode(0o755);
-    fs::set_permissions(&bin_path, permissions)?;
+    fs::set_permissions(bin_path, permissions)?;
 
     // Copy /Resources, skipping source files not needed for the final game
     onscreen_debug!("Copying /Resources.");
@@ -170,9 +167,9 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
 
     // Overwrite game.ron purging player proxies
     let game_ron = ron::to_string(game)
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     let mut game_copy: Game = ron::from_str(&game_ron)
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
 
     // Set player spawn position from proxy before purging
     if let Some(start_room_id) = game_copy.current_world().starting_room_id {
@@ -184,7 +181,7 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
         .separate_tuple_members(true)
         .enumerate_arrays(true);
     let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
-        .map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     fs::write(target_resources.join(GAME_RON), ron_string)?;
 
     // Copy Icon.icns

@@ -70,14 +70,12 @@ impl BackgroundModule {
             g / 255.0,
             b / 255.0,
             a / 255.0,
-        ).into();
-
-        map.background = Color::new(r / 255.0, g / 255.0, b / 255.0, a / 255.0).into();
+        );
 
         // Preview square
         let preview_sz = field_h; // same height as the input fields
         let preview_rect = Rect::new(x, y, preview_sz, preview_sz);
-        ctx.draw_rectangle(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, map.background.into());
+        ctx.draw_rectangle(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, map.background);
         ctx.draw_rectangle_lines(preview_rect.x, preview_rect.y, preview_rect.w, preview_rect.h, 2.0, Color::WHITE);
     }
 }

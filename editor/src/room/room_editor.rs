@@ -6,7 +6,7 @@ use crate::shared::selection::draw_selection_box;
 use crate::gui::inspector::inspector::Inspector;
 use crate::room::selection::PreCopyDragState;
 use crate::canvas::grid_shader::GridRenderer;
-use crate::editor_assets::editor_assets::*;
+use crate::editor_assets::assets::*;
 use crate::tilemap::tilemap_editor::*;
 use crate::gui::modal::is_modal_open;
 use crate::gui::mode_selector::*;
@@ -138,7 +138,6 @@ impl RoomEditor {
             .map(|r| (r.position, r.size))
             .collect();
 
-        // Compute exits from adjacent rooms that face toward the current room
         let adjacent_exits: Vec<(Vec2, ExitDirection)> = {
             let current_room = current_world.rooms
                 .iter()
@@ -197,9 +196,7 @@ impl RoomEditor {
                     room,
                     &other_bounds,
                     &adjacent_exits,
-                    ecs,
                     grid_size,
-                    room_id,
                 ).await;
             }
             RoomEditorMode::Scene => {

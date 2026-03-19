@@ -3,14 +3,10 @@
 // Tells windows if it's a console app or not (console is useful in debug)
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::editor_assets::editor_assets::*;
+use crate::editor_assets::assets::*;
 use crate::editor_global::*;
 use crate::app::Editor;
-use engine_core::logging::logging::init_file_logger;
-use engine_core::ui::widgets::*;
-use engine_core::*;
-use engine_core::storage::path_utils::*;
-use engine_core::{constants::*, storage::path_utils::absolute_save_root};
+use engine_core::prelude::*;
 use bishop::prelude::*;
 use bishop::BishopApp;
 
@@ -47,7 +43,7 @@ impl BishopApp for EditorApp {
         onscreen_info!("Starting editor.");
 
         // Initialize logging
-        init_file_logger();
+        logging::init_file_logger();
 
         if !ensure_save_root().await {
             // User cancelled
@@ -61,7 +57,7 @@ impl BishopApp for EditorApp {
             std::process::exit(1);
         }
 
-        match Editor::new(&mut *ctx.borrow_mut()).await {
+        match Editor::new(&mut ctx.borrow_mut()).await {
             Ok(editor) => {
                 // This allows global access to services
                 set_editor(editor);

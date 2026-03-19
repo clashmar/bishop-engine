@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use super::menu_element::MenuElement;
 use super::menu_panel::PanelBackground;
-use crate::menu::layout::LayoutConfig;
+use super::menu_element::MenuElement;
+use crate::menu::*;
+use serde::{Deserialize, Serialize};
 
 /// Element that arranges its children using layout rules.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,14 +11,7 @@ pub struct LayoutGroupElement {
     /// Optional panel background rendered behind the children.
     #[serde(default)]
     pub background: Option<PanelBackground>,
-    /// Navigation target when leaving upward.
-    pub nav_up: Option<usize>,
-    /// Navigation target when leaving downward.
-    pub nav_down: Option<usize>,
-    /// Navigation target when leaving left.
-    pub nav_left: Option<usize>,
-    /// Navigation target when leaving right.
-    pub nav_right: Option<usize>,
+    pub nav_targets: NavTargets,
 }
 
 impl Default for LayoutGroupElement {
@@ -27,11 +20,29 @@ impl Default for LayoutGroupElement {
             layout: LayoutConfig::default(),
             children: Vec::new(),
             background: None,
-            nav_up: None,
-            nav_down: None,
-            nav_left: None,
-            nav_right: None,
+            nav_targets: NavTargets::default(),
         }
+    }
+}
+
+impl Navigable for LayoutGroupElement {
+    fn nav_targets(&self) -> &NavTargets { 
+        &self.nav_targets 
+    }
+    
+    fn nav_targets_mut(&mut self) -> &mut NavTargets { 
+        &mut self.nav_targets 
+    }
+
+    fn from_element(el: &MenuElement) -> Option<&Self> {
+        match &el.kind {
+            MenuElementKind::LayoutGroup(group) => Some(group),
+            _ => None,
+        }
+    }
+    
+    fn wrap_into_element(self) -> MenuElementKind {
+        MenuElementKind::LayoutGroup(self)
     }
 }
 
