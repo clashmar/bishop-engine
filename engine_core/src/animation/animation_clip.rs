@@ -3,7 +3,7 @@ use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::constants::DEFAULT_GRID_SIZE;
 use crate::ecs::entity::Entity;
-use crate::game::game::*;
+use crate::game::*;
 use std::{collections::HashMap, path::{Path, PathBuf}};
 use serde_with::{FromInto, serde_as};
 use serde::{Deserialize, Serialize};
@@ -91,7 +91,7 @@ impl Animation {
         self.sprite_cache.clear();
 
         // Resolve and cache new sprite ids, incrementing refs
-        for (clip_id, _) in &self.clips {
+        for clip_id in self.clips.keys()  {
             let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
             if sprite_id.0 != 0 {
                 asset_manager.increment_ref(sprite_id);

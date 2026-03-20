@@ -193,7 +193,7 @@ pub async fn pick_save_root_async() -> Option<PathBuf> {
     let base_folder = FileDialog::new()
         .set_title("Select a folder for the editor assets root directory.")
         .pick_folder()
-        .unwrap_or_else(|| default_save_root());
+        .unwrap_or_else(default_save_root);
 
     // Build the full path
     let save_root = base_folder
@@ -219,7 +219,7 @@ pub async fn change_save_root_async() -> Option<PathBuf> {
     let base_folder = rfd::FileDialog::new()
         .set_title("Select a new folder for the editor assets root directory.")
         .pick_folder()
-        .unwrap_or_else(|| default_save_root());
+        .unwrap_or_else(default_save_root);
 
     // Build the full path
     let new_root = base_folder
@@ -233,27 +233,27 @@ pub async fn change_save_root_async() -> Option<PathBuf> {
     }
 
     // Move the old games folder (if it exists) to the new location
-    if let Some(old_root) = get_save_root() {
-        if old_root != new_root {
-            // Try a rename
-            match fs::rename(&old_root, &new_root) {
-                Ok(_) => {
-                    delete_save_root();
+    if let Some(old_root) = get_save_root() 
+    && old_root != new_root {
+        // Try a rename
+        match fs::rename(&old_root, &new_root) {
+            Ok(_) => {
+                delete_save_root();
+            }
+            Err(rename_err) => {
+                // If rename fails fall back to copy
+                onscreen_error!("Rename failed: {rename_err}.");
+                if let Err(copy_err) = copy_dir_recursive(&old_root, &new_root) {
+                    // Continue even if copy fails
+                    onscreen_error!("Failed to copy old games: {copy_err}.");
                 }
-                Err(rename_err) => {
-                    // If rename fails fall back to copy
-                    onscreen_error!("Rename failed: {rename_err}.");
-                    if let Err(copy_err) = copy_dir_recursive(&old_root, &new_root) {
-                        // Continue even if copy fails
-                        onscreen_error!("Failed to copy old games: {copy_err}.");
-                    }
-                    else {
-                        delete_save_root();
-                    }
+                else {
+                    delete_save_root();
                 }
             }
         }
     }
+    
 
     update_config_root(&new_root)?;
 
@@ -264,19 +264,17 @@ pub async fn change_save_root_async() -> Option<PathBuf> {
 /// Deletes SAVE_ROOT if it is the parent of GAME_SAVE_ROOT after a 
 /// successful copy. DO NOT MAKE PUBLIC.
 fn delete_save_root() {
-    if let Some(root) = get_save_root() {
-        if let Some(parent) = root.parent() {
-            if parent.file_name() == Some(OsStr::new(SAVE_ROOT)) {
-                let _ = fs::remove_dir_all(parent);
-            }
-        }
+    if let Some(root) = get_save_root() 
+    && let Some(parent) = root.parent() 
+    && parent.file_name() == Some(OsStr::new(SAVE_ROOT)) {
+        let _ = fs::remove_dir_all(parent);
     }
 }
 
 /// Update the in‑memory config and persist it.
-fn update_config_root(root_path: &PathBuf) -> Option<()> {
+fn update_config_root(root_path: &Path) -> Option<()> {
     match EDITOR_CONFIG.write() {
-        Ok(mut cfg) => cfg.save_root = Some(root_path.clone()),
+        Ok(mut cfg) => cfg.save_root = Some(root_path.to_path_buf()),
         Err(poison) => {
             onscreen_error!("Editor config lock poisoned: {poison}");
             return None;

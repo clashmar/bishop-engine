@@ -1,9 +1,9 @@
 // editor/src/menu_editor/menu_editor.rs
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
-use crate::menu_editor::resize_handle::ResizeHandleState;
+use crate::menu::resize_handle::ResizeHandleState;
 use crate::gui::modal::is_modal_open;
 use crate::app::SubEditor;
-use crate::menu_editor::*;
+use crate::menu::*;
 use std::collections::HashSet;
 use engine_core::prelude::*;
 use bishop::prelude::*;

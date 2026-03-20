@@ -53,11 +53,10 @@ impl TextManager {
     /// Loads the manifest file to get available languages.
     fn load_manifest(&mut self) {
         let manifest_path = self.text_root.join("_manifest.toml");
-        if let Ok(content) = fs::read_to_string(&manifest_path) {
-            if let Ok(manifest) = toml::from_str::<TextManifest>(&content) {
-                self.current_language = manifest.default_language;
-                self.available_languages = manifest.available;
-            }
+        if let Ok(content) = fs::read_to_string(&manifest_path) 
+        && let Ok(manifest) = toml::from_str::<TextManifest>(&content) {
+            self.current_language = manifest.default_language;
+            self.available_languages = manifest.available;
         }
     }
 

@@ -28,7 +28,7 @@ impl LuaGameCtx {
     }
 
     /// Retrieves a borrowed reference to the stored `LuaGameCtx`.
-    pub fn borrow_ctx<'lua>(lua: &'lua Lua) ->  LuaResult<UserDataRef<LuaGameCtx>> {
+    pub fn borrow_ctx(lua: &Lua) ->  LuaResult<UserDataRef<LuaGameCtx>> {
         let user_data: mlua::AnyUserData = lua.globals().get(LUA_GAME_CTX)?;
         user_data.borrow::<LuaGameCtx>()
     }
@@ -49,7 +49,7 @@ impl LuaBishopCtx {
     }
 
     /// Retrieves a borrowed reference to the stored `LuaBishopCtx`.
-    pub fn borrow_ctx<'lua>(lua: &'lua Lua) -> LuaResult<UserDataRef<LuaBishopCtx>> {
+    pub fn borrow_ctx(lua: &Lua) -> LuaResult<UserDataRef<LuaBishopCtx>> {
         let user_data: mlua::AnyUserData = lua.globals().get(LUA_BISHOP_CTX)?;
         user_data.borrow::<LuaBishopCtx>()
     }

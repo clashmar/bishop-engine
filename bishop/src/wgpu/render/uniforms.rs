@@ -36,7 +36,7 @@ impl CameraUniforms {
         if camera.rotation != 0.0 {
             let rotation =
                 glam::Mat4::from_rotation_z(-camera.rotation.to_radians());
-            projection = projection * rotation;
+            projection *= rotation;
         }
 
         Self {

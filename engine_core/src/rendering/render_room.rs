@@ -41,11 +41,11 @@ pub fn render_room<C: BishopContext>(
 
     // Draw tilemap first
     let tilemap = &room.current_variant().tilemap;
-    tilemap.draw(ctx, asset_manager, room.position.into(), grid_size);
+    tilemap.draw(ctx, asset_manager, room.position, grid_size);
 
     // Draw all entities sorted by layer
-    for (_z, (entities, _glows)) in layer_map {
-        for (entity, pos) in entities {
+    for (_z, layer) in layer_map {
+        for (entity, pos) in layer.entities {
             draw_entity(
                 ctx,
                 ecs,
@@ -200,6 +200,12 @@ pub fn draw_entity_placeholder<C: BishopContext>(
     ctx.draw_rectangle(pos.x, pos.y, grid_size, grid_size, Color::GREEN);
 }
 
+#[derive(Default)]
+pub struct LayerData<'a> {
+    pub entities: Vec<(Entity, Vec2)>,
+    pub glows: Vec<(&'a Glow, Vec2)>,
+}
+
 /// Sorts entites by their z-layer, filters out entities that should not be
 /// drawn and interpolates the draw positions. BTreeMap automatically sorts keys.
 fn collect_interpolated_layer_map<'a>(
@@ -209,8 +215,8 @@ fn collect_interpolated_layer_map<'a>(
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
     grid_size: f32,
-) -> BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&'a Glow, Vec2)>)> {
-    let mut map: BTreeMap<i32, (Vec<(Entity, Vec2)>, Vec<(&Glow, Vec2)>)> = BTreeMap::new();
+) -> BTreeMap<i32, LayerData<'a>> {
+    let mut map: BTreeMap<i32, LayerData<'a>> = BTreeMap::new();
 
     let trans_store = ecs.get_store::<Transform>();
     let cam_store = ecs.get_store::<RoomCamera>();
@@ -246,7 +252,7 @@ fn collect_interpolated_layer_map<'a>(
         let z = layer_store.get(*entity).map_or(0, |l| l.z);
 
         let entry = map.entry(z).or_default();
-        entry.0.push((*entity, draw_pos));
+        entry.entities.push((*entity, draw_pos));
 
         // If the entity also has a Glow component, apply pivot to glow position
         if let Some(glow) = glow_store.get(*entity) {
@@ -256,13 +262,13 @@ fn collect_interpolated_layer_map<'a>(
                 .unwrap_or(Vec2::new(grid_size, grid_size));
 
             let glow_draw_pos = pivot_adjusted_position(draw_pos, glow_size, transform.pivot);
-            entry.1.push((glow, glow_draw_pos));
+            entry.glows.push((glow, glow_draw_pos));
         }
     }
 
     // There always needs to be at least one layer otherwise nothing will be drawn
     if map.is_empty() {
-        map.insert(0, (Vec::new(), Vec::new()));
+        map.insert(0, LayerData::default());
     }
 
     map

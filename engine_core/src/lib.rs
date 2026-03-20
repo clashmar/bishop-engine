@@ -18,7 +18,7 @@ pub mod scripting;
 pub mod shaders;
 pub mod storage;
 pub mod tiles;
-pub mod world;
+pub mod worlds;
 pub mod ui;
 
 /// Prelude module for convenient imports.
@@ -43,6 +43,6 @@ pub mod prelude {
     pub use crate::shaders::*;
     pub use crate::storage::*;
     pub use crate::tiles::*;
-    pub use crate::world::*;
+    pub use crate::worlds::*;
     pub use crate::ui::*;
 }

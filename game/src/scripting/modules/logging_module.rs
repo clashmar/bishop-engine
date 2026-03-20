@@ -22,8 +22,8 @@ register_lua_module!(LoggingModule);
 impl LuaModule for LoggingModule {
     fn register(&self, lua: &Lua) -> mlua::Result<()> {
         // Helper that creates a wrapper for a concrete log level
-        fn level_wrapper<'lua>(
-            lua: &'lua Lua,
+        fn level_wrapper(
+            lua: &Lua,
             level_name: &'static str,
         ) -> mlua::Result<Function> {
             let name = level_name.to_string();
@@ -32,7 +32,7 @@ impl LuaModule for LoggingModule {
                     Some(Value::String(s)) => s.to_str()?.to_owned(),
                     _ => {
                         return Err(mlua::Error::RuntimeError(
-                            format!("{name} expects a string").into(),
+                            format!("{name} expects a string"),
                         ))
                     }
                 };

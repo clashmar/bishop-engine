@@ -18,13 +18,11 @@ pub enum PanelMode {
 
 impl PanelMode {
     fn matches(&self, mode: &EditorMode) -> bool {
-        match (self, mode) {
-            (PanelMode::Game, EditorMode::Game) => true,
-            (PanelMode::World, EditorMode::World(_)) => true,
-            (PanelMode::Room, EditorMode::Room(_)) => true,
-            (PanelMode::Menu, EditorMode::Menu) => true,
-            _ => false,
-        }
+        matches!((self, mode), 
+        (PanelMode::Game, EditorMode::Game) | 
+        (PanelMode::World, EditorMode::World(_)) | 
+        (PanelMode::Room, EditorMode::Room(_)) | 
+        (PanelMode::Menu, EditorMode::Menu))
     }
 }
 

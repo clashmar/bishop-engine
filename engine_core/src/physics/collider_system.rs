@@ -26,7 +26,7 @@ pub fn update_colliders_from_sprites(ecs: &mut Ecs, assets: &mut AssetManager) {
 
             // Try animation components first
             if let Some(col) = collider_from_animation_component(
-                &current_frame_store,
+                current_frame_store,
                 *entity,
                 assets,
             ) {

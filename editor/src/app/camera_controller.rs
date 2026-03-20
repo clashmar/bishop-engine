@@ -123,9 +123,10 @@ impl EditorCameraController {
     ) -> Vec2 {
         let max_dim_px = size.max_element() / zoom_factor;
         let scalar = editor_zoom_factor(grid_size) / max_dim_px;
-
-        let mut temp = Camera2D::default();
-        temp.zoom = vec2(scalar, scalar);
+        let mut temp = Camera2D { 
+            zoom: vec2(scalar, scalar), 
+            ..Default::default() 
+        };
         EditorCameraController::apply_aspect(ctx, &mut temp, scalar);
         temp.zoom
     }

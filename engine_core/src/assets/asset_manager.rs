@@ -2,7 +2,7 @@
 use crate::animation::animation_clip::Animation;
 use crate::storage::path_utils::assets_folder;
 use crate::assets::sprite::*;
-use crate::game::game::Game;
+use crate::game::Game;
 use crate::tiles::tile::*;
 use crate::*;
 use serde::{Deserialize, Serialize};
@@ -100,14 +100,14 @@ impl AssetManager {
         self.textures.insert(*id, texture);
         self.path_to_sprite_id.insert(path.to_path_buf(), *id);
 
-        return Ok(());
+        Ok(())
     }
 
     /// Returns a texture from a `SpriteId`. If the texture has not been loaded yet load it synchronously.
     pub fn get_texture_from_id(&mut self, id: SpriteId) -> &Texture2D {
         // If SpriteId = 0 it is unset
         if id.0 == 0 {
-            return &*EMPTY_TEXTURE;
+            return &EMPTY_TEXTURE;
         }
 
         // Fast path
@@ -344,13 +344,12 @@ impl AssetManager {
         // Get the old sprite id first to avoid borrow issues
         let old_sprite_id = self.tile_defs.get(&id).map(|def| def.sprite_id);
 
-        if let Some(old_id) = old_sprite_id {
-            if old_id != new_sprite_id {
-                self.decrement_ref(old_id);
-                self.increment_ref(new_sprite_id);
-                if let Some(def) = self.tile_defs.get_mut(&id) {
-                    def.sprite_id = new_sprite_id;
-                }
+        if let Some(old_id) = old_sprite_id 
+        && old_id != new_sprite_id {
+            self.decrement_ref(old_id);
+            self.increment_ref(new_sprite_id);
+            if let Some(def) = self.tile_defs.get_mut(&id) {
+                def.sprite_id = new_sprite_id;
             }
         }
     }

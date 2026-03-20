@@ -34,7 +34,7 @@ impl HierarchyPanel {
     }
 }
 
-pub const HIERARCHY_PANEL: &'static str = "Hierarchy";
+pub const HIERARCHY_PANEL: &str = "Hierarchy";
 
 impl PanelDefinition for HierarchyPanel {
     fn title(&self) -> &'static str {

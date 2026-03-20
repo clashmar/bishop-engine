@@ -1,7 +1,7 @@
 // engine_core/src/ecs/component_registry.rs 
 use crate::ecs::{entity::Entity, ecs::Ecs}; 
 use crate::ecs::component::Component;
-use crate::game::game::GameCtxMut;
+use crate::game::GameCtxMut;
 use serde::{Deserialize, Serialize};
 use std::any::{Any, TypeId};
 use once_cell::sync::Lazy;

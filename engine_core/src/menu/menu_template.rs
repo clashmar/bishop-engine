@@ -71,7 +71,7 @@ impl MenuTemplate {
                         }
                         if let MenuElementKind::Label(label) = &child.element.kind {
                             let display_text = text_manager.get_ui_text(text_id, &label.text_key)
-                                .unwrap_or_else(|| format!("{}", label.text_key));
+                                .unwrap_or_else(|| label.text_key.to_string());
                             let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
                             Self::render_label(ctx, label, screen_rect, &display_text);
                         }

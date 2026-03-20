@@ -1,7 +1,7 @@
 // engine_core/src/tiles/tilemap.rs
 use crate::assets::asset_manager::AssetManager;
 use crate::tiles::tile::TileDefId;
-use crate::world::world::GridPos;
+use crate::worlds::world::GridPos;
 use serde_with::{serde_as, FromInto};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -44,7 +44,7 @@ impl TileMap {
             room_position.y,
             self.width as f32 * grid_size,
             self.height as f32 * grid_size,
-            self.background.into(),
+            self.background,
         );
 
         for ((x, y), tile_def_id) in &self.tiles {
@@ -58,7 +58,7 @@ impl TileMap {
                     tile_pos.y,
                     Color::WHITE,
                     DrawTextureParams {
-                        dest_size: Some(Vec2::new(grid_size, grid_size).into()),
+                        dest_size: Some(Vec2::new(grid_size, grid_size)),
                         ..Default::default()
                     },
                 );
@@ -97,12 +97,10 @@ impl TileMap {
         for x in x_range {
             for y in y_start..=y_end {
                 let pos = GridPos::new(x, y);
-                if pos.is_in_bounds(map.width, map.height) {
-                    if let Some(tile) = map.get_tile(pos) {
-                        if predicate(tile) {
-                            return true;
-                        }
-                    }
+                if pos.is_in_bounds(map.width, map.height) 
+                && let Some(tile) = map.get_tile(pos) 
+                && predicate(tile) {
+                    return true;
                 }
             }
         }

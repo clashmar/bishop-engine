@@ -130,7 +130,7 @@ impl GenericPanel {
         );
 
         // Background
-        ctx.draw_rectangle(content_rect.x, content_rect.y, content_rect.w, content_rect.h, FIELD_BACKGROUND_COLOR.into());
+        ctx.draw_rectangle(content_rect.x, content_rect.y, content_rect.w, content_rect.h, FIELD_BACKGROUND_COLOR);
         ctx.draw_rectangle_lines(content_rect.x, content_rect.y, content_rect.w, content_rect.h, 2., Color::WHITE);
 
         if !self.collapsed {

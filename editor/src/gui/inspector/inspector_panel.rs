@@ -1,4 +1,4 @@
-// editor/src/gui/inspector/inspector.rs
+// editor/src/gui/inspector/inspector_panel.rs
 use crate::gui::inspector::room_camera_module::ROOM_CAMERA_MODULE_TITLE;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::gui::inspector::player_module::PlayerModule;
@@ -26,17 +26,17 @@ fn is_proxy_local_module(module_title: &str) -> bool {
         || module_title == "PlayerModule"
 } 
 
-/// The panel that lives on the right‑hand side of the room editor window
-pub struct Inspector {
-    /// Geometry of the panel
+/// The panel that lives on the right‑hand side of the room editor.
+pub struct InspectorPanel {
+    /// Geometry of the panel.
     rect: Rect,
-    /// Currently inspected entity
+    /// Currently inspected entity.
     pub target: Option<Entity>,
-    /// All sub‑modules that can draw UI
+    /// All sub‑modules that can draw UI.
     modules: Vec<Box<dyn InspectorModule>>,
-    /// If true hide normal panel and show only the add‑component UI
+    /// If true hide normal panel and show only the add‑component UI.
     add_mode: bool,
-    /// Component name that the user selected from the menu
+    /// Component name that the user selected from the menu.
     pending_add: Option<String>,
     /// Rectangles that were drawn this frame and are therefore active.
     active_rects: Vec<Rect>,
@@ -50,7 +50,7 @@ pub struct WidgetIds {
     pub darkness_slider_id: WidgetId
 }
 
-impl Inspector {
+impl InspectorPanel {
     /// Create a fresh panel with the default set of modules.
     pub fn new() -> Self {
         let mut modules: Vec<Box<dyn InspectorModule>> = Vec::new();
@@ -186,7 +186,7 @@ impl Inspector {
                     Color::new(0., 0., 0., 0.6),
                 );
 
-                let total_content_h = self.total_content_height(&game_ctx.ecs, entity);
+                let total_content_h = self.total_content_height(game_ctx.ecs, entity);
 
                 if inner.contains(ctx.mouse_position().into()) && !is_mouse_over_dropdown_list(ctx) {
                     let (_, dy) = ctx.mouse_wheel();
@@ -215,7 +215,7 @@ impl Inspector {
                         // Only draw when the module intersects the visible area
                         if y + h > inner.y && y < inner.y + inner.h {
                             let sub_rect = Rect::new(inner.x + INSET, y, inner.w - INSET * 2.0, h);
-                            module.draw(ctx, blocked, sub_rect.into(), game_ctx, module_entity);
+                            module.draw(ctx, blocked, sub_rect, game_ctx, module_entity);
                         }
 
                         y += h + WIDGET_SPACING;
@@ -250,10 +250,9 @@ impl Inspector {
             
             // Draw buttons at the top after the covers
             // Add entity
-            if menu_button(ctx, add_rect, add_label, false) {
-                if self.can_show_any_component(game_ctx.ecs) {
-                    self.add_mode = !self.add_mode;
-                }
+            if menu_button(ctx, add_rect, add_label, false) 
+            && self.can_show_any_component(game_ctx.ecs) {
+                self.add_mode = !self.add_mode;
             }
 
             // Remove button
@@ -300,7 +299,7 @@ impl Inspector {
                 // Create a new RoomCamera entity that belongs to the current room
                 let ecs = &mut game_ctx.ecs;
                 let cur_room = game_ctx.cur_world.current_room().unwrap();
-                let _ = cur_room.create_room_camera(ecs, cur_room.id, game_ctx.cur_world.grid_size);
+                cur_room.create_room_camera(ecs, cur_room.id, game_ctx.cur_world.grid_size);
             }
 
             let cur_room = game_ctx.cur_world.current_room_mut().unwrap();

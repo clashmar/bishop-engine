@@ -13,7 +13,7 @@ struct DeferredDropdownRender {
 
 thread_local! {
     static DEFERRED_DROPDOWN_RENDERS: RefCell<Vec<DeferredDropdownRender>> =
-        RefCell::new(Vec::new());
+        const { RefCell::new(Vec::new()) };
 }
 
 /// Flushes all deferred dropdown list renders.

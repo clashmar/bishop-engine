@@ -157,12 +157,9 @@ pub fn parse_field_name(name: &str) -> Cow<'_, str> {
         let mut chars = part.chars();
         let first_char = chars.next().map(|c| c.to_ascii_uppercase());
         let rest: String = chars.collect();
-        match first_char {
-            Some(f) => {
-                acc.push(' ');
-                acc.push_str(&format!("{}{}", f, rest));
-            }
-            None => {}
+        if let Some(f) = first_char {
+        acc.push(' ');
+           acc.push_str(&format!("{}{}", f, rest));
         }
         acc
     });

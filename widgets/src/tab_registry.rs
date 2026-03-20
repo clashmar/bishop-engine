@@ -59,15 +59,17 @@ pub fn resolve_pending_tab() {
 
         let src_idx = sorted.iter().position(|t| t.id == from_id);
         if let Some(idx) = src_idx {
-            let dest_idx = if shift {
-                if idx == 0 { sorted.len() - 1 } else { idx - 1 }
-            } else {
-                if idx + 1 == sorted.len() { 0 } else { idx + 1 }
-            };
-            let target = sorted[dest_idx];
-            request_focus(target.id, target.is_text_input);
+        let len = sorted.len();
+        let dest_idx = if shift {
+            (idx + len - 1) % len 
         } else {
-            debug_assert!(false, "Widget {:?} pressed Tab but is not in the tab registry", from_id);
-        }
+            (idx + 1) % len       
+        };
+
+        let target = sorted[dest_idx];
+        request_focus(target.id, target.is_text_input);
+    } else {
+        debug_assert!(false, "Widget {:?} pressed Tab but is not in the tab registry", from_id);
+    }
     }
 }

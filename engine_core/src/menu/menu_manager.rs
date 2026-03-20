@@ -88,11 +88,10 @@ impl MenuManager {
     /// Closes the current menu and returns to previous menu if any.
     pub fn close_menu(&mut self) {
         self.menu_stack.pop();
-        if let Some(parent_id) = self.menu_stack.last() {
-            if let Some(template) = self.templates.get(parent_id) {
-                self.focus.reset(template);
-                return;
-            }
+        if let Some(parent_id) = self.menu_stack.last() 
+        && let Some(template) = self.templates.get(parent_id) {
+            self.focus.reset(template);
+            return;
         }
         self.focus = MenuFocus::new(0);
     }
@@ -105,24 +104,23 @@ impl MenuManager {
 
     /// Returns the current menu mode based on active menu.
     pub fn mode(&self) -> Option<MenuMode> {
-        if let Some(menu_id) = self.menu_stack.last() {
-            if let Some(template) = self.templates.get(menu_id) {
-                return Some(template.mode);
-            }
+        if let Some(menu_id) = self.menu_stack.last() 
+        && let Some(template) = self.templates.get(menu_id) {
+            return Some(template.mode);
         }
         None
     }
 
     /// Returns true if the menu is blocking game updates.
     pub fn is_pausing_game(&self) -> bool {
-        self.mode().map_or(false, |m| m.is_paused())
+        self.mode().is_some_and(|m| m.is_paused())
     }
 
     /// Returns true if the bottom menu's background fully obscures the game.
     pub fn is_hiding_game(&self) -> bool {
         self.menu_stack.first()
             .and_then(|id| self.templates.get(id))
-            .map_or(false, |t| t.background.is_opaque())
+            .is_some_and(|t| t.background.is_opaque())
     }
 
     /// Returns true if any menu is active.
@@ -145,43 +143,42 @@ impl MenuManager {
             return;
         }
 
-        if let Some(menu_id) = self.menu_stack.last().cloned() {
-            if let Some(template) = self.templates.get(&menu_id).cloned() {
-                if self.navigation.up_pressed(ctx) {
-                    self.focus.navigate(NavDirection::Up, &template);
-                }
-                if self.navigation.down_pressed(ctx) {
-                    self.focus.navigate(NavDirection::Down, &template);
-                }
-                if self.navigation.left_pressed(ctx) {
-                    self.focus.navigate(NavDirection::Left, &template);
-                }
-                if self.navigation.right_pressed(ctx) {
-                    self.focus.navigate(NavDirection::Right, &template);
-                }
+        if let Some(menu_id) = self.menu_stack.last().cloned() 
+        && let Some(template) = self.templates.get(&menu_id).cloned() {
+            if self.navigation.up_pressed(ctx) {
+                self.focus.navigate(NavDirection::Up, &template);
+            }
+            if self.navigation.down_pressed(ctx) {
+                self.focus.navigate(NavDirection::Down, &template);
+            }
+            if self.navigation.left_pressed(ctx) {
+                self.focus.navigate(NavDirection::Left, &template);
+            }
+            if self.navigation.right_pressed(ctx) {
+                self.focus.navigate(NavDirection::Right, &template);
+            }
 
-                let cancel_pressed = self.navigation.cancel_pressed(ctx);
-                let confirm_pressed = self.navigation.confirm_pressed(ctx);
-                let action_to_handle = if confirm_pressed {
-                    template.get_element_at_focus(&self.focus)
-                        .and_then(|element| {
-                            if let MenuElementKind::Button(button) = &element.kind {
-                                Some(button.action.clone())
-                            } else {
-                                None
-                            }
-                        })
-                } else {
-                    None
-                };
+            let cancel_pressed = self.navigation.cancel_pressed(ctx);
+            let confirm_pressed = self.navigation.confirm_pressed(ctx);
+            let action_to_handle = if confirm_pressed {
+                template.get_element_at_focus(&self.focus)
+                    .and_then(|element| {
+                        if let MenuElementKind::Button(button) = &element.kind {
+                            Some(button.action.clone())
+                        } else {
+                            None
+                        }
+                    })
+            } else {
+                None
+            };
 
-                if cancel_pressed {
-                    self.close_menu();
-                }
+            if cancel_pressed {
+                self.close_menu();
+            }
 
-                if let Some(action) = action_to_handle {
-                    self.handle_action(action);
-                }
+            if let Some(action) = action_to_handle {
+                self.handle_action(action);
             }
         }
     }
@@ -336,7 +333,7 @@ impl MenuManager {
 
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
-            if path.extension().map_or(true, |ext| ext != "ron") {
+            if path.extension().is_none_or(|ext| ext != "ron") {
                 continue;
             }
 

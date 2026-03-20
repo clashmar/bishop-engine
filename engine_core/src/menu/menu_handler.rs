@@ -22,7 +22,7 @@ impl MenuActionHandler for NoOpActionHandler {
 }
 
 thread_local! {
-    static MENU_EVENTS: RefCell<Vec<String>> = RefCell::new(Vec::new());
+    static MENU_EVENTS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Handles custom menu actions by queuing events to be emitted to Lua.

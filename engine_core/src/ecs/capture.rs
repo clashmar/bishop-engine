@@ -1,5 +1,5 @@
 // engine_core/src/ecs/capture.rs
-use crate::{ecs::entity::Children, game::game::GameCtxMut};
+use crate::{ecs::entity::Children, game::GameCtxMut};
 use serde::{Deserialize, Serialize};
 
 /// A single serialized component.

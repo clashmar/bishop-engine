@@ -1,5 +1,5 @@
 // engine_core/src/assets/sprite.rs
-use crate::game::game::GameCtxMut;
+use crate::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use crate::inspector_module;
 use serde::{Deserialize, Serialize};

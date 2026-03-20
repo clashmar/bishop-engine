@@ -3,7 +3,7 @@ use crate::commands::editor_command_manager::EditorCommand;
 use crate::storage::editor_storage::create_new_world;
 use crate::app::EditorMode;
 use crate::with_editor;
-use engine_core::world::world::WorldId;
+use engine_core::worlds::world::WorldId;
 
 /// Undo-able command for creating a new world.
 #[derive(Debug)]

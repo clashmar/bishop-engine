@@ -365,7 +365,7 @@ impl WgpuContext {
     /// Returns a future that completes on the next frame.
     /// Use this to yield from async code and allow the frame to render.
     pub fn next_frame(&self) -> FrameFuture {
-        FrameFuture::new()
+        FrameFuture::default()
     }
 
     /// Clears per-frame input state (pressed/released events).

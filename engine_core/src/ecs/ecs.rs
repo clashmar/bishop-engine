@@ -4,8 +4,8 @@ use crate::ecs::transform::Transform;
 use crate::ecs::has_any::HasAny;
 use crate::ecs::component::*;
 use crate::ecs::entity::*;
-use crate::game::game::GameCtxMut;
-use crate::world::room::RoomId;
+use crate::game::GameCtxMut;
+use crate::worlds::room::RoomId;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -68,12 +68,11 @@ impl Ecs {
     /// Remove an entity and all of its descendants.
     pub fn remove_entity(ctx: &mut GameCtxMut, entity: Entity) {
         // Detach from parent (if any)
-        if let Some(parent) = ctx.ecs.get::<Parent>(entity).map(|p| p.0) {
-            if let Some(children) = ctx.ecs.get_mut::<Children>(parent) {
-                children.remove(entity);
-                if children.entities.is_empty() {
-                    ctx.ecs.get_store_mut::<Children>().remove(parent);
-                }
+        if let Some(parent) = ctx.ecs.get::<Parent>(entity).map(|p| p.0) 
+        && let Some(children) = ctx.ecs.get_mut::<Children>(parent) {
+            children.remove(entity);
+            if children.entities.is_empty() {
+                ctx.ecs.get_store_mut::<Children>().remove(parent);
             }
         }
 
@@ -110,15 +109,15 @@ impl Ecs {
             .into_iter()
             .find(|r| r.type_name == type_name);
 
-        if let Some(reg) = reg {
-            if (reg.has)(ctx.ecs, entity) {
-                let mut boxed = (reg.clone)(ctx.ecs, entity);
-                (reg.post_remove)(&mut *boxed, &entity, ctx);
-                (reg.remove)(ctx.ecs, entity);
-            }
+        if let Some(reg) = reg 
+        && (reg.has)(ctx.ecs, entity) {
+            let mut boxed = (reg.clone)(ctx.ecs, entity);
+            (reg.post_remove)(&mut *boxed, &entity, ctx);
+            (reg.remove)(ctx.ecs, entity);
         }
     }
 
+    // TODO: Is this legit?
     /// Return an immutable reference to the store for Component `T`.
     pub fn get_store<T>(&self) -> &ComponentStore<T>
     where
@@ -202,7 +201,7 @@ impl Ecs {
         let room_store = self.get_store::<CurrentRoom>();
 
         proxy_store.data.keys()
-            .find(|e| room_store.get(**e).map_or(false, |r| r.0 == room_id))
+            .find(|e| room_store.get(**e).is_some_and(|r| r.0 == room_id))
             .copied()
     }
 
@@ -213,18 +212,17 @@ impl Ecs {
             .and_then(|e| self.get::<Transform>(e))
             .map(|t| t.position);
 
-        if let Some(pos) = spawn_pos {
-            if let Some(player_entity) = self.get_player_entity() {
-                if let Some(transform) = self.get_mut::<Transform>(player_entity) {
-                    transform.position = pos;
-                } else {
-                    self.add_component_to_entity(player_entity, Transform {
-                        position: pos,
-                        ..Default::default()
-                    });
-                }
-                self.add_component_to_entity(player_entity, CurrentRoom(room_id));
+        if let Some(pos) = spawn_pos 
+        && let Some(player_entity) = self.get_player_entity() {
+            if let Some(transform) = self.get_mut::<Transform>(player_entity) {
+                transform.position = pos;
+            } else {
+                self.add_component_to_entity(player_entity, Transform {
+                    position: pos,
+                    ..Default::default()
+                });
             }
+            self.add_component_to_entity(player_entity, CurrentRoom(room_id));
         }
     }
 

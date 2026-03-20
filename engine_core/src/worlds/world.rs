@@ -1,8 +1,8 @@
-// engine_core/src/world/world.rs
+// engine_core/src/worlds/world.rs
 use crate::assets::asset_manager::AssetManager;
 use crate::assets::sprite::SpriteId;
 use crate::tiles::tilemap::TileMap;
-use crate::world::room::*;
+use crate::worlds::room::*;
 use serde::{Deserialize, Serialize};
 use serde_with::FromInto;
 use serde_with::serde_as;

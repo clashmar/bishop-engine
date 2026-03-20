@@ -1,23 +1,8 @@
 // editor/src/gui/inspector/script_module.rs
 use crate::with_lua;
-use engine_core::ecs::module_factory::ModuleFactoryEntry;
-use engine_core::ecs::reflect_field::parse_field_name;
-use engine_core::scripting::script::ScriptField;
-use engine_core::scripting::script::ScriptId;
-use engine_core::scripting::script::Script;
-use engine_core::ecs::inpsector_module::*;
-use engine_core::ecs::entity::Entity;
-use engine_core::ui::widgets::{
-    Button, gui_script_picker, TextInput, NumberInput,
-    gui_checkbox, WidgetId, DEFAULT_FONT_SIZE_16, DEFAULT_FIELD_HEIGHT, DEFAULT_CHECKBOX_DIMS,
-    FIELD_TEXT_COLOR, WIDGET_SPACING, WIDGET_PADDING,
-};
-use engine_core::ecs::ecs::Ecs;
-use engine_core::game::game::*;
 use std::collections::HashMap;
-use engine_core::ui::text::*;
+use engine_core::prelude::*;
 use bishop::prelude::*;
-use engine_core::*;
 
 #[derive(Default)]   
 pub struct ScriptModule {
@@ -65,7 +50,6 @@ impl InspectorModule for ScriptModule {
             with_lua(|lua| {
                 if let Err(e) = script_comp.load(lua, script_manager, entity) {
                     onscreen_error!("Failed to load script: {}", e);
-                    return;
                 }
             });
         }
@@ -136,7 +120,7 @@ impl InspectorModule for ScriptModule {
             let base_id = *self
                 .field_ids
                 .entry(base_key.clone())
-                .or_insert_with(WidgetId::default);
+                .or_default();
 
             // Prepare the field label
             let display_name = parse_field_name(&name);
@@ -208,12 +192,12 @@ impl InspectorModule for ScriptModule {
                     let id_x = *self
                         .field_ids
                         .entry(format!("{}.x", name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let id_y = *self
                         .field_ids
                         .entry(format!("{}.y", name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let half = widget_rect.w / 2.0;
 
@@ -243,17 +227,17 @@ impl InspectorModule for ScriptModule {
                     let id_x = *self
                         .field_ids
                         .entry(format!("{}.x", name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let id_y = *self
                         .field_ids
                         .entry(format!("{}.y", name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let id_z = *self
                         .field_ids
                         .entry(format!("{}.z", name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let third = widget_rect.w / 3.0 - SPACING / 3.0;
 

@@ -12,7 +12,7 @@ use crate::tilemap::tile_palette::TilePalette;
 use crate::world::world_editor::WorldEditor;
 use crate::room::room_editor::RoomEditor;
 use crate::game::game_editor::GameEditor;
-use crate::menu_editor::MenuEditor;
+use crate::menu::MenuEditor;
 use crate::storage::editor_storage::*;
 use crate::playtest::room_playtest::*;
 use crate::storage::editor_storage;
@@ -317,7 +317,7 @@ impl Editor {
             self.draw_menu_bar(ctx).await;
 
             // Draws and handles result of modal
-            if let Some(_) = self.handle_modal(ctx).await {
+            if self.handle_modal(ctx).await.is_some() {
                 self.modal.close();
             }
 

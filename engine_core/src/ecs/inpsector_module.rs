@@ -1,5 +1,5 @@
 // engine_core/src/ecs/module.rs
-use crate::game::game::GameCtxMut;
+use crate::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use crate::ui::widgets::*;
 use crate::ecs::ecs::Ecs;

@@ -6,7 +6,7 @@ use crate::ecs::component::CurrentRoom;
 use crate::ecs::transform::Transform;
 use crate::camera::game_camera::*;
 use crate::ecs::entity::Entity;
-use crate::world::room::RoomId;
+use crate::worlds::room::RoomId;
 use crate::ecs::ecs::Ecs;
 use crate::text::*;
 use crate::ui::text::*;
@@ -240,10 +240,9 @@ fn interpolate_position(
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
 ) -> Vec2 {
-    if let Some(prev_map) = prev_positions {
-        if let Some(prev_pos) = prev_map.get(&entity) {
-            return lerp_rounded(*prev_pos, current_pos, alpha);
-        }
+    if let Some(prev_map) = prev_positions 
+    && let Some(prev_pos) = prev_map.get(&entity) {
+        return lerp_rounded(*prev_pos, current_pos, alpha);
     }
     current_pos
 }

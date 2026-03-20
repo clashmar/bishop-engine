@@ -22,7 +22,7 @@ mod playtest;
 mod commands;
 mod game;
 mod editor_assets;
-mod menu_editor;
+mod menu;
 mod shared;
 
 /// Wrapper struct for running the editor via BishopApp.
@@ -43,7 +43,7 @@ impl BishopApp for EditorApp {
         onscreen_info!("Starting editor.");
 
         // Initialize logging
-        logging::init_file_logger();
+        init_file_logger();
 
         if !ensure_save_root().await {
             // User cancelled

@@ -16,6 +16,7 @@ pub enum TransitionState {
     Retreated,
 }
 
+#[derive(Default)]
 pub struct TransitionManager {
     pub state: TransitionState,
     pub from: Option<Uuid>,
@@ -23,14 +24,6 @@ pub struct TransitionManager {
 }
 
 impl TransitionManager {
-    pub fn new() -> Self {
-        Self {
-            state: TransitionState::None,
-            from: None,
-            to: None,
-        }
-    }
-
     /// Called when the physics system reports that the player crossed an exit.
     pub fn set_state(&mut self, new_state: TransitionState, target_room: Uuid) {
         match new_state {

@@ -1,6 +1,6 @@
 // editor/src/playtest/playtest_process.rs
 use std::sync::mpsc::{self, Receiver, TryRecvError};
-use engine_core::logging::logging::LOG_HISTORY;
+use engine_core::logging::LOG_HISTORY;
 use std::process::{Child, Command, Stdio};
 use std::io::{BufRead, BufReader};
 use std::path::Path;

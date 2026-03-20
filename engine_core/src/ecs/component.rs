@@ -1,7 +1,7 @@
 // engine_core/src/ecs/component.rs
 use crate::assets::asset_manager::AssetManager;
 use crate::ecs::entity::Entity;
-use crate::world::room::RoomId;
+use crate::worlds::room::RoomId;
 use crate::ecs::ecs::Ecs;
 use crate::inspector_module;
 use serde::{Deserialize, Serialize};
