@@ -3,7 +3,7 @@ use crate::app::EditorCameraController;
 use crate::world::world_editor::WorldEditor;
 use crate::game::game_editor::GameEditor;
 use crate::room::room_editor::RoomEditor;
-use crate::menu_editor::MenuEditor;
+use crate::menu::MenuEditor;
 use crate::storage::export::export_game;
 use crate::storage::editor_storage::*;
 use crate::commands::world::*;
@@ -50,12 +50,10 @@ impl Editor {
         // Wait until the user has responded
         loop {
             // Draws and handles result
-            if let Some(modal_result) = self.handle_modal(ctx).await {
-                if let ModalResult::String(name) = modal_result {
-                    // Only close modal if a name is returned
-                    self.modal.close();
-                    return Some(name);
-                }
+            if let Some(ModalResult::String(name)) = self.handle_modal(ctx).await {
+                // Only close modal if a name is returned
+                self.modal.close();
+                return Some(name);
             }
 
             // Guard against modal not being open for some reason
@@ -110,7 +108,7 @@ impl Editor {
                                             Ok(game) => {
                                                 self.reset(ctx, game).await;
                                                 self.toast = Some(Toast::new(
-                                                    &format!("Loaded '{}'", name),
+                                                    format!("Loaded '{}'", name),
                                                     2.5,
                                                 ));
                                             }
@@ -442,7 +440,7 @@ impl Editor {
                             Ok(()) => self.save(),
                             Err(err) => {
                                 self.toast =
-                                    Some(Toast::new(&format!("Failed to save game: {err}"), 3.0));
+                                    Some(Toast::new(format!("Failed to save game: {err}"), 3.0));
                             }
                         }
                         self.modal.close();
@@ -492,7 +490,7 @@ impl Editor {
         let game = self.init_game_for_editor(ctx, game).await;
 
         *self = Self {
-            game: game,
+            game,
             camera: std::mem::take(&mut self.camera),
             ..Self::default()
         };
@@ -522,7 +520,7 @@ impl Editor {
         let duplicate_exists = list_game_names().iter().any(|existing| existing == name);
 
         if duplicate_exists {
-            self.toast = Some(Toast::new(&format!("\"{name}\" already exists."), 2.5));
+            self.toast = Some(Toast::new(format!("\"{name}\" already exists."), 2.5));
         };
 
         duplicate_exists
@@ -530,8 +528,8 @@ impl Editor {
 }
 
 thread_local! {
-    pub static NEW_GAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
-    pub static RENAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
-    pub static SAVE_AS_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = RefCell::new(None);
-    pub static WORLD_SETTINGS_RESULT: RefCell<Option<WorldSettingsResult>> = RefCell::new(None);
+    pub static NEW_GAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = const { RefCell::new(None) };
+    pub static RENAME_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = const { RefCell::new(None) };
+    pub static SAVE_AS_PROMPT_RESULT: RefCell<Option<StringPromptResult>> = const { RefCell::new(None) };
+    pub static WORLD_SETTINGS_RESULT: RefCell<Option<WorldSettingsResult>> = const { RefCell::new(None) };
 }

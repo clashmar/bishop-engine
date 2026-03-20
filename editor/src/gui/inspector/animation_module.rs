@@ -364,7 +364,7 @@ pub fn draw_current_clip_dropdowns(
     let chosen = Dropdown::new(
         module.set_dropdown_id,
         right_rect,
-        &type_label,
+        type_label,
         &all_ids,
         |id| id.ui_label(),
     ).blocked(blocked).show(ctx);
@@ -387,8 +387,8 @@ pub fn draw_current_clip_dropdowns(
                 // Prevent duplicate concrete types on the same entity
                 if animation.clips.contains_key(&other) && Some(&other) != animation.current.as_ref() {
                     module.warning = Some(Toast::new(
-                        format!("Enity already has this animation."),
-                        2.0, // seconds
+                        "Enity already has this animation.",
+                        2.0,
                     ));
                 } else {
                     reset_current_clip_id(animation, other);

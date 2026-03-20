@@ -60,7 +60,7 @@ pub struct EntityHandle {
 }
 
 /// Build a Lua userdata object that wraps `Entity`.
-pub fn lua_entity_handle<'lua>(lua: &'lua Lua, entity: Entity) -> LuaResult<Value> {
+pub fn lua_entity_handle(lua: &Lua, entity: Entity) -> LuaResult<Value> {
     let handle = EntityHandle { entity };
     lua.create_userdata(handle).map(Value::UserData)
 }
@@ -259,7 +259,7 @@ impl LuaMethod<EntityHandle> for SetMethod {
         for reg in COMPONENTS.iter() {
             let type_name = reg.type_name;
             let fn_name = to_snake_case(type_name);
-            out.line(&format!("---@param self Entity"));
+            out.line("---@param self Entity");
             out.line(&format!("---@param v {}", type_name));
             out.line(&format!("function Entity:{}_{}(v) end", SET, fn_name));
             out.line("");
@@ -276,7 +276,7 @@ impl LuaMethod<EntityHandle> for HasMethod {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_instance = ctx.game_instance.borrow();
             let ecs = &game_instance.game.ecs;
-            Ok(COMPONENTS.iter().find(|r| r.type_name == comp_name).map_or(false, |r| (r.has)(ecs, this.entity)))
+            Ok(COMPONENTS.iter().find(|r| r.type_name == comp_name).is_some_and(|r| (r.has)(ecs, this.entity)))
         });
 
         // entity:has_any
@@ -408,7 +408,7 @@ impl LuaMethod<EntityHandle> for GetClipMethod {
 
             if let Some(animation) = ecs.get::<Animation>(this.entity) {
                 if let Some(clip_id) = &animation.current {
-                    Ok(Value::String(lua.create_string(&clip_id.ui_label())?))
+                    Ok(Value::String(lua.create_string(clip_id.ui_label())?))
                 } else {
                     Ok(Value::Nil)
                 }
@@ -681,10 +681,8 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
             let text = if let Some(ref opts_table) = opts {
                 if let Ok(vars_table) = opts_table.get::<Table>("vars") {
                     let mut vars = HashMap::new();
-                    for pair in vars_table.pairs::<String, String>() {
-                        if let Ok((k, v)) = pair {
-                            vars.insert(k, v);
-                        }
+                    for (k, v) in vars_table.pairs::<String, String>().flatten() {
+                        vars.insert(k, v);
                     }
                     interpolate(&text, &vars)
                 } else {

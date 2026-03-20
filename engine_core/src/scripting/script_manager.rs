@@ -5,7 +5,7 @@ use crate::scripting::lua_constants::*;
 use crate::scripting::script::*;
 use crate::ecs::entity::Entity;
 use crate::engine_global::*;
-use crate::game::game::Game;
+use crate::game::Game;
 use crate::*;
 use std::collections::HashSet;
 use std::collections::HashMap;
@@ -53,7 +53,7 @@ pub struct ScriptManager {
 impl ScriptManager {
     /// Initializes a new script manager.
     pub async fn new() -> Self {
-        let manager = Self {
+        Self {
             event_bus: EventBus::default(),
             table_defs: HashMap::new(),
             instances: HashMap::new(),
@@ -63,9 +63,7 @@ impl ScriptManager {
             path_to_script_id: HashMap::new(),
             next_script_id: 1,
             ref_counts: HashMap::new(),
-        };
-
-        manager
+        }
     }
 
     /// Increment reference count for a script.
@@ -108,21 +106,18 @@ impl ScriptManager {
 
     /// Load the Lua table by id and return a reference to it.
     pub fn load_script_table(&mut self, lua: &Lua, id: ScriptId) -> LuaResult<&Table> {
-        // Early return if already loaded (single lookup)
         if self.table_defs.contains_key(&id) {
-            return Ok(self.table_defs.get(&id).ok_or_else(|| {
+            return self.table_defs.get(&id).ok_or_else(|| {
                 mlua::Error::RuntimeError("Table disappeared unexpectedly".into())
-            })?);
+            });
         }
 
-        // Load the table (requires &mut self, so cannot use entry API)
         let table = self.get_table_from_id(lua, id)?;
 
         if let Ok(update) = table.get::<_>(UPDATE) {
             self.update_fns.insert(id, update);
         }
 
-        // Insert and return (uses entry API to avoid extra lookup)
         Ok(self.table_defs.entry(id).or_insert(table))
     }
 
@@ -236,7 +231,6 @@ impl ScriptManager {
         let path = rel_path.as_ref().to_path_buf();
 
         if path.to_string_lossy().trim().is_empty() {
-            // Guard against path being empty
             return Err("Empty script path.".into());
         }
 
@@ -255,7 +249,7 @@ impl ScriptManager {
         // Restore after inserting 
         self.restore_next_id();
 
-        return Ok(id);
+        Ok(id)
     }
 
     /// Returns a path normalized relative to the game's scripts folder.

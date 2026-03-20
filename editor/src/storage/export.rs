@@ -2,7 +2,7 @@
 #![allow(unused)]
 use crate::editor_assets::assets::*;
 use engine_core::storage::path_utils::*;
-use engine_core::game::game::*;
+use engine_core::game::*;
 use winres_edit::resource_type;
 use engine_core::constants::*;
 use winres_edit::Resources;
@@ -140,7 +140,7 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
     // Make sure this file exists
     fs::create_dir_all(&macos_dir)?;
 
-    let bin_path = &macos_dir.join(game.name.to_string());
+    let bin_path = &macos_dir.join(game.name.clone());
 
     onscreen_debug!("Creating new binary at: {}", bin_path.display());
     let mut bin_file = fs::File::create(bin_path)?;

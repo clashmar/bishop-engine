@@ -46,7 +46,7 @@ macro_rules! inspector_module {
     
     ($ty:ty, removable = $removable:expr) => {
         inventory::submit! {
-            crate::ecs::module_factory::ModuleFactoryEntry {
+            $crate::ecs::module_factory::ModuleFactoryEntry {
                 title: <$ty>::TYPE_NAME,
                 factory: || crate::ecs::module_factory::make_module::<$ty>(<$ty>::TYPE_NAME, $removable),
             }

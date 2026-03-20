@@ -2,7 +2,7 @@
 use crate::ecs::component::CurrentRoom;
 use crate::ecs::transform::Transform;
 use crate::ecs::entity::Entity;
-use crate::world::room::RoomId;
+use crate::worlds::room::RoomId;
 use crate::engine_global::cam_tile_dims;
 use crate::ecs::ecs::Ecs;
 use serde_with::{serde_as, FromInto};
@@ -96,9 +96,9 @@ pub enum ZoomMode {
 
 impl ZoomMode {
     pub fn ui_label(&self) -> String {
-        match self {
-            &ZoomMode::Step => "Step".to_string(),
-            &ZoomMode::Free => "Free".to_string(),
+        match *self {
+            ZoomMode::Step => "Step".to_string(),
+            ZoomMode::Free => "Free".to_string(),
         }
     }
 }

@@ -1,8 +1,9 @@
 // editor/src/storage/editor_storage.rs
 #![allow(unused)]
 use crate::tilemap::tile_palette::TilePalette;
-use crate::with_lua_async;
 use crate::write_engine_scripts;
+use crate::write_animations_lua;
+use crate::with_lua_async;
 use std::collections::HashSet;
 use engine_core::prelude::*;
 use std::time::SystemTime;
@@ -133,7 +134,7 @@ pub fn save_game(game: &Game) -> io::Result<()> {
         .enumerate_arrays(true);
 
     let ron_string = ron::ser::to_string_pretty(game, pretty)
-        .map_err(|e| Error::other(e))?;
+        .map_err(Error::other)?;
 
     let resources_folder = resources_folder_current();
     let file_path = resources_folder.join(GAME_RON);
@@ -142,7 +143,7 @@ pub fn save_game(game: &Game) -> io::Result<()> {
 
     // Regenerate animations.lua with custom clips
     let custom_clips = collect_custom_clip_names(&game.ecs);
-    if let Err(e) = crate::editor_assets::write_animations_lua(&scripts_folder(), &custom_clips) {
+    if let Err(e) = write_animations_lua(&scripts_folder(), &custom_clips) {
         onscreen_error!("Could not write animations.lua: {e}");
     }
 
@@ -218,7 +219,7 @@ pub fn save_palette(palette: &TilePalette, game_name: &str) -> io::Result<()> {
     fs::create_dir_all(&dir)?;
     let path = dir.join("palette.ron");
     let ron = ron::ser::to_string(palette)
-        .map_err(|e| io::Error::other(e))?;
+        .map_err(Error::other)?;
     fs::write(path, ron)
 }
 
@@ -229,7 +230,7 @@ pub fn load_palette(game_name: &str) -> io::Result<TilePalette> {
         return Ok(TilePalette::new());
     }
     let ron = fs::read_to_string(path)?;
-    ron::de::from_str(&ron).map_err(|e| Error::other(e))
+    ron::de::from_str(&ron).map_err(Error::other)
 }
 
 /// Create a fresh world with a single default room.
@@ -387,7 +388,7 @@ pub fn save_menu(template: &MenuTemplate) -> io::Result<()> {
         .enumerate_arrays(true);
 
     let ron = ron::ser::to_string_pretty(template, pretty)
-        .map_err(|e| io::Error::other(e))?;
+        .map_err(Error::other)?;
 
     fs::write(path, ron)
 }

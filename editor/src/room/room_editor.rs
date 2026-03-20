@@ -3,7 +3,7 @@ use crate::app::EditorCameraController;
 use crate::app::SubEditor;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::shared::selection::draw_selection_box;
-use crate::gui::inspector::inspector::Inspector;
+use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::room::selection::PreCopyDragState;
 use crate::canvas::grid_shader::GridRenderer;
 use crate::editor_assets::assets::*;
@@ -53,7 +53,7 @@ pub struct RoomEditor {
     pub mode: RoomEditorMode,
     pub mode_selector: ModeSelector<RoomEditorMode>,
     pub tilemap_editor: TileMapEditor,
-    pub inspector: Inspector,
+    pub inspector: InspectorPanel,
     pub selected_entities: HashSet<Entity>,
     pub(crate) active_rects: Vec<Rect>,
     pub(crate) show_grid: bool,
@@ -97,7 +97,7 @@ impl RoomEditor {
                 options: *ALL_MODES,
             },
             tilemap_editor: TileMapEditor::new(),
-            inspector: Inspector::new(),
+            inspector: InspectorPanel::new(),
             selected_entities: HashSet::new(),
             active_rects: Vec::new(),
             show_grid: true,
@@ -241,7 +241,7 @@ impl RoomEditor {
                         .create_entity()
                         .with(Transform { position: room.position, ..Default::default() })
                         .with(CurrentRoom(room.id))
-                        .with(Name(format!("Entity")))
+                        .with(Name("Entity".to_string()))
                         .finish();
 
                     // Immediately select it so the inspector shows the newly-created entity
@@ -361,7 +361,7 @@ impl RoomEditor {
                     }
 
                     draw_exit_placeholders(ctx, &room.exits, room.position, grid_size);
-                    draw_camera_placeholders(ctx, &ecs, room_id, grid_size);
+                    draw_camera_placeholders(ctx, ecs, room_id, grid_size);
                     draw_light_placeholders(ctx, ecs, room_id, grid_size);
                     draw_glow_placeholders(ctx, ecs, asset_manager, room_id, grid_size);
 
@@ -431,7 +431,7 @@ impl SubEditor for RoomEditor {
     fn should_block_canvas(&self, ctx: &WgpuContext) -> bool {
         let mouse_screen: Vec2 = ctx.mouse_position().into();
         self.active_rects.iter().any(|r| r.contains(mouse_screen))
-            || self.sub_mode_rect.map_or(false, |r| r.contains(mouse_screen))
+            || self.sub_mode_rect.is_some_and(|r| r.contains(mouse_screen))
             || self.inspector.is_mouse_over(ctx)
             || is_dropdown_open()
             || is_modal_open()

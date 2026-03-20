@@ -1,6 +1,6 @@
 // editor/src/menu_editor/ui.rs
 use crate::gui::menu_bar::{draw_top_panel_full, menu_panel_rect};
-use crate::menu_editor::MenuEditor;
+use crate::menu::MenuEditor;
 use bishop::prelude::*;
 
 impl MenuEditor{

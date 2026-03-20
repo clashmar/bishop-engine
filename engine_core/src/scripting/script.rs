@@ -1,7 +1,7 @@
 // engine_core/src/script/script.rs
 use crate::scripting::script_manager::ScriptManager;
 use crate::scripting::lua_constants::PUBLIC;
-use crate::game::game::GameCtxMut;
+use crate::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use ecs_component::ecs_component;
 use std::collections::HashMap;

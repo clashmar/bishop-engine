@@ -1,5 +1,5 @@
 // editor/src/menu_editor/menu_properties_panel/element_properties.rs
-use crate::menu_editor::MenuEditor;
+use crate::menu::MenuEditor;
 use super::{ROW_HEIGHT, LABEL_WIDTH, FIELD_HEIGHT, common_properties::row_visible};
 use engine_core::prelude::*;
 use bishop::prelude::*;

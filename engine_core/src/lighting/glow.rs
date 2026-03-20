@@ -1,6 +1,6 @@
 // engine_core/src/lighting/glow.rs
 use crate::assets::sprite::SpriteId;
-use crate::game::game::GameCtxMut;
+use crate::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use crate::inspector_module;
 use serde_with::{serde_as, FromInto};

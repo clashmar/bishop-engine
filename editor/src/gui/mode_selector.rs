@@ -50,18 +50,16 @@ impl<M: ModeInfo + Copy + PartialEq> ModeSelector<M> {
 
             // Click handling
             if ctx.is_mouse_button_pressed(MouseButton::Left)
-                && rect.contains(ctx.mouse_position().into())
-                && !is_modal_open()
-            {
-                if *mode != self.current {
-                    self.current = *mode;
-                    changed = true;
-                }
+            && rect.contains(ctx.mouse_position().into())
+            && !is_modal_open()
+            && *mode != self.current {
+                self.current = *mode;
+                changed = true;
             }
 
             // Draw icon
             ctx.draw_texture_ex(
-                &mode.icon(),
+                mode.icon(),
                 rect.x,
                 rect.y,
                 Color::WHITE,
@@ -188,13 +186,11 @@ pub fn draw_sub_mode_strip<S: ModeInfo + Copy + PartialEq + 'static>(
 
         // Click handling
         if ctx.is_mouse_button_pressed(MouseButton::Left)
-            && rect.contains(ctx.mouse_position().into())
-            && !is_modal_open()
-        {
-            if *mode != *current {
-                *current = *mode;
-                changed = true;
-            }
+        && rect.contains(ctx.mouse_position().into())
+        && !is_modal_open()
+        && *mode != *current {
+            *current = *mode;
+            changed = true;
         }
 
         // Draw icon

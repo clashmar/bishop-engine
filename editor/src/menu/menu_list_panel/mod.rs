@@ -1,7 +1,7 @@
-// editor/src/menu_editor/menu_list_panel.rs
+// editor/src/menu/menu_list_panel/mod.rs
 use crate::commands::menu::{CreateTemplateCmd, DeleteTemplateCmd};
 use crate::editor_global::push_command;
-use crate::menu_editor::MenuEditor;
+use crate::menu::MenuEditor;
 use bishop::prelude::*;
 use engine_core::ui::widgets::*;
 

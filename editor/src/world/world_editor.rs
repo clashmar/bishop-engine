@@ -420,7 +420,7 @@ impl WorldEditor {
         &self, 
         ctx: &mut WgpuContext,
         camera: &Camera2D, 
-        rooms: &Vec<Room>, 
+        rooms: &[Room], 
         grid_size: f32
     ) {
         if let (Some(start), Some(end)) = (self.placing_start, self.placing_end) {

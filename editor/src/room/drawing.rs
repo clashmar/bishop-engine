@@ -401,7 +401,7 @@ pub fn draw_glow_placeholders(
             let mut pos = position.position;
 
             if let Some((w, h)) = asset_manager.texture_size(glow.sprite_id) {
-                pos = pos + vec2((w / 2.) - grid_size / 2., (h / 2.) - grid_size / 2.);
+                pos += vec2((w / 2.) - grid_size / 2., (h / 2.) - grid_size / 2.);
             }
 
             let body = Rect::new(

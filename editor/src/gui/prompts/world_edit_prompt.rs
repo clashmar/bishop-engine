@@ -46,7 +46,7 @@ impl WorldEditPrompt {
 
         Self {
             world_id,
-            name_id: name_id,
+            name_id,
             rect,
             og_name: name.clone(),
             og_sprite,
@@ -96,7 +96,7 @@ impl WorldEditPrompt {
         y += label_dims.height + GAP;
 
         let sprite_rect = Rect::new(self.rect.x, y, self.rect.w, 30.0);
-        if gui_sprite_picker(ctx, sprite_rect.into(), &mut self.current_sprite, asset_manager, false) {
+        if gui_sprite_picker(ctx, sprite_rect, &mut self.current_sprite, asset_manager, false) {
             // Widget updates the sprite
         }
 

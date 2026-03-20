@@ -107,7 +107,7 @@ where
     let lua_ref = services.lua.borrow();
     
     // Call the closure and await the future
-    let future = f(&*lua_ref);
+    let future = f(&lua_ref);
     future.await
 }
 

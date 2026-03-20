@@ -404,9 +404,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
         }
     }
 
-    // Decide whether the list should be open this frame
     let list_is_open = state.open; 
-    state.open = list_is_open; // Remember for next frame   
 
     // Let the editor know a dropdown is open
     let mut any_open = false;
@@ -446,7 +444,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     );
 
     if list_is_open {
-        state.rect = list_rect.into();
+        state.rect = list_rect;
     }
 
     // Draw the list and handle selection
@@ -530,7 +528,7 @@ fn menu_dropdown<T: Clone + PartialEq + Display>(
     let mouse_pos = ctx.mouse_position().into();
     if ctx.is_mouse_button_pressed(MouseButton::Left)
         && !rect.contains(mouse_pos)
-        && !(state.open && state.rect.contains(mouse_pos.into()))
+        && !(state.open && state.rect.contains(mouse_pos))
     {
         state.open = false;
         CURRENT_OPEN.with(|c| *c.borrow_mut() = None);
@@ -582,5 +580,5 @@ pub fn menu_button(
 
 thread_local! {
     /// Holds the `WidgetId` of the dropdown that is currently open, if any.
-    static CURRENT_OPEN: RefCell<Option<WidgetId>> = RefCell::new(None);
+    static CURRENT_OPEN: RefCell<Option<WidgetId>> = const { RefCell::new(None) };
 }

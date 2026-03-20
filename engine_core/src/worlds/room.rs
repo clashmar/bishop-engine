@@ -64,8 +64,7 @@ impl Room {
             darkness: 0.,
         };
 
-        let _camera = room.create_room_camera(ecs, room_id, grid_size);
-
+        room.create_room_camera(ecs, room_id, grid_size);
         room
     }
 
@@ -79,7 +78,7 @@ impl Room {
             // Local to world position
             let exit_world_pos = (self.position / grid_size) + exit.position;
 
-            'other_rooms: for (_, other_room) in other_rooms.iter().enumerate() {
+            'other_rooms: for other_room in other_rooms.iter() {
                 for other_exit in &other_room.exits {
                     // World position of the other room's exit
                     let other_world_pos = (other_room.position / grid_size) + other_exit.position;
@@ -182,12 +181,10 @@ impl Room {
                 if cur_room.0 != self.id {
                     continue;
                 }
-                if let Some(num_str) = name.strip_prefix(CAMERA_PREFIX) {
-                    if let Ok(num) = num_str.parse::<usize>() {
-                        if num > 0 {
-                            used.insert(num);
-                        }
-                    }
+                if let Some(num_str) = name.strip_prefix(CAMERA_PREFIX) 
+                && let Ok(num) = num_str.parse::<usize>() 
+                && num > 0 {
+                    used.insert(num);
                 }
             }
         }

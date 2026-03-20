@@ -41,8 +41,8 @@ impl LuaModule for InputModule {
 }
 
 /// Build a Lua function that queries a current `InputSnapshot`.
-pub fn make_snapshot_query_fn<'lua, Sel>(
-    lua: &'lua Lua,
+pub fn make_snapshot_query_fn<Sel>(
+    lua: &Lua,
     map_selector: Sel,
 ) -> LuaResult<Function>
 where

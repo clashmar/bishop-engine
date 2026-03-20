@@ -405,16 +405,16 @@ where
             self.current
         } else {
             let mut result = text.parse::<T>().unwrap_or(self.current);
-            if let Some(min) = self.min {
-                if result < min {
-                    result = min;
-                }
+            if let Some(min) = self.min 
+            && result < min {
+                result = min;
             }
-            if let Some(max) = self.max {
-                if result > max {
-                    result = max;
-                }
+            
+            if let Some(max) = self.max 
+            && result > max {
+                result = max;
             }
+            
             result
         }
     }

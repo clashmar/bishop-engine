@@ -239,8 +239,8 @@ impl ConsolePanel {
         result.push('\n');
 
         // Middle lines in full
-        for line_idx in (start.line + 1)..end.line {
-            result.push_str(&all_lines[line_idx]);
+        for line in all_lines.iter().take(end.line).skip(start.line + 1) {
+            result.push_str(line);
             result.push('\n');
         }
 
@@ -367,13 +367,13 @@ impl PanelDefinition for ConsolePanel {
         let all_line_texts: Vec<String> = all_lines.iter().map(|(text, _)| text.clone()).collect();
 
         // Handle mouse selection
-        if !blocked && content_rect.contains(mouse) {
-            if ctx.is_mouse_button_pressed(MouseButton::Left) {
-                if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_state.scroll_y, &all_line_texts, font_size) {
-                    self.selection_anchor = Some(pos);
-                    self.selection_end = Some(pos);
-                    self.dragging = true;
-                }
+        if !blocked 
+        && content_rect.contains(mouse) 
+        && ctx.is_mouse_button_pressed(MouseButton::Left) {
+            if let Some(pos) = Self::pos_from_mouse(ctx, mouse, content_rect, self.scroll_state.scroll_y, &all_line_texts, font_size) {
+                self.selection_anchor = Some(pos);
+                self.selection_end = Some(pos);
+                self.dragging = true;
             }
         }
 

@@ -5,7 +5,7 @@ use crate::ecs::transform::Pivot;
 use crate::ecs::reflect_field::*;
 use crate::ecs::entity::Entity;
 use crate::ui::widgets::*;
-use crate::game::game::*;
+use crate::game::*;
 use crate::ecs::ecs::Ecs;
 use crate::ui::text::*;
 use std::collections::HashMap;
@@ -86,7 +86,7 @@ where
             let base_id = *self
                 .field_ids
                 .entry(base_key.clone())
-                .or_insert_with(WidgetId::default);
+                .or_default();
 
             // Prepare the field label
             let display_name = parse_field_name(field.name);
@@ -146,12 +146,12 @@ where
                     let id_x = *self
                         .field_ids
                         .entry(format!("{}.x", field.name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let id_y = *self
                         .field_ids
                         .entry(format!("{}.y", field.name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let half = widget_rect.w / 2.0;
 
@@ -177,15 +177,15 @@ where
                     let id_x = *self
                         .field_ids
                         .entry(format!("{}.x", field.name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
                     let id_y = *self
                         .field_ids
                         .entry(format!("{}.y", field.name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
                     let id_z = *self
                         .field_ids
                         .entry(format!("{}.z", field.name))
-                        .or_insert_with(WidgetId::default);
+                        .or_default();
 
                     let third = widget_rect.w / 3.0 - SPACING / 3.0;
 

@@ -5,7 +5,7 @@ mod layout_properties;
 mod common_properties;
 mod nav_section;
 
-use crate::menu_editor::MenuEditor;
+use crate::menu::MenuEditor;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 

@@ -14,7 +14,7 @@ pub struct Modal {
 }
 
 thread_local! {
-    pub static MODAL_OPEN: RefCell<bool> = RefCell::new(false);
+    pub static MODAL_OPEN: RefCell<bool> = const { RefCell::new(false) };
 }
 
 /// Global flag that tells the rest of the editor whether a modal

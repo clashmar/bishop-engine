@@ -23,7 +23,7 @@ fn main() {
 
     for reg in inventory::iter::<LuaApiRegistry> {
         let module = (reg.ctor)();
-        let mut writer = LuaApiWriter::new();
+        let mut writer = LuaApiWriter::default();
         module.emit_api(&mut writer);
 
         // Append the snippet to the buffer for this file

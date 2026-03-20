@@ -4,7 +4,7 @@ use crate::menu::*;
 use serde::{Deserialize, Serialize};
 
 /// Element that arranges its children using layout rules.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct LayoutGroupElement {
     pub layout: LayoutConfig,
     pub children: Vec<LayoutChild>,
@@ -12,17 +12,6 @@ pub struct LayoutGroupElement {
     #[serde(default)]
     pub background: Option<PanelBackground>,
     pub nav_targets: NavTargets,
-}
-
-impl Default for LayoutGroupElement {
-    fn default() -> Self {
-        Self {
-            layout: LayoutConfig::default(),
-            children: Vec::new(),
-            background: None,
-            nav_targets: NavTargets::default(),
-        }
-    }
 }
 
 impl Navigable for LayoutGroupElement {

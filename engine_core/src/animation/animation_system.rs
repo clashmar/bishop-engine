@@ -1,11 +1,11 @@
 // engine_core/src/animation/animation_system.rs
 use crate::assets::asset_manager::AssetManager;
-use crate::world::room::entities_in_room;
+use crate::worlds::room::entities_in_room;
 use crate::animation::animation_clip::*;
 use crate::assets::sprite::SpriteId;
 use crate::ecs::component::PlayerProxy;
 use crate::ecs::entity::Entity;
-use crate::world::room::RoomId;
+use crate::worlds::room::RoomId;
 use crate::ecs::ecs::Ecs;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
@@ -43,10 +43,9 @@ pub async fn update_animation_sytem(
 
     // Process the player entity if there's a player proxy
     let has_spawn_point = entities.iter().any(|e| ecs.has::<PlayerProxy>(*e));
-    if has_spawn_point {
-        if let Some(player) = ecs.get_player_entity() {
-            entities.insert(player);
-        }
+    if has_spawn_point 
+    && let Some(player) = ecs.get_player_entity() {
+        entities.insert(player);
     }
 
     let anim_store = ecs.get_store_mut::<Animation>();
@@ -144,14 +143,11 @@ async fn get_sprite_id(
     current_id: &ClipId,
     asset_manager: &mut AssetManager,
 ) -> (SpriteId, bool) {
-    // Try cache first
-    if let Some(&cached) = animation.sprite_cache.get(current_id) {
-        if cached.0 != 0 {
-            return (cached, false);
-        }
+    if let Some(&cached) = animation.sprite_cache.get(current_id) 
+    && cached.0 != 0 {
+        return (cached, false);
     }
 
-    // Not in cache try to resolve with asset manager
     let resolved = resolve_sprite_id(
         asset_manager, 
         &animation.variant, 

@@ -16,7 +16,7 @@ pub enum MenuElementKind {
 }
 
 /// Label element displaying text resolved from a text key.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct LabelElement {
     #[serde(alias = "text")]
     pub text_key: String,
@@ -24,17 +24,6 @@ pub struct LabelElement {
     pub color: Color,
     #[serde(default)]
     pub alignment: HorizontalAlign,
-}
-
-impl Default for LabelElement {
-    fn default() -> Self {
-        Self {
-            text_key: String::new(),
-            font_size: 24.0,
-            color: Color::WHITE,
-            alignment: HorizontalAlign::Center,
-        }
-    }
 }
 
 /// Button element that triggers an action when clicked.
@@ -80,17 +69,9 @@ impl Navigable for ButtonElement {
 }
 
 /// Decorative panel element that renders a background fill.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct PanelElement {
     pub background: PanelBackground,
-}
-
-impl Default for PanelElement {
-    fn default() -> Self {
-        Self {
-            background: PanelBackground::default(),
-        }
-    }
 }
 
 /// Menu element variants with positional data.

@@ -24,9 +24,9 @@ impl CameraManager {
         player_pos: Vec2, 
         grid_size: f32
     ) -> Self {
-        let room_cameras = get_room_cameras(&ecs, room_id);
+        let room_cameras = get_room_cameras(ecs, room_id);
         let (active_camera, _) =
-            Self::find_best_camera_for_room(ctx, &ecs, &room_cameras, player_pos, grid_size)
+            Self::find_best_camera_for_room(ctx, ecs, &room_cameras, player_pos, grid_size)
                 .expect("Room must contain at least one camera.");
 
         Self {

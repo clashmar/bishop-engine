@@ -2,29 +2,20 @@
 use crate::scripting::commands::lua_command_manager::LuaCommandManager;
 use crate::scripting::commands::lua_command::LuaCommand;
 use crate::input::input_snapshot::InputSnapshot;
-use std::vec::IntoIter;
 use std::cell::{Cell, RefCell};
+use std::vec::IntoIter;
 use std::rc::Rc;
 
 /// Global services for the `GameState`.
+#[derive(Default)]
 pub struct GameServices {
     pub command_manager: RefCell<LuaCommandManager>,
     pub input_snapshot: RefCell<InputSnapshot>,
     pub menu_active: Cell<bool>,
 }
 
-impl GameServices {
-    pub fn new() -> Self {
-        Self {
-            command_manager: RefCell::new(LuaCommandManager::default()),
-            input_snapshot: RefCell::new(InputSnapshot::default()),
-            menu_active: Cell::new(false),
-        }
-    }
-}
-
 thread_local! {
-    static GAME_SERVICES: Rc<GameServices> = Rc::new(GameServices::new());
+    static GAME_SERVICES: Rc<GameServices> = Rc::new(GameServices::default());
 }
 
 /// Push an `LuaCommand` to the global command queue.
