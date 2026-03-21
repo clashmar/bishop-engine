@@ -70,7 +70,9 @@ impl Input for WgpuContext {
 
 impl Draw for WgpuContext {
     fn draw_rectangle(&mut self, x: f32, y: f32, w: f32, h: f32, color: Color) {
+        let prev = self.primitive_renderer.vertex_count() as u32;
         self.primitive_renderer.draw_rectangle(x, y, w, h, color);
+        self.record_primitive_segment(prev);
     }
 
     fn draw_rectangle_lines(
@@ -82,35 +84,46 @@ impl Draw for WgpuContext {
         thickness: f32,
         color: Color,
     ) {
+        let prev = self.primitive_renderer.vertex_count() as u32;
         self.primitive_renderer
             .draw_rectangle_lines(x, y, w, h, thickness, color);
+        self.record_primitive_segment(prev);
     }
 
     fn draw_line(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, thickness: f32, color: Color) {
+        let prev = self.primitive_renderer.vertex_count() as u32;
         self.primitive_renderer
             .draw_line(x1, y1, x2, y2, thickness, color);
+        self.record_primitive_segment(prev);
     }
 
     fn draw_circle(&mut self, x: f32, y: f32, radius: f32, color: Color) {
+        let prev = self.primitive_renderer.vertex_count() as u32;
         self.primitive_renderer.draw_circle(x, y, radius, color);
+        self.record_primitive_segment(prev);
     }
 
     fn draw_circle_lines(&mut self, x: f32, y: f32, radius: f32, thickness: f32, color: Color) {
+        let prev = self.primitive_renderer.vertex_count() as u32;
         self.primitive_renderer
             .draw_circle_lines(x, y, radius, thickness, color);
+        self.record_primitive_segment(prev);
     }
 
     fn draw_triangle(&mut self, v1: Vec2, v2: Vec2, v3: Vec2, color: Color) {
+        let prev = self.primitive_renderer.vertex_count() as u32;
         self.primitive_renderer.draw_triangle(v1, v2, v3, color);
+        self.record_primitive_segment(prev);
     }
 
     fn clear_background(&mut self, color: Color) {
         self.clear_color = Some(color);
     }
 
-
     fn draw_texture(&mut self, texture: &Texture2D, x: f32, y: f32, color: Color) {
+        let prev = self.texture_renderer.batch_count();
         self.texture_renderer.draw_texture(texture.inner(), x, y, color);
+        self.record_texture_segment(prev);
     }
 
     fn draw_texture_ex(
@@ -121,8 +134,10 @@ impl Draw for WgpuContext {
         color: Color,
         params: DrawTextureParams,
     ) {
+        let prev = self.texture_renderer.batch_count();
         self.texture_renderer
             .draw_texture_ex(texture.inner(), x, y, color, params);
+        self.record_texture_segment(prev);
     }
 }
 
@@ -135,7 +150,10 @@ impl Text for WgpuContext {
         font_size: f32,
         color: Color,
     ) -> TextDimensions {
-        self.text_renderer.draw_text(text, x, y, font_size, color)
+        let prev = self.text_renderer.vertex_count() as u32;
+        let dims = self.text_renderer.draw_text(text, x, y, font_size, color);
+        self.record_text_segment(prev);
+        dims
     }
 
     fn draw_text_ex(
@@ -145,7 +163,10 @@ impl Text for WgpuContext {
         y: f32,
         params: crate::text::TextParams,
     ) -> TextDimensions {
-        self.text_renderer.draw_text_ex(text, x, y, &params)
+        let prev = self.text_renderer.vertex_count() as u32;
+        let dims = self.text_renderer.draw_text_ex(text, x, y, &params);
+        self.record_text_segment(prev);
+        dims
     }
 
     fn measure_text(&self, text: &str, font_size: f32) -> TextDimensions {

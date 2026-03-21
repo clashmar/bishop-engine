@@ -2,9 +2,13 @@
 use crate::game::GameCtxMut;
 use crate::ecs::entity::Entity;
 use crate::inspector_module;
+use crate::rendering::renderable::{EntityDrawParams, Renderable};
+use crate::assets::asset_manager::AssetManager;
+use crate::rendering::render_room::pivot_adjusted_position;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use reflect_derive::Reflect;
+use bishop::prelude::*;
 
 
 /// Opaque handle that the asset manager gives out. Default/Unset is 0.
@@ -35,3 +39,34 @@ fn post_remove(sprite: &mut Sprite, _entity: &Entity, ctx: &mut GameCtxMut) {
 }
 
 inspector_module!(Sprite);
+
+impl Renderable for Sprite {
+    fn dimensions(&self, asset_manager: &AssetManager) -> Option<Vec2> {
+        asset_manager.texture_size(self.sprite).map(|(w, h)| vec2(w, h))
+    }
+
+    fn draw<C: BishopContext>(
+        &self,
+        ctx: &mut C,
+        asset_manager: &mut AssetManager,
+        params: &EntityDrawParams,
+    ) -> bool {
+        let Some(size) = self.dimensions(asset_manager) else {
+            return false;
+        };
+        
+        let tex = asset_manager.get_texture_from_id(self.sprite);
+        let draw_base = pivot_adjusted_position(params.pos, size, params.pivot);
+        ctx.draw_texture_ex(
+            tex,
+            draw_base.x,
+            draw_base.y,
+            Color::WHITE,
+            DrawTextureParams {
+                dest_size: Some(size),
+                ..Default::default()
+            },
+        );
+        true
+    }
+}

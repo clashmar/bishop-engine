@@ -1,4 +1,4 @@
-// game/src/game_state.rs
+// game/src/engine/game_instance.rs
 use crate::scripting::script_system::ScriptSystem;
 use std::collections::HashMap;
 use engine_core::prelude::*;
@@ -69,7 +69,6 @@ impl GameInstance {
         mut game: Game,
         lua: &Lua,
         camera_manager: &mut CameraManager,
-        grid_size: f32,
     ) -> Self {
         // Playtest mode is set in playtest_main.rs before this is called,
         // so we only set Game mode if not already in Playtest mode
@@ -83,12 +82,13 @@ impl GameInstance {
         let player_pos = ecs.get_player_transform()
             .map(|t| t.position)
             .unwrap_or_default();
-        
+        let grid_size = game.current_world().grid_size;
+
         *camera_manager = CameraManager::new(
-            ctx, 
-            ecs, 
-            room.id, 
-            player_pos, 
+            ctx,
+            ecs,
+            room.id,
+            player_pos,
             grid_size
         );
 

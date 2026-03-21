@@ -300,6 +300,16 @@ impl TextureRenderer {
         self.vertices.is_empty() && self.batches.is_empty()
     }
 
+    /// Returns the number of texture batches queued.
+    pub fn batch_count(&self) -> usize {
+        self.batches.len()
+    }
+
+    /// Forces the next texture draw to start a new batch, regardless of bind group.
+    pub fn seal_batch(&mut self) {
+        self.current_texture_bind_group = None;
+    }
+
     /// Draws a texture at the specified position.
     pub fn draw_texture(&mut self, texture: &WgpuTexture, x: f32, y: f32, color: Color) {
         self.draw_texture_ex(texture, x, y, color, DrawTextureParams::default());
@@ -440,23 +450,29 @@ impl TextureRenderer {
         }
     }
 
-    /// Uploads vertices and renders to the given render pass.
-    pub fn flush<'a>(&'a self, queue: &wgpu::Queue, render_pass: &mut wgpu::RenderPass<'a>) {
+    /// Uploads the vertex buffer to the GPU.
+    pub fn upload_vertices(&self, queue: &wgpu::Queue) {
         if self.vertices.is_empty() {
             return;
         }
+        queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&self.vertices));
+    }
 
-        queue.write_buffer(
-            &self.vertex_buffer,
-            0,
-            bytemuck::cast_slice(&self.vertices),
-        );
-
+    /// Binds the pipeline, camera group, and vertex buffer on the render pass.
+    pub fn setup_pipeline<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+    }
 
-        for batch in &self.batches {
+    /// Issues draw calls for a sub-range of the batch list.
+    pub fn draw_batches_range<'a>(
+        &'a self,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        batch_start: usize,
+        batch_count: usize,
+    ) {
+        for batch in &self.batches[batch_start..batch_start + batch_count] {
             let bind_group = unsafe { &*batch.bind_group_ptr };
             render_pass.set_bind_group(1, bind_group, &[]);
             render_pass.draw(
@@ -465,4 +481,5 @@ impl TextureRenderer {
             );
         }
     }
+
 }

@@ -1,6 +1,10 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Display;
 use crate::*;
+
+/// Offset added to a dropdown's WidgetId to derive its filter TextInput's WidgetId.
+const FILTER_ID_OFFSET: usize = usize::MAX / 2 + 1;
 
 /// Data for deferred dropdown rendering.
 struct DeferredDropdownRender {
@@ -14,6 +18,21 @@ struct DeferredDropdownRender {
 thread_local! {
     static DEFERRED_DROPDOWN_RENDERS: RefCell<Vec<DeferredDropdownRender>> =
         const { RefCell::new(Vec::new()) };
+    /// Per-dropdown filter text, keyed by the dropdown's WidgetId.
+    static DROPDOWN_FILTER_STATE: RefCell<HashMap<WidgetId, String>> =
+        RefCell::new(HashMap::new());
+}
+
+fn get_filter(id: WidgetId) -> String {
+    DROPDOWN_FILTER_STATE.with(|s| s.borrow().get(&id).cloned().unwrap_or_default())
+}
+
+fn set_filter(id: WidgetId, filter: String) {
+    DROPDOWN_FILTER_STATE.with(|s| { s.borrow_mut().insert(id, filter); });
+}
+
+fn clear_filter(id: WidgetId) {
+    DROPDOWN_FILTER_STATE.with(|s| { s.borrow_mut().remove(&id); });
 }
 
 /// Flushes all deferred dropdown list renders.
@@ -34,7 +53,7 @@ pub fn flush_dropdown_lists<C: BishopContext>(ctx: &mut C) {
     });
 }
 
-/// The visual style of a dropdown.
+/// The visual style of a dropdown trigger button.
 #[derive(Clone, Copy)]
 pub enum DropDownStyle {
     /// Standard dropdown with background and border.
@@ -52,9 +71,11 @@ pub struct Dropdown<'a, T> {
     to_string: Box<dyn Fn(&T) -> String + 'a>,
     style: DropDownStyle,
     text_color: Color,
+    label_font_size: f32,
     y_offset: f32,
     blocked: bool,
     fixed_width: bool,
+    filterable: bool,
 }
 
 impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
@@ -74,9 +95,11 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             to_string: Box::new(to_string),
             style: DropDownStyle::Default,
             text_color: Color::WHITE,
+            label_font_size: FIELD_TEXT_SIZE_16,
             y_offset: 0.0,
             blocked: false,
             fixed_width: false,
+            filterable: false,
         }
     }
 
@@ -86,9 +109,24 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         self
     }
 
+    /// Renders the trigger button using the menu bar style: transparent at rest,
+    /// dark overlay on hover or when open, black text at 20pt.
+    pub fn menu_style(mut self) -> Self {
+        self.style = DropDownStyle::Plain;
+        self.text_color = Color::BLACK;
+        self.label_font_size = HEADER_FONT_SIZE_20;
+        self
+    }
+
     /// Sets the text color.
     pub fn text_color(mut self, color: impl Into<Color>) -> Self {
         self.text_color = color.into();
+        self
+    }
+
+    /// Sets the font size for the trigger button label.
+    pub fn font_size(mut self, size: f32) -> Self {
+        self.label_font_size = size;
         self
     }
 
@@ -107,6 +145,13 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
     /// Clamps the dropdown list width to match the parent button.
     pub fn fixed_width(mut self) -> Self {
         self.fixed_width = true;
+        self
+    }
+
+    /// Shows a filter TextInput at the top of the dropdown list for case-insensitive search.
+    /// The list renders inline (non-deferred) when filtering is active.
+    pub fn filterable(mut self) -> Self {
+        self.filterable = true;
         self
     }
 
@@ -134,12 +179,15 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
 
         let button_clicked = match self.style {
             DropDownStyle::Default => {
-                Button::new(self.rect, display_label).blocked(self.blocked).show(ctx) && !self.blocked
+                Button::new(self.rect, display_label)
+                    .blocked(self.blocked)
+                    .show(ctx) && !self.blocked
             }
             DropDownStyle::Plain => {
                 Button::new(self.rect, display_label)
                     .plain()
                     .text_color(self.text_color)
+                    .font_size(self.label_font_size)
                     .blocked(self.blocked)
                     .show(ctx) && !self.blocked
             }
@@ -152,6 +200,9 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         if button_clicked {
             consume_click();
             state.open = !state.open;
+            if self.filterable && !state.open {
+                clear_filter(self.id);
+            }
         }
 
         let list_is_open = state.open;
@@ -176,79 +227,81 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             self.rect.w.max(max_opt_width + 2.0 * W_PADDING + SCROLLBAR_WIDTH)
         };
 
-        let visible_rows = MAX_VISIBLE_ROWS.min(self.options.len());
-        let list_h = self.rect.h * visible_rows as f32;
-        let drop_down_y = self.rect.y + self.rect.h + self.y_offset;
-        let drop_up_y = self.rect.y - list_h - self.y_offset;
-        let drops_below_screen = drop_down_y + list_h > ctx.screen_height();
-        let list_y = if drops_below_screen && drop_up_y >= 0.0 {
-            drop_up_y
-        } else {
-            drop_down_y
-        };
-        let list_rect = Rect::new(self.rect.x, list_y, list_width, list_h);
-
-        if list_is_open {
-            state.rect = list_rect;
-        }
-
         let mut result: Option<T> = None;
 
         if list_is_open {
-            let total_height = self.rect.h * self.options.len() as f32;
-            let max_offset = (total_height - list_rect.h).max(0.0);
+            if self.filterable {
+                result = self.show_filterable_list(ctx, &mut state, list_width);
+            } else {
+                let visible_rows = MAX_VISIBLE_ROWS.min(self.options.len());
+                let list_h = self.rect.h * visible_rows as f32;
+                let drop_down_y = self.rect.y + self.rect.h + self.y_offset;
+                let drop_up_y = self.rect.y - list_h - self.y_offset;
+                let drops_below_screen = drop_down_y + list_h > ctx.screen_height();
+                let list_y = if drops_below_screen && drop_up_y >= 0.0 {
+                    drop_up_y
+                } else {
+                    drop_down_y
+                };
+                let list_rect = Rect::new(self.rect.x, list_y, list_width, list_h);
 
-            let mouse_pos = ctx.mouse_position();
-            let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
+                state.rect = list_rect;
 
-            if list_rect.contains(mouse_vec) {
-                if ctx.is_mouse_button_pressed(MouseButton::Left) {
-                    consume_click();
+                let total_height = self.rect.h * self.options.len() as f32;
+                let max_offset = (total_height - list_rect.h).max(0.0);
+
+                let mouse_pos = ctx.mouse_position();
+                let mouse_vec = Vec2::new(mouse_pos.0, mouse_pos.1);
+
+                if list_rect.contains(mouse_vec) {
+                    if ctx.is_mouse_button_pressed(MouseButton::Left) {
+                        consume_click();
+                    }
+                    let (_, wheel_y) = ctx.mouse_wheel();
+                    if wheel_y != 0.0 {
+                        let delta = wheel_y * SCROLL_SPEED;
+                        state.scroll_offset = (state.scroll_offset - delta).clamp(0.0, max_offset);
+                    }
                 }
-                let (_, wheel_y) = ctx.mouse_wheel();
-                if wheel_y != 0.0 {
-                    let delta = wheel_y * SCROLL_SPEED;
-                    state.scroll_offset = (state.scroll_offset - delta).clamp(0.0, max_offset);
+
+                for (i, opt) in self.options.iter().enumerate() {
+                    let entry_y = list_rect.y + i as f32 * self.rect.h;
+                    let draw_y = entry_y - state.scroll_offset;
+
+                    if draw_y + self.rect.h < list_rect.y + self.rect.h
+                        || draw_y > list_rect.y + list_rect.h - self.rect.h
+                    {
+                        continue;
+                    }
+
+                    let entry_rect = Rect::new(list_rect.x, draw_y, list_rect.w, self.rect.h);
+
+                    let hovered = entry_rect.contains(mouse_vec);
+                    if hovered && ctx.is_mouse_button_pressed(MouseButton::Left) {
+                        consume_click();
+                        state.open = false;
+                        dropdown_state::set(self.id, state);
+                        update_global_dropdown_flag();
+                        result = Some(opt.clone());
+                        break;
+                    }
                 }
-            }
 
-            for (i, opt) in self.options.iter().enumerate() {
-                let entry_y = list_rect.y + i as f32 * self.rect.h;
-                let draw_y = entry_y - state.scroll_offset;
+                let scroll_offset = state.scroll_offset;
+                let row_height = self.rect.h;
+                let labels: Vec<String> = self.options.iter().map(|o| (self.to_string)(o)).collect();
+                let option_count = self.options.len();
 
-                if draw_y + self.rect.h < list_rect.y + self.rect.h
-                    || draw_y > list_rect.y + list_rect.h - self.rect.h
-                {
-                    continue;
-                }
-
-                let entry_rect = Rect::new(list_rect.x, draw_y, list_rect.w, self.rect.h);
-
-                let hovered = entry_rect.contains(mouse_vec);
-                if hovered && ctx.is_mouse_button_pressed(MouseButton::Left) {
-                    consume_click();
-                    state.open = false;
-                    dropdown_state::set(self.id, state);
-                    update_global_dropdown_flag();
-                    result = Some(opt.clone());
-                    break;
-                }
-            }
-
-            let scroll_offset = state.scroll_offset;
-            let row_height = self.rect.h;
-            let labels: Vec<String> = self.options.iter().map(|o| (self.to_string)(o)).collect();
-            let option_count = self.options.len();
-
-            DEFERRED_DROPDOWN_RENDERS.with(|renders| {
-                renders.borrow_mut().push(DeferredDropdownRender {
-                    list_rect,
-                    row_height,
-                    scroll_offset,
-                    labels,
-                    option_count,
+                DEFERRED_DROPDOWN_RENDERS.with(|renders| {
+                    renders.borrow_mut().push(DeferredDropdownRender {
+                        list_rect,
+                        row_height,
+                        scroll_offset,
+                        labels,
+                        option_count,
+                    });
                 });
-            });
+            }
         }
 
         let mouse_pos = ctx.mouse_position();
@@ -258,10 +311,101 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             && !(state.open && state.rect.contains(mouse_vec))
         {
             state.open = false;
+            if self.filterable {
+                clear_filter(self.id);
+            }
         }
 
         dropdown_state::set(self.id, state);
         update_global_dropdown_flag();
+        result
+    }
+
+    /// Draws the filterable list inline (non-deferred) and returns a selected option if any.
+    fn show_filterable_list<C: BishopContext>(
+        &self,
+        ctx: &mut C,
+        state: &mut dropdown_state::DropState,
+        list_width: f32,
+    ) -> Option<T> {
+        const MAX_VISIBLE_ROWS: usize = 8;
+
+        let filter_str = get_filter(self.id);
+        let filter_lower = filter_str.to_lowercase();
+
+        let filtered: Vec<&T> = if filter_lower.is_empty() {
+            self.options.iter().collect()
+        } else {
+            self.options.iter().filter(|opt| {
+                (self.to_string)(opt).to_lowercase().contains(&filter_lower)
+            }).collect()
+        };
+
+        let visible_entries = MAX_VISIBLE_ROWS.min(filtered.len());
+        let filter_h = self.rect.h;
+        let entries_h = self.rect.h * visible_entries as f32;
+        let popup_h = filter_h + entries_h;
+
+        let drop_down_y = self.rect.y + self.rect.h + self.y_offset;
+        let drop_up_y = self.rect.y - popup_h - self.y_offset;
+        let drops_below = drop_down_y + popup_h > ctx.screen_height();
+        let popup_y = if drops_below && drop_up_y >= 0.0 { drop_up_y } else { drop_down_y };
+
+        let popup_rect = Rect::new(self.rect.x, popup_y, list_width, popup_h);
+        state.rect = popup_rect;
+
+        // Background and border
+        ctx.draw_rectangle(popup_rect.x, popup_rect.y, popup_rect.w, popup_rect.h, FIELD_BACKGROUND_COLOR);
+        ctx.draw_rectangle_lines(popup_rect.x, popup_rect.y, popup_rect.w, popup_rect.h, 2., OUTLINE_COLOR);
+
+        // Filter TextInput
+        let filter_rect = Rect::new(popup_rect.x, popup_y, list_width, filter_h);
+        let filter_id = WidgetId(self.id.0.wrapping_add(FILTER_ID_OFFSET));
+        let (new_filter, _) = TextInput::new(filter_id, filter_rect, &filter_str)
+            .in_dropdown()
+            .live()
+            .show(ctx);
+        set_filter(self.id, new_filter);
+
+        // Entries
+        let entries_y = popup_y + filter_h;
+        let mouse_pos: Vec2 = ctx.mouse_position().into();
+        let mut result = None;
+
+        for (i, opt) in filtered.iter().take(visible_entries).enumerate() {
+            let entry_rect = Rect::new(popup_rect.x, entries_y + i as f32 * self.rect.h, list_width, self.rect.h);
+            let hovered = entry_rect.contains(mouse_pos);
+
+            if hovered {
+                ctx.draw_rectangle(
+                    entry_rect.x, entry_rect.y, entry_rect.w, entry_rect.h,
+                    Color::new(0.2, 0.2, 0.2, 0.9),
+                );
+            }
+
+            draw_text_clipped(
+                ctx,
+                &(self.to_string)(opt),
+                entry_rect.x,
+                entry_rect.y,
+                entry_rect.w,
+                entry_rect.h,
+                0.0,
+                DEFAULT_FONT_SIZE_16,
+                FIELD_TEXT_COLOR,
+            );
+
+            if hovered && ctx.is_mouse_button_pressed(MouseButton::Left) {
+                consume_click();
+                state.open = false;
+                clear_filter(self.id);
+                dropdown_state::set(self.id, *state);
+                update_global_dropdown_flag();
+                result = Some((*opt).clone());
+                break;
+            }
+        }
+
         result
     }
 }

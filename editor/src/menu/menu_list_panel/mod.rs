@@ -67,6 +67,7 @@ impl MenuEditor {
             if new_clicked {
                 self.menu_list_panel.pending_new_menu = true;
                 self.menu_list_panel.new_menu_name = String::new();
+                text_input_reset(self.menu_list_panel.new_menu_id);
             }
 
             if delete_clicked {
@@ -80,26 +81,28 @@ impl MenuEditor {
         // New menu name input (if pending)
         if self.menu_list_panel.pending_new_menu {
             if area.is_fully_visible(y, 24.0) {
-                let field_rect = Rect::new(content_x, y, content_w - 60.0, 24.0);
+                let cancel_w = 24.0;
+                let field_rect = Rect::new(content_x, y, content_w - cancel_w - 4.0, 24.0);
+                let cancel_rect = Rect::new(content_x + content_w - cancel_w, y, cancel_w, 24.0);
+
                 let (new_text, _) = TextInput::new(self.menu_list_panel.new_menu_id, field_rect, &self.menu_list_panel.new_menu_name)
                     .focused(true)
                     .blocked(blocked)
                     .show(ctx);
                 self.menu_list_panel.new_menu_name = new_text;
 
-                let ok_rect = Rect::new(content_x + content_w - 50.0, y, 50.0, 24.0);
-                let ok_clicked = Button::new(ok_rect, "OK").blocked(blocked).show(ctx);
+                let cancel_clicked = Button::new(cancel_rect, "×").blocked(blocked).show(ctx);
 
                 let name_trimmed = self.menu_list_panel.new_menu_name.trim();
                 let duplicate = self.templates.iter().any(|t| t.id == name_trimmed);
-                if (ok_clicked || ctx.is_key_pressed(KeyCode::Enter)) && !name_trimmed.is_empty() && !duplicate {
+                if ctx.is_key_pressed(KeyCode::Enter) && !name_trimmed.is_empty() && !duplicate {
                     let name = name_trimmed.to_string();
                     push_command(Box::new(CreateTemplateCmd::new(name)));
                     self.menu_list_panel.pending_new_menu = false;
                     self.menu_list_panel.new_menu_name.clear();
                 }
 
-                if ctx.is_key_pressed(KeyCode::Escape) {
+                if cancel_clicked || ctx.is_key_pressed(KeyCode::Escape) {
                     self.menu_list_panel.pending_new_menu = false;
                     self.menu_list_panel.new_menu_name.clear();
                 }

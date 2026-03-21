@@ -234,10 +234,10 @@ pub fn highlight_selected_entity<C: BishopContext>(
         entity
     };
 
-    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
-    let draw_pos = pivot_adjusted_position(transform.position, Vec2::new(width, height), transform.pivot);
+    let size = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
+    let draw_pos = pivot_adjusted_position(transform.position, size, transform.pivot);
 
-    ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, width, height, 1.0, color);
+    ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, size.x, size.y, 1.0, color);
 }
 
 /// Draw the outline of the collider for an entity if it has one.

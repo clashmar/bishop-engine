@@ -74,6 +74,32 @@
                         ),
                         managed: true,
                     ),
+                    /*[2]*/ (
+                        element: (
+                            name: "",
+                            kind: Button((
+                                text_key: "Settings",
+                                action: OpenMenu("settings"),
+                                font_size: 20.0,
+                                nav_targets: (
+                                    up: None,
+                                    down: None,
+                                    left: None,
+                                    right: None,
+                                ),
+                            )),
+                            rect: (
+                                x: 0.14793742,
+                                y: 0.23101828,
+                                w: 0.1,
+                                h: 0.037,
+                            ),
+                            enabled: true,
+                            visible: true,
+                            z_order: 0,
+                        ),
+                        managed: true,
+                    ),
                 ],
                 background: None,
                 nav_targets: (
@@ -84,33 +110,10 @@
                 ),
             )),
             rect: (
-                x: 0.4204893,
-                y: 0.34430718,
+                x: 0.375,
+                y: 0.35,
                 w: 0.25,
                 h: 0.3,
-            ),
-            enabled: true,
-            visible: true,
-            z_order: 0,
-        ),
-        /*[1]*/ (
-            name: "",
-            kind: Button((
-                text_key: "button",
-                action: CloseMenu,
-                font_size: 20.0,
-                nav_targets: (
-                    up: None,
-                    down: None,
-                    left: None,
-                    right: Some(0),
-                ),
-            )),
-            rect: (
-                x: 0.16365647,
-                y: 0.48980597,
-                w: 0.1,
-                h: 0.037,
             ),
             enabled: true,
             visible: true,

@@ -1,5 +1,5 @@
 // engine_core/src/world/transition_manager.rs
-use crate::game_instance::GameInstance;
+use crate::engine::game_instance::GameInstance;
 use engine_core::prelude::*;
 use uuid::Uuid;
 

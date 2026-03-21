@@ -2,6 +2,7 @@
 use crate::scripting::commands::lua_command_manager::LuaCommandManager;
 use crate::scripting::commands::lua_command::LuaCommand;
 use crate::input::input_snapshot::InputSnapshot;
+use crate::input::{InputFocusMap, focus_priority};
 use std::cell::{Cell, RefCell};
 use std::vec::IntoIter;
 use std::rc::Rc;
@@ -12,6 +13,7 @@ pub struct GameServices {
     pub command_manager: RefCell<LuaCommandManager>,
     pub input_snapshot: RefCell<InputSnapshot>,
     pub menu_active: Cell<bool>,
+    pub input_focus: RefCell<InputFocusMap>,
 }
 
 thread_local! {
@@ -41,7 +43,32 @@ pub fn get_input_snapshot() -> InputSnapshot {
 pub fn set_menu_active(active: bool) {
     GAME_SERVICES.with(|services| {
         services.menu_active.set(active);
+        let mut focus = services.input_focus.borrow_mut();
+        if active {
+            focus.take_control("menu", focus_priority::MENU);
+        } else {
+            focus.release_control("menu");
+        }
     });
+}
+
+/// Registers `name` with `priority` in the input focus map.
+pub fn take_input_control(name: &str, priority: u8) {
+    GAME_SERVICES.with(|services| {
+        services.input_focus.borrow_mut().take_control(name, priority);
+    });
+}
+
+/// Removes `name` from the input focus map.
+pub fn release_input_control(name: &str) {
+    GAME_SERVICES.with(|services| {
+        services.input_focus.borrow_mut().release_control(name);
+    });
+}
+
+/// Returns `true` if `name` currently holds the highest priority.
+pub fn in_input_control(name: &str) -> bool {
+    GAME_SERVICES.with(|services| services.input_focus.borrow().in_control(name))
 }
 
 /// Returns true if any menu is currently active.

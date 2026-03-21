@@ -71,6 +71,9 @@ pub trait BishopApp {
 
     /// Called once per frame. The app handles its own update/render logic.
     fn frame(&mut self, ctx: PlatformContext) -> impl std::future::Future<Output = ()>;
+
+    /// Called when the application is about to exit. Default is a no-op.
+    fn on_exit(&mut self) {}
 }
 
 /// Error type for the wgpu run function.

@@ -20,11 +20,6 @@ pub fn render_room<C: BishopContext>(
 ) {
     let render_start = std::time::Instant::now();
 
-    // Cache the needed stores
-    let sprite_store = ecs.get_store::<Sprite>();
-    let frame_store = ecs.get_store::<CurrentFrame>();
-    let transform_store = ecs.get_store::<Transform>();
-
     // Organize entities by layer
     let layer_map = collect_interpolated_layer_map(
         ecs,
@@ -46,17 +41,7 @@ pub fn render_room<C: BishopContext>(
     // Draw all entities sorted by layer
     for (_z, layer) in layer_map {
         for (entity, pos) in layer.entities {
-            draw_entity(
-                ctx,
-                ecs,
-                asset_manager,
-                frame_store,
-                sprite_store,
-                transform_store,
-                entity,
-                pos,
-                grid_size,
-            );
+            draw_entity(ctx, ecs, asset_manager, entity, pos, grid_size);
         }
 
         // TODO: Re-enable multi-pass rendering
@@ -78,117 +63,63 @@ fn draw_entity<C: BishopContext>(
     ctx: &mut C,
     ecs: &Ecs,
     asset_manager: &mut AssetManager,
-    frame_store: &ComponentStore<CurrentFrame>,
-    sprite_store: &ComponentStore<Sprite>,
-    transform_store: &ComponentStore<Transform>,
     entity: Entity,
     pos: Vec2,
     grid_size: f32,
 ) {
-    // If this is a player proxy, render using Player's visual components
     let visual_entity = if ecs.has::<PlayerProxy>(entity) {
         ecs.get_player_entity().unwrap_or(entity)
     } else {
         entity
     };
 
-    let (width, height) = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
-
-    // Get pivot from transform (default to BottomCenter)
-    let pivot = transform_store
+    let pivot = ecs
+        .get_store::<Transform>()
         .get(entity)
         .map(|t| t.pivot)
         .unwrap_or(Pivot::BottomCenter);
 
-    // Calculate pivot-adjusted draw position
-    let draw_base = pivot_adjusted_position(pos, Vec2::new(width, height), pivot);
+    let params = EntityDrawParams { pos, pivot, grid_size };
 
-    // Animate/Draw sprite (use visual_entity for sprite lookup)
-    if let Some(cf) = frame_store.get(visual_entity) && asset_manager.contains(cf.sprite_id) {
-        let tex = asset_manager.get_texture_from_id(cf.sprite_id);
-
-        let frame_w = cf.frame_size.x;
-        let frame_h = cf.frame_size.y;
-
-        let src = Rect::new(
-            cf.col as f32 * frame_w,
-            cf.row as f32 * frame_h,
-            frame_w,
-            frame_h,
-        );
-
-        // Floor to be sure
-        let draw_x = (draw_base.x + cf.offset.x).floor();
-        let draw_y = (draw_base.y + cf.offset.y).floor();
-
-        ctx.draw_texture_ex(
-            tex,
-            draw_x,
-            draw_y,
-            Color::WHITE,
-            DrawTextureParams {
-                dest_size: Some(Vec2::new(frame_w, frame_h)),
-                source: Some(src),
-                flip_x: cf.flip_x,
-                ..Default::default()
-            },
-        );
+    if let Some(cf) = ecs.get_store::<CurrentFrame>().get(visual_entity)
+        && cf.draw(ctx, asset_manager, &params)
+    {
         return;
-    } else if let Some(sprite) = sprite_store.get(visual_entity) {
-        // No animation
-        if asset_manager.contains(sprite.sprite) {
-            let tex = asset_manager.get_texture_from_id(sprite.sprite);
-            ctx.draw_texture_ex(
-                tex,
-                draw_base.x,
-                draw_base.y,
-                Color::WHITE,
-                DrawTextureParams {
-                    dest_size: Some(Vec2::new(width, height)),
-                    ..Default::default()
-                },
-            );
-            return;
-        }
     }
 
-    // Don't draw placeholders for these components
+    if let Some(sprite) = ecs.get_store::<Sprite>().get(visual_entity)
+        && sprite.draw(ctx, asset_manager, &params)
+    {
+        return;
+    }
+    
     if ecs.has_any::<(Light, Glow)>(visual_entity) {
         return;
     }
 
-    // Fallback placeholder (no sprite or missing texture)
-    draw_entity_placeholder(ctx, draw_base, grid_size);
+    let base = pivot_adjusted_position(pos, Vec2::splat(grid_size), pivot);
+    draw_entity_placeholder(ctx, base, grid_size);
 }
 
-/// Get the dimensions of an entity for rendering.
+/// Returns the pixel dimensions of an entity for rendering.
 pub fn entity_dimensions(
     ecs: &Ecs,
     asset_manager: &AssetManager,
     entity: Entity,
     grid_size: f32,
-) -> (f32, f32) {
+) -> Vec2 {
     let from_anim = ecs
         .get_store::<CurrentFrame>()
         .get(entity)
-        .map(|cf| (cf.frame_size.x, cf.frame_size.y));
+        .and_then(|cf| cf.dimensions(asset_manager));
 
     let from_sprite = || {
         ecs.get_store::<Sprite>()
             .get(entity)
-            .and_then(|sprite| asset_manager.texture_size(sprite.sprite))
+            .and_then(|s| s.dimensions(asset_manager))
     };
 
-    let from_glow = || {
-        ecs.get_store::<Glow>()
-            .get(entity)
-            .and_then(|glow| asset_manager.texture_size(glow.sprite_id))
-    };
-
-    from_anim
-        .or_else(from_sprite)
-        .or_else(from_glow)
-        .unwrap_or((grid_size, grid_size))
+    from_anim.or_else(from_sprite).unwrap_or(Vec2::splat(grid_size))
 }
 
 /// Draw a placeholder for an entity without a sprite.

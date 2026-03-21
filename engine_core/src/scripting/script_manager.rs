@@ -4,7 +4,6 @@ use crate::scripting::event_bus::EventBus;
 use crate::scripting::lua_constants::*;
 use crate::scripting::script::*;
 use crate::ecs::entity::Entity;
-use crate::engine_global::*;
 use crate::game::Game;
 use crate::*;
 use std::collections::HashSet;
@@ -48,6 +47,10 @@ pub struct ScriptManager {
     pub next_script_id: usize,
     /// How many entities are using a script.
     ref_counts: HashMap<ScriptId, usize>,
+    /// Script ids whose path mappings should be removed on exit.
+    #[cfg(feature = "editor")]
+    #[serde(skip)]
+    pending_path_removal: HashSet<ScriptId>,
 }
 
 impl ScriptManager {
@@ -63,6 +66,8 @@ impl ScriptManager {
             path_to_script_id: HashMap::new(),
             next_script_id: 1,
             ref_counts: HashMap::new(),
+            #[cfg(feature = "editor")]
+            pending_path_removal: HashSet::new(),
         }
     }
 
@@ -71,7 +76,13 @@ impl ScriptManager {
         if script_id.0 == 0 {
             return;
         }
+        
         *self.ref_counts.entry(script_id).or_insert(0) += 1;
+
+        #[cfg(feature = "editor")]
+        { 
+            self.pending_path_removal.remove(&script_id); 
+        }
     }
 
     /// Decrement reference count for a script, and clean up if it reaches zero.
@@ -88,13 +99,21 @@ impl ScriptManager {
                 self.table_defs.remove(&script_id);
                 self.update_fns.remove(&script_id);
 
-                // In editor mode also remove the path mappings
-                if get_engine_mode() == EngineMode::Editor {
-                    // Find and remove the path entry for this script_id
-                    if let Some(path) = self.script_id_to_path.remove(&script_id) {
-                        self.path_to_script_id.remove(&path);
-                    }
+                #[cfg(feature = "editor")]
+                { 
+                    self.pending_path_removal.insert(script_id); 
                 }
+            }
+        }
+    }
+
+    /// Remove path mappings for all scripts with a zero ref count.
+    /// Call this before serializing game data on exit.
+    #[cfg(feature = "editor")]
+    pub fn flush_pending_removals(&mut self) {
+        for id in self.pending_path_removal.drain() {
+            if let Some(path) = self.script_id_to_path.remove(&id) {
+                self.path_to_script_id.remove(&path);
             }
         }
     }

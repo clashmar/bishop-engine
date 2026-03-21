@@ -32,6 +32,10 @@ pub struct AssetManager {
     next_tile_def_id: usize,
     /// Reference counts for sprite ids.
     ref_counts: HashMap<SpriteId, usize>,
+    /// Sprite ids whose path mappings should be removed on exit.
+    #[cfg(feature = "editor")]
+    #[serde(skip)]
+    pending_path_removal: HashSet<SpriteId>,
 }
 
 /// Empty guard texture.
@@ -48,6 +52,8 @@ impl AssetManager {
             tile_defs: HashMap::new(),
             next_tile_def_id: 1,
             ref_counts: HashMap::new(),
+            #[cfg(feature = "editor")]
+            pending_path_removal: HashSet::new(),
         }
     }
 
@@ -61,9 +67,12 @@ impl AssetManager {
             return Err("Empty texture path".into());
         }
 
-        // Already loaded, reuse the same id
+        // Path already registered — reuse the same id, but reload the texture if it was evicted.
         if let Some(&id) = self.path_to_sprite_id.get(&path) {
-            onscreen_info!("init_texture: {:?} already loaded as {:?}", path, id);
+            if !self.textures.contains_key(&id) {
+                let texture = self.load_texture_from_game(&path).await?;
+                self.textures.insert(id, texture);
+            }
             return Ok(id);
         }
 
@@ -182,9 +191,8 @@ impl AssetManager {
             let _ = game.asset_manager.reload_texture(&id, &path).await;
         }
 
-        // Load and initialize all animations
         for animation in game.ecs.get_store_mut::<Animation>().data.values_mut() {
-            animation.refresh_sprite_cache(&mut game.asset_manager).await;
+            animation.init_sprite_cache(&mut game.asset_manager).await;
             animation.init_runtime();
         }
     }
@@ -224,7 +232,23 @@ impl AssetManager {
         if sprite_id.0 == 0 {
             return;
         }
+
         *self.ref_counts.entry(sprite_id).or_insert(0) += 1;
+
+        #[cfg(feature = "editor")]
+        { 
+            self.pending_path_removal.remove(&sprite_id); 
+        }
+
+        // If the texture was freed when the ref count hit zero, reload it now
+        // so it is immediately available for rendering (e.g. after an undo).
+        if !self.textures.contains_key(&sprite_id) {
+            if let Some(path) = self.sprite_id_to_path.get(&sprite_id).cloned() {
+                if let Ok(texture) = block_on(self.load_texture_from_game(&path)) {
+                    self.textures.insert(sprite_id, texture);
+                }
+            }
+        }
     }
 
     /// Decrement reference count for a sprite, cleaning up all structures when count reaches zero.
@@ -239,9 +263,22 @@ impl AssetManager {
             if *count == 0 {
                 self.ref_counts.remove(&sprite_id);
                 self.textures.remove(&sprite_id);
-                if let Some(path) = self.sprite_id_to_path.remove(&sprite_id) {
-                    self.path_to_sprite_id.remove(&path);
+
+                #[cfg(feature = "editor")]
+                { 
+                    self.pending_path_removal.insert(sprite_id); 
                 }
+            }
+        }
+    }
+
+    /// Remove path mappings for all sprites with a zero ref count.
+    /// Call this before serializing game data on exit.
+    #[cfg(feature = "editor")]
+    pub fn flush_pending_removals(&mut self) {
+        for id in self.pending_path_removal.drain() {
+            if let Some(path) = self.sprite_id_to_path.remove(&id) {
+                self.path_to_sprite_id.remove(&path);
             }
         }
     }

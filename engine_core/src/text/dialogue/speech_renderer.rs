@@ -18,8 +18,7 @@ use bishop::prelude::*;
 pub struct SpeechBubbleRenderData {
     pub text: String,
     pub world_pos: Vec2,
-    pub entity_width: f32,
-    pub entity_height: f32,
+    pub entity_size: Vec2,
     pub pivot: Pivot,
     pub color: [f32; 4],
     pub offset: (f32, f32),
@@ -58,13 +57,12 @@ pub fn collect_speech_bubbles(
         };
 
         let world_pos = interpolate_position(*entity, transform.position, alpha, prev_positions);
-        let (entity_width, entity_height) = entity_dimensions(ecs, asset_manager, *entity, grid_size);
+        let entity_size = entity_dimensions(ecs, asset_manager, *entity, grid_size);
 
         bubbles.push(SpeechBubbleRenderData {
             text: bubble.text.clone(),
             world_pos,
-            entity_width,
-            entity_height,
+            entity_size,
             pivot: transform.pivot,
             color: bubble.color,
             offset: bubble.offset,
@@ -151,8 +149,8 @@ fn render_bubble_screen_space<C: BishopContext>(
     let bubble_height = total_text_height + padding * 2.0;
 
     let pivot_offset = bubble.pivot.as_normalized();
-    let entity_width_scaled = bubble.entity_width * scale;
-    let entity_height_scaled = bubble.entity_height * scale;
+    let entity_width_scaled = bubble.entity_size.x * scale;
+    let entity_height_scaled = bubble.entity_size.y * scale;
 
     let half_w = 1.0 / render_cam.zoom.x;
     let half_h = 1.0 / render_cam.zoom.y;
