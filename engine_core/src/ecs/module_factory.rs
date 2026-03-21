@@ -2,7 +2,7 @@
 use crate::ecs::generic_module::GenericModule;
 use crate::ecs::reflect_field::Reflect;
 use crate::ecs::component::Component;
-use crate::ecs::inpsector_module::*;
+use crate::ecs::inspector_module::*;
 use once_cell::sync::Lazy;
 
 /// Human‑readable names of all components that have been registered with `inspector_module!`.
