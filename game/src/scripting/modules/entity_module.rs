@@ -98,7 +98,6 @@ pub enum EntityHandleMethod {
     GetCurrentFrame(GetCurrentFrameMethod),
     IsClipFinished(IsClipFinishedMethod),
     Say(SayMethod),
-    SayDialogue(SayDialogueMethod),
     ClearSpeech(ClearSpeechMethod),
     IsSpeaking(IsSpeakingMethod),
 }
@@ -121,7 +120,6 @@ fn entity_handle_methods() -> Vec<EntityHandleMethod> {
         EntityHandleMethod::GetCurrentFrame(GetCurrentFrameMethod),
         EntityHandleMethod::IsClipFinished(IsClipFinishedMethod),
         EntityHandleMethod::Say(SayMethod),
-        EntityHandleMethod::SayDialogue(SayDialogueMethod),
         EntityHandleMethod::ClearSpeech(ClearSpeechMethod),
         EntityHandleMethod::IsSpeaking(IsSpeakingMethod),
     ]
@@ -145,7 +143,6 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::GetCurrentFrame(m) => m.register(methods),
             EntityHandleMethod::IsClipFinished(m) => m.register(methods),
             EntityHandleMethod::Say(m) => m.register(methods),
-            EntityHandleMethod::SayDialogue(m) => m.register(methods),
             EntityHandleMethod::ClearSpeech(m) => m.register(methods),
             EntityHandleMethod::IsSpeaking(m) => m.register(methods),
         }
@@ -168,7 +165,6 @@ impl LuaMethod<EntityHandle> for EntityHandleMethod {
             EntityHandleMethod::GetCurrentFrame(m) => m.emit_api(out),
             EntityHandleMethod::IsClipFinished(m) => m.emit_api(out),
             EntityHandleMethod::Say(m) => m.emit_api(out),
-            EntityHandleMethod::SayDialogue(m) => m.emit_api(out),
             EntityHandleMethod::ClearSpeech(m) => m.emit_api(out),
             EntityHandleMethod::IsSpeaking(m) => m.emit_api(out),
         }
@@ -589,81 +585,11 @@ impl LuaMethod<EntityHandle> for IsClipFinishedMethod {
     }
 }
 
-/// Method: `entity:say(text, opts)`
+/// Method: `entity:say(dialogue_id, key, opts)`
 pub struct SayMethod;
 impl LuaMethod<EntityHandle> for SayMethod {
     fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
-        methods.add_method(SAY, |lua, this, (text, opts): (String, Option<Table>)| {
-            let ctx = LuaGameCtx::borrow_ctx(lua)?;
-            let game_instance = ctx.game_instance.borrow();
-            let config = &game_instance.game.text_manager.config;
-
-            let duration = opts
-                .as_ref()
-                .and_then(|t| t.get::<f32>("duration").ok())
-                .unwrap_or(config.default_duration);
-
-            let color = opts.as_ref().and_then(|t| {
-                t.get::<Table>("color").ok().and_then(|c| {
-                    Some([
-                        c.get::<f32>(1).ok()?,
-                        c.get::<f32>(2).ok()?,
-                        c.get::<f32>(3).ok()?,
-                        c.get::<f32>(4).ok().unwrap_or(1.0),
-                    ])
-                })
-            });
-
-            let offset = opts.as_ref().and_then(|t| {
-                t.get::<Table>("offset").ok().and_then(|o| {
-                    Some((o.get::<f32>(1).ok()?, o.get::<f32>(2).ok()?))
-                })
-            });
-
-            let font_size = opts.as_ref().and_then(|t| t.get::<f32>("font_size").ok());
-            let max_width = opts.as_ref().and_then(|t| t.get::<f32>("max_width").ok());
-            let show_background = opts.as_ref().and_then(|t| t.get::<bool>("show_background").ok());
-
-            let background_color = opts.as_ref().and_then(|t| {
-                t.get::<Table>("background_color").ok().and_then(|c| {
-                    Some([
-                        c.get::<f32>(1).ok()?,
-                        c.get::<f32>(2).ok()?,
-                        c.get::<f32>(3).ok()?,
-                        c.get::<f32>(4).ok().unwrap_or(0.7),
-                    ])
-                })
-            });
-
-            push_command(Box::new(ShowSpeechCmd {
-                entity: this.entity,
-                text,
-                duration,
-                color,
-                offset,
-                font_size,
-                max_width,
-                show_background,
-                background_color,
-            }));
-            Ok(())
-        });
-    }
-
-    fn emit_api(&self, out: &mut LuaApiWriter) {
-        out.line("--- Shows a speech bubble with raw text above the entity.");
-        out.line("---@param text string The text to display");
-        out.line("---@param opts? {duration?: number, color?: number[], offset?: number[], font_size?: number, max_width?: number, show_background?: boolean, background_color?: number[]}");
-        out.line(&format!("function Entity:{}(text, opts) end", SAY));
-        out.line("");
-    }
-}
-
-/// Method: `entity:say_dialogue(dialogue_id, key, opts)`
-pub struct SayDialogueMethod;
-impl LuaMethod<EntityHandle> for SayDialogueMethod {
-    fn register<M: UserDataMethods<EntityHandle>>(&self, methods: &mut M) {
-        methods.add_method(SAY_DIALOGUE, |lua, this, (dialogue_id, key, opts): (String, String, Option<Table>)| {
+        methods.add_method(SAY, |lua, this, (dialogue_id, key, opts): (String, String, Option<Table>)| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
             let game_instance = ctx.game_instance.borrow();
             let config = game_instance.game.text_manager.config.clone();
@@ -677,7 +603,6 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
             };
             drop(game_instance);
 
-            // Extract vars table and apply interpolation
             let text = if let Some(ref opts_table) = opts {
                 if let Ok(vars_table) = opts_table.get::<Table>("vars") {
                     let mut vars = HashMap::new();
@@ -749,7 +674,7 @@ impl LuaMethod<EntityHandle> for SayDialogueMethod {
         out.line("---@param dialogue_id string The dialogue file ID (e.g. \"npc_merchant\")");
         out.line("---@param key string The dialogue key (e.g. \"greeting\")");
         out.line("---@param opts? {vars?: table<string, string>, duration?: number, color?: number[], offset?: number[], font_size?: number, max_width?: number, show_background?: boolean, background_color?: number[]}");
-        out.line(&format!("function Entity:{}(dialogue_id, key, opts) end", SAY_DIALOGUE));
+        out.line(&format!("function Entity:{}(dialogue_id, key, opts) end", SAY));
         out.line("");
     }
 }

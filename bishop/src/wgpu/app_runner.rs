@@ -145,6 +145,10 @@ impl<A: BishopApp + 'static> ApplicationHandler for WgpuAppRunner<A> {
             _ => {}
         }
     }
+
+    fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
+        self.app.borrow_mut().on_exit();
+    }
 }
 
 /// Converts a WindowIcon to a winit Icon.

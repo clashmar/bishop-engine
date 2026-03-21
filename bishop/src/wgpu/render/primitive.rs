@@ -258,7 +258,6 @@ impl PrimitiveRenderer {
     }
 
     /// Returns the number of vertices queued.
-    #[allow(dead_code)]
     pub fn vertex_count(&self) -> usize {
         self.vertices.len()
     }
@@ -268,21 +267,24 @@ impl PrimitiveRenderer {
         self.vertices.is_empty()
     }
 
-    /// Uploads vertices and renders to the given render pass.
-    pub fn flush<'a>(&'a self, queue: &wgpu::Queue, render_pass: &mut wgpu::RenderPass<'a>) {
+    /// Uploads the vertex buffer to the GPU.
+    pub fn upload_vertices(&self, queue: &wgpu::Queue) {
         if self.vertices.is_empty() {
             return;
         }
+        queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&self.vertices));
+    }
 
-        queue.write_buffer(
-            &self.vertex_buffer,
-            0,
-            bytemuck::cast_slice(&self.vertices),
-        );
-
+    /// Binds the pipeline, uniform group, and vertex buffer on the render pass.
+    pub fn setup_pipeline<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.draw(0..self.vertices.len() as u32, 0..1);
     }
+
+    /// Issues a draw call for a sub-range of the uploaded vertex buffer.
+    pub fn draw_range(&self, render_pass: &mut wgpu::RenderPass<'_>, start: u32, count: u32) {
+        render_pass.draw(start..start + count, 0..1);
+    }
+
 }

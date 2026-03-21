@@ -434,6 +434,11 @@ impl TextRenderer {
         self.vertices.clear();
     }
 
+    /// Returns the number of text vertices queued.
+    pub fn vertex_count(&self) -> usize {
+        self.vertices.len()
+    }
+
     /// Returns true if there are no queued text draws.
     pub fn is_empty(&self) -> bool {
         self.vertices.is_empty()
@@ -592,28 +597,35 @@ impl TextRenderer {
         }
     }
 
-    /// Uploads any dirty atlas data and renders text to the given render pass.
-    pub fn flush<'a>(&'a mut self, queue: &wgpu::Queue, render_pass: &mut wgpu::RenderPass<'a>) {
+    /// Uploads any dirty atlas pixel data to the GPU. Must be called before the render pass.
+    pub fn upload_atlas(&mut self, queue: &wgpu::Queue) {
         self.font_atlas.upload(queue);
+    }
 
+    /// Uploads the vertex buffer to the GPU.
+    pub fn upload_vertices(&self, queue: &wgpu::Queue) {
         if self.vertices.is_empty() {
             return;
         }
+        queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&self.vertices));
+    }
 
+    /// Binds the pipeline, camera group, atlas group, and vertex buffer.
+    /// Returns false if the atlas bind group is not yet ready.
+    pub fn setup_pipeline<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) -> bool {
         let Some(bind_group) = self.font_atlas.bind_group() else {
-            return;
+            return false;
         };
-
-        queue.write_buffer(
-            &self.vertex_buffer,
-            0,
-            bytemuck::cast_slice(&self.vertices),
-        );
-
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_bind_group(1, bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.draw(0..self.vertices.len() as u32, 0..1);
+        true
     }
+
+    /// Issues a draw call for a sub-range of the uploaded vertex buffer.
+    pub fn draw_range(&self, render_pass: &mut wgpu::RenderPass<'_>, start: u32, count: u32) {
+        render_pass.draw(start..start + count, 0..1);
+    }
+
 }

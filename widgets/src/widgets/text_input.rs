@@ -10,6 +10,8 @@ pub struct TextInput<'a> {
     start_focused: bool,
     max_len: Option<usize>,
     char_filter: Option<fn(char) -> Option<char>>,
+    live: bool,
+    bypass_dropdown: bool,
 }
 
 impl<'a> TextInput<'a> {
@@ -23,6 +25,8 @@ impl<'a> TextInput<'a> {
             start_focused: false,
             max_len: None,
             char_filter: None,
+            live: false,
+            bypass_dropdown: false,
         }
     }
 
@@ -48,6 +52,20 @@ impl<'a> TextInput<'a> {
     /// Return `Some(char)` to accept (possibly transformed), or `None` to reject.
     pub fn char_filter(mut self, filter: fn(char) -> Option<char>) -> Self {
         self.char_filter = Some(filter);
+        self
+    }
+
+    /// Returns the current typed text every frame without requiring Enter to confirm.
+    /// Use for inputs that should filter or react in real time.
+    pub fn live(mut self) -> Self {
+        self.live = true;
+        self
+    }
+
+    /// Allows this input to receive keyboard events even when a dropdown list is open.
+    /// Use for TextInputs that are embedded inside a dropdown list.
+    pub fn in_dropdown(mut self) -> Self {
+        self.bypass_dropdown = true;
         self
     }
 
@@ -175,7 +193,7 @@ impl<'a> TextInput<'a> {
             let _ = ctx.chars_pressed();
         }
 
-        if is_dropdown_open() {
+        if is_dropdown_open() && !self.bypass_dropdown {
             return (text, false)
         }
 
@@ -431,10 +449,10 @@ impl<'a> TextInput<'a> {
             });
         });
 
-        if focused || !confirmed {
-            (self.current.to_string(), focused)
-        } else {
+        if self.live || (!focused && confirmed) {
             (text, focused)
+        } else {
+            (self.current.to_string(), focused)
         }
     }
 }

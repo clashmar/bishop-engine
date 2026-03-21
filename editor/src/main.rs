@@ -69,6 +69,14 @@ impl BishopApp for EditorApp {
         }
     }
 
+    fn on_exit(&mut self) {
+        with_editor(|editor| {
+            editor.game.asset_manager.flush_pending_removals();
+            editor.game.script_manager.flush_pending_removals();
+            editor.save();
+        });
+    }
+
     async fn frame(&mut self, ctx: PlatformContext) {
         let mut ctx_ref = ctx.borrow_mut();
         let cur_screen = (ctx_ref.screen_width() as u32, ctx_ref.screen_height() as u32);

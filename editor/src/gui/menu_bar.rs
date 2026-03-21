@@ -550,7 +550,7 @@ pub fn menu_button(
     // Text layout
     let txt_dims = ctx.measure_text(label, HEADER_FONT_SIZE_20);
     let txt_y = rect.y + (rect.h - txt_dims.height) / 2.0 + txt_dims.offset_y;
-    let txt_x = rect.x + PADDING / 2.0;
+    let txt_x = rect.x + (rect.w - txt_dims.width) / 2.0;
 
     let mouse = ctx.mouse_position();
     let hovered = rect.contains(vec2(mouse.0, mouse.1));

@@ -1,7 +1,7 @@
 // game/src/diagnostics/overlay.rs
 //! In-game diagnostics overlay toggled with F3/F4.
 
-use crate::game_instance::GameInstance;
+use crate::engine::game_instance::GameInstance;
 use engine_core::prelude::*;
 
 /// Detail level for the diagnostics overlay.

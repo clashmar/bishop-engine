@@ -119,6 +119,8 @@ impl MenuEditor {
         ctx: &mut WgpuContext,
         camera: &Camera2D,
     ) {
+        self.active_rects.clear();
+        
         ctx.set_camera(camera);
         ctx.clear_background(Color::BLACK);
 

@@ -1,16 +1,10 @@
 // game/src/playtest_main.rs
-use engine_core::camera::camera_manager::CameraManager;
-use game_lib::scripting::lua_ctx::register_lua_contexts;
-use game_lib::game_instance::GameInstance;
+use game_lib::engine::{Engine, EngineBuilder, GameInstance};
 use engine_core::prelude::*;
-use game_lib::engine::Engine;
 use bishop::prelude::*;
 use bishop::BishopApp;
-use std::cell::RefCell;
 use ron::de::from_str;
 use std::{env, fs};
-use std::rc::Rc;
-use mlua::Lua;
 
 /// The complete payload the editor writes for the play-test binary.
 #[derive(serde::Deserialize)]
@@ -38,13 +32,6 @@ impl PlaytestApp {
 
 impl BishopApp for PlaytestApp {
     async fn init(&mut self, ctx: PlatformContext) {
-        // Store the context for later use
-        self.ctx = Some(ctx.clone());
-
-        set_engine_mode(
-            EngineMode::Playtest
-        );
-
         let payload_str = match fs::read_to_string(&self.payload_path) {
             Ok(s) => s,
             Err(e) => {
@@ -61,33 +48,23 @@ impl BishopApp for PlaytestApp {
             }
         };
 
-        let lua = Lua::new();
-        let mut camera_manager = CameraManager::default();
-        let grid_size = game.current_world().grid_size;
+        self.ctx = Some(ctx.clone());
+        set_engine_mode(EngineMode::Playtest);
+
+        let mut builder = EngineBuilder::new();
 
         let game_instance = {
             let mut ctx_ref = ctx.borrow_mut();
-            Rc::new(RefCell::new(
-                GameInstance::for_room(
-                    &mut *ctx_ref, 
-                    room, game, 
-                    &lua, 
-                    &mut camera_manager, 
-                    grid_size
-                ).await
-            ))
+            GameInstance::for_room(
+                &mut *ctx_ref, 
+                room, 
+                game, 
+                &builder.lua, 
+                &mut builder.camera_manager
+            ).await
         };
-
-        let _ = register_lua_contexts(&lua, game_instance.clone(), ctx.clone());
-
-        self.engine = Some(Engine::new(
-            game_instance.clone(),
-            ctx.clone(),
-            lua,
-            camera_manager,
-            grid_size,
-            true,
-        ));
+        
+        self.engine = Some(builder.assemble(game_instance, ctx, true));
     }
 
     async fn frame(&mut self, ctx: PlatformContext) {

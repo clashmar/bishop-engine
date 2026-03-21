@@ -1,18 +1,18 @@
 // editor/src/room/room_editor.rs
-use crate::app::EditorCameraController;
-use crate::app::SubEditor;
+use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::gui::panels::panel_manager::is_mouse_over_panel;
 use crate::shared::selection::draw_selection_box;
-use crate::gui::inspector::inspector_panel::InspectorPanel;
 use crate::room::selection::PreCopyDragState;
 use crate::canvas::grid_shader::GridRenderer;
-use crate::editor_assets::assets::*;
+use crate::app::EditorCameraController;
 use crate::tilemap::tilemap_editor::*;
 use crate::gui::modal::is_modal_open;
+use crate::editor_assets::assets::*;
 use crate::gui::mode_selector::*;
 use crate::commands::room::*;
 use crate::room::drawing::*;
 use crate::editor_global::*;
+use crate::app::SubEditor;
 use crate::canvas::grid;
 use crate::world::coord;
 use std::collections::HashSet;
@@ -286,12 +286,13 @@ impl RoomEditor {
         let room = &mut game_ctx.cur_world.current_room_mut().unwrap();
         let asset_manager = &mut game_ctx.asset_manager;
 
-        // Panel rect for inspector and tilemap editor
+        // Panel rect for inspector and tilemap editor.
+        const INSPECTOR_W: f32 = 325.0;
         let inspector_rect = Rect::new(
-            ctx.screen_width() * 0.75,
+            ctx.screen_width() - INSPECTOR_W,
             0.0,
-            ctx.screen_width() * 0.25,
-            ctx.screen_height()
+            INSPECTOR_W,
+            ctx.screen_height(),
         );
 
         match self.mode {

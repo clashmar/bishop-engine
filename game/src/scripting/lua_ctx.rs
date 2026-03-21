@@ -1,6 +1,6 @@
 // game/src/scripting/lua_ctx.rs
 use engine_core::scripting::lua_constants::*;
-use crate::game_instance::GameInstance;
+use crate::engine::game_instance::GameInstance;
 use mlua::prelude::LuaResult;
 use bishop::prelude::*;
 use std::cell::RefCell;

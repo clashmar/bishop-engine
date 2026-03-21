@@ -81,6 +81,16 @@ impl Animation {
         self.current = None;
     }
 
+    /// Populate `sprite_cache` for the current variant without modifying ref counts.
+    /// Use during game initialization when ref counts are already tracked by serialized state.
+    pub async fn init_sprite_cache(&mut self, asset_manager: &mut AssetManager) {
+        self.sprite_cache.clear();
+        for clip_id in self.clips.keys() {
+            let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
+            self.sprite_cache.insert(clip_id.clone(), sprite_id);
+        }
+    }
+
     /// Populate `sprite_cache` for the current variant.
     /// Called when the variant folder changes or a new clip is added.
     pub async fn refresh_sprite_cache(&mut self, asset_manager: &mut AssetManager) {

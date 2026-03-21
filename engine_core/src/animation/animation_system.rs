@@ -7,6 +7,8 @@ use crate::ecs::component::PlayerProxy;
 use crate::ecs::entity::Entity;
 use crate::worlds::room::RoomId;
 use crate::ecs::ecs::Ecs;
+use crate::rendering::renderable::{EntityDrawParams, Renderable};
+use crate::rendering::render_room::pivot_adjusted_position;
 use serde::{Deserialize, Serialize};
 use ecs_component::ecs_component;
 use bishop::prelude::*;
@@ -134,6 +136,48 @@ pub async fn update_animation_sytem(
     let frame_store = ecs.get_store_mut::<CurrentFrame>();
     for entity in to_remove {
         frame_store.remove(entity);
+    }
+}
+
+impl Renderable for CurrentFrame {
+    fn dimensions(&self, _asset_manager: &AssetManager) -> Option<Vec2> {
+        Some(self.frame_size)
+    }
+
+    fn draw<C: BishopContext>(
+        &self,
+        ctx: &mut C,
+        asset_manager: &mut AssetManager,
+        params: &EntityDrawParams,
+    ) -> bool {
+        if !asset_manager.contains(self.sprite_id) {
+            return false;
+        }
+        let tex = asset_manager.get_texture_from_id(self.sprite_id);
+        let frame_w = self.frame_size.x;
+        let frame_h = self.frame_size.y;
+        let src = Rect::new(
+            self.col as f32 * frame_w,
+            self.row as f32 * frame_h,
+            frame_w,
+            frame_h,
+        );
+        let draw_base = pivot_adjusted_position(params.pos, self.frame_size, params.pivot);
+        let draw_x = (draw_base.x + self.offset.x).floor();
+        let draw_y = (draw_base.y + self.offset.y).floor();
+        ctx.draw_texture_ex(
+            tex,
+            draw_x,
+            draw_y,
+            Color::WHITE,
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(frame_w, frame_h)),
+                source: Some(src),
+                flip_x: self.flip_x,
+                ..Default::default()
+            },
+        );
+        true
     }
 }
 

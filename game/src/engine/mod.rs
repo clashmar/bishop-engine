@@ -1,10 +1,15 @@
-// game/src/engine.rs
+// game/src/engine/mod.rs
+pub mod engine_builder;
+pub mod game_instance;
+
+pub use engine_builder::EngineBuilder;
+pub use game_instance::GameInstance;
+
 use crate::transitions::transition_manager::TransitionManager;
 use crate::scripting::script_system::ScriptSystem;
 use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::game_global::set_menu_active;
-use crate::game_instance::GameInstance;
 use crate::physics::physics_system::*;
 use engine_core::prelude::*;
 use bishop::prelude::*;
@@ -73,7 +78,7 @@ impl BishopApp for Engine {
 
         if self.is_playtest {
             self.diagnostics.update_from_game(
-                &self.game_instance.borrow(), 
+                &self.game_instance.borrow(),
                 self.render_system.render_time_ms
             );
         }
@@ -186,7 +191,7 @@ impl Engine {
             }
         }
 
-        // Sync menu state for Lua scripts 
+        // Sync menu state for Lua scripts
         // TODO: This should be decoupled from menus (does player movement need to be blocked for other reasons?)
         // Also reconsider global pattern here.
         set_menu_active(self.menu_manager.has_active_menu());

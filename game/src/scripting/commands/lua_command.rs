@@ -49,7 +49,6 @@ pub struct CallEntityFnCmd {
     pub args: Vec<Value>,
 }
 
-// TODO: use this for updates?
 impl LuaCommand for CallEntityFnCmd {
     fn execute(&mut self, engine: &mut Engine) {
         let game_instance = engine.game_instance.borrow();
