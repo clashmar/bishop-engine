@@ -1,5 +1,5 @@
 // engine_core/src/ecs/generic_module.rs
-use crate::ecs::inpsector_module::InspectorModule;
+use crate::ecs::inspector_module::InspectorModule;
 use crate::ecs::component::Component;
 use crate::ecs::transform::Pivot;
 use crate::ecs::reflect_field::*;
