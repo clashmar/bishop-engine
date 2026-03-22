@@ -49,7 +49,7 @@ pub fn gui_sprite_picker<C: BishopContext>(
                 .pick_file()
             {
                 let normalized = asset_manager.normalize_path(path);
-                match asset_manager.get_or_load(&normalized) {
+                match asset_manager.get_or_load(ctx, &normalized) {
                     Some(new_id) => {
                         asset_manager.change_sprite(id, new_id);
                         changed = true;

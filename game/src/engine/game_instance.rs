@@ -28,7 +28,7 @@ impl GameInstance {
             Err(e) => panic!("{e}")
         };
 
-        game.initialize(lua).await;
+        game.initialize(ctx, lua).await;
 
         // TODO: Get rid of expects
         let start_room_id = game.current_world().starting_room_id
@@ -76,7 +76,7 @@ impl GameInstance {
             set_engine_mode(EngineMode::Game);
         }
 
-        game.initialize(lua).await;
+        game.initialize(ctx, lua).await;
 
         let ecs = &game.ecs;
         let player_pos = ecs.get_player_transform()

@@ -35,8 +35,8 @@ impl ModeInfo for TilemapEditorMode {
 
     fn icon(&self) -> &'static Texture2D {
         match self {
-            TilemapEditorMode::Tiles => &TILE_ICON,
-            TilemapEditorMode::Exits => &EXIT_ICON,
+            TilemapEditorMode::Tiles => tile_icon(),
+            TilemapEditorMode::Exits => exit_icon(),
         }
     }
 

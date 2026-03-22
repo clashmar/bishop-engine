@@ -83,17 +83,17 @@ impl Animation {
 
     /// Populate `sprite_cache` for the current variant without modifying ref counts.
     /// Use during game initialization when ref counts are already tracked by serialized state.
-    pub async fn init_sprite_cache(&mut self, asset_manager: &mut AssetManager) {
+    pub fn init_sprite_cache(&mut self, loader: &impl TextureLoader, asset_manager: &mut AssetManager) {
         self.sprite_cache.clear();
         for clip_id in self.clips.keys() {
-            let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
+            let sprite_id = resolve_sprite_id(loader, asset_manager, &self.variant, clip_id);
             self.sprite_cache.insert(clip_id.clone(), sprite_id);
         }
     }
 
     /// Populate `sprite_cache` for the current variant.
     /// Called when the variant folder changes or a new clip is added.
-    pub async fn refresh_sprite_cache(&mut self, asset_manager: &mut AssetManager) {
+    pub fn refresh_sprite_cache(&mut self, loader: &impl TextureLoader, asset_manager: &mut AssetManager) {
         // Decrement refs for old cache entries before clearing
         for &sprite_id in self.sprite_cache.values() {
             asset_manager.decrement_ref(sprite_id);
@@ -101,8 +101,8 @@ impl Animation {
         self.sprite_cache.clear();
 
         // Resolve and cache new sprite ids, incrementing refs
-        for clip_id in self.clips.keys()  {
-            let sprite_id = resolve_sprite_id(asset_manager, &self.variant, clip_id).await;
+        for clip_id in self.clips.keys() {
+            let sprite_id = resolve_sprite_id(loader, asset_manager, &self.variant, clip_id);
             if sprite_id.0 != 0 {
                 asset_manager.increment_ref(sprite_id);
             }
@@ -232,7 +232,8 @@ pub struct ClipState {
 }
 
 /// Returns the `SpriteId` for the current variant clip.
-pub async fn resolve_sprite_id(
+pub fn resolve_sprite_id(
+    loader: &impl TextureLoader,
     asset_manager: &mut AssetManager,
     variant_folder: &VariantFolder,
     clip_id: &ClipId,
@@ -257,10 +258,10 @@ pub async fn resolve_sprite_id(
         return id;
     }
 
-     match asset_manager.init_texture(&path).await {
+    match asset_manager.init_texture(loader, &path) {
         Ok(id) => id,
-        Err(_) => SpriteId(0) // Sentinal
-     }
+        Err(_) => SpriteId(0), // Sentinel
+    }
 }
 
 /// Initializes the component when an entity is instantiated into the world.

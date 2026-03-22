@@ -4,7 +4,7 @@ pub mod game_map;
 
 pub use game_map::*;
 
-use crate::text::TextManager;
+use crate::{storage::text_folder, text::TextManager};
 use crate::scripting::script_manager::ScriptManager;
 use crate::assets::asset_manager::AssetManager;
 use crate::engine_global::set_game_name;
@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use uuid::Uuid;
 use mlua::Lua;
+use bishop::prelude::TextureLoader;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Default)]
@@ -145,16 +146,15 @@ impl Game {
     }
 
     /// Syncs all assets/scripts that belong to this game, sets the game name, and inits managers.
-    pub async fn initialize(&mut self, lua: &Lua) {
+    pub async fn initialize(&mut self, loader: &impl TextureLoader, lua: &Lua) {
         set_game_name(self.name.clone());
-        AssetManager::init_manager(self).await;
+        AssetManager::init_manager(loader, self);
         ScriptManager::init_manager(self, lua).await;
         self.init_text_manager();
     }
 
     /// Initializes the text manager with the correct path.
-    fn init_text_manager(&mut self) {
-        use crate::storage::path_utils::text_folder;
+    pub fn init_text_manager(&mut self) {
         let text_root = text_folder();
         self.text_manager.set_text_root(text_root);
     }

@@ -507,14 +507,21 @@ impl Editor {
 
     // Returns an initialized game for the editor.
     pub async fn init_game_for_editor(&mut self, ctx: &WgpuContext, game: Game) -> Game {
+        let mut game = game;
+
+        // Initialize assets synchronously (ctx provides texture loading).
+        set_game_name(game.name.clone());
+        AssetManager::init_manager(ctx, &mut game);
+
+        // Initialize scripts asynchronously (needs Lua VM).
         let mut game = with_lua_async(|lua| {
             Box::pin(async move {
-                let mut game = game;
-                game.initialize(lua).await;
+                ScriptManager::init_manager(&mut game, lua).await;
                 game
             })
         }).await;
 
+        game.init_text_manager();
         self.game_editor.init_camera(ctx, &mut self.camera, &mut game);
 
         game

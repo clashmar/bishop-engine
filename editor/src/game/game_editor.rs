@@ -39,10 +39,10 @@ impl ModeInfo for GameEditorMode {
     }
     fn icon(&self) -> &'static Texture2D {
         match self {
-            GameEditorMode::Select => &SELECT_ICON,
-            GameEditorMode::Edit => &EDIT_ICON,
-            GameEditorMode::Move => &MOVE_ICON,
-            GameEditorMode::Delete => &DELETE_ICON,
+            GameEditorMode::Select => select_icon(),
+            GameEditorMode::Edit => edit_icon(),
+            GameEditorMode::Move => move_icon(),
+            GameEditorMode::Delete => delete_icon(),
         }
     }
     fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
@@ -101,7 +101,7 @@ impl GameEditor {
                 // Select world
                 if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &game.worlds {
-                        let texture = self.resolve_world_texture(world, &mut game.asset_manager);
+                        let texture = self.resolve_world_texture(ctx, world, &mut game.asset_manager);
                         if self.is_mouse_over_world(ctx, camera, world, texture) {
                             return Some(world.id);
                         }
@@ -114,7 +114,7 @@ impl GameEditor {
                     // Do nothing
                 } else if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &mut game.worlds {
-                        let texture = self.resolve_world_texture(world, &mut game.asset_manager);
+                        let texture = self.resolve_world_texture(ctx, world, &mut game.asset_manager);
                         if self.is_mouse_over_world(ctx, camera, world, texture) {
                             // Capture the world data
                             let world_id = world.id;
@@ -156,7 +156,7 @@ impl GameEditor {
                 // Delete world
                 if ctx.is_mouse_button_pressed(MouseButton::Left) && !self.should_block_canvas(ctx) {
                     for world in &game.worlds {
-                        let texture = self.resolve_world_texture(world, &mut game.asset_manager);
+                        let texture = self.resolve_world_texture(ctx, world, &mut game.asset_manager);
                         if self.is_mouse_over_world(ctx, camera, world, texture) {
                             self.selected_world_id = Some(world.id);
                             self.modal = Modal::open_confirm_modal(ctx, &DELETE_WORLD_RESULT);
@@ -196,7 +196,7 @@ impl GameEditor {
     ) {
         // Draw world
         for world in &game.worlds {
-            let texture = self.resolve_world_texture(world, &mut game.asset_manager);
+            let texture = self.resolve_world_texture(ctx, world, &mut game.asset_manager);
 
             // Hover tint
             let tint = if self.is_mouse_over_world(ctx, camera, world, texture) 
@@ -247,7 +247,7 @@ impl GameEditor {
         // Start dragging
         if !self.dragging && ctx.is_mouse_button_pressed(MouseButton::Left) {
             for world in &game.worlds {
-                let texture = self.resolve_world_texture(world, &mut game.asset_manager);
+                let texture = self.resolve_world_texture(ctx, world, &mut game.asset_manager);
                 if self.is_mouse_over_world(ctx, camera, world, texture) {
                     self.dragging = true;
                     self.dragged_world = Some(world.id);
@@ -465,24 +465,26 @@ impl GameEditor {
     }
 
     fn resolve_world_texture<'a>(
-        &self, world: &World, 
-        asset_manager: &'a mut AssetManager
+        &self,
+        loader: &impl TextureLoader,
+        world: &World,
+        asset_manager: &'a mut AssetManager,
     ) -> &'a Texture2D {
-        let texture = if let Some(id) = world.meta.sprite_id {
-            asset_manager.get_texture_from_id(id)
+        if let Some(id) = world.meta.sprite_id {
+            asset_manager.get_texture_from_id(loader, id)
         } else {
-            &CIRCLE_120PX
-        };
-
-        texture
+            circle_120px()
+        }
     }
 
     /// Sets the default camera for the game editor.
     pub fn init_camera(
-        &self, 
+        &self,
         ctx: &WgpuContext,
-        camera: &mut Camera2D, game: &mut Game) {
-        let (min, max) = self.world_bounds(game);
+        camera: &mut Camera2D,
+        game: &mut Game,
+    ) {
+        let (min, max) = self.world_bounds(ctx, game);
         let center = (min + max) * 0.5;
         let size = max - min;
 
@@ -500,13 +502,13 @@ impl GameEditor {
     }
 
     /// Returns the (min, max) world‑space corners that contain all worlds.
-    fn world_bounds(&self, game: &mut Game) -> (Vec2, Vec2) {
+    fn world_bounds(&self, loader: &impl TextureLoader, game: &mut Game) -> (Vec2, Vec2) {
         // Start with max possible values
         let mut min = vec2(f32::INFINITY, f32::INFINITY);
         let mut max = vec2(f32::NEG_INFINITY, f32::NEG_INFINITY);
 
         for world in &game.worlds {
-            let tex = self.resolve_world_texture(world, &mut game.asset_manager);
+            let tex = self.resolve_world_texture(loader, world, &mut game.asset_manager);
             let w = tex.width();
             let h = tex.height();
 
