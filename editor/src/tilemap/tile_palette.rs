@@ -98,7 +98,7 @@ impl TilePalette {
                 .expect("Could not find tile definition.")
                 .sprite_id;
 
-            let tex = asset_manager.get_texture_from_id(sprite_id);
+            let tex = asset_manager.get_texture_from_id(ctx, sprite_id);
 
             ctx.draw_texture_ex(
                 tex,
@@ -188,14 +188,14 @@ impl TilePalette {
                 let normalized_path = asset_manager.normalize_path(path);
 
                 self.ui.sprite_id = asset_manager
-                    .get_or_load(&normalized_path)
+                    .get_or_load(ctx, &normalized_path)
                     .expect("Could not get id for sprite path.");
             }
         }
         
         // Preview
         if !self.ui.sprite_id.0 != 0 {
-            let tex = asset_manager.get_texture_from_id(self.ui.sprite_id);
+            let tex = asset_manager.get_texture_from_id(ctx, self.ui.sprite_id);
             ctx.draw_texture_ex(
                 tex,
                 panel.x + panel.w - 50.,

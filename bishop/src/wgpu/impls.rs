@@ -4,8 +4,10 @@ use std::cell::RefCell;
 
 use super::context::WgpuContext;
 use super::render::FontAtlas;
+use crate::TextureLoader;
 use crate::camera::{Camera, Camera2D};
 use crate::draw::{Draw, DrawTextureParams};
+use super::render::WgpuTexture;
 use crate::input::{Input, KeyCode, MouseButton};
 use crate::material::RenderOps;
 use crate::text::{Text, TextDimensions};
@@ -272,5 +274,37 @@ impl Time for WgpuContext {
 
     fn update(&mut self) {
         self.input.end_frame();
+    }
+}
+
+impl TextureLoader for WgpuContext {
+    fn load_texture_from_bytes(&self, data: &[u8]) -> Result<Texture2D, String> {
+        let wgpu_texture = WgpuTexture::from_png(
+            self.device(),
+            self.queue(),
+            self.texture_bind_group_layout(),
+            data,
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(Texture2D::from_wgpu(wgpu_texture))
+    }
+
+    fn load_texture_from_path(&self, path: &str) -> Result<Texture2D, String> {
+        let data = std::fs::read(path)
+            .map_err(|e| format!("Failed to read '{}': {}", path, e))?;
+        self.load_texture_from_bytes(&data)
+    }
+
+    fn empty_texture(&self) -> Texture2D {
+        let data: [u8; 4] = [0, 0, 0, 0];
+        let wgpu_texture = WgpuTexture::from_rgba(
+            self.device(),
+            self.queue(),
+            self.texture_bind_group_layout(),
+            &data,
+            1,
+            1,
+        );
+        Texture2D::from_wgpu(wgpu_texture)
     }
 }

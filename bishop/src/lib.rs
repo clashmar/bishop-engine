@@ -32,6 +32,7 @@ pub mod draw;
 pub mod input;
 pub mod material;
 pub mod text;
+pub mod texture;
 pub mod time;
 pub mod types;
 pub mod window;
@@ -43,6 +44,7 @@ pub use camera::*;
 pub use draw::*;
 pub use input::*;
 pub use text::*;
+pub use texture::*;
 pub use time::*;
 pub use types::*;
 pub use window::*;
@@ -55,10 +57,10 @@ pub use wgpu::WgpuContext;
 
 use material::RenderOps;
 
-/// Combined context trait for widgets that need input, drawing, text, camera, window, time, and render operations.
-pub trait BishopContext: Input + Draw + Text + Camera + Window + Time + RenderOps {}
+/// Combined context trait for widgets that need input, drawing, text, camera, window, time, render operations, and texture loading.
+pub trait BishopContext: Input + Draw + Text + Camera + Window + Time + RenderOps + TextureLoader {}
 
-impl<T: Input + Draw + Text + Camera + Window + Time + RenderOps> BishopContext for T {}
+impl<T: Input + Draw + Text + Camera + Window + Time + RenderOps + TextureLoader> BishopContext for T {}
 
 /// Trait for applications that can be run by bishop.
 pub trait BishopApp {
@@ -175,6 +177,7 @@ pub mod prelude {
     pub use crate::input::*;
     pub use crate::material::*;
     pub use crate::text::*;
+    pub use crate::texture::*;
     pub use crate::time::*;
     pub use crate::types::*;
     pub use crate::window::*;
@@ -183,7 +186,7 @@ pub mod prelude {
     pub use glam::{Vec2, Vec3, vec4};
 
     #[cfg(feature = "wgpu")]
-    pub use crate::wgpu::{empty_texture, load_texture, WgpuContext};
+    pub use crate::wgpu::WgpuContext;
 
     #[cfg(feature = "wgpu")]
     pub use crate::{run_backend, run_wgpu, PlatformContext, RunError};

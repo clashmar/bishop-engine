@@ -282,7 +282,7 @@ impl InspectorModule for AnimationModule {
                         // Refresh sprite cache after importing
                         let has_variant_folder = !animation.variant.0.as_os_str().is_empty();
                         if has_variant_folder {
-                            futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
+                            animation.refresh_sprite_cache(ctx, asset_manager);
                         }
                     }
                     Err(e) => {
@@ -311,7 +311,7 @@ impl InspectorModule for AnimationModule {
         // Refresh sprite cache when variant changes or a new clip is added (only if variant is set)
         let has_variant = !animation.variant.0.as_os_str().is_empty();
         if (variant_changed || clip_added) && has_variant {
-            futures::executor::block_on(animation.refresh_sprite_cache(asset_manager));
+            animation.refresh_sprite_cache(ctx, asset_manager);
         }
     }
 

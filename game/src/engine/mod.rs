@@ -173,7 +173,8 @@ impl Engine {
             let ecs = game_ctx.ecs;
 
             if let Some(current_room) = game_ctx.cur_world.current_room() {
-                update_animation_sytem(ecs, asset_manager, dt, current_room.id).await;
+                let loader = self.ctx.borrow();
+                update_animation_sytem(&*loader, ecs, asset_manager, dt, current_room.id).await;
             }
 
             // Load scripts in this scope TODO: make this part of run_scripts when scope is finalized

@@ -35,6 +35,7 @@ pub struct CurrentFrame {
 }
 
 pub async fn update_animation_sytem(
+    loader: &impl TextureLoader,
     ecs: &mut Ecs,
     asset_manager: &mut AssetManager,
     dt: f32,
@@ -67,7 +68,7 @@ pub async fn update_animation_sytem(
         };
 
         // Get the sprite id
-        let (sprite_id, resolved) = get_sprite_id(animation, current_id, asset_manager).await;
+        let (sprite_id, resolved) = get_sprite_id(loader, animation, current_id, asset_manager);
 
         if resolved {
             animation.update_cache_entry(current_id, sprite_id, asset_manager);
@@ -153,7 +154,7 @@ impl Renderable for CurrentFrame {
         if !asset_manager.contains(self.sprite_id) {
             return false;
         }
-        let tex = asset_manager.get_texture_from_id(self.sprite_id);
+        let tex = asset_manager.get_texture_from_id(ctx, self.sprite_id);
         let frame_w = self.frame_size.x;
         let frame_h = self.frame_size.y;
         let src = Rect::new(
@@ -182,21 +183,23 @@ impl Renderable for CurrentFrame {
 }
 
 /// Return the SpriteId for for the current animation clip.
-async fn get_sprite_id(
+fn get_sprite_id(
+    loader: &impl TextureLoader,
     animation: &Animation,
     current_id: &ClipId,
     asset_manager: &mut AssetManager,
 ) -> (SpriteId, bool) {
-    if let Some(&cached) = animation.sprite_cache.get(current_id) 
+    if let Some(&cached) = animation.sprite_cache.get(current_id)
     && cached.0 != 0 {
         return (cached, false);
     }
 
     let resolved = resolve_sprite_id(
-        asset_manager, 
-        &animation.variant, 
-        current_id
-    ).await;
+        loader,
+        asset_manager,
+        &animation.variant,
+        current_id,
+    );
 
     (resolved, true)
 }

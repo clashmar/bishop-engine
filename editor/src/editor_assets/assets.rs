@@ -1,15 +1,10 @@
 // editor/src/editor_assets/editor_assets.rs
 #![allow(unused)]
-use std::hash::BuildHasherDefault;
-use futures::executor::block_on;
 use std::path::{Path, PathBuf};
-use std::hash::DefaultHasher;
 use engine_core::prelude::*;
-use std::hash::BuildHasher;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 use std::{env, fs, io};
 use bishop::prelude::*;
-use std::hash::Hasher;
 
 /// Windows .exe for the game binary.
 pub static GAME_EXE: &[u8] = include_bytes!(
@@ -43,71 +38,42 @@ pub static ICON_BIG: LazyLock<[u8; 64 * 64 * 4]> = LazyLock::new(|| {
     load_rgba_resized::<{ 64 * 64 * 4 }>(include_bytes!("icon.png"), 64)
 });
 
-pub static SELECT_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/select.png"))
-});
+static SELECT_ICON: OnceLock<Texture2D> = OnceLock::new();
+static EDIT_ICON: OnceLock<Texture2D> = OnceLock::new();
+static CREATE_ICON: OnceLock<Texture2D> = OnceLock::new();
+static DELETE_ICON: OnceLock<Texture2D> = OnceLock::new();
+static MOVE_ICON: OnceLock<Texture2D> = OnceLock::new();
+static TILE_ICON: OnceLock<Texture2D> = OnceLock::new();
+static ENTITY_ICON: OnceLock<Texture2D> = OnceLock::new();
+static GRID_ICON: OnceLock<Texture2D> = OnceLock::new();
+static EXIT_ICON: OnceLock<Texture2D> = OnceLock::new();
+static CIRCLE_120PX: OnceLock<Texture2D> = OnceLock::new();
 
-pub static EDIT_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/edit.png"))
-});
-
-pub static CREATE_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/create.png"))
-});
-
-pub static DELETE_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/delete.png"))
-});
-
-pub static MOVE_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/move.png"))
-});
-
-pub static TILE_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/tile.png"))
-});
-
-pub static ENTITY_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/entity.png"))
-});
-
-pub static GRID_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/grid.png"))
-});
-
-pub static EXIT_ICON: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("icons/exit.png"))
-});
-
-pub static CIRCLE_120PX: LazyLock<Texture2D> = LazyLock::new(|| {
-    load_texture_from_bytes(include_bytes!("textures/circle120px.png"))
-});
-
-/// Helper that turns the embedded PNG data into a `Texture2D`.
-fn load_texture_from_bytes(data: &'static [u8]) -> Texture2D {
-    let mut tmp_path: PathBuf = env::temp_dir();
-    let hash = {
-        type FnvHasher = DefaultHasher;
-        let mut hasher = BuildHasherDefault::<FnvHasher>::default().build_hasher();
-        hasher.write(data);
-        hasher.finish()
-    };
-
-    tmp_path.push(format!("asset_{:x}.png", hash));
-
-    if !tmp_path.exists() {
-        fs::write(&tmp_path, data)
-            .expect("Failed to write temporary texture file.");
-    }
-
-    let texture = block_on(async {
-        load_texture(tmp_path.to_string_lossy().as_ref())
-            .await
-            .expect("Failed to load texture from temporary file.")
-    });
-
-    texture
+/// Loads all editor icon textures. Must be called once after the graphics context is ready.
+pub fn init_editor_icons(loader: &impl TextureLoader) {
+    let load = |data: &[u8]| loader.load_texture_from_bytes(data).unwrap_or_else(|_| loader.empty_texture());
+    let _ = SELECT_ICON.set(load(include_bytes!("icons/select.png")));
+    let _ = EDIT_ICON.set(load(include_bytes!("icons/edit.png")));
+    let _ = CREATE_ICON.set(load(include_bytes!("icons/create.png")));
+    let _ = DELETE_ICON.set(load(include_bytes!("icons/delete.png")));
+    let _ = MOVE_ICON.set(load(include_bytes!("icons/move.png")));
+    let _ = TILE_ICON.set(load(include_bytes!("icons/tile.png")));
+    let _ = ENTITY_ICON.set(load(include_bytes!("icons/entity.png")));
+    let _ = GRID_ICON.set(load(include_bytes!("icons/grid.png")));
+    let _ = EXIT_ICON.set(load(include_bytes!("icons/exit.png")));
+    let _ = CIRCLE_120PX.set(load(include_bytes!("textures/circle120px.png")));
 }
+
+pub fn select_icon() -> &'static Texture2D { SELECT_ICON.get().expect("Editor icons not initialized") }
+pub fn edit_icon() -> &'static Texture2D { EDIT_ICON.get().expect("Editor icons not initialized") }
+pub fn create_icon() -> &'static Texture2D { CREATE_ICON.get().expect("Editor icons not initialized") }
+pub fn delete_icon() -> &'static Texture2D { DELETE_ICON.get().expect("Editor icons not initialized") }
+pub fn move_icon() -> &'static Texture2D { MOVE_ICON.get().expect("Editor icons not initialized") }
+pub fn tile_icon() -> &'static Texture2D { TILE_ICON.get().expect("Editor icons not initialized") }
+pub fn entity_icon() -> &'static Texture2D { ENTITY_ICON.get().expect("Editor icons not initialized") }
+pub fn grid_icon() -> &'static Texture2D { GRID_ICON.get().expect("Editor icons not initialized") }
+pub fn exit_icon() -> &'static Texture2D { EXIT_ICON.get().expect("Editor icons not initialized") }
+pub fn circle_120px() -> &'static Texture2D { CIRCLE_120PX.get().expect("Editor icons not initialized") }
 
 // Include the auto-generated ENGINE_SCRIPTS array from build.rs
 include!("engine_scripts.rs");

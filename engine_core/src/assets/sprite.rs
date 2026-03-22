@@ -55,7 +55,7 @@ impl Renderable for Sprite {
             return false;
         };
         
-        let tex = asset_manager.get_texture_from_id(self.sprite);
+        let tex = asset_manager.get_texture_from_id(ctx, self.sprite);
         let draw_base = pivot_adjusted_position(params.pos, size, params.pivot);
         ctx.draw_texture_ex(
             tex,

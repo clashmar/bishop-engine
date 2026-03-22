@@ -32,8 +32,8 @@ pub async fn create_new_game(name: String) -> Game {
     // Ensure the folder structure exists.
     create_game_folders(&name);
 
-    let asset_manager = AssetManager::new().await;
-    let script_manager = ScriptManager::new().await;
+    let asset_manager = AssetManager::default();
+    let script_manager = ScriptManager::default();
 
     // Build the game first so we can allocate room IDs globally
     let mut game = Game {

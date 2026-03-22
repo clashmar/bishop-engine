@@ -12,7 +12,6 @@ use super::render::{
     PrimitiveRenderer, TextRenderer, TextureRenderer,
 };
 use super::state::{GraphicsState, GraphicsStateError, InputState, TimeState};
-use super::texture_loader::init_texture_loader;
 use crate::camera::Camera2D;
 use crate::types::Color;
 use crate::window::CursorIcon;
@@ -59,13 +58,6 @@ impl WgpuContext {
         let texture_renderer = TextureRenderer::new(&graphics.device, graphics.config.format);
         let text_renderer =
             TextRenderer::new(&graphics.device, &graphics.queue, graphics.config.format);
-
-        // Initialize the global texture loader for free function texture loading
-        init_texture_loader(
-            graphics.device.clone(),
-            graphics.queue.clone(),
-            texture_renderer.texture_bind_group_layout_arc(),
-        );
 
         let render_target_bind_group_layout = std::sync::Arc::new(create_texture_bind_group_layout(
             &graphics.device,

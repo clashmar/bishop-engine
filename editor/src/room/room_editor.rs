@@ -37,8 +37,8 @@ impl ModeInfo for RoomEditorMode {
     }
     fn icon(&self) -> &'static Texture2D {
         match self {
-            RoomEditorMode::Scene => &ENTITY_ICON,
-            RoomEditorMode::Tilemap => &GRID_ICON,
+            RoomEditorMode::Scene => entity_icon(),
+            RoomEditorMode::Tilemap => grid_icon(),
         }
     }
     fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {
@@ -177,10 +177,11 @@ impl RoomEditor {
         let delta_time = ctx.get_frame_time();
 
         update_animation_sytem(
+            ctx,
             ecs,
             asset_manager,
             delta_time,
-            room.id
+            room.id,
         ).await;
 
         match self.mode {

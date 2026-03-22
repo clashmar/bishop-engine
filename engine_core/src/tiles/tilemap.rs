@@ -57,7 +57,7 @@ impl TileMap {
             let tile_pos = Vec2::new(*x as f32 * grid_size, *y as f32 * grid_size) + room_position;
 
             if let Some(tile_def) = asset_manager.tile_defs.get(tile_def_id) {
-                let tex = asset_manager.get_texture_from_id(tile_def.sprite_id);
+                let tex = asset_manager.get_texture_from_id(ctx, tile_def.sprite_id);
                 ctx.draw_texture_ex(
                     tex,
                     tile_pos.x,

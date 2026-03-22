@@ -36,9 +36,9 @@ impl ModeInfo for WorldEditorMode {
     }
     fn icon(&self) -> &'static Texture2D {
         match self {
-            WorldEditorMode::Select => &SELECT_ICON,
-            WorldEditorMode::New => &CREATE_ICON,
-            WorldEditorMode::Delete => &DELETE_ICON,
+            WorldEditorMode::Select => select_icon(),
+            WorldEditorMode::New => create_icon(),
+            WorldEditorMode::Delete => delete_icon(),
         }
     }
     fn shortcut(self) -> Option<fn(&WgpuContext) -> bool> {

@@ -64,6 +64,9 @@ impl Editor {
             std::process::exit(0);
         };
 
+        // Initialize editor icon textures using the graphics context.
+        crate::editor_assets::init_editor_icons(ctx);
+
         // Register all panels
         with_panel_manager(|panel_manager| {
             panel_manager.register_all_panels(ctx);
