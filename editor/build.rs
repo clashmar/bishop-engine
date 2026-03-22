@@ -171,6 +171,8 @@ fn generate_lua_script() {
         ---@field public table\n\
         ---@field update fun(self: Script, dt: number)\n\
         ---@field init fun(self: Script)\n\
+        ---@field interact fun(self: Script)\n\
+        ---@field on_exit fun(self: Script)\n\
         ---@class Script : ScriptDef\n\
         ---@field entity Entity\n\
         local Script = {}\n\

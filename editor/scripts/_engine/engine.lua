@@ -24,15 +24,6 @@ function engine.on(event, handler) end
 --- @return nil
 function engine.emit(event, ...) end
 
----@param input string
-function engine.input.is_down(input) end
-
----@param input string
-function engine.input.pressed(input) end
-
----@param input string
-function engine.input.released(input) end
-
 ---@param msg string
 function engine.log.info(msg) end
 
@@ -44,4 +35,24 @@ function engine.log.error(msg) end
 
 ---@param msg string
 function engine.log.debug(msg) end
+
+---@param input string
+function engine.input.is_down(input) end
+
+---@param input string
+function engine.input.pressed(input) end
+
+---@param input string
+function engine.input.released(input) end
+
+---@param name string
+---@param priority number
+function engine.input.take_control(name, priority) end
+
+---@param name string
+function engine.input.release_control(name) end
+
+---@param name string
+---@return boolean
+function engine.input.in_control(name) end
 

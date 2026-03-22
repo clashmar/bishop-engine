@@ -1,4 +1,4 @@
-// game/src/scripting/commands/dialogue_commands.rs
+// game/src/scripting/commands/text_commands.rs
 use crate::scripting::commands::lua_command::LuaCommand;
 use crate::engine::Engine;
 use engine_core::prelude::*;
@@ -19,31 +19,18 @@ pub struct ShowSpeechCmd {
 impl LuaCommand for ShowSpeechCmd {
     fn execute(&mut self, engine: &mut Engine) {
         let mut game_instance = engine.game_instance.borrow_mut();
-        let mut bubble = SpeechBubble::new(self.text.clone(), self.duration);
+        let config = &game_instance.game.text_manager.config;
 
-        if let Some(color) = self.color {
-            bubble.color = color;
-        }
-
-        if let Some(offset) = self.offset {
-            bubble.offset = offset;
-        }
-
-        if let Some(size) = self.font_size {
-            bubble.font_size = Some(size);
-        }
-
-        if let Some(width) = self.max_width {
-            bubble.max_width = Some(width);
-        }
-
-        if let Some(show) = self.show_background {
-            bubble.show_background = show;
-        }
-
-        if let Some(bg_color) = self.background_color {
-            bubble.background_color = bg_color;
-        }
+        let bubble = SpeechBubble {
+            text: self.text.clone(),
+            timer: self.duration,
+            color: self.color.unwrap_or(config.default_color),
+            offset: self.offset.unwrap_or((0.0, config.default_offset_y)),
+            font_size: self.font_size,
+            max_width: self.max_width,
+            show_background: self.show_background.unwrap_or(config.show_background),
+            background_color: self.background_color.unwrap_or(config.default_background_color),
+        };
 
         game_instance.game.ecs.add_component_to_entity(self.entity, bubble);
     }
@@ -62,7 +49,7 @@ impl LuaCommand for ClearSpeechCmd {
     }
 }
 
-/// Command to set the current dialogue language.
+/// Command to set the current text display language.
 pub struct SetLanguageCmd {
     pub language: String,
 }

@@ -6,14 +6,6 @@
 local Entity = {}
 
 -- Component getters
----@overload fun(self: Entity, component: "Script"): Script
----@overload fun(self: Entity, component: "Light"): Light
----@overload fun(self: Entity, component: "SpeechBubble"): SpeechBubble
----@overload fun(self: Entity, component: "FacingDirection"): FacingDirection
----@overload fun(self: Entity, component: "CurrentFrame"): CurrentFrame
----@overload fun(self: Entity, component: "Glow"): Glow
----@overload fun(self: Entity, component: "Children"): Children
----@overload fun(self: Entity, component: "Parent"): Parent
 ---@overload fun(self: Entity, component: "Name"): Name
 ---@overload fun(self: Entity, component: "PhysicsBody"): PhysicsBody
 ---@overload fun(self: Entity, component: "PlayerProxy"): PlayerProxy
@@ -29,10 +21,18 @@ local Entity = {}
 ---@overload fun(self: Entity, component: "Walkable"): Walkable
 ---@overload fun(self: Entity, component: "Grounded"): Grounded
 ---@overload fun(self: Entity, component: "Collider"): Collider
----@overload fun(self: Entity, component: "Sprite"): Sprite
----@overload fun(self: Entity, component: "Animation"): Animation
+---@overload fun(self: Entity, component: "SpeechBubble"): SpeechBubble
+---@overload fun(self: Entity, component: "Children"): Children
+---@overload fun(self: Entity, component: "Parent"): Parent
 ---@overload fun(self: Entity, component: "RoomCamera"): RoomCamera
+---@overload fun(self: Entity, component: "FacingDirection"): FacingDirection
+---@overload fun(self: Entity, component: "Script"): Script
+---@overload fun(self: Entity, component: "CurrentFrame"): CurrentFrame
 ---@overload fun(self: Entity, component: "Transform"): Transform
+---@overload fun(self: Entity, component: "Light"): Light
+---@overload fun(self: Entity, component: "Animation"): Animation
+---@overload fun(self: Entity, component: "Glow"): Glow
+---@overload fun(self: Entity, component: "Sprite"): Sprite
 ---@overload fun(self: Entity, component: "Interactable"): Interactable
 ---@param component string
 ---@return table|nil
@@ -45,38 +45,6 @@ function Entity:get(component) end
 function Entity:set(component, value) end
 
 -- Typed component setters
----@param self Entity
----@param v Script
-function Entity:set_script(v) end
-
----@param self Entity
----@param v Light
-function Entity:set_light(v) end
-
----@param self Entity
----@param v SpeechBubble
-function Entity:set_speech_bubble(v) end
-
----@param self Entity
----@param v FacingDirection
-function Entity:set_facing_direction(v) end
-
----@param self Entity
----@param v CurrentFrame
-function Entity:set_current_frame(v) end
-
----@param self Entity
----@param v Glow
-function Entity:set_glow(v) end
-
----@param self Entity
----@param v Children
-function Entity:set_children(v) end
-
----@param self Entity
----@param v Parent
-function Entity:set_parent(v) end
-
 ---@param self Entity
 ---@param v Name
 function Entity:set_name(v) end
@@ -138,20 +106,52 @@ function Entity:set_grounded(v) end
 function Entity:set_collider(v) end
 
 ---@param self Entity
----@param v Sprite
-function Entity:set_sprite(v) end
+---@param v SpeechBubble
+function Entity:set_speech_bubble(v) end
 
 ---@param self Entity
----@param v Animation
-function Entity:set_animation(v) end
+---@param v Children
+function Entity:set_children(v) end
+
+---@param self Entity
+---@param v Parent
+function Entity:set_parent(v) end
 
 ---@param self Entity
 ---@param v RoomCamera
 function Entity:set_room_camera(v) end
 
 ---@param self Entity
+---@param v FacingDirection
+function Entity:set_facing_direction(v) end
+
+---@param self Entity
+---@param v Script
+function Entity:set_script(v) end
+
+---@param self Entity
+---@param v CurrentFrame
+function Entity:set_current_frame(v) end
+
+---@param self Entity
 ---@param v Transform
 function Entity:set_transform(v) end
+
+---@param self Entity
+---@param v Light
+function Entity:set_light(v) end
+
+---@param self Entity
+---@param v Animation
+function Entity:set_animation(v) end
+
+---@param self Entity
+---@param v Glow
+function Entity:set_glow(v) end
+
+---@param self Entity
+---@param v Sprite
+function Entity:set_sprite(v) end
 
 ---@param self Entity
 ---@param v Interactable

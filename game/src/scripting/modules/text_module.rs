@@ -1,5 +1,5 @@
-// game/src/scripting/modules/dialogue_module.rs
-use crate::scripting::commands::dialogue_commands::SetLanguageCmd;
+// game/src/scripting/modules/text_module.rs
+use crate::scripting::commands::text_commands::SetLanguageCmd;
 use crate::scripting::lua_ctx::LuaGameCtx;
 use crate::game_global::push_command;
 use engine_core::register_lua_api;
@@ -10,21 +10,21 @@ use mlua::prelude::LuaResult;
 use mlua::Table;
 use mlua::Lua;
 
-/// Lua module that exposes the dialogue system API.
+/// Lua module for onscreen text display.
 #[derive(Default)]
-pub struct DialogueModule;
-register_lua_module!(DialogueModule);
+pub struct TextModule;
+register_lua_module!(TextModule);
 
-impl LuaModule for DialogueModule {
+impl LuaModule for TextModule {
     fn register(&self, lua: &Lua) -> LuaResult<()> {
         let engine_tbl: Table = lua.globals().get(ENGINE)?;
-        let dialogue_tbl = lua.create_table()?;
+        let text_tbl = lua.create_table()?;
 
         let set_language_fn = lua.create_function(|_lua, lang: String| {
             push_command(Box::new(SetLanguageCmd { language: lang }));
             Ok(())
         })?;
-        dialogue_tbl.set(SET_LANGUAGE, set_language_fn)?;
+        text_tbl.set(SET_LANGUAGE, set_language_fn)?;
 
         let get_language_fn = lua.create_function(|lua, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
@@ -32,7 +32,7 @@ impl LuaModule for DialogueModule {
             let lang = game_instance.game.text_manager.get_language().to_string();
             Ok(lang)
         })?;
-        dialogue_tbl.set(GET_LANGUAGE, get_language_fn)?;
+        text_tbl.set(GET_LANGUAGE, get_language_fn)?;
 
         let get_languages_fn = lua.create_function(|lua, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
@@ -48,7 +48,7 @@ impl LuaModule for DialogueModule {
             }
             Ok(table)
         })?;
-        dialogue_tbl.set(GET_LANGUAGES, get_languages_fn)?;
+        text_tbl.set(GET_LANGUAGES, get_languages_fn)?;
 
         let get_config_fn = lua.create_function(|lua, ()| {
             let ctx = LuaGameCtx::borrow_ctx(lua)?;
@@ -79,40 +79,40 @@ impl LuaModule for DialogueModule {
 
             Ok(table)
         })?;
-        dialogue_tbl.set(GET_CONFIG, get_config_fn)?;
+        text_tbl.set(GET_CONFIG, get_config_fn)?;
 
-        engine_tbl.set(DIALOGUE, dialogue_tbl)?;
+        engine_tbl.set(TEXT, text_tbl)?;
         Ok(())
     }
 }
 
-register_lua_api!(DialogueModule, DIALOGUE_FILE);
+register_lua_api!(TextModule, TEXT_FILE);
 
-impl LuaApi for DialogueModule {
+impl LuaApi for TextModule {
     fn emit_api(&self, out: &mut LuaApiWriter) {
-        out.line("--- Dialogue system module");
-        out.line("---@class DialogueApi");
-        out.line("engine.dialogue = {}");
+        out.line("--- Onscreen text display module");
+        out.line("---@class TextApi");
+        out.line("engine.text = {}");
         out.line("");
 
-        out.line("--- Sets the current dialogue language.");
+        out.line("--- Sets the current text display language.");
         out.line("---@param lang string The language code (e.g. \"en\", \"es\")");
-        out.line("function engine.dialogue.set_language(lang) end");
+        out.line("function engine.text.set_language(lang) end");
         out.line("");
 
-        out.line("--- Gets the current dialogue language.");
+        out.line("--- Gets the current text display language.");
         out.line("---@return string");
-        out.line("function engine.dialogue.get_language() end");
+        out.line("function engine.text.get_language() end");
         out.line("");
 
         out.line("--- Gets a list of available languages.");
         out.line("---@return string[]");
-        out.line("function engine.dialogue.get_languages() end");
+        out.line("function engine.text.get_languages() end");
         out.line("");
 
-        out.line("--- Gets the current dialogue configuration.");
+        out.line("--- Gets the current text display configuration.");
         out.line("---@return {default_duration: number, font_size: number, max_width: number, default_offset_y: number, padding: number, show_background: boolean, default_color: number[], default_background_color: number[]}");
-        out.line("function engine.dialogue.get_config() end");
+        out.line("function engine.text.get_config() end");
         out.line("");
     }
 }

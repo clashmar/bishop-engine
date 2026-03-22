@@ -7,7 +7,7 @@ use std::cell::{Cell, RefCell};
 use std::vec::IntoIter;
 use std::rc::Rc;
 
-/// Global services for the `GameState`.
+/// Global services for the `Engine`.
 #[derive(Default)]
 pub struct GameServices {
     pub command_manager: RefCell<LuaCommandManager>,

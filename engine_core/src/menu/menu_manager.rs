@@ -199,7 +199,6 @@ impl MenuManager {
             let text_id = format!("ui/{}", menu_id);
             if let Some(template) = self.templates.get(menu_id) {
                 template.render_background(ctx, self.viewport);
-                template.render_labels(ctx, canvas_origin, canvas_size, text_manager, &text_id);
 
                 for i in template.sorted_element_indices() {
                     let element = &template.elements[i];
@@ -207,6 +206,11 @@ impl MenuManager {
                         continue;
                     }
                     match &element.kind {
+                        MenuElementKind::Label(label) => {
+                            let display_text = text_manager.resolve_ui_text(&text_id, &label.text_key);
+                            let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
+                            MenuTemplate::render_label(ctx, label, screen_rect, &display_text);
+                        }
                         MenuElementKind::Button(button) => {
                             let display_text = text_manager.resolve_ui_text(&text_id, &button.text_key);
                             let is_focused = self.focus.node == i && self.focus.child.is_none();
@@ -245,24 +249,30 @@ impl MenuManager {
                                 if !child.element.visible {
                                     continue;
                                 }
-                                if let MenuElementKind::Button(button) = &child.element.kind {
-                                    let display_text = text_manager.resolve_ui_text(&text_id, &button.text_key);
-                                    let is_focused = self.focus.node == i
-                                        && self.focus.child == Some(focusable_idx);
-                                    let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
-                                    let btn = Button::new(screen_rect, &display_text)
-                                        .blocked(!child.element.enabled)
-                                        .focused(is_focused);
-                                    if btn.show(ctx) {
-                                        triggered_action = Some(button.action.clone());
+                                let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
+                                match &child.element.kind {
+                                    MenuElementKind::Label(label) => {
+                                        let display_text = text_manager.resolve_ui_text(&text_id, &label.text_key);
+                                        MenuTemplate::render_label(ctx, label, screen_rect, &display_text);
                                     }
-                                    if child.element.enabled {
-                                        focusable_idx += 1;
+                                    MenuElementKind::Button(button) => {
+                                        let display_text = text_manager.resolve_ui_text(&text_id, &button.text_key);
+                                        let is_focused = self.focus.node == i
+                                            && self.focus.child == Some(focusable_idx);
+                                        let btn = Button::new(screen_rect, &display_text)
+                                            .blocked(!child.element.enabled)
+                                            .focused(is_focused);
+                                        if btn.show(ctx) {
+                                            triggered_action = Some(button.action.clone());
+                                        }
+                                        if child.element.enabled {
+                                            focusable_idx += 1;
+                                        }
                                     }
+                                    _ => {}
                                 }
                             }
                         }
-                        _ => {}
                     }
                 }
             }

@@ -1,4 +1,5 @@
 // engine_core/src/tiles/tilemap.rs
+use crate::tiles::serialization::{serialize_tiles, deserialize_tiles};
 use crate::assets::asset_manager::AssetManager;
 use crate::tiles::tile::TileDefId;
 use crate::worlds::world::GridPos;
@@ -12,7 +13,12 @@ use bishop::prelude::*;
 pub struct TileMap {
     pub width: usize,
     pub height: usize,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "HashMap::is_empty",
+        serialize_with = "serialize_tiles",
+        deserialize_with = "deserialize_tiles",
+    )]
     pub tiles: HashMap<(usize, usize), TileDefId>,
     #[serde_as(as = "FromInto<[f32; 4]>")]
     pub background: Color,

@@ -57,9 +57,13 @@ pub const SAY_DIALOGUE: &str = "say_dialogue";
 pub const CLEAR_SPEECH: &str = "clear_speech";
 pub const IS_SPEAKING: &str = "is_speaking";
 
-// Dialogue module
-pub const DIALOGUE: &str = "dialogue";
-pub const DIALOGUE_FILE: &str = "dialogue.lua";
+// Text module
+pub const TEXT: &str = "text";
+pub const TEXT_FILE: &str = "text.lua";
+pub const GET_LANGUAGE: &str = "get_language";
+pub const GET_LANGUAGES: &str = "get_languages";
+pub const SET_LANGUAGE: &str = "set_language";
+pub const GET_CONFIG: &str = "get_config";
 
 // Menu module
 pub const LUA_MENU: &str = "menu";
@@ -67,10 +71,6 @@ pub const MENU_FILE: &str = "menu.lua";
 pub const OPEN_MENU: &str = "open";
 pub const CLOSE_MENU: &str = "close";
 pub const IS_MENU_OPEN: &str = "is_open";
-pub const SET_LANGUAGE: &str = "set_language";
-pub const GET_LANGUAGE: &str = "get_language";
-pub const GET_LANGUAGES: &str = "get_languages";
-pub const GET_CONFIG: &str = "get_config";
 
 
 

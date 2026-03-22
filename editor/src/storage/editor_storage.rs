@@ -130,7 +130,7 @@ default_language = "en"
 /// Save a `Game` and all its contents.
 pub fn save_game(game: &Game) -> io::Result<()> {
     let pretty = ron::ser::PrettyConfig::new()
-        .separate_tuple_members(true)
+        .separate_tuple_members(false)
         .enumerate_arrays(true);
 
     let ron_string = ron::ser::to_string_pretty(game, pretty)

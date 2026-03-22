@@ -16,7 +16,7 @@ local Player = {
     _state = nil,
 
     update = function(self, dt)
-        if not engine.input.in_control("player") then
+        if engine.menu.is_open() then
             local cur_vel = self.entity:get(comp.Velocity)
             self.entity:set_velocity({ x = 0, y = cur_vel.y })
             return

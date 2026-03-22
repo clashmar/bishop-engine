@@ -16,7 +16,7 @@ pub enum MenuElementKind {
 }
 
 /// Label element displaying text resolved from a text key.
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabelElement {
     #[serde(alias = "text")]
     pub text_key: String,
@@ -24,6 +24,17 @@ pub struct LabelElement {
     pub color: Color,
     #[serde(default)]
     pub alignment: HorizontalAlign,
+}
+
+impl Default for LabelElement {
+    fn default() -> Self {
+        Self {
+            text_key: String::new(),
+            font_size: 20.0,
+            color: Color::WHITE,
+            alignment: HorizontalAlign::default(),
+        }
+    }
 }
 
 /// Button element that triggers an action when clicked.
