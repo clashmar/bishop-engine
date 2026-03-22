@@ -1,13 +1,14 @@
 // game/src/engine/mod.rs
 pub mod engine_builder;
 pub mod game_instance;
+mod render;
+use render::*;
 
 pub use engine_builder::EngineBuilder;
 pub use game_instance::GameInstance;
 
 use crate::transitions::transition_manager::TransitionManager;
 use crate::scripting::script_system::ScriptSystem;
-use crate::screen_space::render_screen_space;
 use crate::diagnostics::DiagnosticsOverlay;
 use crate::game_global::set_menu_active;
 use crate::physics::physics_system::*;
@@ -84,16 +85,7 @@ impl BishopApp for Engine {
         }
 
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
-
-        // Render game if visible
-        if !self.menu_manager.is_hiding_game() {
-            self.render(&mut *ctx.borrow_mut(), alpha);
-        } else {
-            ctx.borrow_mut().clear_background(Color::BLACK);
-        }
-
-        // Render menus/ui on top
-        self.render_menus(&ctx);
+        self.render(&ctx, alpha);
     }
 }
 
@@ -192,8 +184,6 @@ impl Engine {
         }
 
         // Sync menu state for Lua scripts
-        // TODO: This should be decoupled from menus (does player movement need to be blocked for other reasons?)
-        // Also reconsider global pattern here.
         set_menu_active(self.menu_manager.has_active_menu());
 
         // Run scripts outside borrow_mut scope
@@ -205,65 +195,36 @@ impl Engine {
         self.game_instance.borrow().emit_menu_events();
     }
 
-    pub fn render<C: BishopContext>(&mut self, ctx: &mut C, alpha: f32) {
-        ctx.clear_background(Color::BLACK);
+    pub fn render(&mut self, ctx: &PlatformContext, alpha: f32) {
+        if !self.menu_manager.is_hiding_game() {
+            let mut ctx_borrow = ctx.borrow_mut();
+            let platform_ctx = &mut *ctx_borrow;
+            let render_cam = build_render_camera(&self.camera_manager, alpha);
+            let mut game_borrow = self.game_instance.borrow_mut();
+            let game_instance = &mut *game_borrow;
 
-        let mut game_instance = self.game_instance.borrow_mut();
-        let prev_positions = game_instance.prev_positions.clone();
-        let text_config = game_instance.game.text_manager.config.clone();
-        let game_ctx = game_instance.game.ctx_mut();
+            render_scene(
+                platform_ctx, 
+                game_instance, 
+                &mut self.render_system, 
+                &render_cam, 
+                alpha
+            );
 
-        let Some(current_room) = game_ctx.cur_world.current_room() else {
-            return;
-        };
+            render_screen_space(
+                platform_ctx, 
+                game_instance, 
+                &render_cam, 
+                alpha
+            );
 
-        let grid_size = game_ctx.cur_world.grid_size;
-        let render_cam = Camera2D {
-            target: self.camera_manager.interpolated_target(alpha),
-            zoom: self.camera_manager.active.camera.zoom,
-            ..Default::default()
-        };
-
-        self.render_system.resize_for_camera(render_cam.zoom);
-        self.render_system.begin_scene(ctx);
-
-        render_room(
-            ctx,
-            game_ctx.ecs,
-            current_room,
-            game_ctx.asset_manager,
-            &mut self.render_system,
-            &render_cam,
-            alpha,
-            Some(&prev_positions),
-            grid_size,
-        );
-
-        self.render_system.end_scene(ctx);
-        self.render_system.present_game(ctx);
-
-        render_screen_space(
-            ctx,
-            game_ctx.ecs,
-            game_ctx.asset_manager,
-            &text_config,
-            &render_cam,
-            current_room.id,
-            Some(&prev_positions),
-            alpha,
-            grid_size,
-        );
-
-        if self.is_playtest {
-            self.diagnostics.draw(ctx);
+            if self.is_playtest { 
+                self.diagnostics.draw(platform_ctx); 
+            }
+        } else {
+            ctx.borrow_mut().clear_background(Color::BLACK);
         }
-    }
 
-    fn render_menus(&mut self, ctx: &PlatformContext) {
-        ctx.borrow_mut().flush_if_needed();
-        let viewport = self.render_system.viewport_rect(&*ctx.borrow());
-        self.menu_manager.set_viewport(viewport);
-        let game_instance = self.game_instance.borrow();
-        self.menu_manager.render(&mut *ctx.borrow_mut(), &game_instance.game.text_manager);
+        self.render_menus(ctx);
     }
 }

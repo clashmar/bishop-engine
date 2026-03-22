@@ -1,5 +1,5 @@
 // game/src/scripting/modules/entity_module.rs
-use crate::scripting::commands::dialogue_commands::*;
+use crate::scripting::commands::text_commands::*;
 use crate::scripting::commands::lua_command::*;
 use crate::scripting::lua_ctx::LuaGameCtx;
 use crate::game_global::push_command;

@@ -111,10 +111,7 @@ async fn export_for_windows(dest_root: &PathBuf, game: &Game) -> io::Result<Path
     }
     game_copy.ecs.purge_proxies();
 
-    let pretty = ron::ser::PrettyConfig::new()
-        .separate_tuple_members(true)
-        .enumerate_arrays(true);
-    let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
+    let ron_string = ron::to_string(&game_copy)
         .map_err(|e| io::Error::other(e.to_string()))?;
     fs::write(target_resources.join(GAME_RON), ron_string)?;
 
@@ -177,10 +174,7 @@ async fn export_for_mac(dest_root: PathBuf, game: &Game) -> io::Result<PathBuf> 
     }
     game_copy.ecs.purge_proxies();
 
-    let pretty = ron::ser::PrettyConfig::new()
-        .separate_tuple_members(true)
-        .enumerate_arrays(true);
-    let ron_string = ron::ser::to_string_pretty(&game_copy, pretty)
+    let ron_string = ron::to_string(&game_copy)
         .map_err(|e| io::Error::other(e.to_string()))?;
     fs::write(target_resources.join(GAME_RON), ron_string)?;
 

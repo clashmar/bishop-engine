@@ -9,22 +9,24 @@ use bishop::prelude::*;
 /// Currently uses simplified single-pass rendering.
 pub fn render_room<C: BishopContext>(
     ctx: &mut C,
-    ecs: &Ecs,
-    room: &Room,
-    asset_manager: &mut AssetManager,
+    game_ctx: &mut GameCtxMut<'_>,
     render_system: &mut RenderSystem,
     render_cam: &Camera2D,
     alpha: f32,
     prev_positions: Option<&HashMap<Entity, Vec2>>,
-    grid_size: f32,
 ) {
     let render_start = std::time::Instant::now();
+    let Some(current_room) = game_ctx.cur_world.current_room() else { 
+        return; 
+    };
+
+    let grid_size = game_ctx.cur_world.grid_size;
 
     // Organize entities by layer
     let layer_map = collect_interpolated_layer_map(
-        ecs,
-        room,
-        asset_manager,
+        game_ctx.ecs,
+        current_room,
+        game_ctx.asset_manager,
         alpha,
         prev_positions,
         grid_size,
@@ -35,13 +37,20 @@ pub fn render_room<C: BishopContext>(
     ctx.clear_background(Color::BLACK);
 
     // Draw tilemap first
-    let tilemap = &room.current_variant().tilemap;
-    tilemap.draw(ctx, asset_manager, room.position, grid_size);
+    let tilemap = &current_room.current_variant().tilemap;
+    tilemap.draw(ctx, game_ctx.asset_manager, current_room.position, grid_size);
 
     // Draw all entities sorted by layer
     for (_z, layer) in layer_map {
         for (entity, pos) in layer.entities {
-            draw_entity(ctx, ecs, asset_manager, entity, pos, grid_size);
+            draw_entity(
+                ctx, 
+                game_ctx.ecs, 
+                game_ctx.asset_manager, 
+                entity, 
+                pos, 
+                grid_size
+            );
         }
 
         // TODO: Re-enable multi-pass rendering

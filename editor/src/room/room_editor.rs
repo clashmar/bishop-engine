@@ -282,9 +282,6 @@ impl RoomEditor {
 
         let mut game_ctx = game.ctx_mut();
         let grid_size = game_ctx.cur_world.grid_size;
-        let ecs = &mut game_ctx.ecs;
-        let room = &mut game_ctx.cur_world.current_room_mut().unwrap();
-        let asset_manager = &mut game_ctx.asset_manager;
 
         // Panel rect for inspector and tilemap editor.
         const INSPECTOR_W: f32 = 325.0;
@@ -297,6 +294,13 @@ impl RoomEditor {
 
         match self.mode {
             RoomEditorMode::Tilemap => {
+                let Some(room) = game_ctx.cur_world.current_room_mut() else {
+                    return;
+                };
+
+                let ecs = &mut *game_ctx.ecs;
+                let asset_manager = &mut *game_ctx.asset_manager;
+
                 self.tilemap_editor.tilemap_panel.set_rect(inspector_rect);
                 self.tilemap_editor.draw(
                     ctx,
@@ -314,10 +318,10 @@ impl RoomEditor {
             }
             RoomEditorMode::Scene => {
                 let room_camera = get_room_camera_by_id(
-                    ctx, 
-                    ecs, 
-                    room_id, 
-                    grid_size, 
+                    ctx,
+                    &*game_ctx.ecs,
+                    room_id,
+                    grid_size,
                     self.preview_camera_id
                 );
 
@@ -337,17 +341,7 @@ impl RoomEditor {
                 }
 
                 // Draws everything in the room. Same implementation as the game.
-                render_room(
-                    ctx,
-                    ecs,
-                    room,
-                    asset_manager,
-                    render_system,
-                    render_cam,
-                    0.0,
-                    None,
-                    grid_size,
-                );
+                render_room(ctx, &mut game_ctx, render_system, render_cam, 0.0, None);
 
                 if self.view_preview {
                     render_system.end_scene(ctx);
@@ -355,16 +349,24 @@ impl RoomEditor {
                 }
 
                 if !self.view_preview {
+                    let Some(room) = game_ctx.cur_world.current_room_mut() else {
+                        return;
+                    };
+
                     ctx.set_camera(camera);
 
                     if self.show_grid {
                         grid::draw_grid(ctx, grid_renderer, camera, grid_size);
                     }
+                    
+                    let ecs = &*game_ctx.ecs;
+                    let asset_manager = &mut *game_ctx.asset_manager;
 
                     draw_exit_placeholders(ctx, &room.exits, room.position, grid_size);
                     draw_camera_placeholders(ctx, ecs, room_id, grid_size);
                     draw_light_placeholders(ctx, ecs, room_id, grid_size);
                     draw_glow_placeholders(ctx, ecs, asset_manager, room_id, grid_size);
+                    draw_interactable_ranges(ctx, ecs, room_id, grid_size);
 
                     // Highlight all selected entities and draw their overlays
                     for &selected_entity in &self.selected_entities {

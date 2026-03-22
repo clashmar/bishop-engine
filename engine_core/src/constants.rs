@@ -13,7 +13,7 @@ pub const MINIMUM_TILE_SIZE: f32 = 5.0;
 /// Base tile size for editor scaling.
 pub const BASE_GRID_SIZE: f32 = 32.0;
 
-pub const DEFAULT_ROOM_SIZE: Vec2 = Vec2::new(16.0, 10.0);
+pub const DEFAULT_ROOM_SIZE: Vec2 = Vec2::new(16.0, 9.0);
 pub const DEFAULT_ROOM_POSITION: Vec2 = Vec2::new(0.0, 0.0);
 
 /// Name of the game .ron save file.

@@ -250,6 +250,11 @@ impl Editor {
     }
 
     pub fn save(&mut self) {
+        let palette = &self.room_editor.tilemap_editor.tilemap_panel.palette;
+        if let Err(e) = save_palette(palette, &self.game.name) {
+            onscreen_error!("Could not save palette: {e}");
+        }
+
         if let Err(e) = save_game(&self.game) {
             onscreen_error!("Could not save game: {}.", e)
         } else {

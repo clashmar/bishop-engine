@@ -10,7 +10,7 @@ use engine_core::prelude::*;
 use bishop::prelude::*;
 
 const PLACEHOLDER_OPACITY: f32 = 0.2;
-fn thickness(grid_size: f32) -> f32 { (grid_size * 0.175).max(1.0) }
+fn thickness(grid_size: f32) -> f32 { (grid_size * 0.1).max(1.0) }
 
 impl RoomEditor {
     /// Draw static UI for the scene editor
@@ -454,6 +454,34 @@ pub fn draw_pivot_marker(
 pub fn is_pure_placeholder(ecs: &Ecs, entity: Entity) -> bool {
     ecs.has::<RoomCamera>(entity)
         || (ecs.has::<Light>(entity) && !ecs.has_any::<(Sprite, Animation, CurrentFrame)>(entity))
+}
+
+/// Draw a thin circle showing the interaction range for each `Interactable` entity in the room.
+pub fn draw_interactable_ranges(
+    ctx: &mut WgpuContext,
+    ecs: &Ecs,
+    room_id: RoomId,
+    grid_size: f32,
+) {
+    let room_store = ecs.get_store::<CurrentRoom>();
+    let violet = Color::new(0.75, 0.25, 1.0, 0.55);
+
+    for (entity, interactable) in ecs.get_store::<Interactable>().data.iter() {
+        if let Some(CurrentRoom(id)) = room_store.get(*entity) {
+            if *id != room_id { continue; }
+        }
+
+        if let Some(transform) = ecs.get_store::<Transform>().get(*entity) {
+            let pos = transform.position;
+            ctx.draw_circle_lines(
+                pos.x,
+                pos.y,
+                interactable.range,
+                thickness(grid_size) * 0.75,
+                violet,
+            );
+        }
+    }
 }
 
 /// Draw exit arrows for all exits in the room.

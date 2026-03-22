@@ -1,4 +1,4 @@
-pub mod dialogue_module;
+pub mod text_module;
 pub mod entity_module;
 pub mod engine_module;
 pub mod input_module;

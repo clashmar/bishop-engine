@@ -1,5 +1,4 @@
 use crate::menu::*;
-use crate::text::TextManager;
 use serde::{Deserialize, Serialize};
 use bishop::prelude::*;
 
@@ -44,45 +43,7 @@ impl MenuTemplate {
     }
 
     /// Renders menu labels transformed from normalized to screen-space using canvas origin/size.
-    pub fn render_labels<C: BishopContext>(
-        &self,
-        ctx: &mut C,
-        canvas_origin: Vec2,
-        canvas_size: Vec2,
-        text_manager: &TextManager,
-        text_id: &str,
-    ) {
-        for i in self.sorted_element_indices() {
-            let element = &self.elements[i];
-            if !element.visible {
-                continue;
-            }
-            match &element.kind {
-                MenuElementKind::Label(label) => {
-                    let display_text = text_manager.resolve_ui_text(text_id, &label.text_key);
-                    let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
-                    Self::render_label(ctx, label, screen_rect, &display_text);
-                }
-                MenuElementKind::LayoutGroup(group) => {
-                    let resolved = resolve_layout(group, element.rect);
-                    for (child, rect) in group.children.iter().zip(resolved.iter()) {
-                        if !child.element.visible {
-                            continue;
-                        }
-                        if let MenuElementKind::Label(label) = &child.element.kind {
-                            let display_text = text_manager.get_ui_text(text_id, &label.text_key)
-                                .unwrap_or_else(|| label.text_key.to_string());
-                            let screen_rect = normalized_rect_to_screen(*rect, canvas_origin, canvas_size);
-                            Self::render_label(ctx, label, screen_rect, &display_text);
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn render_label<C: BishopContext>(ctx: &mut C, label: &LabelElement, rect: Rect, display_text: &str) {
+    pub(crate) fn render_label<C: BishopContext>(ctx: &mut C, label: &LabelElement, rect: Rect, display_text: &str) {
         let txt_dims = ctx.measure_text(display_text, label.font_size);
         let txt_x = match label.alignment {
             HorizontalAlign::Left => rect.x,

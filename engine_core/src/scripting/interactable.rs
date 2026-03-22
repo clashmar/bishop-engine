@@ -10,7 +10,7 @@ use reflect_derive::Reflect;
 
 /// Component for interactable entities.
 #[ecs_component]
-#[derive(Debug, Clone, Serialize, Deserialize, Default, Reflect)]
+#[derive(Debug, Clone, Serialize, Deserialize, Reflect)]
 pub struct Interactable {
     /// Maximum interaction distance.
     pub range: f32,
@@ -21,6 +21,15 @@ pub struct Interactable {
     // event dispatch
 }
 inspector_module!(Interactable);
+
+impl Default for Interactable {
+    fn default() -> Self {
+        Self {
+            range: 20.0,
+        }
+    }
+}
+
 
 /// Returns the best interactable entity candidate for the player in the `CurrentRoom` or `None`.
 pub fn find_best_interactable(ecs: &Ecs) -> Option<Entity> {
