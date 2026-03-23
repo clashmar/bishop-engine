@@ -40,6 +40,9 @@ pub mod window;
 #[cfg(feature = "wgpu")]
 pub mod wgpu;
 
+#[cfg(feature = "audio")]
+pub mod audio;
+
 pub use camera::*;
 pub use draw::*;
 pub use input::*;
@@ -190,4 +193,10 @@ pub mod prelude {
 
     #[cfg(feature = "wgpu")]
     pub use crate::{run_backend, run_wgpu, PlatformContext, RunError};
+
+    #[cfg(feature = "audio")]
+    pub use crate::audio::AudioBackend;
+
+    #[cfg(feature = "audio-cpal")]
+    pub use crate::audio::DefaultAudioBackend;
 }
