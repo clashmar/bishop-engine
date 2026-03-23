@@ -167,6 +167,11 @@ impl EditorCommand for ResizeTilemapCmd {
                         // Expand left
                         map.width += self.delta as usize;
                         shift_tiles(map, self.delta as isize, 0);
+                        for exit in exits.iter_mut() {
+                            if (exit.position.x - room_size.x).abs() < f32::EPSILON {
+                                exit.position.x += self.delta as f32;
+                            }
+                        }
                         room_size.x += self.delta as f32;
                         room_position.x -= self.delta as f32 * grid_size;
                     } else if self.delta < 0 {
@@ -181,6 +186,11 @@ impl EditorCommand for ResizeTilemapCmd {
                             }
                             map.width -= shrink;
                             shift_tiles(map, -(shrink as isize), 0);
+                            for exit in exits.iter_mut() {
+                                if (exit.position.x - room_size.x).abs() < f32::EPSILON {
+                                    exit.position.x -= shrink as f32;
+                                }
+                            }
                             room_size.x -= shrink as f32;
                             room_position.x += shrink as f32 * grid_size;
                         }

@@ -41,4 +41,12 @@ pub trait Draw {
         color: Color,
         params: DrawTextureParams,
     );
+
+    /// Restricts subsequent rendering to the given rectangle.
+    ///
+    /// Must be paired with [`pop_clip_rect`](Self::pop_clip_rect).
+    fn push_clip_rect(&mut self, rect: crate::types::Rect);
+
+    /// Removes the active clip rectangle set by [`push_clip_rect`](Self::push_clip_rect).
+    fn pop_clip_rect(&mut self);
 }

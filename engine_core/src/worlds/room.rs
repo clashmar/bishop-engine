@@ -46,8 +46,8 @@ pub struct Room {
 }
 
 impl Room {
-    /// Creates a default room with the given pre-allocated room ID.
-    pub fn default(ecs: &mut Ecs, room_id: RoomId, grid_size: f32) -> Self {
+    /// Creates a new room with the given pre-allocated room ID.
+    pub fn new(ecs: &mut Ecs, room_id: RoomId, grid_size: f32) -> Self {
         let first_variant = RoomVariant {
             id: "default".to_string(),
             tilemap: TileMap::new(DEFAULT_ROOM_SIZE.x as usize, DEFAULT_ROOM_SIZE.y as usize),

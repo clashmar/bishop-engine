@@ -120,12 +120,14 @@ impl GameInstance {
         // Store the camera target
         camera_manager.previous_position = Some(camera_manager.active.camera.target);
 
-        self.prev_positions = trans_store.data
-            .iter()
-            .filter_map(|(entity, transform)| {
-                room_store.get(*entity).filter(|cr| cr.0 == self.game.current_world().current_room_id.unwrap()) // TODO: handle unwrap
-                    .map(|_| (*entity, transform.position))
-            })
-            .collect();
+        self.prev_positions.clear();
+        self.prev_positions.extend(
+            trans_store.data
+                .iter()
+                .filter_map(|(entity, transform)| {
+                    room_store.get(*entity).filter(|cr| cr.0 == self.game.current_world().current_room_id.unwrap()) // TODO: handle unwrap
+                        .map(|_| (*entity, transform.position))
+                })
+        );
     }
 }

@@ -135,37 +135,38 @@ impl Engine {
         let mut game_instance = self.game_instance.borrow_mut();
         game_instance.store_previous_positions(&mut self.camera_manager);
 
+        {
+            let game_ctx = game_instance.game.ctx_mut();
+            let Some(current_room) = game_ctx.cur_world.current_room() else {
+                return;
+            };
+            update_physics(
+                game_ctx.asset_manager,
+                game_ctx.ecs,
+                current_room,
+                dt,
+                game_ctx.cur_world.grid_size,
+            );
+        }
+
+        // Resolve room transitions before updating the camera
+        TransitionManager::handle_transitions(&mut game_instance);
+
         let game_ctx = game_instance.game.ctx_mut();
-        let asset_manager = game_ctx.asset_manager;
-        let ecs = game_ctx.ecs;
-
-        let Some(current_room) = game_ctx.cur_world.current_room() else {
-            return;
-        };
-
-        let grid_size = game_ctx.cur_world.grid_size;
-
-        update_physics(
-            asset_manager,
-            ecs,
-            current_room,
-            dt,
-            grid_size
-        );
-
-        self.camera_manager.update_active(
-            ctx,
-            ecs,
-            current_room,
-            game_ctx.cur_world.grid_size
-        );
+        if let Some(current_room) = game_ctx.cur_world.current_room() {
+            self.camera_manager.update_active(
+                ctx,
+                game_ctx.ecs,
+                current_room,
+                game_ctx.cur_world.grid_size,
+            );
+        }
     }
 
     pub async fn update_async(&mut self, dt: f32) {
         {
             // Keep borrow_mut in this scope
             let mut game_instance = self.game_instance.borrow_mut();
-            TransitionManager::handle_transitions(&mut game_instance);
             update_speech_timers(&mut game_instance.game.ecs, dt);
 
             let game_ctx = game_instance.game.ctx_mut();

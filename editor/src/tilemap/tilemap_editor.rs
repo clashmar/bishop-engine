@@ -13,6 +13,8 @@ use crate::gui::modal::*;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
+fn thickness(grid_size: f32) -> f32 { (grid_size * 0.1).max(1.0) }
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum TilemapEditorMode {
     Tiles,
@@ -365,11 +367,7 @@ impl TileMapEditor {
         };
 
         if let Some(tile_pos) = tile_pos {
-            let zoom_scale = camera.zoom.x.abs();
-            let base_width = 0.5;
-            let min_line_width = 2.0;
-            let max_line_width = 5.0;
-            let line_width = (base_width / zoom_scale).clamp(min_line_width, max_line_width);
+            let line_width = thickness(grid_size);
 
             let x = tile_pos.x() as f32 * grid_size + room_position.x;
             let y = tile_pos.y() as f32 * grid_size + room_position.y;

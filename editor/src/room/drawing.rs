@@ -9,7 +9,7 @@ use crate::world::coord;
 use engine_core::prelude::*;
 use bishop::prelude::*;
 
-const PLACEHOLDER_OPACITY: f32 = 0.2;
+const PLACEHOLDER_OPACITY: f32 = 0.5;
 fn thickness(grid_size: f32) -> f32 { (grid_size * 0.1).max(1.0) }
 
 impl RoomEditor {
@@ -158,7 +158,7 @@ impl RoomEditor {
         let room_store = ecs.get_store::<CurrentRoom>();
 
         let editor_scalar = EditorCameraController::scalar_zoom(ctx, editor_cam);
-        const BASE_THICKNESS: f32 = 1.;
+        const BASE_THICKNESS: f32 = 0.25;
         const THICKNESS_SCALE: f32 = 0.01;
         let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 
@@ -237,7 +237,14 @@ pub fn highlight_selected_entity<C: BishopContext>(
     let size = entity_dimensions(ecs, asset_manager, visual_entity, grid_size);
     let draw_pos = pivot_adjusted_position(transform.position, size, transform.pivot);
 
-    ctx.draw_rectangle_lines(draw_pos.x, draw_pos.y, size.x, size.y, 1.0, color);
+    ctx.draw_rectangle_lines(
+        draw_pos.x, 
+        draw_pos.y, 
+        size.x, 
+        size.y, 
+        thickness(grid_size) * 0.25, 
+        color
+    );
 }
 
 /// Draw the outline of the collider for an entity if it has one.
@@ -477,7 +484,7 @@ pub fn draw_interactable_ranges(
                 pos.x,
                 pos.y,
                 interactable.range,
-                thickness(grid_size) * 0.75,
+                thickness(grid_size) * 0.25,
                 violet,
             );
         }
@@ -509,7 +516,7 @@ pub fn draw_all_camera_viewports(
     let room_store = ecs.get_store::<CurrentRoom>();
 
     let editor_scalar = EditorCameraController::scalar_zoom(ctx, editor_cam);
-    const BASE_THICKNESS: f32 = 1.;
+    const BASE_THICKNESS: f32 = 0.5;
     const THICKNESS_SCALE: f32 = 0.01;
     let thickness = BASE_THICKNESS * (THICKNESS_SCALE / editor_scalar).max(1.0);
 

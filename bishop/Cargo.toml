@@ -3,10 +3,6 @@ name = "bishop"
 version = "0.1.0"
 edition = "2021"
 
-[[example]]
-name = "wgpu_test"
-required-features = ["wgpu"]
-
 [features]
 default = ["wgpu"]
 wgpu = ["dep:wgpu", "dep:winit", "dep:pollster", "dep:bytemuck", "dep:image", "dep:fontdue"]

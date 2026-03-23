@@ -283,6 +283,7 @@ impl InspectorModule for AnimationModule {
                         let has_variant_folder = !animation.variant.0.as_os_str().is_empty();
                         if has_variant_folder {
                             animation.refresh_sprite_cache(ctx, asset_manager);
+                            animation.init_runtime();
                         }
                     }
                     Err(e) => {
