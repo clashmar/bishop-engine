@@ -23,7 +23,7 @@ pub fn push_audio_command(cmd: AudioCommand) {
 }
 
 /// Drain all queued commands. Called once per frame by `AudioManager::poll`.
-pub fn drain_audio_commands() -> Vec<AudioCommand> {
+pub(crate) fn drain_audio_commands() -> Vec<AudioCommand> {
     AUDIO_COMMANDS.with(|q| {
         let mut v = q.borrow_mut();
         std::mem::take(&mut *v)
