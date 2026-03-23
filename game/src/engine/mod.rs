@@ -96,7 +96,7 @@ impl BishopApp for Engine {
 
 impl Engine {
     /// Creates a new Engine with the given configuration.
-    pub fn new<B: bishop::audio::AudioBackend>(
+    pub fn new(
         game_instance: Rc<RefCell<GameInstance>>,
         ctx: PlatformContext,
         lua: Lua,
@@ -121,7 +121,7 @@ impl Engine {
             accumulator: 0.0,
             smoothed_dt: None,
             #[cfg(feature = "audio")]
-            audio_manager: engine_core::audio::AudioManager::new::<B>(),
+            audio_manager: engine_core::audio::AudioManager::new::<bishop::prelude::DefaultAudioBackend>(),
         }
     }
 
