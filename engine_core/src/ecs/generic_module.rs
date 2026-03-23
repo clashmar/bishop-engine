@@ -1,6 +1,6 @@
 // engine_core/src/ecs/generic_module.rs
 use crate::ecs::inspector_module::InspectorModule;
-use crate::ecs::component::Component;
+use crate::ecs::component::{comp_type_name, Component};
 use crate::ecs::transform::Pivot;
 use crate::ecs::reflect_field::*;
 use crate::ecs::entity::Entity;
@@ -50,6 +50,10 @@ impl<T> InspectorModule for GenericModule<T>
 where
     T: Reflect + Component + Default + 'static,
 {
+    fn undo_component_type(&self) -> Option<&'static str> {
+        Some(comp_type_name::<T>())
+    }
+
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         // Use the new `get_store` helper
         ecs.get_store::<T>().contains(entity)

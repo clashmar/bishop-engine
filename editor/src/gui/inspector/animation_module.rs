@@ -31,6 +31,10 @@ pub struct AnimationModule {
 }
 
 impl InspectorModule for AnimationModule {
+    fn undo_component_type(&self) -> Option<&'static str> {
+        Some(<Animation>::TYPE_NAME)
+    }
+
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         ecs.get::<Animation>(entity).is_some()
     }

@@ -8,8 +8,26 @@ use crate::commands::room::*;
 use crate::gui::gui_constants::*;
 use engine_core::prelude::*;
 use bishop::prelude::*;
+use std::collections::HashMap;
 
 const SCROLL_SPEED: f32 = 5.0;
+
+/// A component change captured during a single inspector draw pass.
+struct ComponentChange {
+    entity: Entity,
+    type_name: &'static str,
+    old_ron: String,
+    new_ron: String,
+}
+
+struct ComponentEditState {
+    /// Snapshot before editing began; never updated after initial capture.
+    old_ron: String,
+    /// Most recent serialised state of the component.
+    new_ron: String,
+    /// Set to `true` each frame the component changes; cleared at end-of-frame.
+    changed_this_frame: bool,
+}
 
 /// Returns the entity that should be used for component operations.
 fn component_target(ecs: &Ecs, entity: Entity) -> Entity {
@@ -40,6 +58,8 @@ pub struct InspectorPanel {
     scroll_state: ScrollState,
     /// Ids of the widgets at the top level of the inspector.
     widget_ids: WidgetIds,
+    /// In-progress component edits awaiting undo command generation.
+    component_edits: HashMap<(Entity, &'static str), ComponentEditState>,
 }
 
 pub struct WidgetIds {
@@ -92,6 +112,7 @@ impl InspectorPanel {
             active_rects: Vec::new(),
             scroll_state: ScrollState::new(),
             widget_ids,
+            component_edits: HashMap::new(),
         }
     }
 
@@ -105,6 +126,7 @@ impl InspectorPanel {
         if self.target != entity {
             self.target = entity;
             self.scroll_state = ScrollState::new();
+            self.component_edits.clear();
         }
     }
 
@@ -120,6 +142,10 @@ impl InspectorPanel {
         const BTN_MARGIN: f32 = 10.0;
 
         if let Some(entity) = self.target {
+            let Some(room_id) = game_ctx.cur_world.current_room_id else {
+                return false;
+            };
+
             if Controls::copy(ctx) {
                 copy_entity(game_ctx.ecs, entity);
             }
@@ -170,6 +196,10 @@ impl InspectorPanel {
             let mut y = content_rect.y + INSET + self.scroll_state.scroll_y;
             let blocked = self.is_blocked(ctx);
             let comp_target = component_target(game_ctx.ecs, entity);
+
+            // Collect changes this frame.
+            let mut comp_changes: Vec<ComponentChange> = Vec::new();
+
             for module in &mut self.modules {
                 let module_entity = if is_proxy_local_module(module.title()) {
                     entity
@@ -182,11 +212,86 @@ impl InspectorPanel {
 
                     if area.is_visible(y, h) {
                         let sub_rect = Rect::new(content_rect.x + INSET, y, content_rect.w - INSET * 2.0, h);
+
+                        let pre_snapshot = module.undo_component_type().and_then(|type_name| {
+                            let reg = COMPONENTS.iter().find(|r| r.type_name == type_name)?;
+                            if (reg.has)(&game_ctx.ecs, module_entity) {
+                                let boxed = (reg.clone)(&game_ctx.ecs, module_entity);
+                                Some((type_name, (reg.to_ron_component)(boxed.as_ref())))
+                            } else {
+                                None
+                            }
+                        });
+
                         module.draw(ctx, blocked, sub_rect, game_ctx, module_entity);
+
+                        if module.take_remove_request() {
+                            if let Some((type_name, ron)) = pre_snapshot {
+                                self.component_edits.remove(&(module_entity, type_name));
+                                push_command(Box::new(RemoveComponentCmd::new(
+                                    module_entity,
+                                    room_id,
+                                    type_name,
+                                    ron,
+                                )));
+                            }
+                        } else if let Some((type_name, pre_ron)) = pre_snapshot {
+                            if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
+                                if (reg.has)(&game_ctx.ecs, module_entity) {
+                                    let boxed = (reg.clone)(&game_ctx.ecs, module_entity);
+                                    let post_ron = (reg.to_ron_component)(boxed.as_ref());
+                                    if pre_ron != post_ron {
+                                        comp_changes.push(ComponentChange { entity: module_entity, type_name, old_ron: pre_ron, new_ron: post_ron });
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     y += h + WIDGET_SPACING;
                 }
+            }
+
+            // Merge frame changes into component_edits tracking state.
+            for change in comp_changes {
+                let state = self.component_edits
+                    .entry((change.entity, change.type_name))
+                    .or_insert_with(|| ComponentEditState {
+                        old_ron: change.old_ron,
+                        new_ron: change.new_ron.clone(),
+                        changed_this_frame: true,
+                    });
+                state.new_ron = change.new_ron;
+                state.changed_this_frame = true;
+            }
+
+            // Flush completed edits (no change this frame) as undo commands.
+            let completed: Vec<ComponentChange> = self.component_edits
+                .iter_mut()
+                .filter_map(|(&(entity, type_name), state)| {
+                    if !state.changed_this_frame {
+                        Some(ComponentChange {
+                            entity,
+                            type_name,
+                            old_ron: state.old_ron.clone(),
+                            new_ron: state.new_ron.clone(),
+                        })
+                    } else {
+                        state.changed_this_frame = false;
+                        None
+                    }
+                })
+                .collect();
+
+            for change in completed {
+                self.component_edits.remove(&(change.entity, change.type_name));
+                push_command(Box::new(UpdateComponentCmd::new(
+                    change.entity,
+                    room_id,
+                    change.type_name,
+                    change.old_ron,
+                    change.new_ron,
+                )));
             }
 
             area.draw_scrollbar(ctx, self.scroll_state.scroll_y);
@@ -209,8 +314,8 @@ impl InspectorPanel {
             .show(ctx)
             {
                 let target = component_target(game_ctx.ecs, entity);
-                if let Some(reg) = COMPONENTS.iter().find(|r| r.type_name == type_name) {
-                    (reg.factory)(game_ctx.ecs, target);
+                if COMPONENTS.iter().any(|r| r.type_name == type_name) {
+                    push_command(Box::new(AddComponentCmd::new(target, room_id, type_name)));
                 } else {
                     onscreen_error!("Component `{}` not found in registry", type_name);
                 }

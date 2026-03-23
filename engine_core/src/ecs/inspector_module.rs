@@ -36,6 +36,15 @@ pub trait InspectorModule {
             .unwrap_or("Module")
     }
 
+    /// The component type name this module edits, used for undo/redo snapshot tracking.
+    /// Return `Some(T::TYPE_NAME)` for single-component modules.
+    /// Return `None` for modules that manage multiple components or don't support undo.
+    fn undo_component_type(&self) -> Option<&'static str>;
+
+    /// Returns `true` and clears the internal flag if a remove was requested this draw.
+    /// Default returns `false`. `CollapsibleModule` overrides this.
+    fn take_remove_request(&mut self) -> bool { false }
+
     /// Return true if the module should get a “Remove” button in the header.
     /// Default is false.
     fn removable(&self) -> bool { false }
@@ -54,14 +63,17 @@ pub struct CollapsibleModule<T: InspectorModule> {
     /// Optional custom title. If `None`, ask the inner module for its
     /// `title()` implementation.
     custom_title: Option<String>,
+    /// Set when the user clicks the "x" remove button; polled by the inspector panel.
+    remove_requested: bool,
 }
 
 impl<T: InspectorModule> CollapsibleModule<T> {
     pub fn new(inner: T) -> Self {
         Self {
             inner,
-            expanded: true, // start opened   
+            expanded: true, // start opened
             custom_title: None,
+            remove_requested: false,
         }
     }
 
@@ -85,6 +97,14 @@ impl<T: InspectorModule> CollapsibleModule<T> {
 impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         self.inner.visible(ecs, entity)
+    }
+
+    fn undo_component_type(&self) -> Option<&'static str> {
+        self.inner.undo_component_type()
+    }
+
+    fn take_remove_request(&mut self) -> bool {
+        std::mem::take(&mut self.remove_requested)
     }
 
     fn draw(
@@ -125,7 +145,7 @@ impl<T: InspectorModule> InspectorModule for CollapsibleModule<T> {
                 BTN_H,
             );
             if Button::new(btn_rect, "x").blocked(blocked).show(ctx) {
-                self.inner.remove(game_ctx, entity);
+                self.remove_requested = true;
                 return; // Don't draw the rest of the module
             }
         }

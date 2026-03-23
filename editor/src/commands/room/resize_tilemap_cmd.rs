@@ -101,8 +101,10 @@ impl EditorCommand for ResizeTilemapCmd {
                         map.height += self.delta as usize;
                         shift_tiles(map, 0, self.delta as isize);
                         for exit in exits.iter_mut() {
-                            let exit_grid_y = room_size.y - exit.position.y;
-                            if (exit_grid_y - 0.0).abs() < f32::EPSILON {
+                            let on_bottom = (exit.position.y - room_size.y).abs() < f32::EPSILON;
+                            let on_left   = (exit.position.x + 1.0).abs() < f32::EPSILON;
+                            let on_right  = (exit.position.x - room_size.x).abs() < f32::EPSILON;
+                            if on_bottom || on_left || on_right {
                                 exit.position.y += self.delta as f32;
                             }
                         }
@@ -121,8 +123,10 @@ impl EditorCommand for ResizeTilemapCmd {
                             map.height -= shrink;
                             shift_tiles(map, 0, -(shrink as isize));
                             for exit in exits.iter_mut() {
-                                let exit_grid_y = room_size.y - exit.position.y;
-                                if (exit_grid_y - 0.0).abs() < f32::EPSILON {
+                                let on_bottom = (exit.position.y - room_size.y).abs() < f32::EPSILON;
+                                let on_left   = (exit.position.x + 1.0).abs() < f32::EPSILON;
+                                let on_right  = (exit.position.x - room_size.x).abs() < f32::EPSILON;
+                                if on_bottom || on_left || on_right {
                                     exit.position.y -= shrink as f32;
                                 }
                             }
@@ -168,7 +172,10 @@ impl EditorCommand for ResizeTilemapCmd {
                         map.width += self.delta as usize;
                         shift_tiles(map, self.delta as isize, 0);
                         for exit in exits.iter_mut() {
-                            if (exit.position.x - room_size.x).abs() < f32::EPSILON {
+                            let on_right  = (exit.position.x - room_size.x).abs() < f32::EPSILON;
+                            let on_top    = (exit.position.y + 1.0).abs() < f32::EPSILON;
+                            let on_bottom = (exit.position.y - room_size.y).abs() < f32::EPSILON;
+                            if on_right || on_top || on_bottom {
                                 exit.position.x += self.delta as f32;
                             }
                         }
@@ -187,7 +194,10 @@ impl EditorCommand for ResizeTilemapCmd {
                             map.width -= shrink;
                             shift_tiles(map, -(shrink as isize), 0);
                             for exit in exits.iter_mut() {
-                                if (exit.position.x - room_size.x).abs() < f32::EPSILON {
+                                let on_right  = (exit.position.x - room_size.x).abs() < f32::EPSILON;
+                                let on_top    = (exit.position.y + 1.0).abs() < f32::EPSILON;
+                                let on_bottom = (exit.position.y - room_size.y).abs() < f32::EPSILON;
+                                if on_right || on_top || on_bottom {
                                     exit.position.x -= shrink as f32;
                                 }
                             }
