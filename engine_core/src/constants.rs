@@ -40,6 +40,9 @@ pub const TEXT_FOLDER: &str = "text";
 /// Name of the folder that contains menu templates.
 pub const MENUS_FOLDER: &str = "menus";
 
+/// Name of the audio folder.
+pub const AUDIO_FOLDER: &str = "audio";
+
 /// Name of the folder for windows-specific game assets.
 pub const WINDOWS_FOLDER: &str = "windows";
 
