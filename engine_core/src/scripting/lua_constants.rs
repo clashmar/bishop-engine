@@ -72,5 +72,17 @@ pub const OPEN_MENU: &str = "open";
 pub const CLOSE_MENU: &str = "close";
 pub const IS_MENU_OPEN: &str = "is_open";
 
+// Audio module
+pub const LUA_AUDIO: &str = "audio";
+pub const AUDIO_FILE: &str = "audio.lua";
+pub const AUDIO_PLAY_MUSIC: &str = "play_music";
+pub const AUDIO_STOP_MUSIC: &str = "stop_music";
+pub const AUDIO_FADE_MUSIC: &str = "fade_music";
+pub const AUDIO_PLAY_SFX: &str = "play_sfx";
+pub const AUDIO_PRELOAD: &str = "preload";
+pub const AUDIO_SET_MASTER_VOLUME: &str = "set_master_volume";
+pub const AUDIO_SET_MUSIC_VOLUME: &str = "set_music_volume";
+pub const AUDIO_SET_SFX_VOLUME: &str = "set_sfx_volume";
+
 
 
