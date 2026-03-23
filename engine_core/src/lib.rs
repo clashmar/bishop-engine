@@ -50,5 +50,5 @@ pub mod prelude {
     pub use crate::worlds::*;
     pub use crate::ui::*;
     #[cfg(feature = "audio")]
-    pub use crate::audio::{AudioCommand, push_audio_command};
+    pub use crate::audio::{AudioCommand, AudioManager, push_audio_command};
 }
