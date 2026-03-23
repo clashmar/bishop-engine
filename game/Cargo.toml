@@ -5,8 +5,9 @@ edition = "2021"
 build = "build.rs"
 
 [features]
-default = ["wgpu"]
+default = ["wgpu", "audio"]
 wgpu = ["bishop/wgpu", "engine_core/wgpu", "widgets/wgpu"]
+audio = ["engine_core/audio", "bishop/audio-cpal"]
 
 [dependencies]
 bishop = { path = "../bishop", default-features = false }

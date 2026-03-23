@@ -42,6 +42,9 @@ pub struct Engine {
     pub accumulator: f32,
     /// Exponential moving average of frame time, used to smooth accumulator input.
     pub smoothed_dt: Option<f32>,
+    /// Background audio service, polled once per frame.
+    #[cfg(feature = "audio")]
+    pub audio_manager: engine_core::audio::AudioManager,
 }
 
 /// Represents the current state of the active game.
@@ -54,6 +57,8 @@ pub enum GameState {
 impl BishopApp for Engine {
     async fn frame(&mut self, ctx: PlatformContext) {
         let raw_dt = ctx.borrow().get_frame_time();
+        #[cfg(feature = "audio")]
+        self.audio_manager.poll(raw_dt);
         let smoothed = smooth_dt(&mut self.smoothed_dt, raw_dt, 0.9);
         let dt = snap_dt(smoothed);
 
@@ -91,7 +96,7 @@ impl BishopApp for Engine {
 
 impl Engine {
     /// Creates a new Engine with the given configuration.
-    pub fn new(
+    pub fn new<B: bishop::audio::AudioBackend>(
         game_instance: Rc<RefCell<GameInstance>>,
         ctx: PlatformContext,
         lua: Lua,
@@ -115,6 +120,8 @@ impl Engine {
             is_playtest,
             accumulator: 0.0,
             smoothed_dt: None,
+            #[cfg(feature = "audio")]
+            audio_manager: engine_core::audio::AudioManager::new::<B>(),
         }
     }
 
