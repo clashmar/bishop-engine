@@ -11,8 +11,11 @@ pub struct CpalBackend {
     _stream: Option<Stream>,
 }
 
-// Stream is not Send by default on some platforms; asserted safe here because
-// _stream is never accessed after start() returns — it is only kept alive by drop.
+// cpal::Stream is not Send because some platform backends (CoreAudio on macOS/iOS,
+// AAudio on Android) require the stream to be dropped on the thread that created it.
+// This impl is safe in the current architecture because CpalBackend is created and
+// dropped exclusively on the main thread (inside Engine, which is single-threaded).
+// If this type is ever moved to a worker thread, this impl must be re-evaluated.
 unsafe impl Send for CpalBackend {}
 
 impl AudioBackend for CpalBackend {
