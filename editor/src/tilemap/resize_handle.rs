@@ -289,7 +289,7 @@ impl ResizeHandle {
         } else {
             Color::new(1.0, 0.0, 0.0, 0.8)
         };
-        ctx.draw_rectangle_lines(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, 2.0, border_color);
+        ctx.draw_rectangle_lines(preview_pos.x, preview_pos.y, preview_size.x, preview_size.y, 1.0, border_color);
 
         // Draw dimension text centered above preview
         let dim_text = format!("{} x {}", new_width, new_height);

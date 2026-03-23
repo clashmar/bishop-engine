@@ -238,7 +238,7 @@ pub fn create_new_world(game: &mut Game) -> World {
     let id = WorldId(Uuid::new_v4());
     let name = "new".to_string();
     let room_id = game.allocate_room_id();
-    let first_room = Room::default(&mut game.ecs, room_id, DEFAULT_GRID_SIZE);
+    let first_room = Room::new(&mut game.ecs, room_id, DEFAULT_GRID_SIZE);
     let room_origin = first_room.position;
 
     let world = World {

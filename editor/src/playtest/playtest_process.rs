@@ -1,6 +1,6 @@
 // editor/src/playtest/playtest_process.rs
 use std::sync::mpsc::{self, Receiver, TryRecvError};
-use engine_core::logging::LOG_HISTORY;
+use engine_core::logging::{LOG_HISTORY, now_str};
 use std::process::{Child, Command, Stdio};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -103,7 +103,7 @@ impl PlaytestProcess {
     fn push_log(level: log::Level, message: &str) {
         let prefixed = format!("[PLAYTEST] {}", message);
         if let Ok(mut history) = LOG_HISTORY.lock() {
-            history.push(level, prefixed);
+            history.push(level, prefixed, now_str(), "playtest", 0);
         }
     }
 }

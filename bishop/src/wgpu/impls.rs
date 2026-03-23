@@ -141,6 +141,14 @@ impl Draw for WgpuContext {
             .draw_texture_ex(texture.inner(), x, y, color, params);
         self.record_texture_segment(prev);
     }
+
+    fn push_clip_rect(&mut self, rect: crate::types::Rect) {
+        self.push_clip_rect(rect);
+    }
+
+    fn pop_clip_rect(&mut self) {
+        self.pop_clip_rect();
+    }
 }
 
 impl Text for WgpuContext {

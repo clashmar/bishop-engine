@@ -18,6 +18,10 @@ const MAX_LOG_ENTRIES: usize = 500;
 pub struct LogEntry {
     pub level: log::Level,
     pub message: String,
+    pub time: String,
+    pub file: &'static str,
+    pub line: u32,
+    pub count: u32,
 }
 
 /// Stores log entries with a monotonically increasing counter for change detection.
@@ -28,11 +32,19 @@ pub struct LogHistory {
 }
 
 impl LogHistory {
-    pub fn push(&mut self, level: log::Level, message: String) {
+    pub fn push(&mut self, level: log::Level, message: String, time: String, file: &'static str, line: u32) {
+        if let Some(last) = self.entries.last_mut() {
+            if last.level == level && last.message == message && last.file == file && last.line == line {
+                last.count += 1;
+                last.time = time;
+                self.total_pushed += 1;
+                return;
+            }
+        }
         if self.entries.len() >= MAX_LOG_ENTRIES {
             self.entries.remove(0);
         }
-        self.entries.push(LogEntry { level, message });
+        self.entries.push(LogEntry { level, message, time, file, line, count: 1 });
         self.total_pushed += 1;
     }
 
@@ -60,17 +72,23 @@ pub static LOG_HISTORY: Lazy<Mutex<LogHistory>> = Lazy::new(|| Mutex::new(LogHis
 // Global mutable buffer that stores the most recent message (kept for backwards compatibility).
 pub static LAST_LOG: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
 
+/// Returns the current time formatted as `HH:MM:SS.mmm`.
+pub fn now_str() -> String {
+    format!("{}", DeferredNow::new().format("%H:%M:%S%.3f"))
+}
+
 /// Helper macro that allow logs to be displayed by
 /// the program and printed to the console.
 #[macro_export]
 macro_rules! onscreen_log {
     ($lvl:expr, $($arg:tt)*) => {{
-        println!($($arg)*);
-        log::log!($lvl, $($arg)*);
         let msg = format!($($arg)*);
+        let time = $crate::logging::now_str();
+        println!("{} {:5} [{}:{}] {}", time, $lvl, file!(), line!(), &msg);
+        log::log!($lvl, $($arg)*);
         {
             let mut history = $crate::logging::LOG_HISTORY.lock().unwrap();
-            history.push($lvl, msg.clone());
+            history.push($lvl, msg.clone(), time, file!(), line!());
         }
         let mut buf = $crate::logging::LAST_LOG.lock().unwrap();
         *buf = msg;
@@ -124,10 +142,12 @@ pub fn init_file_logger() {
     ) -> Result<()> {
         write!(
             write,
-            "{} {:5} [{}] {}",
+            "{} {:5} [{}  {}:{}] {}",
             now.format("%Y-%m-%d %H:%M:%S%.3f"),
             record.level(),
             record.module_path().unwrap_or("<unknown>"),
+            record.file().unwrap_or("<unknown>"),
+            record.line().unwrap_or(0),
             &record.args()
         )
     }

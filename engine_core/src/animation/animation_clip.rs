@@ -253,11 +253,6 @@ pub fn resolve_sprite_id(
     // Build the path
     let path: PathBuf = Path::new(&variant_folder.0).join(filename);
 
-    // Fast-path if already cached in AssetManager
-    if let Some(&id) = asset_manager.path_to_sprite_id.get(&path) {
-        return id;
-    }
-
     match asset_manager.init_texture(loader, &path) {
         Ok(id) => id,
         Err(_) => SpriteId(0), // Sentinel

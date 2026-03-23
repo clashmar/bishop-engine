@@ -329,9 +329,10 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         list_width: f32,
     ) -> Option<T> {
         const MAX_VISIBLE_ROWS: usize = 8;
+        const SCROLL_SPEED: f32 = 5.0;
 
-        let filter_str = get_filter(self.id);
-        let filter_lower = filter_str.to_lowercase();
+        let prev_filter = get_filter(self.id);
+        let filter_lower = prev_filter.to_lowercase();
 
         let filtered: Vec<&T> = if filter_lower.is_empty() {
             self.options.iter().collect()
@@ -341,9 +342,10 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
             }).collect()
         };
 
-        let visible_entries = MAX_VISIBLE_ROWS.min(filtered.len());
-        let filter_h = self.rect.h;
-        let entries_h = self.rect.h * visible_entries as f32;
+        let visible_rows = MAX_VISIBLE_ROWS.min(filtered.len());
+        let row_h = self.rect.h;
+        let filter_h = row_h;
+        let entries_h = row_h * visible_rows as f32;
         let popup_h = filter_h + entries_h;
 
         let drop_down_y = self.rect.y + self.rect.h + self.y_offset;
@@ -354,26 +356,50 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
         let popup_rect = Rect::new(self.rect.x, popup_y, list_width, popup_h);
         state.rect = popup_rect;
 
-        // Background and border
+        // Background
         ctx.draw_rectangle(popup_rect.x, popup_rect.y, popup_rect.w, popup_rect.h, FIELD_BACKGROUND_COLOR);
-        ctx.draw_rectangle_lines(popup_rect.x, popup_rect.y, popup_rect.w, popup_rect.h, 2., OUTLINE_COLOR);
 
         // Filter TextInput
         let filter_rect = Rect::new(popup_rect.x, popup_y, list_width, filter_h);
         let filter_id = WidgetId(self.id.0.wrapping_add(FILTER_ID_OFFSET));
-        let (new_filter, _) = TextInput::new(filter_id, filter_rect, &filter_str)
+        let (new_filter, _) = TextInput::new(filter_id, filter_rect, &prev_filter)
             .in_dropdown()
             .live()
             .show(ctx);
+
+        // Reset scroll when filter changes so the user is never stranded past new results
+        if new_filter != prev_filter {
+            state.scroll_offset = 0.0;
+        }
         set_filter(self.id, new_filter);
 
-        // Entries
+        // Scroll offset
+        let total_entries_h = row_h * filtered.len() as f32;
+        let max_offset = (total_entries_h - entries_h).max(0.0);
+
         let entries_y = popup_y + filter_h;
         let mouse_pos: Vec2 = ctx.mouse_position().into();
+        let entries_rect = Rect::new(popup_rect.x, entries_y, list_width, entries_h);
+
+        if entries_rect.contains(mouse_pos) {
+            let (_, wheel_y) = ctx.mouse_wheel();
+            if wheel_y != 0.0 {
+                state.scroll_offset = (state.scroll_offset - wheel_y * SCROLL_SPEED).clamp(0.0, max_offset);
+            }
+        }
+
+        // Entries 
+        ctx.push_clip_rect(entries_rect);
         let mut result = None;
 
-        for (i, opt) in filtered.iter().take(visible_entries).enumerate() {
-            let entry_rect = Rect::new(popup_rect.x, entries_y + i as f32 * self.rect.h, list_width, self.rect.h);
+        for (i, opt) in filtered.iter().enumerate() {
+            let draw_y = entries_y + i as f32 * row_h - state.scroll_offset;
+
+            if draw_y + row_h <= entries_y || draw_y >= entries_y + entries_h {
+                continue;
+            }
+
+            let entry_rect = Rect::new(popup_rect.x, draw_y, list_width, row_h);
             let hovered = entry_rect.contains(mouse_pos);
 
             if hovered {
@@ -405,6 +431,31 @@ impl<'a, T: Clone + PartialEq + Display + 'static> Dropdown<'a, T> {
                 break;
             }
         }
+
+        ctx.pop_clip_rect();
+
+        // Scrollbar when content overflows visible area
+        if total_entries_h > entries_h {
+            let thumb_h = (entries_h / total_entries_h) * entries_h;
+            let thumb_y = entries_y + (state.scroll_offset / max_offset) * (entries_h - thumb_h);
+
+            ctx.draw_rectangle(
+                popup_rect.x + popup_rect.w - 6.,
+                entries_y,
+                6.,
+                entries_h,
+                Color::new(0.2, 0.2, 0.2, 0.5),
+            );
+            ctx.draw_rectangle(
+                popup_rect.x + popup_rect.w - 6.,
+                thumb_y,
+                6.,
+                thumb_h,
+                Color::new(0.6, 0.6, 0.6, 0.9),
+            );
+        }
+
+        ctx.draw_rectangle_lines(popup_rect.x, popup_rect.y, popup_rect.w, popup_rect.h, 2., OUTLINE_COLOR);
 
         result
     }

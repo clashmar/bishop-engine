@@ -185,13 +185,12 @@ pub fn get_room_cameras(ecs: &Ecs, room_id: RoomId) -> Vec<(Entity, RoomCamera)>
 }
 
 /// Converts a `RoomCamera` component into a `GameCamera` from its Entity.
-pub fn room_to_game_camera<C: BishopContext>(
-    ctx: &mut C,
+/// The render target is not set here; callers must assign it after selecting the active camera.
+pub fn room_to_game_camera(
     ecs: &Ecs,
     entity: &Entity,
     room_camera: &RoomCamera,
     player_pos: Vec2,
-    grid_size: f32,
 ) -> GameCamera {
     let pos_store = ecs.get_store::<Transform>();
     let origin = pos_store
@@ -210,7 +209,6 @@ pub fn room_to_game_camera<C: BishopContext>(
     let camera = Camera2D {
         target,
         zoom: room_camera.zoom,
-        render_target: Some(game_render_target(ctx, grid_size)),
         ..Default::default()
     };
 

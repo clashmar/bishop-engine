@@ -184,9 +184,7 @@ fn collect_interpolated_layer_map<'a>(
             continue;
         }
 
-        // Interpolate the draw position
-        let draw_pos =
-            interpolate_draw_position(*entity, transform.position, alpha, prev_positions);
+        let draw_pos = interpolate_draw_position(*entity, transform.position, alpha, prev_positions);
 
         // Default layer is 0 if missing
         let z = layer_store.get(*entity).map_or(0, |l| l.z);

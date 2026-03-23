@@ -48,17 +48,7 @@ impl ConsolePanel {
         }
     }
 
-    fn level_prefix(level: log::Level) -> &'static str {
-        match level {
-            log::Level::Error => "[ERROR] ",
-            log::Level::Warn => "[WARN]  ",
-            log::Level::Info => "[INFO]  ",
-            log::Level::Debug => "[DEBUG] ",
-            log::Level::Trace => "[TRACE] ",
-        }
-    }
-
-    /// Wraps text to fit within the given pixel width.
+/// Wraps text to fit within the given pixel width.
     fn wrap_text(
         ctx: &WgpuContext, 
         text: &str, 
@@ -317,11 +307,11 @@ impl PanelDefinition for ConsolePanel {
 
         if needs_update {
             // Rebuild cache from current LOG_HISTORY entries
-            let entries: Vec<(log::Level, String)> = LOG_HISTORY
+            let entries: Vec<(log::Level, String, String, &'static str, u32, u32)> = LOG_HISTORY
                 .lock()
                 .map(|history| {
                     history.entries().iter()
-                        .map(|e| (e.level, e.message.clone()))
+                        .map(|e| (e.level, e.message.clone(), e.time.clone(), e.file, e.line, e.count))
                         .collect()
                 })
                 .unwrap_or_default();
@@ -329,9 +319,13 @@ impl PanelDefinition for ConsolePanel {
             // Calculate usable width for wrapping (account for potential scrollbar)
             let usable_w = content_rect.w - 6.0 - 12.0;
 
-            self.cached_wrapped = entries.iter().map(|(level, message)| {
-                let prefix = Self::level_prefix(*level);
-                let full_message = format!("{}{}", prefix, message);
+            self.cached_wrapped = entries.iter().map(|(level, message, time, file, line, count)| {
+                let count_suffix = if *count > 1 { format!(" ×{}", count) } else { String::new() };
+                let full_message = if *line > 0 {
+                    format!("{} [{}:{}] {}{}", time, file, line, message, count_suffix)
+                } else {
+                    format!("{} [{}] {}{}", time, file, message, count_suffix)
+                };
                 let lines = Self::wrap_text(ctx, &full_message, usable_w, font_size);
                 (*level, lines)
             }).collect();
