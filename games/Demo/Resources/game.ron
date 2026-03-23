@@ -5,119 +5,119 @@
     ecs: (
         components: [
             /*[0]*/ (
-                type_name: "Children",
-                data: "(\n    data: {},\n)",
+                type_name: "Global",
+                data: "(\n    data: {\n        (3): (),\n    },\n)",
             ),
             /*[1]*/ (
-                type_name: "Damage",
-                data: "(\n    data: {},\n)",
+                type_name: "Velocity",
+                data: "(\n    data: {\n        (3): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
             ),
             /*[2]*/ (
-                type_name: "Parent",
-                data: "(\n    data: {},\n)",
+                type_name: "Sprite",
+                data: "(\n    data: {\n        (4): (\n            sprite: (8),\n        ),\n    },\n)",
             ),
             /*[3]*/ (
-                type_name: "Transform",
-                data: "(\n    data: {\n        (1): (\n            visible: true,\n            position: (64.0, 48.0),\n            pivot: TopLeft,\n        ),\n        (13): (\n            visible: true,\n            position: (-256.0, 12.0),\n            pivot: CenterLeft,\n        ),\n        (4): (\n            visible: true,\n            position: (76.0, 120.0),\n            pivot: BottomCenter,\n        ),\n        (2): (\n            visible: true,\n            position: (11.0, 120.0),\n            pivot: BottomCenter,\n        ),\n    },\n)",
+                type_name: "SubPixel",
+                data: "(\n    data: {\n        (3): (),\n    },\n)",
             ),
             /*[4]*/ (
-                type_name: "Name",
-                data: "(\n    data: {\n        (13): (\"Camera 1\"),\n        (1): (\"Camera 1\"),\n        (4): (\"Entity\"),\n        (2): (\"Player Proxy\"),\n        (3): (\"Player\"),\n    },\n)",
+                type_name: "Grounded",
+                data: "(\n    data: {\n        (3): (false),\n    },\n)",
             ),
             /*[5]*/ (
-                type_name: "SpeechBubble",
-                data: "(\n    data: {},\n)",
+                type_name: "Transform",
+                data: "(\n    data: {\n        (4): (\n            visible: true,\n            position: (76.0, 120.0),\n            pivot: BottomCenter,\n        ),\n        (1): (\n            visible: true,\n            position: (64.0, 48.0),\n            pivot: TopLeft,\n        ),\n        (13): (\n            visible: true,\n            position: (-256.0, 12.0),\n            pivot: CenterLeft,\n        ),\n        (2): (\n            visible: true,\n            position: (11.0, 120.0),\n            pivot: BottomCenter,\n        ),\n    },\n)",
             ),
             /*[6]*/ (
-                type_name: "Script",
-                data: "(\n    data: {\n        (4): (\n            script_id: (1),\n            data: (\n                fields: {\n                    \"name\": Text(\"NPC\"),\n                    \"dialogue_id\": Text(\"dialogue/npcs/npc\"),\n                },\n            ),\n        ),\n        (3): (\n            script_id: (2),\n            data: (\n                fields: {\n                    \"health\": Int(100),\n                    \"jump_speed\": Int(200),\n                    \"run_speed\": Int(180),\n                    \"name\": Text(\"Player\"),\n                    \"speed\": Int(100),\n                },\n            ),\n        ),\n    },\n)",
+                type_name: "Name",
+                data: "(\n    data: {\n        (3): (\"Player\"),\n        (13): (\"Camera 1\"),\n        (1): (\"Camera 1\"),\n        (4): (\"Entity\"),\n        (2): (\"Player Proxy\"),\n    },\n)",
             ),
             /*[7]*/ (
                 type_name: "Player",
                 data: "(\n    data: {\n        (3): (),\n    },\n)",
             ),
             /*[8]*/ (
-                type_name: "CurrentFrame",
+                type_name: "PhysicsBody",
                 data: "(\n    data: {\n        (3): (),\n    },\n)",
             ),
             /*[9]*/ (
-                type_name: "CurrentRoom",
-                data: "(\n    data: {\n        (4): ((1)),\n        (13): ((4)),\n        (2): ((1)),\n        (1): ((1)),\n    },\n)",
-            ),
-            /*[10]*/ (
-                type_name: "Grounded",
-                data: "(\n    data: {\n        (3): (false),\n    },\n)",
-            ),
-            /*[11]*/ (
                 type_name: "Light",
                 data: "(\n    data: {},\n)",
             ),
-            /*[12]*/ (
+            /*[10]*/ (
+                type_name: "Collider",
+                data: "(\n    data: {},\n)",
+            ),
+            /*[11]*/ (
                 type_name: "Glow",
                 data: "(\n    data: {},\n)",
             ),
-            /*[13]*/ (
-                type_name: "Solid",
+            /*[12]*/ (
+                type_name: "Children",
                 data: "(\n    data: {},\n)",
             ),
+            /*[13]*/ (
+                type_name: "RoomCamera",
+                data: "(\n    data: {\n        (1): (\n            zoom: (0.0078125, 0.013888889),\n            room_id: (1),\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (13): (\n            zoom: (0.0052083335, 0.009259259),\n            room_id: (4),\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
+            ),
             /*[14]*/ (
-                type_name: "Velocity",
-                data: "(\n    data: {\n        (3): (\n            x: 0.0,\n            y: 0.0,\n        ),\n    },\n)",
+                type_name: "CurrentRoom",
+                data: "(\n    data: {\n        (4): ((1)),\n        (2): ((1)),\n        (13): ((4)),\n        (1): ((1)),\n    },\n)",
             ),
             /*[15]*/ (
-                type_name: "RoomCamera",
-                data: "(\n    data: {\n        (13): (\n            zoom: (0.0052083335, 0.009259259),\n            room_id: (4),\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n        (1): (\n            zoom: (0.0078125, 0.013888889),\n            room_id: (1),\n            zoom_mode: Step,\n            camera_mode: Fixed,\n        ),\n    },\n)",
+                type_name: "PlayerProxy",
+                data: "(\n    data: {\n        (2): (),\n    },\n)",
             ),
             /*[16]*/ (
-                type_name: "Collider",
-                data: "(\n    data: {\n        (3): (\n            width: 6.0,\n            height: 16.0,\n        ),\n    },\n)",
+                type_name: "Script",
+                data: "(\n    data: {\n        (4): (\n            script_id: (1),\n            data: (\n                fields: {\n                    \"dialogue_id\": Text(\"dialogue/npcs/npc\"),\n                    \"name\": Text(\"NPC\"),\n                },\n            ),\n        ),\n        (3): (\n            script_id: (2),\n            data: (\n                fields: {\n                    \"run_speed\": Int(180),\n                    \"name\": Text(\"Player\"),\n                    \"speed\": Int(100),\n                    \"health\": Int(100),\n                    \"jump_speed\": Int(200),\n                },\n            ),\n        ),\n    },\n)",
             ),
             /*[17]*/ (
                 type_name: "Layer",
                 data: "(\n    data: {},\n)",
             ),
             /*[18]*/ (
-                type_name: "PhysicsBody",
-                data: "(\n    data: {\n        (3): (),\n    },\n)",
+                type_name: "Damage",
+                data: "(\n    data: {},\n)",
             ),
             /*[19]*/ (
                 type_name: "Walkable",
                 data: "(\n    data: {},\n)",
             ),
             /*[20]*/ (
-                type_name: "Global",
-                data: "(\n    data: {\n        (3): (),\n    },\n)",
-            ),
-            /*[21]*/ (
                 type_name: "FacingDirection",
                 data: "(\n    data: {},\n)",
             ),
+            /*[21]*/ (
+                type_name: "Animation",
+                data: "(\n    data: {\n        (3): (\n            clips: {\n                Run: (\n                    frame_size: (12.0, 16.0),\n                    cols: 8,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Walk: (\n                    frame_size: (10.0, 16.0),\n                    cols: 4,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Fall: (\n                    frame_size: (6.0, 14.0),\n                    cols: 1,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Jump: (\n                    frame_size: (10.0, 16.0),\n                    cols: 4,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Custom(\"Fidget\"): (\n                    frame_size: (6.0, 15.0),\n                    cols: 8,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n            },\n            variant: (\"animations/player/male\"),\n        ),\n    },\n)",
+            ),
             /*[22]*/ (
-                type_name: "SubPixel",
+                type_name: "CurrentFrame",
                 data: "(\n    data: {\n        (3): (),\n    },\n)",
             ),
             /*[23]*/ (
-                type_name: "PlayerProxy",
-                data: "(\n    data: {\n        (2): (),\n    },\n)",
+                type_name: "SpeechBubble",
+                data: "(\n    data: {},\n)",
             ),
             /*[24]*/ (
                 type_name: "Kinematic",
                 data: "(\n    data: {},\n)",
             ),
             /*[25]*/ (
-                type_name: "Sprite",
-                data: "(\n    data: {\n        (4): (\n            sprite: (8),\n        ),\n    },\n)",
-            ),
-            /*[26]*/ (
                 type_name: "Interactable",
                 data: "(\n    data: {\n        (4): (\n            range: 20.0,\n        ),\n    },\n)",
             ),
+            /*[26]*/ (
+                type_name: "Parent",
+                data: "(\n    data: {},\n)",
+            ),
             /*[27]*/ (
-                type_name: "Animation",
-                data: "(\n    data: {\n        (3): (\n            clips: {\n                Fall: (\n                    frame_size: (6.0, 14.0),\n                    cols: 1,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Idle: (\n                    frame_size: (6.0, 16.0),\n                    cols: 5,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Run: (\n                    frame_size: (12.0, 16.0),\n                    cols: 8,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Custom(\"Fidget\"): (\n                    frame_size: (6.0, 15.0),\n                    cols: 8,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Jump: (\n                    frame_size: (10.0, 16.0),\n                    cols: 4,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n                Walk: (\n                    frame_size: (10.0, 16.0),\n                    cols: 4,\n                    rows: 1,\n                    fps: 10.0,\n                    frame_durations: [],\n                    looping: true,\n                    offset: (0.0, 0.0),\n                    mirrored: true,\n                ),\n            },\n            variant: (\"animations/player/male\"),\n        ),\n    },\n)",
+                type_name: "Solid",
+                data: "(\n    data: {},\n)",
             ),
         ],
-        next_entity_id: 13,
+        next_entity_id: 14,
     ),
     worlds: [
         /*[0]*/ (
@@ -133,17 +133,17 @@
                         /*[0]*/ (
                             position: (-1.0, 17.0),
                             direction: Left,
-                            target_room_id: Some((4)),
+                            target_room_id: None,
                         ),
                         /*[1]*/ (
                             position: (-1.0, 16.0),
                             direction: Left,
-                            target_room_id: Some((4)),
+                            target_room_id: None,
                         ),
                         /*[2]*/ (
                             position: (-1.0, 15.0),
                             direction: Left,
-                            target_room_id: Some((4)),
+                            target_room_id: None,
                         ),
                     ],
                     adjacent_rooms: [],
@@ -153,7 +153,7 @@
                             tilemap: (
                                 width: 32,
                                 height: 18,
-                                tiles: "25,17,3;27,16,3;31,16,3;23,4,5;24,4,5;31,15,3;21,6,5;21,7,5;21,5,5;21,4,5;23,7,5;31,17,3;0,9,5;26,17,3;31,14,3;29,15,3;0,8,5;29,17,3;28,17,3;28,16,3;30,16,3;27,17,3;22,7,5;30,15,3;29,16,3;24,7,5;30,17,3;22,4,5;",
+                                tiles: "27,16,3;31,17,3;21,6,5;0,8,5;30,15,3;29,16,3;31,14,3;26,17,3;30,16,3;24,7,5;22,4,5;24,4,5;22,7,5;28,17,3;21,5,5;0,9,5;29,15,3;23,4,5;29,17,3;21,7,5;31,16,3;25,17,3;30,17,3;27,17,3;31,15,3;23,7,5;28,16,3;21,4,5;",
                                 background: (0.78, 0.78, 0.78, 1.0),
                             ),
                         ),
@@ -163,23 +163,48 @@
                 /*[1]*/ (
                     id: (4),
                     name: "untitled",
-                    position: (-448.0, -96.0),
-                    size: (48.0, 27.0),
+                    position: (-600.0, -104.0),
+                    size: (67.0, 28.0),
                     exits: [
                         /*[0]*/ (
-                            position: (48.0, 24.0),
+                            position: (67.0, 19.0),
                             direction: Right,
-                            target_room_id: Some((1)),
+                            target_room_id: None,
                         ),
                         /*[1]*/ (
-                            position: (48.0, 25.0),
+                            position: (67.0, 20.0),
                             direction: Right,
-                            target_room_id: Some((1)),
+                            target_room_id: None,
                         ),
                         /*[2]*/ (
-                            position: (48.0, 26.0),
+                            position: (67.0, 21.0),
                             direction: Right,
-                            target_room_id: Some((1)),
+                            target_room_id: None,
+                        ),
+                        /*[3]*/ (
+                            position: (49.0, -1.0),
+                            direction: Up,
+                            target_room_id: None,
+                        ),
+                        /*[4]*/ (
+                            position: (50.0, 28.0),
+                            direction: Down,
+                            target_room_id: None,
+                        ),
+                        /*[5]*/ (
+                            position: (25.0, 28.0),
+                            direction: Down,
+                            target_room_id: None,
+                        ),
+                        /*[6]*/ (
+                            position: (-1.0, 13.0),
+                            direction: Left,
+                            target_room_id: None,
+                        ),
+                        /*[7]*/ (
+                            position: (-1.0, 4.0),
+                            direction: Left,
+                            target_room_id: None,
                         ),
                     ],
                     adjacent_rooms: [],
@@ -187,8 +212,8 @@
                         /*[0]*/ (
                             id: "default",
                             tilemap: (
-                                width: 48,
-                                height: 27,
+                                width: 67,
+                                height: 28,
                                 background: (0.78, 0.78, 0.78, 1.0),
                             ),
                         ),
@@ -208,30 +233,11 @@
     ],
     asset_manager: (
         sprite_id_to_path: {
-            (7): "animations/player/male/Run.png",
-            (2): "animations/player/male/Idle.png",
-            (6): "animations/player/male/Jump.png",
-            (5): "animations/player/male/Walk.png",
+            (5): "animations/player/male/Idle.png",
             (8): "sprites/cat.png",
-            (4): "animations/player/male/Fall.png",
             (1): "sprites/tiles/Tile24.png",
-            (3): "animations/player/male/Fidget.png",
         },
         tile_defs: {
-            (5): (
-                sprite_id: (0),
-                components: [
-                    /*[0]*/ Walkable(false),
-                    /*[1]*/ Solid(false),
-                ],
-            ),
-            (3): (
-                sprite_id: (1),
-                components: [
-                    /*[0]*/ Walkable(true),
-                    /*[1]*/ Solid(true),
-                ],
-            ),
             (2): (
                 sprite_id: (1),
                 components: [
@@ -239,7 +245,7 @@
                     /*[1]*/ Solid(true),
                 ],
             ),
-            (4): (
+            (3): (
                 sprite_id: (1),
                 components: [
                     /*[0]*/ Walkable(true),
@@ -253,17 +259,26 @@
                     /*[1]*/ Solid(true),
                 ],
             ),
+            (5): (
+                sprite_id: (0),
+                components: [
+                    /*[0]*/ Walkable(false),
+                    /*[1]*/ Solid(false),
+                ],
+            ),
+            (4): (
+                sprite_id: (1),
+                components: [
+                    /*[0]*/ Walkable(true),
+                    /*[1]*/ Solid(true),
+                ],
+            ),
         },
         next_tile_def_id: 6,
         ref_counts: {
             (1): 4,
             (5): 1,
-            (6): 1,
-            (4): 1,
-            (2): 1,
-            (3): 1,
             (8): 1,
-            (7): 1,
         },
     ),
     script_manager: (
@@ -272,8 +287,8 @@
             (2): "player.lua",
         },
         ref_counts: {
-            (1): 1,
             (2): 1,
+            (1): 1,
         },
     ),
     current_world_id: ("d1639734-8eb3-4088-b1cd-44a686e2d428"),

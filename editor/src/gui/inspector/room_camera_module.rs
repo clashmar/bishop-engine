@@ -14,6 +14,10 @@ pub struct RoomCameraModule {
 }
 
 impl InspectorModule for RoomCameraModule {
+    fn undo_component_type(&self) -> Option<&'static str> {
+        None
+    }
+
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         ecs.get::<RoomCamera>(entity).is_some()
     }

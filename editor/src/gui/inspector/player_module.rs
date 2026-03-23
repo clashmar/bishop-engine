@@ -6,6 +6,10 @@ use bishop::prelude::*;
 pub struct PlayerModule {}
 
 impl InspectorModule for PlayerModule {
+    fn undo_component_type(&self) -> Option<&'static str> {
+        None
+    }
+
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         ecs.has::<Player>(entity) || ecs.has::<PlayerProxy>(entity)
     }

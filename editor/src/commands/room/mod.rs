@@ -10,6 +10,9 @@ mod copy_entity;
 mod set_parent_cmd;
 mod remove_parent_cmd;
 mod resize_tilemap_cmd;
+mod update_component_cmd;
+mod add_component_cmd;
+mod remove_component_cmd;
 
 pub use alt_drag_copy_cmd::*;
 pub use batch_delete_entities_cmd::*;
@@ -22,3 +25,6 @@ pub use copy_entity::*;
 pub use set_parent_cmd::*;
 pub use remove_parent_cmd::*;
 pub use resize_tilemap_cmd::*;
+pub use update_component_cmd::*;
+pub use add_component_cmd::*;
+pub use remove_component_cmd::*;

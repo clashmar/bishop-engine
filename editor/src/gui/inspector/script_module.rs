@@ -18,6 +18,10 @@ const MIN_WIDGET_WIDTH: f32 = 80.0;
 const LABEL_PADDING: f32 = 10.0;
 
 impl InspectorModule for ScriptModule {
+    fn undo_component_type(&self) -> Option<&'static str> {
+        Some(<Script>::TYPE_NAME)
+    }
+
     fn visible(&self, ecs: &Ecs, entity: Entity) -> bool {
         ecs.get::<Script>(entity).is_some()
     }
