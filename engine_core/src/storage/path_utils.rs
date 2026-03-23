@@ -62,6 +62,11 @@ pub fn menus_folder() -> PathBuf {
     resources_folder_current().join(MENUS_FOLDER)
 }
 
+/// Path to the audio folder inside the resources folder (Editor/Game).
+pub fn audio_folder() -> PathBuf {
+    resources_folder_current().join(AUDIO_FOLDER)
+}
+
 /// Path to the windows folder inside the game folder (Editor).
 pub fn windows_folder() -> PathBuf {
     game_folder(&game_name()).join(WINDOWS_FOLDER)
