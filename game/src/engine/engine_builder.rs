@@ -34,6 +34,13 @@ impl EngineBuilder {
         if let Err(e) = register_lua_contexts(&self.lua, game_instance.clone(), ctx.clone()) {
             onscreen_error!("Could not register lua contexts: {}", e);
         }
-        Engine::new(game_instance, ctx, self.lua, self.camera_manager, grid_size, is_playtest)
+        Engine::new::<bishop::prelude::DefaultAudioBackend>(
+            game_instance,
+            ctx,
+            self.lua,
+            self.camera_manager,
+            grid_size,
+            is_playtest,
+        )
     }
 }
