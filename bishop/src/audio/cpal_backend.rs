@@ -48,7 +48,7 @@ impl AudioBackend for CpalBackend {
 
         let config = StreamConfig {
             channels: 2,
-            sample_rate: supported.sample_rate(),
+            sample_rate: cpal::SampleRate(44100),
             buffer_size: cpal::BufferSize::Default,
         };
 
