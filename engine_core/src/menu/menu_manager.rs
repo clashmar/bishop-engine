@@ -273,6 +273,7 @@ impl MenuManager {
                                 }
                             }
                         }
+                        MenuElementKind::Slider(_) => {}
                     }
                 }
             }
