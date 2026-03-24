@@ -173,8 +173,8 @@ impl AudioManager {
             if fade.remaining <= 0.0 {
                 true
             } else {
-                let progress = 1.0 - (fade.remaining / fade.duration).clamp(0.0, 1.0);
-                let linear = self.master_volume * self.music_volume * (1.0 - progress);
+                let ratio = (fade.remaining / fade.duration).clamp(0.0, 1.0);
+                let linear = self.master_volume * self.music_volume * ratio;
                 self.music_group
                     .control::<Gain<Mixer<[f32; 2]>>, _>()
                     .set_amplitude_ratio(linear);
