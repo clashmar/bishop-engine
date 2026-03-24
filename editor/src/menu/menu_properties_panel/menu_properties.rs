@@ -214,6 +214,7 @@ impl MenuEditor {
                         MenuElementKind::Button(b) => format!("Button: {}", b.text_key),
                         MenuElementKind::Panel(_) => "Panel".to_string(),
                         MenuElementKind::LayoutGroup(_) => "Layout Group".to_string(),
+                        MenuElementKind::Slider(s) => format!("Slider: {}", s.text_key),
                     }
                 };
                 (i, label)

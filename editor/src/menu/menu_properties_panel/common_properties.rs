@@ -21,6 +21,7 @@ impl MenuEditor {
                 MenuElementKind::Button(_) => "Button",
                 MenuElementKind::Panel(_) => "Panel",
                 MenuElementKind::LayoutGroup(_) => "Layout Group",
+                MenuElementKind::Slider(_) => "Slider",
             };
             (element.name.clone(), element.rect, element.z_order, type_label)
         };
