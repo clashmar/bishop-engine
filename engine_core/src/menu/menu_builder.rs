@@ -141,6 +141,24 @@ impl LayoutGroupBuilder {
         self
     }
 
+    /// Adds a managed slider child.
+    pub fn slider(mut self, text_key: &str, key: &str, min: f32, max: f32, step: f32, default: f32) -> Self {
+        let element = MenuElement::slider(
+            text_key.to_string(),
+            key.to_string(),
+            min,
+            max,
+            step,
+            default,
+            Rect::new(0.0, 0.0, 0.0, 0.0),
+        );
+        self.children.push(LayoutChild {
+            element,
+            managed: true,
+        });
+        self
+    }
+
     /// Adds a child element with explicit managed flag.
     pub fn child(mut self, element: MenuElement, managed: bool) -> Self {
         self.children.push(LayoutChild { element, managed });
