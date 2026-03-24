@@ -21,7 +21,6 @@ pub mod tiles;
 pub mod worlds;
 pub mod task;
 pub mod ui;
-#[cfg(feature = "audio")]
 pub mod audio;
 
 /// Prelude module for convenient imports.
@@ -49,6 +48,5 @@ pub mod prelude {
     pub use crate::tiles::*;
     pub use crate::worlds::*;
     pub use crate::ui::*;
-    #[cfg(feature = "audio")]
     pub use crate::audio::{AudioCommand, AudioManager, push_audio_command};
 }

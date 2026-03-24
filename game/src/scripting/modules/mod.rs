@@ -4,5 +4,4 @@ pub mod engine_module;
 pub mod input_module;
 pub mod logging_module;
 pub mod menu_module;
-#[cfg(feature = "audio")]
 pub mod audio_module;
