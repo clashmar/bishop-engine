@@ -22,6 +22,8 @@ pub struct MenuManager {
     action_handler: Box<dyn MenuActionHandler>,
     /// The game viewport rect used to transform normalized menu coordinates to screen space.
     viewport: Rect,
+    /// Current values for slider elements, keyed by slider key.
+    slider_values: HashMap<String, f32>,
 }
 
 impl Default for MenuManager {
@@ -57,6 +59,7 @@ impl MenuManager {
             focus: MenuFocus::new(0),
             action_handler: Box::new(NoOpActionHandler),
             viewport: Rect::new(0.0, 0.0, 1.0, 1.0),
+            slider_values: HashMap::new(),
         };
         manager.register_default_menus();
         manager
@@ -269,11 +272,46 @@ impl MenuManager {
                                             focusable_idx += 1;
                                         }
                                     }
+                                    MenuElementKind::Slider(slider) => {
+                                        let value = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
+                                        let label_rect = Rect::new(screen_rect.x, screen_rect.y, screen_rect.w * 0.4, screen_rect.h);
+                                        let slider_rect = Rect::new(screen_rect.x + screen_rect.w * 0.4, screen_rect.y, screen_rect.w * 0.6, screen_rect.h);
+                                        let label = LabelElement { text_key: slider.text_key.clone(), ..Default::default() };
+                                        let display_text = text_manager.resolve_ui_text(&text_id, &label.text_key);
+                                        MenuTemplate::render_label(ctx, &label, label_rect, &display_text);
+                                        let (new_value, state) = gui_slider(ctx, slider.widget_id, slider_rect, slider.min, slider.max, value);
+                                        if !matches!(state, SliderState::Unchanged) {
+                                            self.slider_values.insert(slider.key.clone(), new_value);
+                                            push_slider_event(slider.key.clone(), new_value);
+                                        }
+                                        if self.focus.node == i && self.focus.child == Some(focusable_idx) {
+                                            ctx.draw_rectangle_lines(screen_rect.x, screen_rect.y, screen_rect.w, screen_rect.h, 2.0, Color::WHITE);
+                                        }
+                                        if child.element.enabled {
+                                            focusable_idx += 1;
+                                        }
+                                    }
                                     _ => {}
                                 }
                             }
                         }
-                        MenuElementKind::Slider(_) => {}
+                        MenuElementKind::Slider(slider) => {
+                            let value = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
+                            let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
+                            let label_rect = Rect::new(screen_rect.x, screen_rect.y, screen_rect.w * 0.4, screen_rect.h);
+                            let slider_rect = Rect::new(screen_rect.x + screen_rect.w * 0.4, screen_rect.y, screen_rect.w * 0.6, screen_rect.h);
+                            let label = LabelElement { text_key: slider.text_key.clone(), ..Default::default() };
+                            let display_text = text_manager.resolve_ui_text(&text_id, &label.text_key);
+                            MenuTemplate::render_label(ctx, &label, label_rect, &display_text);
+                            let (new_value, state) = gui_slider(ctx, slider.widget_id, slider_rect, slider.min, slider.max, value);
+                            if !matches!(state, SliderState::Unchanged) {
+                                self.slider_values.insert(slider.key.clone(), new_value);
+                                push_slider_event(slider.key.clone(), new_value);
+                            }
+                            if self.focus.node == i && self.focus.child.is_none() {
+                                ctx.draw_rectangle_lines(screen_rect.x, screen_rect.y, screen_rect.w, screen_rect.h, 2.0, Color::WHITE);
+                            }
+                        }
                     }
                 }
             }
