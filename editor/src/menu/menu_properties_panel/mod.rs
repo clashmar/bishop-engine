@@ -142,6 +142,7 @@ impl MenuEditor {
             MenuElementKind::LayoutGroup(_) => {
                 self.draw_layout_group_properties(ctx, &mut y, content_x, content_w, blocked, &rect);
             }
+            MenuElementKind::Slider(_) => {}
         }
 
         self.properties_panel.last_content_height = y - start_y + 16.0;

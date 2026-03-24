@@ -114,6 +114,7 @@ impl MenuEditor {
                         MenuElementKind::Button(_) => Vec2::new(0.10, 0.037),
                         MenuElementKind::Panel(_) => Vec2::new(0.16, 0.185),
                         MenuElementKind::LayoutGroup(_) => Vec2::new(0.25, 0.30),
+                        MenuElementKind::Slider(_) => Vec2::new(0.20, 0.037),
                     };
 
                     // Check if a layout group is selected to add as child

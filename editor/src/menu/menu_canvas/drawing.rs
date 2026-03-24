@@ -282,6 +282,7 @@ impl MenuEditor {
                 let text_y = element_rect.y + (element_rect.h - text_dims.height) / 2.0 + text_dims.offset_y;
                 ctx.draw_text(text, text_x, text_y, label.font_size, label.color);
             }
+            MenuElementKind::Slider(_) => {}
             MenuElementKind::Panel(panel) => {
                 ctx.draw_rectangle(
                     element_rect.x,
