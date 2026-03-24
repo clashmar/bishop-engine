@@ -107,12 +107,7 @@ impl MenuFocus {
 
     /// Gets the nav field for a direction from a layout group.
     fn group_nav_field(dir: NavDirection, group: &LayoutGroupElement) -> Option<usize> {
-        match dir {
-            NavDirection::Up => group.nav_targets.up,
-            NavDirection::Down => group.nav_targets.down,
-            NavDirection::Left => group.nav_targets.left,
-            NavDirection::Right => group.nav_targets.right,
-        }
+        Self::get_nav_target(&group.nav_targets, dir)
     }
 
     /// Navigates within a layout group along its primary axis.
