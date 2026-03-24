@@ -88,7 +88,7 @@ impl MenuTemplate {
         }
     }
 
-    /// Counts focusable button children in a layout group at the given element index.
+    /// Counts focusable children (buttons or sliders) in a layout group at the given element index.
     pub fn focusable_child_count(&self, element_index: usize) -> usize {
         let Some(element) = self.elements.get(element_index) else {
             return 0;
@@ -100,14 +100,16 @@ impl MenuTemplate {
             .children
             .iter()
             .filter(|child| {
-                matches!(child.element.kind, MenuElementKind::Button(_))
-                    && child.element.enabled
+                matches!(
+                    child.element.kind,
+                    MenuElementKind::Button(_) | MenuElementKind::Slider(_)
+                ) && child.element.enabled
                     && child.element.visible
             })
             .count()
     }
 
-    /// Gets the nth focusable child button in a layout group.
+    /// Gets the nth focusable child (button or slider) in a layout group.
     pub fn get_focusable_child(&self, element_index: usize, child_index: usize) -> Option<&MenuElement> {
         let element = self.elements.get(element_index)?;
         let MenuElementKind::LayoutGroup(group) = &element.kind else {
@@ -117,8 +119,10 @@ impl MenuTemplate {
             .children
             .iter()
             .filter(|child| {
-                matches!(child.element.kind, MenuElementKind::Button(_))
-                    && child.element.enabled
+                matches!(
+                    child.element.kind,
+                    MenuElementKind::Button(_) | MenuElementKind::Slider(_)
+                ) && child.element.enabled
                     && child.element.visible
             })
             .nth(child_index)
