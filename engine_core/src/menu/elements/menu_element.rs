@@ -1,4 +1,5 @@
 use super::layout_group::LayoutGroupElement;
+use super::menu_slider::SliderElement;
 use crate::menu::menu_builder::MenuAction;
 use crate::menu::layout::HorizontalAlign;
 use super::menu_panel::PanelBackground;
@@ -13,6 +14,7 @@ pub enum MenuElementKind {
     Button(ButtonElement),
     Panel(PanelElement),
     LayoutGroup(LayoutGroupElement),
+    Slider(SliderElement),
 }
 
 /// Label element displaying text resolved from a text key.
@@ -143,5 +145,29 @@ impl MenuElement {
     /// Creates a layout group element.
     pub fn layout_group(group: LayoutGroupElement, rect: Rect) -> Self {
         Self::new(MenuElementKind::LayoutGroup(group), rect)
+    }
+
+    /// Creates a slider element for adjusting a bounded numeric setting.
+    pub fn slider(
+        text_key: String,
+        key: String,
+        min: f32,
+        max: f32,
+        step: f32,
+        default_value: f32,
+        rect: Rect,
+    ) -> Self {
+        Self::new(
+            MenuElementKind::Slider(SliderElement {
+                text_key,
+                key,
+                min,
+                max,
+                step,
+                default_value,
+                ..Default::default()
+            }),
+            rect,
+        )
     }
 }
