@@ -157,7 +157,7 @@ impl MenuManager {
                 .get_element_at_focus(&self.focus)
                 .and_then(|el| {
                     if let MenuElementKind::Slider(slider) = &el.kind {
-                        Some(slider.clone())
+                        Some((slider.key.clone(), slider.step, slider.min, slider.max, slider.default_value))
                     } else {
                         None
                     }
@@ -170,26 +170,22 @@ impl MenuManager {
                 self.focus.navigate(NavDirection::Down, &template);
             }
 
-            if let Some(slider) = focused_slider {
+            if let Some((key, step, min, max, default_value)) = focused_slider {
                 if left_pressed {
-                    let current = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
-                    let new_value = (current - slider.step).max(slider.min);
-                    self.slider_values.insert(slider.key.clone(), new_value);
-                    push_slider_event(slider.key.clone(), new_value);
+                    let current = self.slider_values.get(&key).copied().unwrap_or(default_value);
+                    let new_value = (current - step).max(min);
+                    self.slider_values.insert(key.clone(), new_value);
+                    push_slider_event(key, new_value);
+                } else if right_pressed {
+                    let current = self.slider_values.get(&key).copied().unwrap_or(default_value);
+                    let new_value = (current + step).min(max);
+                    self.slider_values.insert(key.clone(), new_value);
+                    push_slider_event(key, new_value);
                 }
-                if right_pressed {
-                    let current = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
-                    let new_value = (current + slider.step).min(slider.max);
-                    self.slider_values.insert(slider.key.clone(), new_value);
-                    push_slider_event(slider.key.clone(), new_value);
-                }
-            } else {
-                if left_pressed {
-                    self.focus.navigate(NavDirection::Left, &template);
-                }
-                if right_pressed {
-                    self.focus.navigate(NavDirection::Right, &template);
-                }
+            } else if left_pressed {
+                self.focus.navigate(NavDirection::Left, &template);
+            } else if right_pressed {
+                self.focus.navigate(NavDirection::Right, &template);
             }
 
             let cancel_pressed = self.navigation.cancel_pressed(ctx);
@@ -362,8 +358,8 @@ impl MenuManager {
         let label_rect = Rect::new(screen_rect.x, screen_rect.y, split, screen_rect.h);
         let slider_rect = Rect::new(screen_rect.x + split, screen_rect.y, screen_rect.w - split, screen_rect.h);
         // SliderElement doesn't embed label styling; defaults are used for now
-        let label = LabelElement { text_key: slider.text_key.clone(), ..Default::default() };
-        let display_text = text_manager.resolve_ui_text(text_id, &label.text_key);
+        let display_text = text_manager.resolve_ui_text(text_id, &slider.text_key);
+        let label = LabelElement::default();
         MenuTemplate::render_label(ctx, &label, label_rect, &display_text);
         // slider.step is used for keyboard input (Task 1D); gui_slider handles continuous drag
         let (new_value, state) = gui_slider(ctx, slider.widget_id, slider_rect, slider.min, slider.max, value);
