@@ -3,6 +3,7 @@ use crate::scripting::script_system::ScriptSystem;
 use std::collections::HashMap;
 use engine_core::prelude::*;
 use mlua::Lua;
+use mlua::Value;
 use mlua::Variadic;
 
 /// Top level orchestrator of the game and systems.
@@ -107,6 +108,17 @@ impl GameInstance {
             self.game.script_manager.event_bus.emit(
                 format!("menu:{}", action),
                 Variadic::new(),
+            );
+        }
+    }
+
+    /// Drains pending slider events and emits them to the Lua event bus.
+    pub fn emit_slider_events(&self) {
+        let events = drain_slider_events();
+        for (key, value) in events {
+            self.game.script_manager.event_bus.emit(
+                format!("slider:{key}"),
+                Variadic::from_iter([Value::Number(value as f64)]),
             );
         }
     }

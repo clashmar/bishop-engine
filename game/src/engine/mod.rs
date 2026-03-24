@@ -91,6 +91,9 @@ impl BishopApp for Engine {
 
         let alpha = (self.accumulator / FIXED_DT).clamp(0.0, 1.0);
         self.render(&ctx, alpha);
+
+        // Process slider events from menu interaction (works while paused).
+        self.game_instance.borrow().emit_slider_events();
     }
 }
 
