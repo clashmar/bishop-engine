@@ -1,5 +1,4 @@
 // game/src/scripting/modules/audio_module.rs
-#[cfg(feature = "audio")]
 use engine_core::audio::{push_audio_command, AudioCommand};
 use engine_core::register_lua_api;
 use engine_core::register_lua_module;
@@ -19,56 +18,53 @@ impl LuaModule for AudioModule {
         let engine_tbl: Table = lua.globals().get(ENGINE)?;
         let audio_tbl = lua.create_table()?;
 
-        #[cfg(feature = "audio")]
-        {
-            let play_music_fn = lua.create_function(|_, id: String| {
-                push_audio_command(AudioCommand::PlayMusic(id));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_PLAY_MUSIC, play_music_fn)?;
+        let play_music_fn = lua.create_function(|_, id: String| {
+            push_audio_command(AudioCommand::PlayMusic(id));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_PLAY_MUSIC, play_music_fn)?;
 
-            let stop_music_fn = lua.create_function(|_, ()| {
-                push_audio_command(AudioCommand::StopMusic);
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_STOP_MUSIC, stop_music_fn)?;
+        let stop_music_fn = lua.create_function(|_, ()| {
+            push_audio_command(AudioCommand::StopMusic);
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_STOP_MUSIC, stop_music_fn)?;
 
-            let fade_music_fn = lua.create_function(|_, duration: f32| {
-                push_audio_command(AudioCommand::FadeMusic(duration));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_FADE_MUSIC, fade_music_fn)?;
+        let fade_music_fn = lua.create_function(|_, duration: f32| {
+            push_audio_command(AudioCommand::FadeMusic(duration));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_FADE_MUSIC, fade_music_fn)?;
 
-            let play_sfx_fn = lua.create_function(|_, id: String| {
-                push_audio_command(AudioCommand::PlaySfx(id));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_PLAY_SFX, play_sfx_fn)?;
+        let play_sfx_fn = lua.create_function(|_, id: String| {
+            push_audio_command(AudioCommand::PlaySfx(id));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_PLAY_SFX, play_sfx_fn)?;
 
-            let preload_fn = lua.create_function(|_, id: String| {
-                push_audio_command(AudioCommand::Preload(id));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_PRELOAD, preload_fn)?;
+        let preload_fn = lua.create_function(|_, id: String| {
+            push_audio_command(AudioCommand::Preload(id));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_PRELOAD, preload_fn)?;
 
-            let set_master_volume_fn = lua.create_function(|_, v: f32| {
-                push_audio_command(AudioCommand::SetMasterVolume(v));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_SET_MASTER_VOLUME, set_master_volume_fn)?;
+        let set_master_volume_fn = lua.create_function(|_, v: f32| {
+            push_audio_command(AudioCommand::SetMasterVolume(v));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_SET_MASTER_VOLUME, set_master_volume_fn)?;
 
-            let set_music_volume_fn = lua.create_function(|_, v: f32| {
-                push_audio_command(AudioCommand::SetMusicVolume(v));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_SET_MUSIC_VOLUME, set_music_volume_fn)?;
+        let set_music_volume_fn = lua.create_function(|_, v: f32| {
+            push_audio_command(AudioCommand::SetMusicVolume(v));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_SET_MUSIC_VOLUME, set_music_volume_fn)?;
 
-            let set_sfx_volume_fn = lua.create_function(|_, v: f32| {
-                push_audio_command(AudioCommand::SetSfxVolume(v));
-                Ok(())
-            })?;
-            audio_tbl.set(AUDIO_SET_SFX_VOLUME, set_sfx_volume_fn)?;
-        }
+        let set_sfx_volume_fn = lua.create_function(|_, v: f32| {
+            push_audio_command(AudioCommand::SetSfxVolume(v));
+            Ok(())
+        })?;
+        audio_tbl.set(AUDIO_SET_SFX_VOLUME, set_sfx_volume_fn)?;
 
         engine_tbl.set(LUA_AUDIO, audio_tbl)?;
         Ok(())
