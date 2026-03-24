@@ -163,6 +163,13 @@ impl MenuManager {
                     }
                 });
 
+            if up_pressed {
+                self.focus.navigate(NavDirection::Up, &template);
+            }
+            if down_pressed {
+                self.focus.navigate(NavDirection::Down, &template);
+            }
+
             if let Some(slider) = focused_slider {
                 if left_pressed {
                     let current = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
@@ -176,19 +183,7 @@ impl MenuManager {
                     self.slider_values.insert(slider.key.clone(), new_value);
                     push_slider_event(slider.key.clone(), new_value);
                 }
-                if up_pressed {
-                    self.focus.navigate(NavDirection::Up, &template);
-                }
-                if down_pressed {
-                    self.focus.navigate(NavDirection::Down, &template);
-                }
             } else {
-                if up_pressed {
-                    self.focus.navigate(NavDirection::Up, &template);
-                }
-                if down_pressed {
-                    self.focus.navigate(NavDirection::Down, &template);
-                }
                 if left_pressed {
                     self.focus.navigate(NavDirection::Left, &template);
                 }
