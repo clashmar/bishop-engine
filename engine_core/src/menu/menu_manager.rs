@@ -273,20 +273,16 @@ impl MenuManager {
                                         }
                                     }
                                     MenuElementKind::Slider(slider) => {
-                                        let value = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
-                                        let label_rect = Rect::new(screen_rect.x, screen_rect.y, screen_rect.w * 0.4, screen_rect.h);
-                                        let slider_rect = Rect::new(screen_rect.x + screen_rect.w * 0.4, screen_rect.y, screen_rect.w * 0.6, screen_rect.h);
-                                        let label = LabelElement { text_key: slider.text_key.clone(), ..Default::default() };
-                                        let display_text = text_manager.resolve_ui_text(&text_id, &label.text_key);
-                                        MenuTemplate::render_label(ctx, &label, label_rect, &display_text);
-                                        let (new_value, state) = gui_slider(ctx, slider.widget_id, slider_rect, slider.min, slider.max, value);
-                                        if !matches!(state, SliderState::Unchanged) {
-                                            self.slider_values.insert(slider.key.clone(), new_value);
-                                            push_slider_event(slider.key.clone(), new_value);
-                                        }
-                                        if self.focus.node == i && self.focus.child == Some(focusable_idx) {
-                                            ctx.draw_rectangle_lines(screen_rect.x, screen_rect.y, screen_rect.w, screen_rect.h, 2.0, Color::WHITE);
-                                        }
+                                        let is_focused = self.focus.node == i && self.focus.child == Some(focusable_idx);
+                                        Self::render_slider(
+                                            ctx,
+                                            slider,
+                                            screen_rect,
+                                            text_manager,
+                                            &text_id,
+                                            &mut self.slider_values,
+                                            is_focused,
+                                        );
                                         if child.element.enabled {
                                             focusable_idx += 1;
                                         }
@@ -296,21 +292,17 @@ impl MenuManager {
                             }
                         }
                         MenuElementKind::Slider(slider) => {
-                            let value = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
                             let screen_rect = normalized_rect_to_screen(element.rect, canvas_origin, canvas_size);
-                            let label_rect = Rect::new(screen_rect.x, screen_rect.y, screen_rect.w * 0.4, screen_rect.h);
-                            let slider_rect = Rect::new(screen_rect.x + screen_rect.w * 0.4, screen_rect.y, screen_rect.w * 0.6, screen_rect.h);
-                            let label = LabelElement { text_key: slider.text_key.clone(), ..Default::default() };
-                            let display_text = text_manager.resolve_ui_text(&text_id, &label.text_key);
-                            MenuTemplate::render_label(ctx, &label, label_rect, &display_text);
-                            let (new_value, state) = gui_slider(ctx, slider.widget_id, slider_rect, slider.min, slider.max, value);
-                            if !matches!(state, SliderState::Unchanged) {
-                                self.slider_values.insert(slider.key.clone(), new_value);
-                                push_slider_event(slider.key.clone(), new_value);
-                            }
-                            if self.focus.node == i && self.focus.child.is_none() {
-                                ctx.draw_rectangle_lines(screen_rect.x, screen_rect.y, screen_rect.w, screen_rect.h, 2.0, Color::WHITE);
-                            }
+                            let is_focused = self.focus.node == i && self.focus.child.is_none();
+                            Self::render_slider(
+                                ctx,
+                                slider,
+                                screen_rect,
+                                text_manager,
+                                &text_id,
+                                &mut self.slider_values,
+                                is_focused,
+                            );
                         }
                     }
                 }
@@ -321,6 +313,35 @@ impl MenuManager {
 
         if let Some(action) = triggered_action {
             self.handle_action(action);
+        }
+    }
+
+    /// Renders a slider element with its label, updating slider state and drawing a focus outline.
+    fn render_slider<C: BishopContext>(
+        ctx: &mut C,
+        slider: &SliderElement,
+        screen_rect: Rect,
+        text_manager: &TextManager,
+        text_id: &str,
+        slider_values: &mut HashMap<String, f32>,
+        is_focused: bool,
+    ) {
+        let value = slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
+        let split = screen_rect.w * 0.4;
+        let label_rect = Rect::new(screen_rect.x, screen_rect.y, split, screen_rect.h);
+        let slider_rect = Rect::new(screen_rect.x + split, screen_rect.y, screen_rect.w - split, screen_rect.h);
+        // SliderElement doesn't embed label styling; defaults are used for now
+        let label = LabelElement { text_key: slider.text_key.clone(), ..Default::default() };
+        let display_text = text_manager.resolve_ui_text(text_id, &label.text_key);
+        MenuTemplate::render_label(ctx, &label, label_rect, &display_text);
+        // slider.step is used for keyboard input (Task 1D); gui_slider handles continuous drag
+        let (new_value, state) = gui_slider(ctx, slider.widget_id, slider_rect, slider.min, slider.max, value);
+        if !matches!(state, SliderState::Unchanged) {
+            slider_values.insert(slider.key.clone(), new_value);
+            push_slider_event(slider.key.clone(), new_value);
+        }
+        if is_focused {
+            ctx.draw_rectangle_lines(screen_rect.x, screen_rect.y, screen_rect.w, screen_rect.h, 2.0, Color::WHITE);
         }
     }
 
