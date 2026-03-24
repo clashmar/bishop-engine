@@ -18,4 +18,4 @@ pub trait AudioBackend: Send + 'static {
 /// The default audio backend for the current platform, selected by feature flag.
 /// Use this in EngineBuilder to avoid hard-coding a backend.
 #[cfg(feature = "audio-cpal")]
-pub type DefaultAudioBackend = CpalBackend;
+pub type PlatformAudioBackend = CpalBackend;

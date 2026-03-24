@@ -198,5 +198,5 @@ pub mod prelude {
     pub use crate::audio::AudioBackend;
 
     #[cfg(feature = "audio-cpal")]
-    pub use crate::audio::DefaultAudioBackend;
+    pub use crate::audio::PlatformAudioBackend;
 }
