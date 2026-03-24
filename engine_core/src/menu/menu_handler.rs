@@ -44,3 +44,21 @@ pub fn drain_menu_events() -> Vec<String> {
     })
 }
 
+thread_local! {
+    static SLIDER_EVENTS: RefCell<Vec<(String, f32)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Queues a slider value-change event.
+pub fn push_slider_event(key: String, value: f32) {
+    SLIDER_EVENTS.with(|events| {
+        events.borrow_mut().push((key, value));
+    });
+}
+
+/// Drains all pending slider events and returns them.
+pub fn drain_slider_events() -> Vec<(String, f32)> {
+    SLIDER_EVENTS.with(|events| {
+        events.borrow_mut().drain(..).collect()
+    })
+}
+
