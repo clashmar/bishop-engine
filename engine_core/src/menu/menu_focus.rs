@@ -11,13 +11,13 @@ pub enum NavDirection {
 
 /// Tracks the current focus position in a menu.
 ///
-/// Uses a two-level scheme: `node` indexes a top-level element (button or layout group),
+/// Uses a two-level scheme: `node` indexes a top-level element (button, slider, or layout group),
 /// and `child` optionally indexes a focusable child within a layout group.
 #[derive(Debug, Clone)]
 pub struct MenuFocus {
     /// Element index in the template.
     pub node: usize,
-    /// Child index within a layout group (None for standalone buttons).
+    /// Child index within a layout group (None for standalone buttons or sliders).
     pub child: Option<usize>,
 }
 
@@ -61,24 +61,12 @@ impl MenuFocus {
 
         match &element.kind {
             MenuElementKind::Button(button) => {
-                let target = match dir {
-                    NavDirection::Up => button.nav_targets.up,
-                    NavDirection::Down => button.nav_targets.down,
-                    NavDirection::Left => button.nav_targets.left,
-                    NavDirection::Right => button.nav_targets.right,
-                };
-                if let Some(target_idx) = target {
+                if let Some(target_idx) = Self::get_nav_target(&button.nav_targets, dir) {
                     self.enter_element(target_idx, dir, template);
                 }
             }
             MenuElementKind::Slider(slider) => {
-                let target = match dir {
-                    NavDirection::Up => slider.nav_targets.up,
-                    NavDirection::Down => slider.nav_targets.down,
-                    NavDirection::Left => slider.nav_targets.left,
-                    NavDirection::Right => slider.nav_targets.right,
-                };
-                if let Some(target_idx) = target {
+                if let Some(target_idx) = Self::get_nav_target(&slider.nav_targets, dir) {
                     self.enter_element(target_idx, dir, template);
                 }
             }
@@ -104,6 +92,16 @@ impl MenuFocus {
             LayoutDirection::Vertical => matches!(dir, NavDirection::Up | NavDirection::Down),
             LayoutDirection::Horizontal => matches!(dir, NavDirection::Left | NavDirection::Right),
             LayoutDirection::Grid { .. } => true,
+        }
+    }
+
+    /// Returns the navigation target index for the given direction.
+    fn get_nav_target(targets: &NavTargets, dir: NavDirection) -> Option<usize> {
+        match dir {
+            NavDirection::Up => targets.up,
+            NavDirection::Down => targets.down,
+            NavDirection::Left => targets.left,
+            NavDirection::Right => targets.right,
         }
     }
 
