@@ -146,19 +146,55 @@ impl MenuManager {
             return;
         }
 
-        if let Some(menu_id) = self.menu_stack.last().cloned() 
+        if let Some(menu_id) = self.menu_stack.last().cloned()
         && let Some(template) = self.templates.get(&menu_id).cloned() {
-            if self.navigation.up_pressed(ctx) {
-                self.focus.navigate(NavDirection::Up, &template);
-            }
-            if self.navigation.down_pressed(ctx) {
-                self.focus.navigate(NavDirection::Down, &template);
-            }
-            if self.navigation.left_pressed(ctx) {
-                self.focus.navigate(NavDirection::Left, &template);
-            }
-            if self.navigation.right_pressed(ctx) {
-                self.focus.navigate(NavDirection::Right, &template);
+            let up_pressed = self.navigation.up_pressed(ctx);
+            let down_pressed = self.navigation.down_pressed(ctx);
+            let left_pressed = self.navigation.left_pressed(ctx);
+            let right_pressed = self.navigation.right_pressed(ctx);
+
+            let focused_slider = template
+                .get_element_at_focus(&self.focus)
+                .and_then(|el| {
+                    if let MenuElementKind::Slider(slider) = &el.kind {
+                        Some(slider.clone())
+                    } else {
+                        None
+                    }
+                });
+
+            if let Some(slider) = focused_slider {
+                if left_pressed {
+                    let current = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
+                    let new_value = (current - slider.step).max(slider.min);
+                    self.slider_values.insert(slider.key.clone(), new_value);
+                    push_slider_event(slider.key.clone(), new_value);
+                }
+                if right_pressed {
+                    let current = self.slider_values.get(&slider.key).copied().unwrap_or(slider.default_value);
+                    let new_value = (current + slider.step).min(slider.max);
+                    self.slider_values.insert(slider.key.clone(), new_value);
+                    push_slider_event(slider.key.clone(), new_value);
+                }
+                if up_pressed {
+                    self.focus.navigate(NavDirection::Up, &template);
+                }
+                if down_pressed {
+                    self.focus.navigate(NavDirection::Down, &template);
+                }
+            } else {
+                if up_pressed {
+                    self.focus.navigate(NavDirection::Up, &template);
+                }
+                if down_pressed {
+                    self.focus.navigate(NavDirection::Down, &template);
+                }
+                if left_pressed {
+                    self.focus.navigate(NavDirection::Left, &template);
+                }
+                if right_pressed {
+                    self.focus.navigate(NavDirection::Right, &template);
+                }
             }
 
             let cancel_pressed = self.navigation.cancel_pressed(ctx);
