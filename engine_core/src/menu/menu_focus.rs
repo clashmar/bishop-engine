@@ -37,7 +37,7 @@ impl MenuFocus {
                 continue;
             }
             match &element.kind {
-                MenuElementKind::Button(_) => {
+                MenuElementKind::Button(_) | MenuElementKind::Slider(_) => {
                     self.node = i;
                     return;
                 }
@@ -66,6 +66,17 @@ impl MenuFocus {
                     NavDirection::Down => button.nav_targets.down,
                     NavDirection::Left => button.nav_targets.left,
                     NavDirection::Right => button.nav_targets.right,
+                };
+                if let Some(target_idx) = target {
+                    self.enter_element(target_idx, dir, template);
+                }
+            }
+            MenuElementKind::Slider(slider) => {
+                let target = match dir {
+                    NavDirection::Up => slider.nav_targets.up,
+                    NavDirection::Down => slider.nav_targets.down,
+                    NavDirection::Left => slider.nav_targets.left,
+                    NavDirection::Right => slider.nav_targets.right,
                 };
                 if let Some(target_idx) = target {
                     self.enter_element(target_idx, dir, template);
@@ -157,7 +168,7 @@ impl MenuFocus {
         }
 
         match &target_element.kind {
-            MenuElementKind::Button(_) => {
+            MenuElementKind::Button(_) | MenuElementKind::Slider(_) => {
                 self.node = target_idx;
                 self.child = None;
             }
